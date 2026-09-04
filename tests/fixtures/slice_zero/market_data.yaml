@@ -1,0 +1,182 @@
+# Backs FakeMarketDataProvider (M0 §11) and the scheme-master half of
+# FakeFundDataProvider. Zone A data only — no personal ledger rows here.
+
+schemes:
+  - scheme_id: HDFC-TOP100-DIR
+    scheme_name: HDFC Top 100 Fund - Direct Growth
+    amfi_code: "118989"
+    isin: INF179K01YV8
+    amc_id: HDFC
+    plan: direct
+    option: growth
+    sebi_category: Large Cap
+    benchmark_id: NIFTY100-TRI
+    inception_date: 2013-01-01
+    status: active
+
+  # Same fund, Regular plan. Different ISIN, different NAV series, ~1%/yr
+  # apart. Present so a test can prove resolution never conflates them.
+  - scheme_id: HDFC-TOP100-REG
+    scheme_name: HDFC Top 100 Fund - Regular Growth
+    amfi_code: "100119"
+    isin: INF179K01BC0
+    amc_id: HDFC
+    plan: regular
+    option: growth
+    sebi_category: Large Cap
+    benchmark_id: NIFTY100-TRI
+    inception_date: 1996-10-11
+    status: active
+
+  - scheme_id: AXIS-MID-DIR
+    scheme_name: Axis Midcap Fund - Direct Growth
+    amfi_code: "120505"
+    isin: INF846K01_31
+    amc_id: AXIS
+    plan: direct
+    option: growth
+    sebi_category: Mid Cap
+    benchmark_id: NIFTYMID150-TRI
+    inception_date: 2013-01-01
+    status: active
+
+  # Held, but its latest disclosure is quarantined — drives __NO_DISCLOSURE__.
+  - scheme_id: SBI-SC-DIR
+    scheme_name: SBI Small Cap Fund - Direct Growth
+    amfi_code: "125497"
+    isin: INF200K01_58
+    amc_id: SBI
+    plan: direct
+    option: growth
+    sebi_category: Small Cap
+    benchmark_id: NIFTYSML250-TRI
+    inception_date: 2013-05-16
+    status: active
+
+  # Merged away in 2021. Resolution must follow the chain to HDFC-TOP100-DIR.
+  - scheme_id: FRANKLIN-BLUE-DIR
+    scheme_name: Franklin India Bluechip - Direct Growth
+    amfi_code: "103174"
+    isin: INF090I01_29
+    amc_id: FRANKLIN
+    plan: direct
+    option: growth
+    sebi_category: Large Cap
+    benchmark_id: NIFTY100-TRI
+    inception_date: 2013-01-01
+    status: merged
+    merged_into: HDFC-TOP100-DIR
+    merger_date: 2021-06-18
+    merger_ratio_num: 731
+    merger_ratio_den: 1000
+
+mergers:
+  # Non-unit ratio on purpose: 0.731 successor units per predecessor unit.
+  # grandfathered_nav is per-unit and must be rescaled by it, not carried over.
+  - predecessor_scheme_id: FRANKLIN-BLUE-DIR
+    successor_scheme_id: HDFC-TOP100-DIR
+    merger_date: 2021-06-18
+    ratio_num: 731
+    ratio_den: 1000
+
+# 6-decimal NAVs. None of these is exactly representable in binary floating
+# point, which is the point of storing them as TEXT.
+navs:
+  HDFC-TOP100-DIR:
+    - {nav_date: 2018-01-31, nav: "521.847193", is_interpolated: false}
+    - {nav_date: 2024-04-01, nav: "998.114260", is_interpolated: false}
+    - {nav_date: 2025-04-01, nav: "1102.556831", is_interpolated: false}
+    - {nav_date: 2026-07-31, nav: "1284.339072", is_interpolated: false}
+    - {nav_date: 2026-08-31, nav: "1301.772415", is_interpolated: false}
+  HDFC-TOP100-REG:
+    - {nav_date: 2026-07-31, nav: "1187.402556", is_interpolated: false}
+    - {nav_date: 2026-08-31, nav: "1202.884301", is_interpolated: false}
+  AXIS-MID-DIR:
+    - {nav_date: 2024-04-01, nav: "88.442017", is_interpolated: false}
+    - {nav_date: 2026-07-31, nav: "142.839104", is_interpolated: false}
+    # Interpolated, and flagged as such — a filled NAV is not a fetched NAV.
+    - {nav_date: 2026-08-31, nav: "148.006663", is_interpolated: true}
+  SBI-SC-DIR:
+    - {nav_date: 2026-07-31, nav: "204.667319", is_interpolated: false}
+  FRANKLIN-BLUE-DIR:
+    - {nav_date: 2018-01-31, nav: "402.118844", is_interpolated: false}
+    - {nav_date: 2021-06-18, nav: "588.203117", is_interpolated: false}
+
+idcw_events:
+  HDFC-TOP100-REG:
+    - {record_date: 2025-03-14, amount_per_unit: "12.500000"}
+
+tax_class:
+  HDFC-TOP100-DIR: equity
+  HDFC-TOP100-REG: equity
+  AXIS-MID-DIR: equity
+  SBI-SC-DIR: equity
+  FRANKLIN-BLUE-DIR: equity
+
+# Dated: TER changes over time, so a single number would be wrong for any
+# window that spans a change.
+ter:
+  HDFC-TOP100-DIR:
+    - {valid_from: 2013-01-01, valid_to: 2024-03-31, ter: "1.1800"}
+    - {valid_from: 2024-04-01, valid_to: null, ter: "1.0400"}
+  HDFC-TOP100-REG:
+    - {valid_from: 2013-01-01, valid_to: null, ter: "1.6900"}
+  AXIS-MID-DIR:
+    - {valid_from: 2013-01-01, valid_to: null, ter: "0.5700"}
+  SBI-SC-DIR:
+    - {valid_from: 2013-05-16, valid_to: null, ter: "0.6600"}
+  FRANKLIN-BLUE-DIR:
+    - {valid_from: 2013-01-01, valid_to: 2021-06-18, ter: "1.7800"}
+
+exit_load_days:
+  HDFC-TOP100-DIR: 365
+  HDFC-TOP100-REG: 365
+  AXIS-MID-DIR: 365
+  SBI-SC-DIR: 365
+  FRANKLIN-BLUE-DIR: 365
+
+# The Direct <-> Regular pairing, for fee-drag comparisons.
+sibling_plans:
+  HDFC-TOP100-DIR: {regular: HDFC-TOP100-REG}
+  HDFC-TOP100-REG: {direct: HDFC-TOP100-DIR}
+
+benchmarks:
+  # is_total_return is TRUE on all three. PLAN.md §9.4 is decided: TRI only.
+  # A PRI index is included so a test can prove the comparison is suppressed.
+  - {index_id: NIFTY100-TRI, index_name: Nifty 100 TRI, provider: NSE,
+     is_total_return: true, base_date: 1995-11-03, base_value: "1000.0000"}
+  - {index_id: NIFTYMID150-TRI, index_name: Nifty Midcap 150 TRI, provider: NSE,
+     is_total_return: true, base_date: 2005-04-01, base_value: "1000.0000"}
+  - {index_id: NIFTYSML250-TRI, index_name: Nifty Smallcap 250 TRI, provider: NSE,
+     is_total_return: true, base_date: 2005-04-01, base_value: "1000.0000"}
+  - {index_id: NIFTY100-PRI, index_name: Nifty 100 PRI, provider: NSE,
+     is_total_return: false, base_date: 1995-11-03, base_value: "1000.0000"}
+
+index_levels:
+  NIFTY100-TRI:
+    - {level_date: 2024-04-01, level: "27412.6100"}
+    - {level_date: 2026-07-31, level: "33188.4400"}
+    - {level_date: 2026-08-31, level: "33604.9700"}
+  NIFTYMID150-TRI:
+    - {level_date: 2024-04-01, level: "19844.2200"}
+    - {level_date: 2026-07-31, level: "24907.8800"}
+  NIFTYSML250-TRI:
+    - {level_date: 2026-07-31, level: "18220.3500"}
+
+scheme_benchmarks:
+  HDFC-TOP100-DIR: NIFTY100-TRI
+  HDFC-TOP100-REG: NIFTY100-TRI
+  AXIS-MID-DIR: NIFTYMID150-TRI
+  SBI-SC-DIR: NIFTYSML250-TRI
+  FRANKLIN-BLUE-DIR: NIFTY100-TRI
+
+risk_free:
+  - {rate_date: 2026-07-31, tenor: 91D, annual_rate: "6.58000",
+     daily_rate: "0.0001802740", is_interpolated: false}
+  - {rate_date: 2026-08-31, tenor: 91D, annual_rate: "6.61000",
+     daily_rate: "0.0001810959", is_interpolated: false}
+
+aum:
+  HDFC-TOP100-DIR: {2026-07-31: "358942100000.0000"}
+  AXIS-MID-DIR: {2026-07-31: "292118400000.0000"}
+  SBI-SC-DIR: {2026-07-31: "331074500000.0000"}

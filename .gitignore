@@ -1,0 +1,84 @@
+# --- Zone B: personal ledger. NEVER commit. --------------------------------
+# PLAN.md §6.3: transactions, units, folios and PAN. Extreme sensitivity,
+# encrypted at rest, "never leaves the device unencrypted". Nothing here exists
+# yet — these entries are in place BEFORE the first real CAS is imported, not
+# after, because a secret committed once stays in history.
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite3
+personal.db*
+canonical.duckdb*
+
+# CAS statements and anything derived from them
+*.cas
+*CAS*.pdf
+/imports/
+/quarantine/
+/backups/
+
+# --- Zone A: raw archive ---------------------------------------------------
+# PLAN.md §4.4 archives every fetched byte permanently and content-hashed, but
+# on disk under /data/raw — it is an archive, not source, and would be GBs.
+/warehouse/
+
+# --- config with real values -----------------------------------------------
+# config/tax_rules.yaml is human-verified and belongs in the repo; anything
+# carrying credentials or a real user id does not.
+.env
+.env.*
+!.env.example
+config/local.*
+config/secrets.*
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+
+# --- tooling caches --------------------------------------------------------
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.tox/
+
+# --- frontend --------------------------------------------------------------
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# --- editors and OS --------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- graphify output -------------------------------------------------------
+# Regenerable analysis artefacts. GRAPH_REPORT.md is the readable summary that
+# BUILD_ORDER.md's recommendations were derived from, so it stays; the rest is
+# ~1MB of JSON/HTML that regenerates from the same inputs.
+#
+# Patterns are deliberately NOT anchored to the repo root: there are two
+# graphify-out directories (repo root and `Project Context/`), and the cache is
+# keyed on mtime_ns, so it would churn on every file touch.
+graphify-out/graph.json
+graphify-out/graph.html
+graphify-out/cost.json
+graphify-out/cache/
+**/graphify-out/cache/

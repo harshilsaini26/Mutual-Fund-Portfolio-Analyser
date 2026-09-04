@@ -1,0 +1,202 @@
+# Prices, index constituents and market-wide reference data. Backs
+# FakeRiskInputs (M0 block) and FakeMarketDataFeed.
+
+prices:
+  INE040A01034:   # HDFC Bank
+    - {price_date: 2026-06-30, exchange: NSE, open: "1842.2000", high: "1871.4000",
+       low: "1836.1000", close: "1864.7000", prev_close: "1840.3000",
+       close_adj: "1864.7000", volume: 8241900, traded_value: "15369918930.0000",
+       trades_count: 214880}
+    - {price_date: 2026-07-31, exchange: NSE, open: "1878.0000", high: "1892.6000",
+       low: "1871.2000", close: "1883.3000", prev_close: "1877.9000",
+       close_adj: "1883.3000", volume: 7118400, traded_value: "13405081720.0000",
+       trades_count: 198420}
+  INE002A01018:   # Reliance — 1:1 bonus between the two dates
+    - {price_date: 2026-06-30, exchange: NSE, open: "5904.0000", high: "5988.0000",
+       low: "5881.5000", close: "5944.0000", prev_close: "5901.2000",
+       close_adj: "2972.0000", volume: 3104200, traded_value: "18451364800.0000",
+       trades_count: 142100}
+    - {price_date: 2026-07-31, exchange: NSE, open: "2958.0000", high: "2984.5000",
+       low: "2941.0000", close: "2973.0000", prev_close: "2960.4000",
+       close_adj: "2973.0000", volume: 6288100, traded_value: "18694521300.0000",
+       trades_count: 188640}
+  INE009A01021:   # Infosys
+    - {price_date: 2026-07-31, exchange: NSE, open: "1674.0000", high: "1688.9000",
+       low: "1668.2000", close: "1682.7000", prev_close: "1671.4000",
+       close_adj: "1682.7000", volume: 4918200, traded_value: "8275948140.0000",
+       trades_count: 132900}
+  INE090A01021:   # ICICI Bank
+    - {price_date: 2026-07-31, exchange: NSE, open: "1310.0000", high: "1324.8000",
+       low: "1304.5000", close: "1318.4000", prev_close: "1308.7000",
+       close_adj: "1318.4000", volume: 6042100, traded_value: "7965904640.0000",
+       trades_count: 158210}
+  INE018A01030:   # L&T
+    - {price_date: 2026-07-31, exchange: NSE, open: "4042.0000", high: "4078.5000",
+       low: "4028.0000", close: "4059.3000", prev_close: "4038.8000",
+       close_adj: "4059.3000", volume: 1284900, traded_value: "5215560570.0000",
+       trades_count: 88420}
+  INE298A01020:   # Cummins India
+    - {price_date: 2026-07-31, exchange: NSE, open: "3520.0000", high: "3554.0000",
+       low: "3502.5000", close: "3538.9000", prev_close: "3514.2000",
+       close_adj: "3538.9000", volume: 412800, traded_value: "1460858920.0000",
+       trades_count: 42180}
+  INE262H01021:   # Persistent Systems
+    - {price_date: 2026-07-31, exchange: NSE, open: "8580.0000", high: "8642.0000",
+       low: "8544.0000", close: "8612.3000", prev_close: "8571.5000",
+       close_adj: "8612.3000", volume: 188400, traded_value: "1622557320.0000",
+       trades_count: 28910}
+  INE195A01028:   # Supreme Industries
+    - {price_date: 2026-07-31, exchange: NSE, open: "5142.0000", high: "5188.0000",
+       low: "5118.0000", close: "5165.8000", prev_close: "5134.9000",
+       close_adj: "5165.8000", volume: 204100, traded_value: "1054339780.0000",
+       trades_count: 24880}
+
+moving_averages:
+  INE040A01034: {2026-07-31: {50: "1841.3400", 200: "1782.6600"}}
+  INE002A01018: {2026-07-31: {50: "2914.8800", 200: "2802.1200"}}
+
+adv_20d:
+  ISS-HDFCBANK:   "14204118400.0000"
+  ISS-RELIANCE:   "18102448200.0000"
+  ISS-INFY:       "8104228800.0000"
+  ISS-ICICIBANK:  "7802114600.0000"
+  ISS-LT:         "5104882200.0000"
+  ISS-CUMMINS:    "1408221400.0000"
+  ISS-PERSISTENT: "1584220800.0000"
+  # Thin. Drives the illiquid bucket and the days-to-liquidate calculation.
+  ISS-SUPREME:    "984110200.0000"
+
+betas:
+  # Unquoted too — see the note on factor_series.
+  ISS-HDFCBANK:   0.940000
+  ISS-RELIANCE:   1.120000
+  ISS-INFY:       "0.780000"
+  ISS-ICICIBANK:  "1.040000"
+  ISS-LT:         "1.180000"
+  ISS-CUMMINS:    "1.240000"
+  ISS-PERSISTENT: "1.410000"
+  ISS-SUPREME:    "1.080000"
+
+free_float_mcap:
+  ISS-HDFCBANK:   "14882000000000.0000"
+  ISS-RELIANCE:   "9142000000000.0000"
+  ISS-INFY:       "6488000000000.0000"
+  ISS-ICICIBANK:  "9902000000000.0000"
+  ISS-LT:         "5188000000000.0000"
+  ISS-CUMMINS:    "480000000000.0000"
+  ISS-PERSISTENT: "612000000000.0000"
+  ISS-SUPREME:    "338000000000.0000"
+
+index_constituents:
+  NIFTY100-TRI:
+    2026-07-31:
+      - {isin: INE040A01034, issuer_id: ISS-HDFCBANK, weight_pct: "11.840000",
+         free_float_mcap_inr: "14882000000000.0000"}
+      - {isin: INE002A01018, issuer_id: ISS-RELIANCE, weight_pct: "8.220000",
+         free_float_mcap_inr: "9142000000000.0000"}
+      - {isin: INE090A01021, issuer_id: ISS-ICICIBANK, weight_pct: "7.910000",
+         free_float_mcap_inr: "9902000000000.0000"}
+      - {isin: INE009A01021, issuer_id: ISS-INFY, weight_pct: "5.180000",
+         free_float_mcap_inr: "6488000000000.0000"}
+      - {isin: INE018A01030, issuer_id: ISS-LT, weight_pct: "4.140000",
+         free_float_mcap_inr: "5188000000000.0000"}
+
+# Benchmark sector weights, for tilt comparison and Brinson allocation.
+index_sector_weights:
+  2026-07-31:
+    Financial Services: "34.180000"
+    Information Technology: "12.440000"
+    Oil Gas & Consumable Fuels: "9.880000"
+    Capital Goods: "7.220000"
+    Other: "36.280000"
+
+trading_days:
+  2026-07:
+    [2026-07-01, 2026-07-02, 2026-07-03, 2026-07-06, 2026-07-07, 2026-07-08,
+     2026-07-09, 2026-07-10, 2026-07-13, 2026-07-14, 2026-07-15, 2026-07-16,
+     2026-07-17, 2026-07-20, 2026-07-21, 2026-07-22, 2026-07-23, 2026-07-24,
+     2026-07-27, 2026-07-28, 2026-07-29, 2026-07-30, 2026-07-31]
+
+# These are written UNQUOTED on purpose. PyYAML's SafeLoader would resolve them
+# to Python floats; DecimalSafeLoader resolves them to Decimal instead. Keeping
+# a few unquoted values in the committed fixtures is what makes that guarantee
+# testable against real data rather than a synthetic one-liner — and it is what
+# a human editing this file will naturally write.
+factor_series:
+  size:
+    2026-07-30: -0.001240
+    2026-07-31: 0.000880
+  momentum:
+    2026-07-30: 0.002110
+    2026-07-31: -0.000420
+
+# Coverage of the parsed universe. PLAN.md §4.10: this travels onto every
+# cross-scheme figure, and unparsed AMCs are never estimated.
+coverage:
+  2026-07-31:
+    coverage_pct: "61.400000"
+    parsed_aum_inr: "34188000000000.0000"
+    total_aum_inr: "55680000000000.0000"
+    schemes_eligible: 412
+    schemes_total: 1804
+
+scheme_aum_market:
+  HDFC-TOP100-DIR: {2026-07-31: "358942100000.0000"}
+  HDFC-TOP100-REG: {2026-07-31: "358942100000.0000"}
+  AXIS-MID-DIR:    {2026-07-31: "292118400000.0000"}
+  SBI-SC-DIR:      {2026-07-31: "331074500000.0000"}
+
+policy_benchmark:
+  USER-01:
+    - {component_id: NIFTY100-TRI, weight_pct: "60.000000",
+       valid_from: 2024-04-01, valid_to: null, is_auto: true}
+    - {component_id: NIFTYMID150-TRI, weight_pct: "40.000000",
+       valid_from: 2024-04-01, valid_to: null, is_auto: true}
+
+risk_limits:
+  USER-01:
+    - {limit_id: LIM-01, limit_type: issuer_max, dimension_value: null,
+       threshold: "8.000000", is_active: true, created_at: 2025-01-04T09:00:00,
+       notes: null}
+    - {limit_id: LIM-02, limit_type: hhi_max, dimension_value: null,
+       threshold: "0.150000", is_active: true, created_at: 2025-01-04T09:00:00,
+       notes: null}
+    - {limit_id: LIM-03, limit_type: overlap_max, dimension_value: null,
+       threshold: "30.000000", is_active: true, created_at: 2025-01-04T09:00:00,
+       notes: null}
+
+stress_scenarios:
+  COVID-2020:
+    - {shock_dimension: broad_market, dimension_value: ALL, shock_pct: "-38.400000"}
+    - {shock_dimension: sector, dimension_value: Financial Services,
+       shock_pct: "-44.200000"}
+    - {shock_dimension: sector, dimension_value: Information Technology,
+       shock_pct: "-28.100000"}
+
+# Provenance tail only — RiskSnapshot's metric fields are V4 (DECISIONS SZ-11).
+risk_snapshot:
+  2026-07-31:
+    lookback_days: 756
+    obs_count: 588            # below 756 -> confidence is medium, not high
+    rf_available: true
+    bm_available: true
+    cov_method: ledoit_wolf
+    synthetic_basis: constant_weight
+    confidence: medium
+    computed_at: 2026-08-01T03:15:00
+    caveats:
+      - "588 of 756 observations available; risk figures use a shorter window."
+      - "This backtest assumes you held today's allocation throughout — you didn't."
+
+current_drawdown:
+  2026-07-31: "-0.041800"
+
+illiquid_pct:
+  2026-07-31: "2.264782"
+
+portfolio_returns:
+  2026-06-30|2026-07-31: "0.018400"
+
+category_median_returns:
+  Large Cap|direct: "0.142000"
+  Mid Cap|direct: "0.208000"

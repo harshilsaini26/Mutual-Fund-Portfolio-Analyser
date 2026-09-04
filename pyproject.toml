@@ -1,0 +1,48 @@
+[project]
+name = "mf-platform"
+version = "0.0.0"
+description = "Self-hosted look-through analytics for Indian mutual fund investors"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 90
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # import sorting
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "RUF",       # ruff-specific
+]
+ignore = [
+    # UP042 wants `StrEnum` instead of `(str, Enum)`. Declined deliberately:
+    # the module specs write `(str, Enum)` literally (MODULE_2.md §3.2,
+    # MODULE_3.md §12.1), and these values are persisted to TEXT columns.
+    # `StrEnum` changes what `str()` and f-strings produce for a member, so
+    # switching would alter what lands in the database for anything that
+    # interpolates a member instead of its `.value`. Revisit via ADR, not lint.
+    "UP042",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The gate deliberately reaches into module internals to prove the invariants.
+"tests/unit/test_contracts.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "tests"]
+# Slice Zero is contracts only: every function body is `...`, by design.
+disallow_empty_bodies = false
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

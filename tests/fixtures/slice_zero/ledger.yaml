@@ -1,0 +1,148 @@
+# Zone B — the personal ledger side. Backs the M1 half of
+# FakeLookThroughDataProvider and FakeRiskInputs.
+#
+# Values are internally consistent: market_value == units * nav, and the
+# position values sum to the portfolio total in lookthrough.yaml.
+
+user_id: USER-01
+as_of: 2026-07-31
+
+position_contexts:
+  - scheme_id: HDFC-TOP100-DIR
+    folio: "10241847/29"
+    units: "4821.442100"
+    nav: "1284.339072"
+    market_value: "6192442.7266"
+    weight_in_portfolio: "48.114700"
+    first_purchase: 2024-04-01
+    last_purchase: 2026-07-01
+    holding_days: 851
+    is_active_sip: true
+    invested_gross: "4400000.0000"
+    invested_net: "4400000.0000"
+    avg_cost_nav: "912.5891"
+    unrealised_pnl: "1792442.7266"
+    realised_pnl_todate: "0.0000"
+    idcw_received_todate: "0.0000"
+    plan: direct
+    option: growth
+    reconciled: true
+    reconcile_delta_units: "0.000000"
+    confidence: high
+    flags: []
+    cashflows:
+      - [2024-04-01, "-2000000.0000"]
+      - [2025-04-01, "-1200000.0000"]
+      - [2026-07-01, "-1200000.0000"]
+    lots:
+      - {lot_id: LOT-H1, acquisition_date: 2024-04-01, units_remaining: "2003.780000",
+         cost_per_unit: "998.114260", unrealised_gain: "573148.9012",
+         holding_days: 851, gain_type_if_sold_today: LTCG, days_to_ltcg: null,
+         exit_load_free_on: 2025-04-01}
+      - {lot_id: LOT-H2, acquisition_date: 2025-04-01, units_remaining: "1088.376000",
+         cost_per_unit: "1102.556831", unrealised_gain: "198068.2214",
+         holding_days: 486, gain_type_if_sold_today: LTCG, days_to_ltcg: null,
+         exit_load_free_on: 2026-04-01}
+      # Bought 30 days ago: still STCG, and still inside the exit-load window.
+      - {lot_id: LOT-H3, acquisition_date: 2026-07-01, units_remaining: "1729.286100",
+         cost_per_unit: "1273.884400", unrealised_gain: "18075.6040",
+         holding_days: 30, gain_type_if_sold_today: STCG, days_to_ltcg: 335,
+         exit_load_free_on: 2027-07-01}
+
+  - scheme_id: AXIS-MID-DIR
+    folio: "9918442/11"
+    units: "31402.118400"
+    nav: "142.839104"
+    market_value: "4485462.2081"
+    weight_in_portfolio: "34.851200"
+    first_purchase: 2024-04-01
+    last_purchase: 2026-07-01
+    holding_days: 851
+    is_active_sip: true
+    invested_gross: "3100000.0000"
+    invested_net: "3100000.0000"
+    avg_cost_nav: "98.7194"
+    unrealised_pnl: "1385462.2081"
+    realised_pnl_todate: "0.0000"
+    idcw_received_todate: "0.0000"
+    plan: direct
+    option: growth
+    reconciled: true
+    reconcile_delta_units: "0.000000"
+    confidence: high
+    flags: []
+    cashflows:
+      - [2024-04-01, "-1800000.0000"]
+      - [2026-07-01, "-1300000.0000"]
+    lots:
+      - {lot_id: LOT-A1, acquisition_date: 2024-04-01, units_remaining: "20351.884000",
+         cost_per_unit: "88.442017", unrealised_gain: "1106660.4419",
+         holding_days: 851, gain_type_if_sold_today: LTCG, days_to_ltcg: null,
+         exit_load_free_on: 2025-04-01}
+      - {lot_id: LOT-A2, acquisition_date: 2026-07-01, units_remaining: "11050.234400",
+         cost_per_unit: "117.644200", unrealised_gain: "278801.7662",
+         holding_days: 30, gain_type_if_sold_today: STCG, days_to_ltcg: 335,
+         exit_load_free_on: 2027-07-01}
+
+  # Held, but its disclosure is quarantined. The position value is real; the
+  # look-through of it is not available. That gap must stay visible.
+  - scheme_id: SBI-SC-DIR
+    folio: "8827110/04"
+    units: "1044.118200"
+    nav: "204.667319"
+    market_value: "213694.5217"
+    weight_in_portfolio: "1.660200"
+    first_purchase: 2025-09-15
+    last_purchase: 2025-09-15
+    holding_days: 319
+    is_active_sip: false
+    invested_gross: "180000.0000"
+    invested_net: "180000.0000"
+    avg_cost_nav: "172.3947"
+    unrealised_pnl: "33694.5217"
+    realised_pnl_todate: "0.0000"
+    idcw_received_todate: "0.0000"
+    plan: direct
+    option: growth
+    reconciled: true
+    reconcile_delta_units: "0.000000"
+    confidence: high
+    flags: [no_current_disclosure]
+    cashflows:
+      - [2025-09-15, "-180000.0000"]
+    lots:
+      - {lot_id: LOT-S1, acquisition_date: 2025-09-15, units_remaining: "1044.118200",
+         cost_per_unit: "172.394700", unrealised_gain: "33694.5217",
+         holding_days: 319, gain_type_if_sold_today: STCG, days_to_ltcg: 46,
+         exit_load_free_on: 2026-09-15}
+
+# Directly-held equity. In scope only because combined exposure is the point:
+# HDFC Bank is held here AND inside two funds.
+direct_holdings:
+  - {isin: INE040A01034, broker: Zerodha, as_of: 2026-07-31,
+     quantity: "1420.0000", avg_cost: "1402.5500",
+     first_purchase: 2023-11-20, source: manual, notes: null}
+  - {isin: INE090A01021, broker: Zerodha, as_of: 2026-07-31,
+     quantity: "980.0000", avg_cost: "1048.2000",
+     first_purchase: 2024-02-14, source: manual, notes: null}
+
+# PLAN.md §9.6: switch legs are included at scheme scope and excluded at
+# portfolio scope as internal transfers. Both must be labelled or they will not
+# tie out and it will read as a bug.
+portfolio_cashflows:
+  portfolio:
+    - [2024-04-01, "-3800000.0000"]
+    - [2025-04-01, "-1200000.0000"]
+    - [2025-09-15, "-180000.0000"]
+    - [2026-07-01, "-2500000.0000"]
+    - [2026-07-31, "13049066.5253"]
+  scheme:
+    - [2024-04-01, "-3800000.0000"]
+    - [2025-04-01, "-1200000.0000"]
+    - [2025-09-15, "-180000.0000"]
+    # The extra pair is a switch: out of one scheme, into another, same day.
+    # Real at scheme scope, an internal transfer at portfolio scope.
+    - [2026-05-20, "480000.0000"]
+    - [2026-05-20, "-480000.0000"]
+    - [2026-07-01, "-2500000.0000"]
+    - [2026-07-31, "13049066.5253"]

@@ -1,0 +1,408 @@
+# Canned outputs for the fakes that stand in for *derived* layers:
+# FakeLookThroughProvider (M3), FakeSchemeCharacteristics (M2) and
+# FakeMarketIntelligence (M5). These let M4, M5 and M6 be built and tested
+# before M3 exists.
+#
+# Every figure below is computed from holdings.yaml x ledger.yaml x market.yaml,
+# not hand-typed, so the fixture cannot quietly disagree with its own inputs:
+#
+#   fund value    6192442.7266 + 4485462.2081 + 213694.5217 = 10891599.4564
+#   direct value  1420 x 1883.30 + 980 x 1318.40            =  3966318.0000
+#   total                                                     14857917.4564
+#
+# Closure holds: exposures sum to 14857917.4565, one paisa off the total from
+# per-issuer rounding — inside MODULE_3.md's +/- Rs 1 assertion, and non-zero on
+# purpose so a closure test proves it is comparing with a tolerance rather than
+# for exact equality.
+
+lookthrough:
+  as_of: 2026-07-31
+  weight_basis: disclosed
+  holdings_dates: [2026-07-31]
+  coverage_pct: "98.038291"       # SBI-SC excluded: its disclosure is quarantined
+  unresolved_pct: "1.267940"      # 188389.41 / 14857917.46
+
+  exposures:
+    # Descending exposure_inr, tie-broken by issuer_id — MODULE_3.md §15.3.
+    # M6 caches on payload hashes, so this order is part of the contract.
+    - {issuer_id: __CASH__, issuer_name: Cash & Cash Equivalents,
+       exposure_inr: "7267672.3779", exposure_pct: "48.914475", via_funds: 2,
+       fund_inr: "7267672.3779", direct_inr: "0.0000", instrument_class: cash,
+       is_synthetic: true, holdings_as_of: 2026-07-31, staleness_days: 31}
+    # Held inside HDFC Top 100 AND directly. One number, which is the point.
+    - {issuer_id: ISS-HDFCBANK, issuer_name: HDFC Bank Ltd,
+       exposure_inr: "3247706.1965", exposure_pct: "21.858421", via_funds: 1,
+       fund_inr: "573420.1965", direct_inr: "2674286.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    # Direct only: no fund holds it, so holdings_as_of is null, not a fake date.
+    - {issuer_id: ISS-ICICIBANK, issuer_name: ICICI Bank Ltd,
+       exposure_inr: "1292032.0000", exposure_pct: "8.695916", via_funds: 0,
+       fund_inr: "0.0000", direct_inr: "1292032.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: null, staleness_days: null}
+    # 8.448% equity + 1.102% NCD, joined on issuer_id.
+    - {issuer_id: ISS-RELIANCE, issuer_name: Reliance Industries Ltd,
+       exposure_inr: "591378.2804", exposure_pct: "3.980223", via_funds: 1,
+       fund_inr: "591378.2804", direct_inr: "0.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    - {issuer_id: ISS-CUMMINS, issuer_name: Cummins India Ltd,
+       exposure_inr: "480482.7117", exposure_pct: "3.233850", via_funds: 1,
+       fund_inr: "480482.7117", direct_inr: "0.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    - {issuer_id: ISS-INFY, issuer_name: Infosys Ltd,
+       exposure_inr: "440530.3756", exposure_pct: "2.964954", via_funds: 1,
+       fund_inr: "440530.3756", direct_inr: "0.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    - {issuer_id: ISS-PERSISTENT, issuer_name: Persistent Systems Ltd,
+       exposure_inr: "412752.2324", exposure_pct: "2.777995", via_funds: 1,
+       fund_inr: "412752.2324", direct_inr: "0.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    - {issuer_id: ISS-LT, issuer_name: Larsen & Toubro Ltd,
+       exposure_inr: "386779.9727", exposure_pct: "2.603191", via_funds: 1,
+       fund_inr: "386779.9727", direct_inr: "0.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    - {issuer_id: ISS-SUPREME, issuer_name: Supreme Industries Ltd,
+       exposure_inr: "336499.3749", exposure_pct: "2.264782", via_funds: 1,
+       fund_inr: "336499.3749", direct_inr: "0.0000",
+       instrument_class: equity, is_synthetic: false,
+       holdings_as_of: 2026-07-31, staleness_days: 31}
+    # The quarantined fund's whole position value. Visible, not dropped.
+    - {issuer_id: __NO_DISCLOSURE__, issuer_name: No Disclosure Available,
+       exposure_inr: "213694.5217", exposure_pct: "1.438254", via_funds: 1,
+       fund_inr: "213694.5217", direct_inr: "0.0000", instrument_class: null,
+       is_synthetic: true, holdings_as_of: null, staleness_days: null}
+    - {issuer_id: __UNRESOLVED__, issuer_name: Unresolved Holdings,
+       exposure_inr: "188389.4127", exposure_pct: "1.267940", via_funds: 1,
+       fund_inr: "188389.4127", direct_inr: "0.0000", instrument_class: equity,
+       is_synthetic: true, holdings_as_of: 2026-07-31, staleness_days: 31}
+
+  caveats:
+    - "Holdings as of 31 Jul 2026; 31 days stale."
+    - "2 of 3 funds have current disclosures — 98% of your portfolio by value."
+    - "1.3% of your exposure could not be identified to a company."
+    - "SBI Small Cap Fund's latest disclosure failed validation and was excluded."
+
+  summary:
+    total_value_inr: "14857917.4564"
+    fund_value_inr: "10891599.4564"
+    direct_value_inr: "3966318.0000"
+    invested_net_inr: "9680000.0000"
+    unrealised_pnl_inr: "3211599.4564"
+    realised_pnl_todate: "0.0000"
+    portfolio_xirr: "0.2184"
+    portfolio_twrr_ann: "0.1971"
+    blended_ter: "0.8412"
+    annual_fee_inr: "91618.7300"
+    scheme_count: 3
+    folio_count: 3
+    issuer_count: 8
+    direct_issuer_count: 2
+    schemes_covered: 2
+    schemes_stale: 0
+    schemes_quarantined: 1
+    worst_staleness_days: 31
+    confidence: medium
+
+concentration:
+  # Computed over the 8 non-synthetic issuers only — MODULE_3.md §8.2.
+  # __CASH__ at 48.9% of the portfolio is deliberately absent from this
+  # denominator: including it would drag top1 from 45.18% down to ~21.86% and
+  # make a concentrated portfolio look diversified.
+  equity:
+    issuer_count: 8
+    hhi: "0.259820"
+    effective_n: "3.8488"
+    top1_pct: "45.181322"
+    top5_pct: "84.195797"
+    top10_pct: "100.000000"
+    top20_pct: "100.000000"
+    gini: "0.443099"
+    largest_issuer_id: ISS-HDFCBANK
+    largest_issuer_pct: "45.181322"
+  all:
+    issuer_count: 8
+    hhi: "0.259820"
+    effective_n: "3.8488"
+    top1_pct: "45.181322"
+    top5_pct: "84.195797"
+    top10_pct: "100.000000"
+    top20_pct: "100.000000"
+    gini: "0.443099"
+    largest_issuer_id: ISS-HDFCBANK
+    largest_issuer_pct: "45.181322"
+
+overlaps:
+  # scheme_a is the lexicographically smaller id, so each pair appears once.
+  # These two funds share NO real issuer — only __CASH__, which is synthetic and
+  # excluded from the overlap. So overlap_pct, common_issuers and jaccard are
+  # all genuinely zero, and union_issuers counts the 7 non-synthetic issuers
+  # across both. A fixture where overlap_pct was 0 but common_issuers was 1
+  # would let a bug that counts synthetics slip through.
+  - {scheme_a: AXIS-MID-DIR, scheme_b: HDFC-TOP100-DIR,
+     overlap_pct: "0.000000", overlap_equity_pct: "0.000000",
+     common_issuers: 0, union_issuers: 7, jaccard: "0.000000",
+     overlap_value_inr: "0.0000", as_of_a: 2026-07-31, as_of_b: 2026-07-31,
+     as_of_gap_days: 0, aligned: true}
+
+max_pairwise_overlap: "0.000000"
+
+sector_exposure:
+  # Rupee exposure per canonical sector, non-synthetic issuers only.
+  # Both bases agree here because no issuer changed sector between them; the
+  # mcap dimension is where the two bases diverge (see holdings.yaml).
+  as_of_holding:
+    Financial Services: "4539738.1965"
+    Capital Goods: "1203762.0593"
+    Information Technology: "853282.6080"
+    Oil Gas & Consumable Fuels: "591378.2804"
+  current:
+    Financial Services: "4539738.1965"
+    Capital Goods: "1203762.0593"
+    Information Technology: "853282.6080"
+    Oil Gas & Consumable Fuels: "591378.2804"
+
+tilts:
+  # exposure_pct is of total portfolio value; benchmark_pct comes from
+  # index_sector_weights in market.yaml. active_tilt_pp is the difference —
+  # and it exists only because index_constituent data is present, which is
+  # BUILD_ORDER.md R4's whole argument for promoting it to V1.
+  sector:
+    - {dimension_value: Financial Services, exposure_inr: "4539738.1965",
+       exposure_pct: "30.554337", benchmark_pct: "34.180000",
+       active_tilt_pp: "-3.625663", benchmark_index_id: NIFTY100-TRI,
+       coverage_pct: "98.038291", mcap_basis: null}
+    - {dimension_value: Capital Goods, exposure_inr: "1203762.0593",
+       exposure_pct: "8.101822", benchmark_pct: "7.220000",
+       active_tilt_pp: "0.881822", benchmark_index_id: NIFTY100-TRI,
+       coverage_pct: "98.038291", mcap_basis: null}
+    - {dimension_value: Information Technology, exposure_inr: "853282.6080",
+       exposure_pct: "5.742949", benchmark_pct: "12.440000",
+       active_tilt_pp: "-6.697051", benchmark_index_id: NIFTY100-TRI,
+       coverage_pct: "98.038291", mcap_basis: null}
+    - {dimension_value: Oil Gas & Consumable Fuels, exposure_inr: "591378.2804",
+       exposure_pct: "3.980223", benchmark_pct: "9.880000",
+       active_tilt_pp: "-5.899777", benchmark_index_id: NIFTY100-TRI,
+       coverage_pct: "98.038291", mcap_basis: null}
+
+redundancy:
+  - {scheme_a: AXIS-MID-DIR, scheme_b: HDFC-TOP100-DIR, overlap_pct: "0.000000",
+     return_corr_36m: "0.742000", style_distance: "0.618000",
+     blended_score: "0.408600", signals_available: 3, confidence: high}
+
+marginal:
+  AXIS-MID-DIR:
+    position_inr: "4485462.2081"
+    new_issuers: 3
+    new_exposure_inr: "1229683.5200"
+    new_exposure_pct: "8.276000"
+    hhi_with: "0.226841"
+    hhi_without: "0.312440"
+    hhi_delta: "-0.085599"
+    effective_n_delta: "1.207400"
+    style_shift_pp: "12.400000"
+    fee_cost_inr: "25567.1300"
+
+# --- M2: SchemeCharacteristics ------------------------------------------
+
+style:
+  HDFC-TOP100-DIR:
+    2026-07-31:
+      mcap_basis: 2026-07-01
+      unresolved_pct: "0.000000"
+      pct_large: "31.068000"
+      pct_mid: "0.000000"
+      pct_small: "0.000000"
+      pct_unclassified: "0.000000"
+      pct_equity: "31.068000"
+      pct_debt: "1.102000"
+      pct_cash: "67.830000"
+      pct_derivative: "0.000000"
+      pct_mfunit: "0.000000"
+      top5_weight: "31.068000"
+      top10_weight: "31.068000"
+      hhi: "0.259400"
+      effective_n: "3.855100"
+      holding_count: 6
+      equity_count: 4
+      sector_hhi: "0.291200"
+      sector_count: 4
+      wtd_avg_mcap_inr: "11884000000000.0000"
+      median_mcap_inr: "9902000000000.0000"
+  AXIS-MID-DIR:
+    2026-07-31:
+      mcap_basis: 2026-07-01
+      unresolved_pct: "4.200000"
+      pct_large: "0.000000"
+      pct_mid: "27.416000"
+      pct_small: "0.000000"
+      pct_unclassified: "4.200000"
+      pct_equity: "31.616000"
+      pct_debt: "0.000000"
+      pct_cash: "68.384000"
+      pct_derivative: "0.000000"
+      pct_mfunit: "0.000000"
+      top5_weight: "31.616000"
+      top10_weight: "31.616000"
+      hhi: "0.341800"
+      effective_n: "2.925700"
+      holding_count: 5
+      equity_count: 4
+      sector_hhi: "0.402100"
+      sector_count: 3
+      wtd_avg_mcap_inr: "861000000000.0000"
+      median_mcap_inr: "861000000000.0000"
+
+quality:
+  HDFC-TOP100-DIR:
+    2026-07-31: {holdings_as_of: 2026-07-31, staleness_days: 31,
+                 unresolved_pct: "0.000000", weight_residual: "0.000000",
+                 validation_status: ok, usable_for_lookthrough: true,
+                 confidence: high}
+  HDFC-TOP100-REG:
+    2026-07-31: {holdings_as_of: 2026-07-31, staleness_days: 31,
+                 unresolved_pct: "0.000000", weight_residual: "0.000000",
+                 validation_status: ok, usable_for_lookthrough: true,
+                 confidence: high}
+  AXIS-MID-DIR:
+    2026-07-31: {holdings_as_of: 2026-07-31, staleness_days: 31,
+                 unresolved_pct: "4.200000", weight_residual: "0.140000",
+                 validation_status: warn, usable_for_lookthrough: true,
+                 confidence: medium}
+  SBI-SC-DIR:
+    2026-07-31: {holdings_as_of: 2026-07-31, staleness_days: 31,
+                 unresolved_pct: "0.000000", weight_residual: "12.400000",
+                 validation_status: quarantined, usable_for_lookthrough: false,
+                 confidence: low}
+
+peer_context:
+  HDFC-TOP100-DIR: {peer_group_id: PG-LC-DIR, basis: sebi_category,
+                    sebi_category: Large Cap, plan: direct, as_of: 2026-07-31,
+                    member_count: 24, universe_count: 31,
+                    coverage_pct: "77.420000", percentile: "31.200000", rank: 8}
+  AXIS-MID-DIR: {peer_group_id: PG-MC-DIR, basis: sebi_category,
+                 sebi_category: Mid Cap, plan: direct, as_of: 2026-07-31,
+                 member_count: 21, universe_count: 29,
+                 coverage_pct: "72.410000", percentile: "18.400000", rank: 4}
+
+return_correlation:
+  AXIS-MID-DIR|HDFC-TOP100-DIR: "0.742000"
+
+fee_drag:
+  HDFC-TOP100-DIR:
+    2026-07-31: {fee_paid_inr: "48211.4400", fee_pct_of_gain: "2.690000",
+                 blended_ter: "1.040000", regular_penalty_inr: "29404.1000"}
+  AXIS-MID-DIR:
+    2026-07-31: {fee_paid_inr: "21118.9200", fee_pct_of_gain: "1.524000",
+                 blended_ter: "0.570000", regular_penalty_inr: "43122.8800"}
+
+# --- M5: MarketIntelligence ---------------------------------------------
+
+watch_universe:
+  USER-01:
+    2026-07-31:
+      - {issuer_id: ISS-HDFCBANK, exposure_inr: "3247705.6558",
+         exposure_pct: "21.858400", via_funds: 1, direct: true,
+         relevance_rank: 1, in_watchlist: false, added_at: null}
+      - {issuer_id: ISS-ICICIBANK, exposure_inr: "1292032.0000",
+         exposure_pct: "8.695600", via_funds: 0, direct: true,
+         relevance_rank: 2, in_watchlist: false, added_at: null}
+      - {issuer_id: ISS-RELIANCE, exposure_inr: "591377.2800",
+         exposure_pct: "3.979500", via_funds: 1, direct: false,
+         relevance_rank: 3, in_watchlist: false, added_at: null}
+      # Manually watched, zero exposure — the user does not own it yet.
+      - {issuer_id: ISS-SUPREME, exposure_inr: "336499.3700",
+         exposure_pct: "2.264600", via_funds: 1, direct: false,
+         relevance_rank: 4, in_watchlist: true, added_at: 2026-02-11T08:30:00}
+
+manual_watchlist:
+  USER-01:
+    - {issuer_id: ISS-SUPREME, added_at: 2026-02-11T08:30:00,
+       notes: "Watching after the capex cycle note"}
+
+sector_rows:
+  2026-07-31:
+    - {sector_id: Financial Services, universe_id: NSE500,
+       constituent_count: 84, priced_count: 84, coverage_pct: "100.000000",
+       return_1d: "0.004120", median_return_1d: "0.002880",
+       index_level: "148.221000", advancers: 51, decliners: 30, unchanged: 3,
+       pct_above_50dma: "62.400", pct_above_200dma: "71.200",
+       ret_1m: "0.021400", ret_3m: "0.058800", ret_1y: "0.184200",
+       rank_1m: 2, rank_3m: 3, rank_1y: 2}
+    - {sector_id: Capital Goods, universe_id: NSE500,
+       constituent_count: 46, priced_count: 45, coverage_pct: "97.826000",
+       return_1d: "0.006880", median_return_1d: "0.005120",
+       index_level: "192.884000", advancers: 33, decliners: 11, unchanged: 1,
+       pct_above_50dma: "71.100", pct_above_200dma: "80.000",
+       ret_1m: "0.038200", ret_3m: "0.104100", ret_1y: "0.288400",
+       rank_1m: 1, rank_3m: 1, rank_1y: 1}
+
+issuer_flows:
+  2026-07-31:
+    - {issuer_id: ISS-CUMMINS, prev_as_of_date: 2026-06-30,
+       net_qty_adj: "184200.0000", net_value_inr: "651828180.0000",
+       gross_bought_inr: "884210400.0000", gross_sold_inr: "232382220.0000",
+       schemes_holding_curr: 42, schemes_holding_prev: 38,
+       schemes_entering: 6, schemes_exiting: 2, schemes_adding: 21,
+       schemes_trimming: 11, total_mf_holding_inr: "88421040000.0000",
+       pct_of_free_float: "18.420000", net_flow_as_pct_adv: "46.290000",
+       coverage_pct: "61.400000", schemes_eligible: 412, schemes_total: 1804}
+
+flow_contributors:
+  2026-07-31:
+    ISS-CUMMINS:
+      - {scheme_id: AXIS-MID-DIR, qty_delta_adj: "84000.0000",
+         value_delta_inr: "297267600.0000", weight_prev: "9.880000",
+         weight_curr: "10.712000", action: add, adj_factor: "1.0000000000"}
+
+conviction:
+  2026-07-31:
+    - {issuer_id: ISS-CUMMINS, schemes_holding: 42, schemes_high_conviction: 9,
+       max_weight_pct: "10.712000", max_weight_scheme_id: AXIS-MID-DIR,
+       median_weight_pct: "3.880000", wtd_avg_weight_pct: "4.212000",
+       dispersion: "2.410000", conviction_score: "14.628000",
+       consensus_direction: accumulating, coverage_pct: "61.400000"}
+
+company_snapshots:
+  ISS-CUMMINS:
+    2026-07-31: {primary_isin: INE298A01020, sector_id: Capital Goods,
+                 price: "3538.9000", price_chg_1d: "0.007030",
+                 ret_1m: "0.041200", ret_3m: "0.118400", ret_1y: "0.302100",
+                 mcap_inr: "982000000000.0000", mcap_bucket: mid,
+                 mcap_basis: 2026-07-01, high_52w: "3612.0000",
+                 low_52w: "2488.0000", pct_from_52w_high: "-0.020200",
+                 dma_50: "3402.1000", dma_200: "3118.4000",
+                 volatility_1y: "0.284000", beta_1y: "1.240000",
+                 adv_20d_inr: "1408221400.0000",
+                 rel_strength_vs_sector_3m: "0.014300"}
+
+user_sector_context:
+  USER-01:
+    2026-07-31:
+      - {sector_id: Financial Services, your_exposure_inr: "4539737.6558",
+         your_exposure_pct: "30.553200", index_weight_pct: "34.180000",
+         active_tilt_pp: "-3.626800", mf_industry_weight_pct: "31.880000",
+         vs_industry_pp: "-1.326800", sector_ret_1w: "0.008400",
+         sector_ret_1m: "0.021400", sector_ret_3m: "0.058800",
+         contribution_1m: "0.006538", mf_flow_1m_inr: "18422100000.0000",
+         coverage_pct: "98.038500"}
+
+rotation:
+  2026-07-31:
+    - {sector_id: Capital Goods, universe_id: NSE500, rs_ratio: "104.820000",
+       rs_momentum: "102.410000", quadrant: leading, tail_json: null}
+    - {sector_id: Financial Services, universe_id: NSE500, rs_ratio: "99.140000",
+       rs_momentum: "100.880000", quadrant: improving, tail_json: null}
+
+announcements:
+  ISS-CUMMINS:
+    # Headline and URL only — never the body. PLAN.md §3.2.
+    - {announcement_id: ANN-CUM-2026-07-24-01, announced_at: 2026-07-24T16:42:00,
+       category: results, headline: "Cummins India Ltd - Board Meeting Outcome - Q1 FY27 Results",
+       url: "https://www.nseindia.com/companies-listing/corporate-filings-announcements",
+       source: nse}
