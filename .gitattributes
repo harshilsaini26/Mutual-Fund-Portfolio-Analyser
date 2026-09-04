@@ -1,0 +1,35 @@
+# Normalise line endings.
+#
+# `core.autocrlf=true` is set on this machine, so the index already stores LF —
+# but the worktree ended up mixed (30 files LF, 23 CRLF) because different
+# tools write differently on Windows. That mix makes git report changes to
+# files nobody edited.
+#
+# It matters more here than usual: PLAN.md §8.2 rule 4 and CLAUDE.md invariant
+# 10 require a full rebuild to reproduce byte-identical output, and the golden
+# fixtures are the regression baseline for that. A fixture whose bytes shift
+# with the checkout is not a baseline.
+#
+# `eol=lf` pins the worktree too, so the working copy matches the index on
+# every platform.
+* text=auto eol=lf
+
+# Explicit, so a future .gitattributes edit cannot accidentally exempt them.
+*.py   text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.md   text eol=lf
+*.sql  text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+Makefile text eol=lf
+
+# Archived source files are bytes, not text. PLAN.md §4.4 archives every
+# fetched file permanently and content-hashed; any EOL translation would
+# change the hash and break the reparse path. (These live under /data/ and are
+# gitignored — this is belt and braces for anything that escapes it.)
+*.pdf  binary
+*.xlsx binary
+*.xls  binary
+*.duckdb binary
+*.db   binary
