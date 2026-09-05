@@ -27,9 +27,8 @@ from src.m1_ledger.lots import (
 from src.m1_ledger.txn import Txn, load_transactions
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
-HDFC = "PLACEHOLDER:HDFC-FLEXICAP-REG-G"
-ABSL = "PLACEHOLDER:ABSL-LARGEMID-REG-G"
-ICICI = "PLACEHOLDER:ICICI-MULTIASSET-REG-G"
+HDFC = "AMFI:HDFC-FLEXICAP-DIR-G"
+ICICI = "AMFI:ICICI-MULTIASSET-REG-G"
 
 
 @pytest.fixture(scope="module")
@@ -52,8 +51,8 @@ def book(txns: list[Txn]) -> LotBook:
 
 def test_all_transactions_parse(txns: list[Txn]) -> None:
     """14 rows, comment lines skipped, every money field a Decimal."""
-    assert len(txns) == 14
-    assert {t.txn_ref for t in txns} == {f"T{i:03d}" for i in range(1, 15)}
+    assert len(txns) == 13
+    assert {t.txn_ref for t in txns} == {f"T{i:03d}" for i in range(1, 14)}
     for t in txns:
         assert t.units is None or isinstance(t.units, Decimal)
         assert t.amount is None or isinstance(t.amount, Decimal)
@@ -96,9 +95,17 @@ def test_stamp_duty_raises_cost_above_amount_paid(book: LotBook) -> None:
     disfavour, and wrong.
     """
     lot = next(x for x in book.all_lots() if x.golden_ref == "L1")
-    assert lot.cost_total == Decimal("10000.50")
-    assert lot.cost_total > Decimal("10000.00")
-    assert lot.cost_per_unit == Decimal("1000.050000")
+    txn = next(
+        t for t in load_transactions(FIXTURES / "transactions.csv") if t.txn_ref == "T001"
+    )
+    # Rs 10,000 paid: Rs 0.50 to stamp duty, Rs 9,999.50 actually invested.
+    # The lot's cost is the full payment, so it exceeds what bought the units.
+    assert txn.amount is not None
+    assert abs(txn.amount) == Decimal("9999.5000")
+    assert txn.stamp_duty == Decimal("0.5000")
+    assert lot.cost_total == abs(txn.amount) + txn.stamp_duty
+    assert lot.cost_total == Decimal("10000.0000")
+    assert lot.cost_per_unit > abs(txn.amount) / lot.units_original
 
 
 def test_each_sip_instalment_is_its_own_lot(book: LotBook) -> None:
@@ -130,20 +137,23 @@ def test_switch_in_restarts_the_holding_clock(
     Carrying the original date across would convert a short holding into a long
     one and understate tax.
     """
-    lot = next(x for x in book.all_lots() if x.scheme_id == ICICI)
-    assert lot.acquisition_date == date(2026, 1, 15)
-    assert lot.origin == "switch_in"
-    absl = next(x for x in book.all_lots() if x.golden_ref == "L7")
-    assert lot.acquisition_date > absl.acquisition_date
+    lot = next(x for x in book.all_lots() if x.origin == "switch_in")
+    assert lot.acquisition_date == date(2026, 1, 16)
+    # The units it replaced were bought in 2024 and were long-term by then;
+    # the new lot starts its clock from zero.
+    source = next(x for x in book.all_lots() if x.golden_ref == "L1")
+    assert lot.acquisition_date > source.acquisition_date
+    assert (lot.acquisition_date - source.acquisition_date).days > 365
 
 
 def test_idcw_reinvest_creates_a_lot_and_idcw_payout_does_not(book: LotBook) -> None:
     """MODULE_1.md §3.2: both effects must fire for a reinvestment."""
     reinvest = [x for x in book.all_lots() if x.origin == "idcw_reinvest"]
     assert len(reinvest) == 1
-    assert reinvest[0].acquisition_date == date(2025, 8, 20)
-    assert reinvest[0].units_original == Decimal("4.000000")
-    assert not [x for x in book.all_lots() if x.open_txn_ref == "T011"]
+    assert reinvest[0].acquisition_date == date(2026, 6, 10)
+    assert reinvest[0].units_original == Decimal("3.819965")
+    # T012 is the payout: income, no units, no lot.
+    assert not [x for x in book.all_lots() if x.open_txn_ref == "T012"]
 
 
 # --- FIFO consumption ------------------------------------------------------
@@ -172,8 +182,8 @@ def test_one_redemption_produces_both_gain_types(book: LotBook) -> None:
     349 and 320 (STCG). Gain type is a property of the LOT, not the sale.
     """
     cons = book.consumptions_for("T009")
-    assert [c.gain_type for c in cons] == ["LTCG", "STCG", "STCG"]
-    assert [c.holding_days for c in cons] == [380, 349, 320]
+    assert [c.gain_type for c in cons] == ["LTCG", "STCG", "STCG", "STCG"]
+    assert [c.holding_days for c in cons] == [380, 349, 320, 289]
     assert cons[0].holding_days > 365 >= cons[1].holding_days
 
 
@@ -213,7 +223,7 @@ def test_non_equity_holding_threshold_is_not_invented() -> None:
 
 def test_fifo_order_is_oldest_acquisition_first(book: LotBook) -> None:
     """MODULE_1.md §7.3. Monotonic in acquisition_date — PLAN.md §8.3 invariant 3."""
-    for txn_ref in ("T009", "T013"):
+    for txn_ref in ("T009", "T010"):
         dates = [c.acquisition_date for c in book.consumptions_for(txn_ref)]
         assert dates == sorted(dates)
 
@@ -225,11 +235,21 @@ def test_net_proceeds_are_reduced_by_exit_load_and_stt(
     want = expected["totals"]["T009"]
     cons = book.consumptions_for("T009")
     total_net = sum((c.proceeds_net for c in cons), Decimal(0))
-    assert total_net == Decimal(want["net_total"])
-    assert total_net == (
+    stated_net = (
         Decimal(want["gross"]) - Decimal(want["exit_load"]) - Decimal(want["stt"])
     )
-    assert total_net < Decimal(want["gross"])
+    assert stated_net == Decimal(want["net_total"])
+    assert total_net < Decimal(want["gross"]), "exit load and STT must bite"
+
+    # Per-lot proceeds do NOT sum exactly to the transaction total.
+    # MODULE_1.md §7.2 quantises net_per_unit to 6dp and re-multiplies,
+    # which cannot reproduce the total. Bounded at one paisa per row.
+    # DECISIONS V0-06 — the spec does not say who absorbs the residual.
+    residual = abs(stated_net - total_net)
+    assert residual <= Decimal("0.0001") * len(cons)
+    assert residual > 0, (
+        "no residual here — if the algorithm changed, V0-06 may be resolved"
+    )
 
 
 def test_switch_out_is_taxable_even_though_no_cash_moved(book: LotBook) -> None:
@@ -237,11 +257,15 @@ def test_switch_out_is_taxable_even_though_no_cash_moved(book: LotBook) -> None:
 
     Modelling a switch as a single transfer under-reports capital gains.
     """
-    cons = book.consumptions_for("T013")
-    assert len(cons) == 1
-    assert cons[0].gain_type == "LTCG"
-    assert cons[0].gain_amount == Decimal("2498.7700")
-    assert cons[0].gain_amount > 0
+    cons = book.consumptions_for("T010")
+    assert cons, "the switch produced no taxable consumption"
+    assert all(c.gain_type == "LTCG" for c in cons)
+    assert sum((c.gain_amount for c in cons), Decimal(0)) > 0
+    # No cash reached the investor, yet a gain is realised and taxable.
+    switch = next(
+        t for t in load_transactions(FIXTURES / "transactions.csv") if t.txn_ref == "T010"
+    )
+    assert switch.txn_type == "SWITCH_OUT"
 
 
 def test_insufficient_units_raises_and_never_clamps() -> None:
@@ -312,3 +336,44 @@ def test_invariant_5_rebuild_is_deterministic(txns: list[Txn]) -> None:
 def test_units_remaining_per_scheme(book: LotBook, expected: dict[str, Any]) -> None:
     for scheme_id, want in expected["units_remaining"].items():
         assert book.units_remaining(scheme_id) == Decimal(want)
+
+
+def test_a_lot_can_be_split_across_two_transactions(book: LotBook) -> None:
+    """L4 is partly consumed by the redemption and finished by the switch.
+
+    Its two halves land on opposite sides of the one-year boundary — 289
+    days at the redemption, 655 at the switch — so the same lot yields STCG
+    once and LTCG later. A lot is not classified when it is opened.
+    """
+    first = next(c for c in book.consumptions_for("T009") if c.lot_golden_ref == "L4")
+    second = next(c for c in book.consumptions_for("T010") if c.lot_golden_ref == "L4")
+    assert first.gain_type == "STCG"
+    assert second.gain_type == "LTCG"
+    assert first.lot_id == second.lot_id
+
+    lot = next(x for x in book.all_lots() if x.golden_ref == "L4")
+    assert first.units_consumed + second.units_consumed == lot.units_original
+    assert lot.units_remaining == Decimal(0)
+    assert lot.is_closed
+
+
+def test_scheme_master_matches_the_nav_series_plan() -> None:
+    """DECISIONS V0-05. The ~1%/year silent error, pinned.
+
+    The scheme record's plan and the NAV workbook's plan must agree. They
+    did not when the data arrived: a Direct-plan NAV series was supplied
+    against a Regular-plan scheme record, 10.13% apart on 2026-09-04.
+    """
+    master = load_yaml(FIXTURES / "scheme_master.yaml")
+    series = load_yaml(FIXTURES / "nav_series.yaml")["series"]
+    by_id = {s["scheme_id"]: s for s in master["schemes"]}
+
+    for scheme_id, block in series.items():
+        assert scheme_id in by_id, f"{scheme_id} has a NAV series but no record"
+        recorded = by_id[scheme_id]["plan"]
+        from_file = block["plan"].split()[0].lower()  # "Direct Plan" -> direct
+        assert recorded == from_file, (
+            f"{scheme_id}: scheme record says {recorded!r} but the NAV "
+            f"workbook says {block['plan']!r}. Different share classes, "
+            f"different NAV series — never cross them."
+        )
