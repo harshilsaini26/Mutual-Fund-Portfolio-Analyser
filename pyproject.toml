@@ -43,6 +43,14 @@ disallow_empty_bodies = false
 module = "yaml"
 ignore_missing_imports = true
 
+# The PDF stack is imported inside `src/m1_ledger/cas/pdf.py`'s functions, not
+# at module scope: neither library is needed to parse CAS text, and requiring
+# them to import the ledger would fail every test run on a machine that has not
+# installed them. Neither ships type stubs.
+[[tool.mypy.overrides]]
+module = ["pypdf", "pypdf.*", "pdfplumber", "pdfplumber.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

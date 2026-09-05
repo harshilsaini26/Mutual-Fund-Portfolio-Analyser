@@ -1,0 +1,100 @@
+                          CONSOLIDATED ACCOUNT STATEMENT
+                            01-Apr-2024 To 31-Mar-2025
+
+>>> SYNTHETIC. No real PAN, folio, email or holding appears here.
+>>> A real CAS is Zone B personal data and can never be committed, so this file
+>>> reproduces the CAMS layout with invented values. Every trap in
+>>> MODULE_1.md §5.4 is present, and each is labelled at the line it exercises.
+>>> Money is computed, not hand-typed: units x nav ties to the amount net of
+>>> stamp duty on every row, which is the arithmetic the importer checks.
+>>>
+>>> Lines beginning '>>>' are this file's own commentary and are NOT part of
+>>> the layout. `load_cas_fixture` strips them before parsing, the same way
+>>> `load_transactions` strips '>' from transactions.csv. They are deliberately
+>>> NOT in the parser's noise allowlist: a fixture that taught the parser to
+>>> ignore an unfamiliar line would be teaching it the one habit this module
+>>> exists to prevent.
+
+PAN: XXXXX0000X                              Email: investor@example.invalid
+
+Folio No: 12345678 / 90
+HDFC Mutual Fund
+
+>>> Trap: scheme names are abbreviated inconsistently across registrars, so
+>>> resolution is always on ISIN, never on name.
+HDFC0000123-HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF179K01WM2 (Advisor: ARN-0000)
+
+>>> Trap: OPENING_RE is defined in §5.3 and never used. A non-zero opening
+>>> balance is the evidence for §11.2's MISSING_EARLY_CAS.
+        Opening Unit Balance: 120.500000
+
+>>> Trap: stamp duty on its own line, attached to the transaction above it.
+>>> The amount column is GROSS here: 10,000.00 - 0.50 = 5.695540 x 1,755.672.
+01-Apr-2024   Systematic Investment Purchase        10,000.00        5.695540     1,755.672000      126.195540
+              *** Stamp Duty *** 0.50
+
+>>> Trap: "Rejected" must map to REVERSAL. §5.5's own ordering puts `purchase`
+>>> ahead of `reversal`, so this line books as a real instalment there.
+>>> Trap: negatives in parentheses.
+20-Apr-2024   Rejected - SIP Purchase                10,000.00       (5.695540)    1,755.672000      120.500000
+
+>>> Trap: Indian digit grouping. 1,23,456.78 - 6.17 = 68.590417 x 1,799.823.
+15-May-2024   Purchase                            1,23,456.78       68.590417     1,799.823000      189.090417
+              *** Stamp Duty *** 6.17
+
+>>> Trap: multi-page scheme. The page header and the scheme line repeat
+>>> mid-block; the state machine has to carry context across the break.
+                          CONSOLIDATED ACCOUNT STATEMENT
+                                   Page 2 of 3
+HDFC0000123-HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF179K01WM2 (Advisor: ARN-0000)
+
+>>> Exit load on its own line, like stamp duty but on the way out.
+10-Jun-2024   Switch Out - HDFC Balanced Advantage   56,486.79      (30.000000)    1,882.893000      159.090417
+              *** Exit Load *** 564.87
+
+>>> Trap: closing balance lines look like transactions and must be consumed
+>>> before TXN_RE, or they invent units nobody bought.
+        Closing Unit Balance: 159.090417
+
+>>> The other leg of the switch, in a different scheme block, same folio.
+>>> Charges sit between the legs and neither stores the same figure:
+>>>   56,486.79 gross out
+>>>    -  564.87 exit load        -> 55,921.92 actually switched
+>>>    -    2.80 stamp duty       -> 55,919.12 actually invested
+>>> §5.8 compares the STORED amounts, 56,486.79 against 55,919.12, and misses
+>>> by Rs 567.67 against a Rs 1.00 tolerance. Both figures are percentages of
+>>> the switch, so widening the tolerance only moves where linking starts to
+>>> fail. The shared figure is 55,921.92, and both legs reconstruct it.
+HDFC0000456-HDFC Balanced Advantage Fund - Growth Option - Direct Plan - ISIN: INF179K01XA5
+        Opening Unit Balance: 0.000000
+10-Jun-2024   Switch In - From HDFC Flexi Cap        55,921.92      109.144552       512.340000      109.144552
+              *** Stamp Duty *** 2.80
+        Closing Unit Balance: 109.144552
+
+Folio No: 87654321 / 11
+ICICI Prudential Mutual Fund
+
+ICICI00099-ICICI Prudential Bluechip Fund - IDCW Option - Regular Plan - ISIN: INF109K01BL4
+        Opening Unit Balance: 500.000000
+
+>>> Trap: zero-unit rows are legitimate for IDCW_PAYOUT and must not be
+>>> filtered on `units != 0`. This row prints no units and no NAV at all, so
+>>> §5.3's six-column TXN_RE cannot match it — and §5.3 then drops it in
+>>> silence rather than raising.
+12-Aug-2024   IDCW Payout                             1,250.00                                       500.000000
+
+>>> Trap: an unmapped description must RAISE, never default to PURCHASE.
+>>> §5.5 is right about this and it is the one rule that is never relaxed.
+05-Sep-2024   Consolidation Adjustment Entry             0.00        0.000000       291.440000      500.000000
+
+        Closing Unit Balance: 500.000000
+
+>>> Trap: the summary repeats every holding. Parsing it double-counts the
+>>> whole portfolio, so the state machine skips it entirely — including the
+>>> transaction-shaped lines inside it.
+
+Portfolio Summary
+HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF179K01WM2
+10-Jun-2024   Switch Out - HDFC Balanced Advantage   56,486.79      (30.000000)    1,882.893000      159.090417
+        Closing Unit Balance: 159.090417
+Total Value                                        1,68,235.44

@@ -1,0 +1,57 @@
+# CAS description -> transaction type. MODULE_1.md §5.5.
+#
+# Data, not code, so a new registrar wording can be added without a release.
+# This is the whole reason the table lives in YAML: CAS descriptions are free
+# text set by CAMS/KFintech/MF Central independently, and they change.
+#
+# ORDER MATTERS. The first match wins, and several patterns are substrings of
+# others:
+#
+#   SIP           before PURCHASE       ("SIP Purchase" contains "purchase")
+#   STP_OUT       before SWITCH_OUT     ("Switch Out - STP" contains "switch out")
+#   IDCW_REINVEST before IDCW_PAYOUT    ("Dividend Reinvestment" contains "dividend")
+#   REVERSAL      before everything     ("Rejected SIP Purchase" is not a purchase)
+#
+# REVERSAL is hoisted to the top, which MODULE_1.md §5.5 does NOT do. Its list
+# puts `reversal` second-to-last, after `purchase` would have already matched
+# "Reversal - SIP Purchase" and booked a bounced instalment as a real one. See
+# DECISIONS V0-15.
+#
+# Every pattern is matched case-insensitively against the raw description with
+# `re.search`. An unmatched description RAISES (§5.5) — it is a data problem
+# that must surface, never a row quietly booked as a purchase.
+
+patterns:
+  - {pattern: 'reversal|rejected|failed|bounce|dishonour|dishonor',  type: REVERSAL}
+  - {pattern: 'systematic\s+investment|sip\s+purchase|purchase\s*-\s*sip', type: SIP}
+  - {pattern: 'systematic\s+transfer.*out|stp\s+out|switch\s+out.*stp', type: STP_OUT}
+  - {pattern: 'systematic\s+transfer.*in|stp\s+in',                  type: STP_IN}
+  - {pattern: 'systematic\s+withdrawal|swp',                         type: SWP}
+  - {pattern: 'switch\s+out|switch\s*-\s*out|transfer\s+out',        type: SWITCH_OUT}
+  - {pattern: 'switch\s+in|switch\s*-\s*in|transfer\s+in',           type: SWITCH_IN}
+  - {pattern: 'dividend\s+reinvest|idcw\s+reinvest|reinvestment',    type: IDCW_REINVEST}
+  - {pattern: 'dividend\s+payout|idcw\s+payout|dividend\b|idcw\b',   type: IDCW_PAYOUT}
+  - {pattern: 'redemption|repurchase',                               type: REDEMPTION}
+  - {pattern: 'merger|amalgamat',                                    type: MERGER_IN}
+  - {pattern: 'segregat|side\s*pocket',                              type: SEGREGATION}
+  - {pattern: 'purchase|investment|allotment',                       type: PURCHASE}
+
+# Types whose direction is read off the sign of the units column rather than
+# the wording. MODULE_1.md §5.5 mentions `_disambiguate` but never defines it;
+# these are the cases where one description covers both directions.
+#
+#   "Merger - Scheme XYZ" appears in BOTH the dying scheme (units out) and the
+#   surviving one (units in), with identical wording.
+directional:
+  MERGER_IN: {negative: MERGER_OUT, positive: MERGER_IN}
+  SWITCH_IN: {negative: SWITCH_OUT, positive: SWITCH_IN}
+  STP_IN: {negative: STP_OUT, positive: STP_IN}
+
+# Lines that are charges or notes attached to the PRECEDING transaction, not
+# transactions in their own right. MODULE_1.md §5.4 requires stamp duty and STT
+# to be stored separately; it names no patterns, so these are ours.
+charges:
+  - {pattern: '\*+\s*stamp\s+duty\s*\*+', field: stamp_duty}
+  - {pattern: '\*+\s*stt\s*\*+|securities\s+transaction\s+tax', field: stt}
+  - {pattern: '\*+\s*exit\s+load\s*\*+|cdsc', field: exit_load}
+  - {pattern: '\*+\s*tds\s*\*+|tax\s+deducted', field: tds}

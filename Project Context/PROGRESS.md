@@ -7,9 +7,9 @@
 
 ## Current state
 
-**Slice:** V0.1 — ledger on fixtures (`BUILD_ORDER.md` R2). Substantially complete.
-**Repo:** local git, 11 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (51 files) · 284 tests · verifier no drift.
+**Slice:** V0.2 — CAS parser (`MODULE_1.md` §5). Parser complete; PDF layer untested.
+**Repo:** local git, 12 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (57 files) · 323 tests · verifier no drift.
 
 **Run everything:**
 
@@ -34,8 +34,9 @@ python -m scripts.verify_v0_ledger
 | Slice Zero contracts | 10 Protocols, 61 frozen dataclasses, 8 `Fake*` providers. Frozen — changes need an ADR. |
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate) |
+| `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py` (`config/txn_types.yaml`), `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password) |
 | Fixture portfolio | 3 real funds on real AMFI NAV: HDFC Flexi Cap **Direct**, ICICI Multi Asset **Regular**, Kotak Pioneer **Direct** |
-| Not built | M0 ingestion, CAS parser, tax engine, M2–M6 |
+| Not built | M0 ingestion, tax engine, persistence, M2–M6 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -46,8 +47,10 @@ python -m scripts.verify_v0_ledger
 - [~] **XIRR matches an independent calculation to 4 dp.** Verified three ways
       (closed-form cases, NPV≈0 on real data, Excel's 365-day convention). The
       spreadsheet comparison itself is a human step.
-- [~] **Re-import produces zero new rows.** `txn_id` is a deterministic hash and
-      is tested stable across reloads; the end-to-end claim needs the CAS parser.
+- [x] **Re-import produces zero new rows.** Real since V0.2. Proven on two
+      statements with different start dates: the shared transactions hash
+      identically and the overlap inserts nothing. §5.3's per-block `txn_seq`
+      made this impossible (V0-15); it is now per (folio, scheme, date).
 
 ## Open decisions
 
@@ -61,14 +64,21 @@ See `DECISIONS.md` (30 entries). Still open:
 - **OPEN-07** — NAV backfill depth. Before M0 step 4. Original text lost.
 - **OPEN-03** — `index_constituent` scheduling. Before V1 per R4. Text lost.
 
+- **V0-15 scope** — whether a registrar prints a purchase amount gross or net
+  of stamp duty is undocumented. The importer settles it per row against
+  `units × nav` and flags rows where neither reading holds. Replace with a real
+  CAS when one is available.
+
 **Deferred by agreement:** ABSL Large & Mid has no NAV series; HDFC's
 Direct-plan TER is unsourced (V0-05 nulled it). Neither blocks progress.
 
 ## Practices that have earned their place
 
-- **Mutation-test every new module.** It has found a real gap in all four it has
+- **Mutation-test every new module.** It has found a real gap in all five it has
   touched: the LTCG boundary, exit load in cashflows, folio scoping in
-  reconciliation, and two masked fixes in V0-14. Each survived a fully green suite.
+  reconciliation, two masked fixes in V0-14, and four in V0-15 — a sign
+  convention silently rebuilt by a later step, dead code, and two tests passing
+  for the wrong reason. Each survived a fully green suite.
 - **Vary the fixture, not just the assertions.** One NAV scale hid V0-10; one
   folio per scheme hid a netting bug; one exit-load rate hid a hardcoded
   constant. Each was found by adding a fund, not by review.
@@ -123,5 +133,25 @@ cross-check gates. Invariants 2 and 4 tightened to exact equality. Both
 surviving mutations were fixes *masked by an accident of the fixture* rather
 than genuinely exercised.
 
-**Next:** V0.2 — the CAS parser replaces the hand-made CSV, which also makes the
-re-import gate condition real. `MODULE_1.md` §5.
+**S7 · V0.2, the CAS parser.** §5 is the only section shipping working code, and
+implementing it found **seven defects** (V0-15) — worst first: §5.3's per-block
+`txn_seq` contradicts §5.6's idempotence hash, so every overlapping re-import
+duplicates the overlap; §5.3 drops unrecognised lines in silence, so a lost
+transaction reports nothing; §5.4 mandates zero-unit IDCW rows that §5.3's
+six-column regex cannot match; and **§5.3's ISIN pattern demands thirteen
+characters where an ISIN has twelve**, so `SCHEME_RE` never fires and the parser
+returns an empty list from a good statement. Parser split three ways — `pdf.py`
+(password, untestable), `parse.py` (pure, fully covered), `importer.py`. Tested
+against a synthetic CAS carrying one §5.4 trap per labelled line, since a real
+one is Zone B. End to end: the parsed statement replays through the FIFO engine
+and ties to its own printed closing balances exactly.
+
+**Next:** two candidates.
+
+1. **Golden cross-validation** — a second synthetic CAS reproducing the 14 rows
+   of `transactions.csv`, so the hand-made fixture and the parser have to agree.
+   Cheap, and it would catch drift in either.
+2. **M0 §11.3 `resolve_scheme`** — currently a test stub. `PLAN.md` §4.2 is not
+   satisfied until a scheme resolves from an archived source rather than a dict.
+
+`pdf.py` stays untested until a real password-protected CAS exists.
