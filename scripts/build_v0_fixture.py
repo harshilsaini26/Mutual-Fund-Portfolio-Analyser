@@ -140,11 +140,14 @@ class Rows:
         "exit_load",
         "switch_group_id",
         "reverses_txn_ref",
+        "units_balance_rep",
     )
 
     def __init__(self) -> None:
         self.lines: list[str] = []
         self._n = 0
+        #: Running unit balance per (folio, scheme), as a statement prints it.
+        self._balance: dict[tuple[str, str], Decimal] = {}
 
     def add(self, scheme_id: str, **kw: object) -> str:
         self._n += 1
@@ -156,6 +159,13 @@ class Rows:
             "scheme_id": scheme_id,
             "scheme_raw_name": NAMES[scheme_id],
         }
+        # A statement prints the balance after every entry, INCLUDING a
+        # reversal — which is how a reader sees the bounced instalment undone.
+        key = (str(kw["folio"]), scheme_id)
+        units = kw.get("units")
+        if units not in (None, "", 0):
+            self._balance[key] = self._balance.get(key, Decimal(0)) + Decimal(str(units))
+        kw["units_balance_rep"] = self._balance.get(key, Decimal(0))
         self.lines.append(",".join(str(kw.get(c, "")) for c in self.COLUMNS))
         return ref
 

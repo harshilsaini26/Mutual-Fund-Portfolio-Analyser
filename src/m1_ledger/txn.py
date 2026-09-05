@@ -88,6 +88,11 @@ class Txn:
     exit_load: Decimal
     switch_group_id: str | None
     reverses_txn_ref: str | None
+    #: Unit balance AS PRINTED on the statement, after this transaction.
+    #: The independent figure reconciliation checks the ledger against —
+    #: without it there is nothing to reconcile TO, only internal
+    #: self-consistency, which proves nothing about missing statements.
+    units_balance_rep: Decimal | None = None
 
     @property
     def txn_id(self) -> str:
@@ -164,6 +169,11 @@ def load_transactions(path: Path) -> list[Txn]:
                 exit_load=_money(raw, "exit_load"),
                 switch_group_id=(raw.get("switch_group_id") or "").strip() or None,
                 reverses_txn_ref=(raw.get("reverses_txn_ref") or "").strip() or None,
+                units_balance_rep=(
+                    dec(raw["units_balance_rep"])
+                    if (raw.get("units_balance_rep") or "").strip()
+                    else None
+                ),
             )
         )
 
