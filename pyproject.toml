@@ -51,6 +51,13 @@ ignore_missing_imports = true
 module = ["pypdf", "pypdf.*", "pdfplumber", "pdfplumber.*"]
 ignore_missing_imports = true
 
+# openpyxl ships no type stubs and `types-openpyxl` would be a dev dependency
+# for one import. The AMFI market-cap parser reads cells as `str | None` and
+# converts at the boundary, so nothing downstream depends on its types.
+[[tool.mypy.overrides]]
+module = ["openpyxl", "openpyxl.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

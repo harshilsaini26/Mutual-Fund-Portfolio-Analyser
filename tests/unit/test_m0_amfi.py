@@ -32,7 +32,11 @@ from src.m0_data.parse.nav.amfi import (
     parse_navall,
 )
 from src.m0_data.resolve.isin import is_valid_isin
-from src.m0_data.schema.apply import apply_migrations, assert_schema_is_decimal_safe
+from src.m0_data.schema.apply import (
+    apply_migrations,
+    assert_schema_is_decimal_safe,
+    migration_files,
+)
 
 SAMPLE = Path(__file__).resolve().parents[1] / "fixtures" / "m0" / "navall_sample.txt"
 AS_OF = date(2026, 9, 4)
@@ -310,7 +314,7 @@ def test_the_migrated_schema_cannot_silently_store_a_decimal_as_a_real(
     """
     db = tmp_path / "w.db"
     applied = apply_migrations(str(db))
-    assert applied == ["001_provenance.sql", "002_scheme_nav.sql"]
+    assert applied == [p.name for p in migration_files()]
     assert_schema_is_decimal_safe(str(db))
 
     conn = connect(str(db))
@@ -325,7 +329,7 @@ def test_the_migrated_schema_cannot_silently_store_a_decimal_as_a_real(
 
 def test_migrations_are_idempotent(tmp_path: Path) -> None:
     db = tmp_path / "w.db"
-    assert len(apply_migrations(str(db))) == 2
+    assert len(apply_migrations(str(db))) == len(migration_files())
     assert apply_migrations(str(db)) == []
 
 

@@ -7,11 +7,11 @@
 
 ## Current state
 
-**Slice:** V0 complete. The gate passes on a ledger parsed from a statement,
-priced on AMFI's own NAVs, resolved through M0's interface.
-**Repo:** local git, 17 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (84 files) · 422 tests · verifier no drift.
-**Next:** V1.1 — entity master and ISIN resolution (`BUILD_ORDER.md` R4 order).
+**Slice:** V1.1 complete — entity master seeded, resolution cascade live.
+**Repo:** local git, 19 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (94 files) · 458 tests · verifier no drift.
+**Next:** V1.2 — holdings parsers for the top five AMCs, plus the deferred
+sector taxonomy (V1-03).
 
 **Run everything:**
 
@@ -51,15 +51,15 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
-| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET), `parse/nav/amfi.py`, `normalise/`, `resolve/isin.py`, `derive/nav_adj.py`, `load.py`, `validate/integrity.py`, `schema/apply.py`, `providers/warehouse.py` |
-| `migrations/` | `001_provenance.sql` (`raw_file`, `job_run`), `002_scheme_nav.sql` (`amc`, `scheme`, `nav_daily`, `scheme_idcw`). Numbered, forward-only, never edited once applied. |
-| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (one-time history, per OPEN-07). Both write a `job_run` row whatever happens. |
+| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `normalise/` (numbers, names), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/integrity.py`, `schema/apply.py`, `providers/warehouse.py` |
+| `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`). Numbered, forward-only. |
+| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed). All write a `job_run` row whatever happens. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — S1's verified URL and scraping limits. |
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds keyed on their **real ISINs** — `INF179K01UT0`, `INF109K01761`, `INF174KA1EZ1` — on NAVs confirmed against AMFI. Reaches the engine as a **CAS statement**, resolved through `MarketDataProvider`. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
-| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3.1 M NAVs** back to 31-Jan-2018 for the three reference AMCs. |
-| Not built | Holdings, index data, tax engine, M2–M6 |
+| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3.1 M NAVs** back to 31-Jan-2018, **5,427 issuers + instruments** with point-in-time market-cap buckets. |
+| Not built | Holdings parsers, sector taxonomy (V1-03), prices, look-through engine, tax engine, M2–M6 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -83,7 +83,7 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 42 entries (SZ-01…SZ-14, V0-01…V0-26, OPEN-03, OPEN-07).
+`DECISIONS.md` holds 45 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-03, OPEN-03, OPEN-07).
 
 **Nothing is undecided.** The four that were open closed on 2026-09-05:
 
@@ -146,6 +146,33 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S12 · V1.1 — entity master and resolution (2026-09-05)
+
+5,427 real issuers and instruments seeded from AMFI's market-cap list, with
+point-in-time `amfi_mcap` buckets. The resolution cascade runs ISIN → synthetic
+rule → provisional → alias → fuzzy → queue. Measured on 289 realistic
+disclosure rows: **1.73% unresolved**, against the V1 gate's 2%.
+
+Implementing §8 against the real universe found three defects (V1-02), two of
+which misattribute holdings silently:
+
+- **§8.2 runs the synthetic rules before ISIN**, and §8.4's `future`
+  derivative pattern captures **seven real listed companies** — the whole Future
+  Group. A fund holding Future Retail, ISIN and all, would have that equity
+  bucketed as a derivative. A known ISIN now wins.
+- **`token_set_ratio` scores a subset as a perfect match**: `tech mahindra`
+  against `mahindra mahindra` is 100.0, by construction. 18 of 400 sampled
+  names would auto-accept onto the wrong issuer. Fixed with a Jaccard guard
+  rather than a higher threshold — §8.2's 92 is kept, and wrong accepts go to
+  zero.
+- **Two workbook columns are formulas**, including the one `RANK` operates on.
+  Reading column E alone ranked on BSE only. Recomputed, and cross-checked
+  against AMFI's own categorisation column: **5,427 rows, zero disagreements**.
+
+Also: `__NO_DISCLOSURE__` was missing from §4.3's mandatory seed (V1-01), and
+NSE sector data is deferred because I throttled the host by probing it without
+the rate limiter (V1-03).
 
 ### S11 · The fixture re-key — V0 complete (2026-09-05)
 

@@ -17,6 +17,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import date
 
+from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
 
 
@@ -165,3 +166,74 @@ def load_parse_result(
         "collisions": len(collisions),
         "warnings": len(result.warnings) + len(result.unparsed),
     }
+
+
+# --- entity layer (MODULE_0.md §4.3) ----------------------------------------
+
+
+def issuer_id_for(isin: str) -> str:
+    """One issuer per ISIN, at seed time.
+
+    A real security master would map many ISINs to one issuer — equity, prefs
+    and NCDs of the same company are one exposure (§8.1). AMFI's list is one
+    row per listed company, so at seed time the two coincide, and the
+    `instrument.issuer_id` indirection is what lets a later source collapse
+    them without rewriting any holding.
+
+    Prefixed rather than bare so a real issuer can never collide with a
+    synthetic one: `__CASH__` and an ISIN share no namespace.
+    """
+    return f"AMFI:{isin}"
+
+
+def load_mcap(
+    conn: sqlite3.Connection,
+    result: McapParseResult,
+    source_file_id: str | None,
+) -> dict[str, int]:
+    """Seed `issuer`, `instrument` and the `amfi_mcap` classification.
+
+    Classification is written **point-in-time** — `valid_from` is the list's
+    own period end, never today. `CLAUDE.md` invariant 6 and §2.2 S4: applying
+    the current list to a 2021 holding creates phantom drift or masks real
+    drift, and the only defence is that the basis date travels with the value.
+
+    Companies with no market cap get an issuer and an instrument but no
+    classification. They are real securities that simply cannot be ranked.
+    """
+    counts = {"issuer": 0, "instrument": 0, "classification": 0}
+    for row in result.rows:
+        issuer_id = issuer_id_for(row.isin)
+        conn.execute(
+            "INSERT INTO issuer (issuer_id, canonical_name, is_listed, is_synthetic,"
+            " source_file_id) VALUES (?, ?, 1, 0, ?)"
+            " ON CONFLICT(issuer_id) DO UPDATE SET"
+            " canonical_name = excluded.canonical_name,"
+            " source_file_id = excluded.source_file_id",
+            (issuer_id, row.company_name, source_file_id),
+        )
+        counts["issuer"] += 1
+
+        conn.execute(
+            "INSERT INTO instrument (isin, issuer_id, instrument_type, ticker_nse,"
+            " ticker_bse, source_file_id) VALUES (?, ?, 'equity', ?, ?, ?)"
+            " ON CONFLICT(isin) DO UPDATE SET"
+            " issuer_id = excluded.issuer_id,"
+            " ticker_nse = excluded.ticker_nse,"
+            " ticker_bse = excluded.ticker_bse,"
+            " source_file_id = excluded.source_file_id",
+            (row.isin, issuer_id, row.nse_symbol, row.bse_symbol, source_file_id),
+        )
+        counts["instrument"] += 1
+
+        if row.bucket is not None:
+            conn.execute(
+                "INSERT INTO issuer_classification (issuer_id, taxonomy, value,"
+                " valid_from, source, source_file_id)"
+                " VALUES (?, 'amfi_mcap', ?, ?, 'amfi', ?)"
+                " ON CONFLICT(issuer_id, taxonomy, valid_from) DO UPDATE SET"
+                " value = excluded.value, source_file_id = excluded.source_file_id",
+                (issuer_id, row.bucket, result.basis_date, source_file_id),
+            )
+            counts["classification"] += 1
+    return counts
