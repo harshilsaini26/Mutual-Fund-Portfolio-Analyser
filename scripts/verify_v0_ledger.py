@@ -90,6 +90,7 @@ def main() -> None:
                     "units": units,
                     "remaining": units,
                     "cost_total": cost_total,
+                    "cost_remaining": cost_total,
                     "cpu": (cost_total / units).quantize(Q6),
                     "origin": t.lower(),
                 }
@@ -129,7 +130,18 @@ def main() -> None:
                 break
             take = min(Decimal(str(lot["remaining"])), to_close)
             days = (when - lot["acq"]).days  # type: ignore[operator]
-            cost = (Decimal(str(lot["cpu"])) * take).quantize(Q4)
+
+            # V0-10: a lot that closes hands out its entire remaining cost,
+            # rather than recomputing it from a 6dp per-unit figure that does
+            # not multiply back exactly.
+            if Decimal(str(lot["remaining"])) - take <= 0:
+                cost = Decimal(str(lot["cost_remaining"]))
+            else:
+                cost = min(
+                    (Decimal(str(lot["cpu"])) * take).quantize(Q4),
+                    Decimal(str(lot["cost_remaining"])),
+                )
+
             proceeds = (take * npu).quantize(Q4)
             out.append(
                 {
@@ -143,9 +155,21 @@ def main() -> None:
                 }
             )
             lot["remaining"] = Decimal(str(lot["remaining"])) - take
+            lot["cost_remaining"] = Decimal(str(lot["cost_remaining"])) - cost
             to_close -= take
         if to_close > 0:
             raise SystemExit(f"{r['txn_ref']}: short by {to_close} units")
+
+        # V0-06: the per-lot proceeds must sum to the transaction total. The
+        # residual goes to the last consumption — arbitrary which lot, but it
+        # must be deterministic so a rebuild reproduces the same rows.
+        residual = net_total - sum(Decimal(str(c["proceeds_net"])) for c in out)
+        if residual != 0 and out:
+            out[-1]["proceeds_net"] = Decimal(str(out[-1]["proceeds_net"])) + residual
+            out[-1]["gain"] = (
+                Decimal(str(out[-1]["proceeds_net"])) - Decimal(str(out[-1]["cost"]))
+            ).quantize(Q4)
+
         consumptions[r["txn_ref"]] = out
 
     # Label lots L1..Ln in acquisition order, matching the engine's golden refs.

@@ -271,15 +271,29 @@ def test_net_proceeds_are_reduced_by_exit_load_and_stt(
     assert stated_net == Decimal(want["net_total"])
     assert total_net < Decimal(want["gross"]), "exit load and STT must bite"
 
-    # Per-lot proceeds do NOT sum exactly to the transaction total.
-    # MODULE_1.md §7.2 quantises net_per_unit to 6dp and re-multiplies,
-    # which cannot reproduce the total. Bounded at one paisa per row.
-    # DECISIONS V0-06 — the spec does not say who absorbs the residual.
-    residual = abs(stated_net - total_net)
-    assert residual <= Decimal("0.0001") * len(cons)
-    assert residual > 0, (
-        "no residual here — if the algorithm changed, V0-06 may be resolved"
-    )
+    # DECISIONS V0-06, resolved: the per-lot proceeds now sum EXACTLY to the
+    # transaction total. A capital gains schedule lists proceeds per lot, and
+    # they have to tie to the redemption amount printed on the statement.
+    assert total_net == stated_net
+
+
+def test_every_closing_transaction_ties_exactly(
+    book: LotBook, expected: dict[str, Any]
+) -> None:
+    """V0-06 across the board, including the 0.5%-load Kotak redemption.
+
+    One transaction tying could be luck; three at different scales, loads and
+    lot counts is the property holding.
+    """
+    assert len(expected["totals"]) == 3
+    for txn_ref, want in expected["totals"].items():
+        cons = book.consumptions_for(txn_ref)
+        assert cons, f"{txn_ref} produced no consumptions"
+        total = sum((c.proceeds_net for c in cons), Decimal(0))
+        assert total == Decimal(want["net_total"])
+        assert total == (
+            Decimal(want["gross"]) - Decimal(want["exit_load"]) - Decimal(want["stt"])
+        )
 
 
 def test_switch_out_is_taxable_even_though_no_cash_moved(book: LotBook) -> None:
@@ -334,17 +348,18 @@ def test_invariant_2_cost_conservation(book: LotBook) -> None:
     Remaining cost basis plus cost already allocated to consumptions equals the
     total cost of every lot ever opened.
     """
-    remaining = sum(
-        (lot.cost_per_unit * lot.units_remaining for lot in book.all_lots()),
+    remaining = sum((lot.cost_remaining for lot in book.all_lots()), Decimal(0))
+    allocated = sum(
+        (
+            c.cost_allocated
+            for c in book.all_consumptions()
+            if c.cost_basis_method == "actual"
+        ),
         Decimal(0),
     )
-    allocated = sum((c.cost_allocated for c in book.all_consumptions()), Decimal(0))
     opened = sum((lot.cost_total for lot in book.all_lots()), Decimal(0))
-    # Penny-level rounding is expected: cost_per_unit is quantised to 6dp and
-    # re-multiplied. The tolerance is one paisa per lot, not a free pass.
-    assert abs((remaining + allocated) - opened) <= Decimal("0.01") * len(
-        list(book.all_lots())
-    )
+    # EXACT since V0-10. Cost is neither created nor destroyed, at any scale.
+    assert remaining + allocated == opened
 
 
 def test_invariant_3_fifo_ordering_is_monotonic(book: LotBook) -> None:
@@ -463,46 +478,36 @@ def test_gain_type_is_per_lot_in_the_kotak_redemption(book: LotBook) -> None:
     assert cons[1].holding_days == 257
 
 
-def test_cost_allocation_drifts_at_small_nav_and_large_unit_counts(
-    book: LotBook,
-) -> None:
-    """DECISIONS V0-10. Scale-dependent, and invisible on one fund.
+def test_a_lot_never_pays_out_more_cost_than_it_took_in(book: LotBook) -> None:
+    """DECISIONS V0-10, resolved. Exact at every scale.
 
-    `cost_per_unit` is quantised to 6dp and re-multiplied by the unit count.
-    At HDFC's scale — ~6 units at ~Rs 1,700 — that reproduces the lot cost
-    exactly. At Kotak's — ~1,567 units at ~Rs 32 — it overshoots by 2 paisa, so
-    a FULLY consumed lot is allocated more cost than it ever had, and the gain
-    is understated by the same amount.
+    `cost_per_unit` is quantised to 6dp, so re-multiplying it drifts — by
+    nothing at HDFC's ~6 units per Rs 10,000, by 2 paisa at Kotak's ~1,567.
+    A closing lot now hands out its entire remaining cost instead of
+    recomputing, which makes over-allocation structurally impossible rather
+    than merely small.
+
+    Asserted across every lot, so the property cannot regress at one scale
+    while holding at another — which is exactly how it hid before.
     """
-    kotak_lot = next(
-        x for x in book.all_lots() if x.scheme_id == KOTAK and x.units_remaining == 0
-    )
-    allocated = sum(
-        (
-            c.cost_allocated
-            for c in book.all_consumptions()
-            if c.lot_id == kotak_lot.lot_id
-        ),
-        Decimal(0),
-    )
-    assert kotak_lot.is_closed, "this lot must be fully consumed for the test to bite"
-    assert allocated != kotak_lot.cost_total, (
-        "no drift here — if the algorithm changed, V0-10 may be resolved"
-    )
-    assert abs(allocated - kotak_lot.cost_total) <= Decimal("0.001")
+    assert any(x.scheme_id == KOTAK for x in book.all_lots()), "need the small-NAV fund"
 
-    # The same arithmetic on an HDFC lot is exact, which is why one fund could
-    # never have surfaced this.
-    hdfc_lot = next(x for x in book.all_lots() if x.golden_ref == "L1")
-    hdfc_alloc = sum(
-        (
-            c.cost_allocated
-            for c in book.all_consumptions()
-            if c.lot_id == hdfc_lot.lot_id
-        ),
-        Decimal(0),
-    )
-    assert hdfc_alloc == hdfc_lot.cost_total
+    for lot in book.all_lots():
+        allocated = sum(
+            (
+                c.cost_allocated
+                for c in book.all_consumptions()
+                if c.lot_id == lot.lot_id and c.cost_basis_method == "actual"
+            ),
+            Decimal(0),
+        )
+        assert allocated + lot.cost_remaining == lot.cost_total, (
+            f"{lot.golden_ref}: allocated {allocated} + remaining "
+            f"{lot.cost_remaining} != cost {lot.cost_total}"
+        )
+        if lot.is_closed:
+            assert allocated == lot.cost_total, f"{lot.golden_ref} closed but inexact"
+            assert lot.cost_remaining == Decimal(0)
 
 
 def test_invariant_4_pnl_closure(book: LotBook) -> None:
@@ -546,8 +551,42 @@ def test_invariant_4_pnl_closure(book: LotBook) -> None:
     by_lot = realised + unrealised
     by_cashflow = market_value + proceeds - invested_gross
 
-    assert abs(by_lot - by_cashflow) <= Decimal("0.001"), (
-        f"P&L closure broken by {by_lot - by_cashflow}"
-    )
+    # EXACT since V0-06 and V0-10. The residual used to be the cost-allocation
+    # drift; with allocation exact on both sides there is nothing left to lose.
+    assert by_lot == by_cashflow, f"P&L closure broken by {by_lot - by_cashflow}"
     # Both routes must show a real profit, not merely agree on zero.
     assert by_lot > 0 and realised > 0 and unrealised > 0
+
+
+def test_a_closing_lot_hands_out_its_remainder_even_when_recompute_undershoots(
+    book: LotBook,
+) -> None:
+    """V0-10's rule, tested where the fixture cannot reach it.
+
+    Capping the allocation at the remaining cost — `min(cpu * units,
+    remaining)` — masks an OVERSHOOT by accident. It does nothing for an
+    undershoot: the recomputed figure is simply smaller, and the difference is
+    stranded on a lot that has no units left to release it.
+
+    The fixture's only fully-consumed small-NAV lot happens to overshoot, so
+    the cap hides the missing rule. Found by mutation — removing the closing-lot
+    branch left all 279 tests green.
+
+    L8's arithmetic undershoots by a paisa, so it is used here as a lot that
+    closes completely.
+    """
+    from src.m1_ledger.lots import allocate_actual_cost
+
+    donor = next(x for x in book.all_lots() if x.golden_ref == "L8")
+    units = donor.units_original
+    cost = donor.cost_total
+    recomputed = (donor.cost_per_unit * units).quantize(Decimal("0.0001"))
+    assert recomputed < cost, "L8 must undershoot for this test to bite"
+
+    closing = replace(donor, units_remaining=units, cost_remaining=cost)
+    assert allocate_actual_cost(closing, units) == cost
+    assert allocate_actual_cost(closing, units) != recomputed
+
+    # A partial consumption of the same lot still uses the per-unit figure.
+    partial = allocate_actual_cost(closing, units / 2)
+    assert partial < cost

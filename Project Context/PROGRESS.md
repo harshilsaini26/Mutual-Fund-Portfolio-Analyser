@@ -6,10 +6,12 @@
 
 **Slice:** V0.1 — ledger on fixtures (`BUILD_ORDER.md` R2). Substantially complete.
 **Step:** Lot engine, returns engine and reconciliation all built and proven on
-three real NAV series. All five `PLAN.md` §8.3 property invariants pass.
-**Blocked on:** nothing to continue. Before V0 can be *declared* done, see the
-gate assessment below — two of its five conditions are only partly met, and
-V0-12 shows one of them cannot be met as the spec writes it.
+three real NAV series. All five `PLAN.md` §8.3 property invariants pass, two of
+them now at exact equality rather than a tolerance. V0-06, V0-10 and V0-12 are
+resolved (V0-14).
+**Blocked on:** nothing to continue. Of the five V0 gate conditions, three are
+fully met and two are partly met for reasons outside the ledger — an Excel
+cross-check is a human step, and the re-import claim needs the CAS parser.
 Deferred by agreement: ABSL NAV series, HDFC Direct-plan TER (V0-05).
 Still outstanding: OPEN-07 before M0 step 4; OPEN-03 before V1 (R4);
 V0-01 (base vs total TER) before any fee output.
@@ -36,11 +38,10 @@ Slice Zero has no runtime behaviour, so its gate is static:
 
 - [x] **Every folio reconciles**, `|computed − reported| ≤ 0.001` units.
       All three are at exactly 0.000000 against the statements' printed balances.
-- [~] **Value reconciles within 0.5%.** Passes as specified — but V0-12 shows
-      the specified check is the unit delta restated and cannot detect a wrong
-      NAV series, which is the failure it exists to catch. `nav_cross_check()`
-      supplies a check that works; adopting it is an open decision. **Treat
-      this condition as not genuinely met until V0-12 is resolved.**
+- [x] **Value reconciles within 0.5%**, and now genuinely means something.
+      V0-12 is resolved: `nav_cross_check()` is a gate condition, so a wrong NAV
+      series fails with `WRONG_NAV_SERIES` even when units and the spec's value
+      ratio are both perfect. The V0-05 mismatch would now be caught.
 - [~] **XIRR matches an independent calculation to 4 dp.** Verified three ways:
       closed-form cases, NPV≈0 at the returned rate on real data, and Excel's
       365-day convention. Not yet compared against an actual spreadsheet — the
@@ -54,6 +55,33 @@ Slice Zero has no runtime behaviour, so its gate is static:
 ---
 
 ## Session log
+
+### 2026-09-05 — session 6
+
+**Did:** Resolved V0-06, V0-10 and V0-12 together (V0-14), since both allocation
+fixes change the numbers the reconciliation gate then checks.
+- Lots carry `cost_remaining`; a closing lot hands out its remainder exactly.
+- Per-lot proceeds settle their residual onto the last consumption.
+- `nav_cross_check` is now a reconciliation gate condition.
+- Invariants 2 and 4 tightened from tolerance to exact equality.
+
+**Passed:** ruff clean; `mypy --strict` clean on 51 files; 284/284 tests;
+verifier reports no drift.
+
+**Findings worth carrying forward:**
+- The V0-10 fix was **incomplete on the first pass**: allocation was corrected
+  but `cost_basis_remaining()` still recomputed the drifting form one query
+  away. Caught only because P&L closure then failed by a paisa. Fixing a
+  formula means finding every place that formula appears.
+- **Both surviving mutations were fixes masked by an accident of the fixture**,
+  not by a missing assertion: `min()` happened to cap the one overshooting lot
+  that closes, and the wrong-series NAV deviation (~5,600%) sat so far from the
+  0.5% boundary that a 200x change in tolerance altered nothing. A passing suite
+  cannot report this about itself; only mutation can.
+
+**Next:** V0.2 — the CAS parser replaces the hand-made CSV, which also makes the
+re-import gate condition real.
+
 
 ### 2026-09-05 — session 5
 

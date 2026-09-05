@@ -9,10 +9,18 @@ Two checks are specified, and this module implements a third.
 §11.1 says the value check catches what the unit check cannot — a wrong-plan
 resolution, where units match perfectly while the NAV series belongs to the
 other share class, silently biasing every return by ~1%/year. As written it
-does not, because it multiplies both sides by the same NAV and the NAV cancels
-(DECISIONS V0-12). It is implemented verbatim anyway, so the gap stays visible
-rather than being quietly papered over, and `nav_cross_check` below supplies
-the check that actually delivers the stated purpose.
+cannot: it multiplies both sides by the same NAV, so the NAV cancels and the
+result is the unit delta restated.
+
+DECISIONS V0-12 resolves this. `nav_cross_check` compares the NAV each
+transaction was priced at, as printed on the statement, against our resolved
+scheme's NAV on the same date — an independent witness to which scheme the
+units actually belong to. It is now a gate condition, so a wrong-plan
+resolution fails reconciliation instead of passing it.
+
+The spec's own value ratio is still computed and reported as
+`delta_value_pct`, because it is what §11.1 defines and a reader will look for
+it. It simply is not what decides the gate.
 """
 
 from __future__ import annotations
@@ -41,6 +49,22 @@ FLOAT_CONTAMINATION_MIN_TXNS = 100
 
 
 @dataclass(frozen=True)
+class NavCrossCheck:
+    """Whether the statement's printed NAVs agree with our resolved scheme's.
+
+    This is the check that actually detects a wrong-plan resolution.
+    """
+
+    scheme_id: SchemeId
+    checked: int
+    matched: int
+    mismatched: int
+    unavailable: int
+    worst_deviation_pct: Decimal
+    status: str
+
+
+@dataclass(frozen=True)
 class Reconciliation:
     """One folio-scheme's result. `status` is ok | warn | fail.
 
@@ -58,22 +82,8 @@ class Reconciliation:
     delta_units: Decimal = Decimal(0)
     delta_value_pct: Decimal | None = None
     diagnosis: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class NavCrossCheck:
-    """Whether the statement's printed NAVs agree with our resolved scheme's.
-
-    This is the check that actually detects a wrong-plan resolution.
-    """
-
-    scheme_id: SchemeId
-    checked: int
-    matched: int
-    mismatched: int
-    unavailable: int
-    worst_deviation_pct: Decimal
-    status: str
+    #: The V0-12 witness. None when there were no transactions to check.
+    nav_check: NavCrossCheck | None = None
 
 
 @dataclass(frozen=True)
@@ -156,7 +166,16 @@ def reconcile(
         else Decimal(0)
     )
 
-    if abs(delta_units) <= UNIT_TOL and delta_value <= VALUE_TOL:
+    # V0-12: the check that actually detects a wrong NAV series. Skipped when
+    # there are no transactions to witness against — a caller checking a bare
+    # unit count has nothing to cross-check.
+    nav_check = nav_cross_check(txns, navs) if txns else None
+    nav_ok = nav_check is None or nav_check.status == "ok"
+
+    units_ok = abs(delta_units) <= UNIT_TOL
+    value_ok = delta_value <= VALUE_TOL
+
+    if units_ok and value_ok and nav_ok:
         return Reconciliation(
             scheme_id=scheme_id,
             folio=folio,
@@ -167,10 +186,21 @@ def reconcile(
             units_reported=reported,
             delta_units=delta_units,
             delta_value_pct=delta_value * 100,
+            nav_check=nav_check,
         )
 
     earliest = min((t.txn_date for t in txns), default=None)
     has_earlier = any(t.txn_date < earliest for t in txns) if earliest else False
+
+    findings = []
+    if not units_ok or not value_ok:
+        findings.extend(diagnose(delta_units, has_earlier, len(txns)))
+    if not nav_ok:
+        assert nav_check is not None
+        # The actionable message: the units are fine, the SCHEME is wrong.
+        findings.append("WRONG_NAV_SERIES")
+        if units_ok:
+            findings.append("LIKELY_PLAN_MISMATCH_DIRECT_VS_REGULAR")
 
     return Reconciliation(
         scheme_id=scheme_id,
@@ -182,7 +212,8 @@ def reconcile(
         units_reported=reported,
         delta_units=delta_units,
         delta_value_pct=delta_value * 100,
-        diagnosis=diagnose(delta_units, has_earlier, len(txns)),
+        diagnosis=findings or ["UNKNOWN"],
+        nav_check=nav_check,
     )
 
 

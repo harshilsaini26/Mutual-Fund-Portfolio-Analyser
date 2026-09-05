@@ -25,14 +25,14 @@ consumptions:
     - {lot_id: L1, units_consumed: "6.131905", holding_days: 380, gain_type: LTCG, cost_allocated: "10000.0000", proceeds_net: "12000.2201", gain_amount: "2000.2201"}
     - {lot_id: L2, units_consumed: "5.971220", holding_days: 349, gain_type: STCG, cost_allocated: "10000.0000", proceeds_net: "11685.7574", gain_amount: "1685.7574"}
     - {lot_id: L3, units_consumed: "5.752026", holding_days: 320, gain_type: STCG, cost_allocated: "10000.0000", proceeds_net: "11256.7918", gain_amount: "1256.7918"}
-    - {lot_id: L4, units_consumed: "2.144849", holding_days: 289, gain_type: STCG, cost_allocated: "3765.8396", proceeds_net: "4197.4982", gain_amount: "431.6586"}
+    - {lot_id: L4, units_consumed: "2.144849", holding_days: 289, gain_type: STCG, cost_allocated: "3765.8396", proceeds_net: "4197.4983", gain_amount: "431.6587"}
   T010:
     - {lot_id: L4, units_consumed: "3.550691", holding_days: 655, gain_type: LTCG, cost_allocated: "6234.1604", proceeds_net: "8064.1955", gain_amount: "1830.0351"}
     - {lot_id: L5, units_consumed: "5.555824", holding_days: 624, gain_type: LTCG, cost_allocated: "10000.0000", proceeds_net: "12618.1780", gain_amount: "2618.1780"}
     - {lot_id: L6, units_consumed: "0.893485", holding_days: 592, gain_type: LTCG, cost_allocated: "1682.4207", proceeds_net: "2029.2494", gain_amount: "346.8287"}
   T014:
-    - {lot_id: L7, units_consumed: "1567.516303", holding_days: 527, gain_type: LTCG, cost_allocated: "50000.0002", proceeds_net: "54125.3049", gain_amount: "4125.3047"}
-    - {lot_id: L8, units_consumed: "232.483697", holding_days: 257, gain_type: STCG, cost_allocated: "7998.0715", proceeds_net: "8027.5089", gain_amount: "29.4374"}
+    - {lot_id: L7, units_consumed: "1567.516303", holding_days: 527, gain_type: LTCG, cost_allocated: "50000.0000", proceeds_net: "54125.3049", gain_amount: "4125.3049"}
+    - {lot_id: L8, units_consumed: "232.483697", holding_days: 257, gain_type: STCG, cost_allocated: "7998.0715", proceeds_net: "8027.5093", gain_amount: "29.4378"}
 
 totals:
   T009:
@@ -41,7 +41,7 @@ totals:
     stt: "0.3941"
     net_total: "39140.2676"
     cost_allocated: "33765.8396"
-    gain_amount: "5374.4279"
+    gain_amount: "5374.4280"
   T010:
     gross: "22711.8500"
     exit_load: "0"
@@ -54,8 +54,8 @@ totals:
     exit_load: "40.1639"
     stt: "0.6219"
     net_total: "62152.8142"
-    cost_allocated: "57998.0717"
-    gain_amount: "4154.7421"
+    cost_allocated: "57998.0715"
+    gain_amount: "4154.7427"
 
 units_remaining:
   "AMFI:HDFC-FLEXICAP-DIR-G": "4.417226"

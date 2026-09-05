@@ -191,32 +191,55 @@ def test_unit_tolerance_is_enforced_at_the_boundary(
 # --- the value check, and what it cannot do --------------------------------
 
 
-def test_spec_value_check_cannot_detect_a_wrong_nav_series(
+def test_spec_value_ratio_alone_still_cannot_see_a_wrong_nav_series(
     navs: dict[str, dict[date, Decimal]],
 ) -> None:
-    """DECISIONS V0-12. The §11.1 value check is the unit delta restated.
+    """DECISIONS V0-12, first half: WHY the spec's check needed replacing.
 
-    §11.1 computes `v_c = computed * nav` and `v_r = reported * nav` using the
-    SAME nav, so the nav cancels:
+    §11.1 computes `v_c = computed * nav` and `v_r = reported * nav` with the
+    SAME nav, so it cancels:
 
         d_val = |computed-reported| * nav / (reported * nav)
               = |computed-reported| / reported
 
-    It therefore adds nothing to the unit check and cannot detect a wrong NAV
-    series — the exact failure §11.1 says it exists to catch, and the one
-    PLAN.md §7 V0 depends on it for.
-
-    This test pins the DEFECT so it cannot be forgotten, and passes only while
-    the defect is present. Fixing §11.1 should break it.
+    With no transactions there is no witness to cross-check against, so this is
+    the spec's arithmetic in isolation: the value ratio is identical whichever
+    NAV series is attached, and is therefore blind to the substitution.
     """
     units = Decimal("4.417226")
     right = reconcile(HDFC, "F0001/22", units, units, AS_OF, navs[HDFC], [])
-    # Same units, a NAV series from a different scheme entirely.
     wrong = reconcile(HDFC, "F0001/22", units, units, AS_OF, navs[KOTAK], [])
 
-    assert right.status == "ok"
-    assert wrong.status == "ok", "if this now fails, §11.1's value check was fixed"
     assert right.delta_value_pct == wrong.delta_value_pct == Decimal(0)
+    assert right.nav_check is None and wrong.nav_check is None
+
+
+def test_a_wrong_nav_series_now_fails_reconciliation(
+    txns: list[Txn], navs: dict[str, dict[date, Decimal]]
+) -> None:
+    """DECISIONS V0-12, second half: the gate now catches it.
+
+    Units are perfectly correct and the value ratio is zero — the exact shape
+    of the real V0-05 mismatch, where an HDFC Direct NAV series sat against a
+    Regular scheme record 10.13% away. Under the spec's two checks that passes.
+
+    With the NAV cross-check as a gate condition it fails, and says why.
+    """
+    hdfc = [t for t in txns if t.scheme_id == HDFC]
+    computed = build_book(txns).units_remaining(HDFC)
+
+    good = reconcile(HDFC, "F0001/22", computed, computed, AS_OF, navs[HDFC], hdfc)
+    assert good.status == "ok"
+    assert good.nav_check is not None and good.nav_check.mismatched == 0
+
+    # Same units, same reported balance, a different scheme's NAV series.
+    bad = reconcile(HDFC, "F0001/22", computed, computed, AS_OF, navs[KOTAK], hdfc)
+    assert bad.status == "fail"
+    assert bad.delta_units == Decimal(0), "units are not what went wrong"
+    assert bad.delta_value_pct == Decimal(0), "nor is the spec's value ratio"
+    assert "WRONG_NAV_SERIES" in bad.diagnosis
+    assert "LIKELY_PLAN_MISMATCH_DIRECT_VS_REGULAR" in bad.diagnosis
+    assert not apply_gate([bad]).passed
 
 
 def test_nav_cross_check_catches_what_the_value_check_cannot(
@@ -314,3 +337,46 @@ def test_folios_reconcile_separately_and_never_net_against_each_other(
     # The very thing folio scoping prevents: the errors sum to nothing.
     assert sum((r.delta_units for r in results), Decimal(0)) == Decimal(0)
     assert not apply_gate(results).passed
+
+
+@pytest.mark.parametrize(
+    ("deviation_pct", "expect_match"),
+    [
+        ("0.0", True),
+        ("0.4", True),  # inside tolerance: statement rounding
+        ("0.6", False),  # beyond it: a different scheme
+        ("1.0", False),  # a young Direct/Regular pair sits about here
+    ],
+)
+def test_nav_match_tolerance_at_the_boundary(
+    txns: list[Txn],
+    navs: dict[str, dict[date, Decimal]],
+    deviation_pct: str,
+    expect_match: bool,
+) -> None:
+    """Where "the statement rounded" ends and "wrong scheme" begins.
+
+    The fixture's wrong-series deviation is ~5,600%, so every tolerance from
+    0.5% to 100% classifies it identically — widening the constant 200x changed
+    no outcome and no test noticed. Found by mutation.
+
+    The boundary matters in practice: Direct and Regular plans of a recently
+    launched fund differ by roughly the annual TER gap, so within the first year
+    the deviation is around 1%. Set the tolerance too wide and the ~1%/year
+    silent error walks straight through the gate it was built to stop.
+    """
+    scale = Decimal(1) + Decimal(deviation_pct) / 100
+    shifted = [
+        replace(t, nav=t.nav * scale) if t.nav is not None else t
+        for t in txns
+        if t.scheme_id == HDFC
+    ]
+    result = nav_cross_check(shifted, navs[HDFC])
+
+    assert result.checked > 0
+    if expect_match:
+        assert result.mismatched == 0, f"{deviation_pct}% should be within tolerance"
+        assert result.status == "ok"
+    else:
+        assert result.mismatched == result.checked
+        assert result.status == "fail"

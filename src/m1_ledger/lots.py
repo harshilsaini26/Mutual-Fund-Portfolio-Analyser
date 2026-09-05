@@ -17,7 +17,7 @@ explicit marker rather than silently skipped — see `effective_cost`.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from decimal import Decimal
 
@@ -85,6 +85,10 @@ class Lot:
     units_remaining: Decimal
     cost_per_unit: Decimal
     cost_total: Decimal
+    #: Cost not yet allocated to a consumption. Decremented as the lot is
+    #: consumed, and handed out EXACTLY when the lot closes, so a lot can
+    #: never have more cost allocated than it had (V0-10).
+    cost_remaining: Decimal
     origin: str
     grandfathered_nav: Decimal | None = None
     is_closed: bool = False
@@ -140,10 +144,27 @@ def gain_type_for(holding_days: int, tax_class: str) -> str:
     )
 
 
+def allocate_actual_cost(lot: Lot, units: Decimal) -> Decimal:
+    """The lot's own money attributable to `units`. DECISIONS V0-10.
+
+    When this consumption closes the lot, the lot's entire remaining cost is
+    handed out rather than recomputed. `cost_per_unit` is quantised to 6dp, so
+    re-multiplying it drifts — imperceptibly at a Rs 2,000 NAV where Rs 10,000
+    buys six units, by 2 paisa at a Rs 32 NAV where the same money buys 1,567.
+    Allocating the remainder exactly makes the drift structurally impossible:
+    a lot cannot pay out more cost than it took in.
+
+    A partial consumption is capped at the remaining cost for the same reason.
+    """
+    if (lot.units_remaining - units) <= EPS:
+        return lot.cost_remaining
+    return min((lot.cost_per_unit * units).quantize(MONEY_Q), lot.cost_remaining)
+
+
 def effective_cost(
     lot: Lot, units: Decimal, sale_nav: Decimal | None, tax_class: str
 ) -> tuple[Decimal, str]:
-    """Cost allocated to a consumption. MODULE_1.md §7.5.
+    """Cost basis for TAX. MODULE_1.md §7.5.
 
     Grandfathering applies to equity units acquired before 31-Jan-2018:
 
@@ -152,8 +173,13 @@ def effective_cost(
     It needs the 31-Jan-2018 NAV from M0. When the lot predates the cutoff and
     that NAV is absent, the caller marks the consumption `confidence=low`
     rather than computing a wrong number.
+
+    Note the two costs are not the same thing. The grandfathered figure is a
+    statutory substitution used to compute the gain; the lot's actual money is
+    what `allocate_actual_cost` tracks. Only the latter is conserved — the
+    former can legitimately exceed it, which is the whole point of the relief.
     """
-    actual = (lot.cost_per_unit * units).quantize(MONEY_Q)
+    actual = allocate_actual_cost(lot, units)
 
     if (
         lot.acquisition_date >= GRANDFATHER_DATE
@@ -234,12 +260,12 @@ class LotBook:
         redeemed or switched away, and drives the absolute return far negative
         on any position that has been partly sold.
         """
+        # Reads the tracked remainder rather than recomputing
+        # cost_per_unit * units_remaining, which is the drifting form V0-10
+        # removed from the allocation path. Recomputing it here would
+        # reintroduce the same error one query away from the fix.
         return sum(
-            (
-                (lot.cost_per_unit * lot.units_remaining).quantize(MONEY_Q)
-                for lot in self.lots
-                if lot.scheme_id == scheme_id
-            ),
+            (lot.cost_remaining for lot in self.lots if lot.scheme_id == scheme_id),
             Decimal(0),
         )
 
@@ -334,6 +360,7 @@ def apply_transaction(
                 units_remaining=t.units,
                 cost_per_unit=(cost_total / t.units).quantize(NAV_Q),
                 cost_total=cost_total,
+                cost_remaining=cost_total,
                 origin=ORIGIN_MAP[t.txn_type],
                 grandfathered_nav=grandfathered_nav,
             )
@@ -366,6 +393,7 @@ def apply_transaction(
             break
         take = min(lot.units_remaining, to_close)
         days = (t.txn_date - lot.acquisition_date).days
+        actual_cost = allocate_actual_cost(lot, take)
         cost, method = effective_cost(lot, take, t.nav, tax_class)
         proceeds_net = (take * net_per_unit).quantize(MONEY_Q)
 
@@ -396,6 +424,7 @@ def apply_transaction(
             )
         )
         lot.units_remaining -= take
+        lot.cost_remaining -= actual_cost
         lot.is_closed = lot.units_remaining <= EPS
         to_close -= take
         seq += 1
@@ -403,8 +432,45 @@ def apply_transaction(
     if to_close > EPS:
         raise InsufficientUnits(t, shortfall=to_close)
 
+    out = _settle_proceeds_residual(out, gross, net_total)
     book.consumptions.extend(out)
     return out
+
+
+def _settle_proceeds_residual(
+    consumptions: list[Consumption], gross: Decimal, net_total: Decimal
+) -> list[Consumption]:
+    """Make the per-lot proceeds sum to the transaction total. V0-06.
+
+    MODULE_1.md §7.2 quantises `net_per_unit` to 6dp and re-multiplies it per
+    lot, which cannot reproduce the total. The gap is a paisa or two, but a
+    capital gains schedule lists proceeds per lot and they must tie to the
+    redemption amount printed on the statement — otherwise the return does not
+    add up and a reviewer asks why.
+
+    The residual goes to the LAST consumption. Which lot absorbs it is
+    arbitrary; that it is deterministic is not, because a rebuild has to
+    reproduce the same rows byte for byte (CLAUDE.md invariant 10). FIFO order
+    makes "last" well defined.
+    """
+    if not consumptions:
+        return consumptions
+
+    net_residual = net_total - sum((c.proceeds_net for c in consumptions), Decimal(0))
+    gross_residual = gross - sum((c.proceeds_gross for c in consumptions), Decimal(0))
+    if net_residual == 0 and gross_residual == 0:
+        return consumptions
+
+    last = consumptions[-1]
+    adjusted_net = last.proceeds_net + net_residual
+    consumptions[-1] = replace(
+        last,
+        proceeds_net=adjusted_net,
+        proceeds_gross=last.proceeds_gross + gross_residual,
+        # The gain follows the proceeds, or the two stop agreeing.
+        gain_amount=(adjusted_net - last.cost_allocated).quantize(MONEY_Q),
+    )
+    return consumptions
 
 
 def build_book(
