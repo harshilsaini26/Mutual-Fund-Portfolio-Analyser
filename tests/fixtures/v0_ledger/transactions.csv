@@ -1,0 +1,43 @@
+> Synthetic transactions for V0.1, on the three real schemes in scheme_master.yaml.
+> BUILD_ORDER.md R2: the point is that the correct answers are known by
+> construction, so NAVs are chosen to give exact unit counts and the FIFO
+> consumption is hand-computable. Expected results are in expected.yaml.
+>
+> Lines beginning with '>' are comments and are not parsed.
+>
+> Cases deliberately covered:
+>   - SIP: each instalment is its own lot (6 lots in one scheme)
+>   - A redemption straddling the 365-day boundary, so ONE transaction produces
+>     both LTCG and STCG consumptions. This is the case that catches a lot
+>     engine classifying gains per-transaction instead of per-lot.
+>   - Exit load and STT reducing net proceeds below gross
+>   - Stamp duty raising cost basis above the amount paid
+>   - A bounced SIP and its REVERSAL: both excluded, not netted
+>   - IDCW_PAYOUT (income, no lot) vs IDCW_REINVEST (income AND a new lot)
+>   - SWITCH_OUT/SWITCH_IN as two linked rows: taxable, clock resets
+>   - A switch INTO the scheme whose tax class is unknown (ICICI multi-asset)
+>
+txn_ref,user_id,folio,scheme_id,scheme_raw_name,txn_date,txn_seq,txn_type,units,nav,amount,stamp_duty,stt,exit_load,switch_group_id,reverses_txn_ref
+> --- HDFC Flexi Cap: six monthly SIP instalments, six separate lots ---------
+T001,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-01-01,0,SIP,10.000000,1000.00,-10000.00,0.50,0,0,,
+T002,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-02-01,0,SIP,8.000000,1250.00,-10000.00,0.50,0,0,,
+T003,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-03-01,0,SIP,10.000000,1000.00,-10000.00,0.50,0,0,,
+T004,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-04-01,0,SIP,6.250000,1600.00,-10000.00,0.50,0,0,,
+T005,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-05-01,0,SIP,8.000000,1250.00,-10000.00,0.50,0,0,,
+T006,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-06-01,0,SIP,5.000000,2000.00,-10000.00,0.50,0,0,,
+> The bounced instalment and its reversal. Neither may reach the lot engine.
+T007,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-07-01,0,SIP,10.000000,1000.00,-10000.00,0.50,0,0,,
+T008,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2024-07-05,0,REVERSAL,-10.000000,1000.00,10000.00,0,0,0,,T007
+> Redemption of 20 units. FIFO takes lot1 (380d, LTCG), lot2 (349d, STCG) and
+> 2 units of lot3 (320d, STCG) — one transaction, two gain types.
+T009,USER-01,F0001/22,PLACEHOLDER:HDFC-FLEXICAP-REG-G,HDFC Flexi Cap Fund - Growth,2025-01-15,0,REDEMPTION,-20.000000,2000.00,40000.00,0,0.40,400.00,,
+> --- Aditya Birla Large & Mid: lump sum, IDCW, then a switch out -----------
+T010,USER-01,F0002/07,PLACEHOLDER:ABSL-LARGEMID-REG-G,Aditya Birla Sun Life Large & Mid Cap Fund - Growth,2024-06-10,0,PURCHASE,125.000000,800.00,-100000.00,5.00,0,0,,
+> Cash out, no units, no lot. Taxable at slab.
+T011,USER-01,F0002/07,PLACEHOLDER:ABSL-LARGEMID-REG-G,Aditya Birla Sun Life Large & Mid Cap Fund - Growth,2025-02-20,0,IDCW_PAYOUT,0,900.00,2500.00,0,0,0,,
+> Fires twice: slab income AND a new lot with a fresh acquisition date.
+T012,USER-01,F0002/07,PLACEHOLDER:ABSL-LARGEMID-REG-G,Aditya Birla Sun Life Large & Mid Cap Fund - Growth,2025-08-20,0,IDCW_REINVEST,4.000000,750.00,-3000.00,0.15,0,0,,
+> Switch out: no cash moves, but it is a redemption for tax. 584 days, LTCG.
+T013,USER-01,F0002/07,PLACEHOLDER:ABSL-LARGEMID-REG-G,Aditya Birla Sun Life Large & Mid Cap Fund - Growth,2026-01-15,0,SWITCH_OUT,-25.000000,900.00,22500.00,0,0.23,0,SW001,
+> --- ICICI Multi Asset: the receiving leg. Holding period restarts here. ----
+T014,USER-01,F0003/01,PLACEHOLDER:ICICI-MULTIASSET-REG-G,ICICI Prudential Multi Asset Allocation Fund - Growth,2026-01-15,1,SWITCH_IN,29.999700,750.00,-22499.77,1.12,0,0,SW001,

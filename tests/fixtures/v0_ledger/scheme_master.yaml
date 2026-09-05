@@ -1,0 +1,152 @@
+# V0.1 scheme master — transcribed from ET Money screenshots, 2026-09-05.
+#
+# PROVENANCE. Source is a third-party aggregator's UI, not AMFI and not the AMC.
+# `PLAN.md` §4.2 ("every number traces to a row in an archived source file") is
+# NOT satisfied by this file: there is no archived source, only a screenshot.
+# Fine for a V0.1 test fixture whose job is to make the lot engine provable;
+# not fine as a warehouse row. M0's real AMFI ingestion replaces all of it.
+#
+# WHAT IS NOT HERE, and cannot be invented:
+#   - ISINs and AMFI codes. ET Money shows neither. `MODULE_0.md` §11.4 makes
+#     scheme_id "stable and never reused" because ledger rows reference it
+#     permanently, so the placeholders below are marked and must be replaced
+#     before any real CAS import. Recalling real ISINs from memory would put a
+#     possibly-wrong permanent identifier into a ledger.
+#   - Holdings. No look-through is possible from this data.
+#   - Direct-plan siblings. All three funds below are Regular.
+#   - A NAV series. Two points per fund is what the screenshots carry.
+
+meta:
+  source: ET Money fund pages (screenshots)
+  captured: 2026-09-05
+  archived_source_file_id: null      # no L0 archive — see PROVENANCE above
+  confidence: low
+  caveats:
+    - "Scheme identifiers are placeholders; ET Money does not display ISIN or AMFI code."
+    - "All three schemes are Regular plan. Direct-plan NAV and TER are not available here."
+
+schemes:
+  - scheme_id: PLACEHOLDER:HDFC-FLEXICAP-REG-G
+    scheme_name: HDFC Flexi Cap Fund
+    amc_id: HDFC
+    plan: regular
+    option: growth
+    sebi_category: Flexi Cap
+    benchmark_id: NIFTY500-TRI
+    inception_date: 1994-12-08
+    status: active
+    exit_load_pct: "1.0"
+    exit_load_days: 365
+    lock_in_days: 0
+    # Indian digit grouping: "1,10,736 Cr" is 110736 crore, not 1.10736 crore.
+    # 110736 x 10^7 = 1.10736e12. A parser that assumes Western grouping or
+    # misreads the unit is out by 100x, which is MODULE_0.md's lakh/crore trap.
+    aum_inr: "1107360000000.0000"
+    aum_as_of: 2026-08-31          # AUM date not shown; TER date used as proxy
+    risk_label: Very High
+
+  - scheme_id: PLACEHOLDER:ABSL-LARGEMID-REG-G
+    scheme_name: Aditya Birla Sun Life Large & Mid Cap Fund
+    amc_id: ABSL
+    plan: regular
+    option: growth
+    sebi_category: Large & Mid Cap
+    benchmark_id: NIFTYLARGEMID250-TRI
+    inception_date: 2001-04-02
+    status: active
+    exit_load_pct: "1.0"
+    exit_load_days: 365
+    lock_in_days: 0
+    aum_inr: "58270000000.0000"     # 5,827 Cr
+    aum_as_of: 2026-08-31
+    risk_label: Very High
+
+  - scheme_id: PLACEHOLDER:ICICI-MULTIASSET-REG-G
+    scheme_name: ICICI Prudential Multi Asset Allocation Fund
+    amc_id: ICICI
+    plan: regular
+    option: growth
+    sebi_category: Multi Asset Allocation
+    # ET Money shows "Benchmark: NA". Not a PRI index to suppress under
+    # CLAUDE.md invariant 7 — there is no benchmark at all, which is the
+    # separate `bm_available=False` path. Every benchmark-derived figure
+    # (alpha, tracking error, information ratio, Brinson) must be suppressed
+    # with a reason, not rendered as zero. PLAN.md §4.9: degrade the panel.
+    benchmark_id: null
+    inception_date: 2002-10-07
+    status: active
+    exit_load_pct: "1.0"
+    exit_load_days: 365
+    lock_in_days: 0
+    aum_inr: "867850000000.0000"    # 86,785 Cr
+    aum_as_of: 2026-08-31
+    risk_label: Very High
+
+# --- TER --------------------------------------------------------------------
+# ET Money reports TWO figures per fund; MODULE_0.md's `scheme_ter` has one
+# `ter` column. Base TER excludes GST on the management fee, B-30 incentive and
+# additional expenses; Total TER is what actually reduces NAV daily and is
+# therefore what fee drag in rupees must use (PLAN.md §2: "costs Rs 3,400/year").
+#
+# Both are recorded here pending an ADR. Do not silently pick one.
+ter:
+  PLACEHOLDER:HDFC-FLEXICAP-REG-G:
+    - {valid_from: 2026-08-31, valid_to: null, base_ter: "1.0800", total_ter: "1.3700"}
+  PLACEHOLDER:ABSL-LARGEMID-REG-G:
+    - {valid_from: 2026-08-31, valid_to: null, base_ter: "1.5700", total_ter: "2.0000"}
+  PLACEHOLDER:ICICI-MULTIASSET-REG-G:
+    - {valid_from: 2026-08-31, valid_to: null, base_ter: "1.0600", total_ter: "1.4200"}
+
+# --- NAV --------------------------------------------------------------------
+# Two points per fund: the header NAV and the chart's hover label. Not a series.
+# XIRR needs a NAV on every cashflow date; TWRR needs one at every period
+# boundary. Neither is computable from this until a real series exists.
+#
+# Note the as-of dates differ — ICICI is a day behind the other two. That is
+# ordinary NAV publication lag and exactly the staleness PLAN.md §4.3 says must
+# be displayed rather than smoothed over.
+navs:
+  PLACEHOLDER:HDFC-FLEXICAP-REG-G:
+    - {nav_date: 2025-06-23, nav: "1963.710000", is_interpolated: false}
+    - {nav_date: 2026-09-04, nav: "2062.380000", is_interpolated: false}
+  PLACEHOLDER:ABSL-LARGEMID-REG-G:
+    - {nav_date: 2021-12-10, nav: "686.170000", is_interpolated: false}
+    - {nav_date: 2026-09-04, nav: "962.330000", is_interpolated: false}
+  PLACEHOLDER:ICICI-MULTIASSET-REG-G:
+    - {nav_date: 2021-10-14, nav: "423.120000", is_interpolated: false}
+    - {nav_date: 2026-09-03, nav: "814.800000", is_interpolated: false}
+
+# --- tax class --------------------------------------------------------------
+# scheme_tax_class is point-in-time in MODULE_0.md, and this is why.
+#
+# The two equity funds show equity taxation on their overview cards. The ICICI
+# multi-asset card shows NO tax rows at all — and a multi-asset fund is taxed as
+# equity only while its equity allocation stays at or above the statutory
+# threshold, which moves with the manager's allocation. It cannot be read off a
+# screenshot, and guessing it would produce a confidently wrong tax number.
+#
+# CLAUDE.md invariant 5: raise, don't clamp. Unknown is recorded as unknown.
+tax_class:
+  PLACEHOLDER:HDFC-FLEXICAP-REG-G:
+    - {valid_from: 1994-12-08, valid_to: null, tax_class: equity, source: etmoney_ui}
+  PLACEHOLDER:ABSL-LARGEMID-REG-G:
+    - {valid_from: 2001-04-02, valid_to: null, tax_class: equity, source: etmoney_ui}
+  PLACEHOLDER:ICICI-MULTIASSET-REG-G:
+    - {valid_from: 2002-10-07, valid_to: null, tax_class: null, source: unknown}
+
+# --- benchmarks -------------------------------------------------------------
+# Both named benchmarks are explicitly TRI, which satisfies invariant 7.
+benchmarks:
+  - {index_id: NIFTY500-TRI, index_name: NIFTY 500 TRI, provider: NSE,
+     is_total_return: true}
+  - {index_id: NIFTYLARGEMID250-TRI, index_name: Nifty Large Midcap 250 TRI,
+     provider: NSE, is_total_return: true}
+
+# --- NOT stored -------------------------------------------------------------
+# "Returns since inception 18.56% / 15.52% / 20.25% p.a." are derived figures,
+# recomputable from the NAV series and inception date. Storing a derived number
+# alongside its inputs invites the two to disagree (CLAUDE.md invariant 10:
+# every derived table is droppable and regenerable).
+#
+# ET Money Rating (5/1/4 stars) is a third-party opinion, not a fact about the
+# fund, and PLAN.md §3.3 forbids surfacing prescriptive signals.
