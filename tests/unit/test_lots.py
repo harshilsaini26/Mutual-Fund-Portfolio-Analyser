@@ -30,6 +30,7 @@ from src.m1_ledger.txn import Txn, load_transactions
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = "AMFI:HDFC-FLEXICAP-DIR-G"
 ICICI = "AMFI:ICICI-MULTIASSET-REG-G"
+KOTAK = "AMFI:KOTAK-PIONEER-DIR-G"
 
 
 @pytest.fixture(scope="module")
@@ -52,8 +53,8 @@ def book(txns: list[Txn]) -> LotBook:
 
 def test_all_transactions_parse(txns: list[Txn]) -> None:
     """14 rows, comment lines skipped, every money field a Decimal."""
-    assert len(txns) == 11
-    assert {t.txn_ref for t in txns} == {f"T{i:03d}" for i in range(1, 12)}
+    assert len(txns) == 14
+    assert {t.txn_ref for t in txns} == {f"T{i:03d}" for i in range(1, 15)}
     for t in txns:
         assert t.units is None or isinstance(t.units, Decimal)
         assert t.amount is None or isinstance(t.amount, Decimal)
@@ -252,7 +253,7 @@ def test_non_equity_holding_threshold_is_not_invented() -> None:
 
 def test_fifo_order_is_oldest_acquisition_first(book: LotBook) -> None:
     """MODULE_1.md §7.3. Monotonic in acquisition_date — PLAN.md §8.3 invariant 3."""
-    for txn_ref in ("T009", "T010"):
+    for txn_ref in ("T009", "T010", "T014"):
         dates = [c.acquisition_date for c in book.consumptions_for(txn_ref)]
         assert dates == sorted(dates)
 
@@ -406,3 +407,99 @@ def test_scheme_master_matches_the_nav_series_plan() -> None:
             f"workbook says {block['plan']!r}. Different share classes, "
             f"different NAV series — never cross them."
         )
+
+
+def test_exit_load_is_per_scheme_not_a_constant(txns: list[Txn]) -> None:
+    """Kotak charges 0.5%; HDFC charges 1%. Exit load is a scheme term.
+
+    A fixture with one rate cannot catch code that hardcodes it — an earlier
+    draft of the generator did exactly that, and would have doubled Kotak's
+    load. This asserts the two transactions carry genuinely different rates.
+    """
+    hdfc_redemption = next(t for t in txns if t.txn_ref == "T009")
+    kotak_redemption = next(t for t in txns if t.txn_ref == "T014")
+    assert hdfc_redemption.scheme_id == HDFC
+    assert kotak_redemption.scheme_id == KOTAK
+
+    master = load_yaml(FIXTURES / "scheme_master.yaml")
+    rates = {s["scheme_id"]: Decimal(s["exit_load_pct"]) for s in master["schemes"]}
+    assert rates[HDFC] == Decimal("1.0")
+    assert rates[KOTAK] == Decimal("0.5")
+    assert rates[KOTAK] * 2 == rates[HDFC]
+
+    # Both charged something, and neither charged the whole redemption.
+    for t in (hdfc_redemption, kotak_redemption):
+        assert t.amount is not None
+        assert 0 < t.exit_load < abs(t.amount)
+
+
+def test_exit_load_spares_units_past_the_window(txns: list[Txn]) -> None:
+    """Charging the load on the whole redemption overcharges long holders.
+
+    Kotak's redemption takes 1,567 units held 527 days (outside the window,
+    unloaded) and 232 units held 257 days (inside, loaded). The load must be
+    0.5% of the 232 units only.
+    """
+    t = next(x for x in txns if x.txn_ref == "T014")
+    assert t.nav is not None
+    loaded_units = Decimal("232.483697")
+    assert t.exit_load == (loaded_units * t.nav * Decimal("0.005")).quantize(
+        Decimal("0.0001")
+    )
+    # A naive load on all 1,800 units would be nearly eight times larger.
+    naive = (Decimal("1800") * t.nav * Decimal("0.005")).quantize(Decimal("0.0001"))
+    assert naive > t.exit_load * 7
+
+
+def test_gain_type_is_per_lot_in_the_kotak_redemption(book: LotBook) -> None:
+    """A second scheme, a second mixed-gain redemption, a different load rate.
+
+    Two schemes showing the same behaviour is what distinguishes a rule from a
+    coincidence of one fixture's dates.
+    """
+    cons = book.consumptions_for("T014")
+    assert [c.gain_type for c in cons] == ["LTCG", "STCG"]
+    assert cons[0].holding_days == 527
+    assert cons[1].holding_days == 257
+
+
+def test_cost_allocation_drifts_at_small_nav_and_large_unit_counts(
+    book: LotBook,
+) -> None:
+    """DECISIONS V0-10. Scale-dependent, and invisible on one fund.
+
+    `cost_per_unit` is quantised to 6dp and re-multiplied by the unit count.
+    At HDFC's scale — ~6 units at ~Rs 1,700 — that reproduces the lot cost
+    exactly. At Kotak's — ~1,567 units at ~Rs 32 — it overshoots by 2 paisa, so
+    a FULLY consumed lot is allocated more cost than it ever had, and the gain
+    is understated by the same amount.
+    """
+    kotak_lot = next(
+        x for x in book.all_lots() if x.scheme_id == KOTAK and x.units_remaining == 0
+    )
+    allocated = sum(
+        (
+            c.cost_allocated
+            for c in book.all_consumptions()
+            if c.lot_id == kotak_lot.lot_id
+        ),
+        Decimal(0),
+    )
+    assert kotak_lot.is_closed, "this lot must be fully consumed for the test to bite"
+    assert allocated != kotak_lot.cost_total, (
+        "no drift here — if the algorithm changed, V0-10 may be resolved"
+    )
+    assert abs(allocated - kotak_lot.cost_total) <= Decimal("0.001")
+
+    # The same arithmetic on an HDFC lot is exact, which is why one fund could
+    # never have surfaced this.
+    hdfc_lot = next(x for x in book.all_lots() if x.golden_ref == "L1")
+    hdfc_alloc = sum(
+        (
+            c.cost_allocated
+            for c in book.all_consumptions()
+            if c.lot_id == hdfc_lot.lot_id
+        ),
+        Decimal(0),
+    )
+    assert hdfc_alloc == hdfc_lot.cost_total

@@ -41,6 +41,7 @@ from src.m1_ledger.txn import load_transactions
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = SchemeId("AMFI:HDFC-FLEXICAP-DIR-G")
 ICICI = SchemeId("AMFI:ICICI-MULTIASSET-REG-G")
+KOTAK = SchemeId("AMFI:KOTAK-PIONEER-DIR-G")
 AS_OF = date(2026, 9, 4)
 
 
@@ -396,3 +397,68 @@ def test_switch_out_inflow_is_net_of_stt(txns: list[Any]) -> None:
     expected = abs(switch.amount) - switch.exit_load - switch.stt
     flows = build_cashflows(txns, "scheme", Decimal("1000"), AS_OF)
     assert any(a == expected for d, a in flows if d == switch.txn_date)
+
+
+def test_funds_price_on_different_last_days(
+    navs: dict[str, dict[date, Decimal]],
+) -> None:
+    """Kotak's series ends a day before the other two.
+
+    Real cross-fund staleness: a portfolio as-of date cannot assume every
+    scheme priced that day. `PLAN.md` §4.3 — staleness is displayed, never
+    hidden — starts with the valuation actually noticing it.
+    """
+    last = {k: max(v) for k, v in navs.items()}
+    assert last[HDFC] == date(2026, 9, 4)
+    assert last[ICICI] == date(2026, 9, 4)
+    assert last[KOTAK] == date(2026, 9, 3)
+    assert len({v for v in last.values()}) > 1, "fixture must span >1 last-priced date"
+
+
+def test_valuation_uses_each_funds_own_latest_nav(
+    navs: dict[str, dict[date, Decimal]],
+) -> None:
+    """At a portfolio as-of of 2026-09-04, Kotak is valued on 2026-09-03.
+
+    Rolling forward would price it at a NAV that did not exist yet; refusing to
+    value it would drop a real holding from the total.
+    """
+    from src.m1_ledger.returns import nav_on_or_before
+
+    assert AS_OF not in navs[KOTAK]
+    got = nav_on_or_before(navs[KOTAK], AS_OF)
+    assert got is not None
+    assert got == navs[KOTAK][date(2026, 9, 3)]
+
+    staleness = (AS_OF - max(d for d in navs[KOTAK] if d <= AS_OF)).days
+    assert staleness == 1, "Kotak is one day stale at this as-of date"
+
+
+def test_returns_computed_for_every_held_scheme(
+    txns: list[Any], navs: dict[str, dict[date, Decimal]]
+) -> None:
+    """Three schemes, three coherent return sets, none degrading to None."""
+    from src.m1_ledger.returns import nav_on_or_before
+
+    book = build_book(txns)
+    firsts = {HDFC: date(2024, 1, 1), ICICI: date(2026, 1, 16), KOTAK: date(2024, 11, 4)}
+    for scheme_id, first in firsts.items():
+        units = book.units_remaining(scheme_id)
+        assert units > 0, f"{scheme_id} should still hold units"
+        nav = nav_on_or_before(navs[scheme_id], AS_OF)
+        assert nav is not None
+        pos = Position(
+            scheme_id=scheme_id,
+            as_of=AS_OF,
+            units=units,
+            market_value=units * nav,
+            invested_net=book.cost_basis_remaining(scheme_id),
+            first_purchase=first,
+        )
+        r = compute_returns(
+            pos, [t for t in txns if t.scheme_id == scheme_id], navs[scheme_id]
+        )
+        assert r.xirr is not None, f"{scheme_id} XIRR undefined"
+        assert r.twrr_ann is not None, f"{scheme_id} TWRR undefined"
+        assert r.absolute is not None
+        assert r.timing_effect == r.xirr - r.twrr_ann

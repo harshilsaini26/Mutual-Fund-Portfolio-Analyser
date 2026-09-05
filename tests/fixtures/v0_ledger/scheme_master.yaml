@@ -28,6 +28,7 @@ meta:
     - "Scheme identifiers are placeholders; ET Money displays no ISIN or AMFI code."
     - "HDFC is the Direct plan; its TER and inception could not be sourced for that plan."
     - "Aditya Birla Large & Mid has no NAV series and is therefore absent."
+    - "Two of three schemes publish no benchmark at all."
 
 schemes:
   - scheme_id: AMFI:HDFC-FLEXICAP-DIR-G
@@ -94,6 +95,43 @@ schemes:
     # reason, never rendered as zero.
     benchmark_id: null
 
+  - scheme_id: AMFI:KOTAK-PIONEER-DIR-G
+    scheme_name: Kotak Pioneer Fund- Direct Plan- Growth Option
+    amc_id: KOTAK
+    plan: direct
+    option: growth
+    sebi_category: Thematic
+    status: active
+
+    # Consistent throughout: workbook says Direct Plan, screenshot says Direct,
+    # and NAV 39.53 on 2026-09-03 matches the page exactly.
+    #
+    # Unlike HDFC, this scheme's TER IS the Direct plan's, because the
+    # screenshot was taken on the Direct plan. 0.64% total against HDFC's
+    # 1.37% Regular is the distributor commission made concrete.
+    base_ter: "0.4800"
+    total_ter: "0.6400"
+    ter_as_of: 2026-08-31
+
+    # HALF the other two schemes' exit load. Exit load is a per-scheme term,
+    # and a fixture with one rate cannot catch code that hardcodes it.
+    exit_load_pct: "0.5"
+    exit_load_days: 365
+    lock_in_days: 0
+    aum_inr: "40230000000.0000"     # 4,023 Cr
+    aum_as_of: 2026-08-31
+    risk_label: Very High
+
+    # Unambiguous here, unlike HDFC: the scheme launched 2019-10-09, well after
+    # SEBI introduced Direct plans, so scheme inception and Direct-plan
+    # inception are the same date.
+    inception_date: 2019-10-09
+
+    # "Benchmark: NA" again — the second scheme of three with no benchmark at
+    # all. DECISIONS V0-02 is not a one-off: bm_available=False needs to be a
+    # first-class state, not an edge case.
+    benchmark_id: null
+
 # --- tax class --------------------------------------------------------------
 # scheme_tax_class is point-in-time in MODULE_0.md, and the ICICI fund is why.
 #
@@ -107,6 +145,8 @@ tax_class:
     - {valid_from: 2013-01-01, valid_to: null, tax_class: equity, source: etmoney_ui}
   AMFI:ICICI-MULTIASSET-REG-G:
     - {valid_from: 2002-10-07, valid_to: null, tax_class: null, source: unknown}
+  AMFI:KOTAK-PIONEER-DIR-G:
+    - {valid_from: 2019-10-09, valid_to: null, tax_class: equity, source: etmoney_ui}
 
 benchmarks:
   - {index_id: NIFTY500-TRI, index_name: NIFTY 500 TRI, provider: NSE,
