@@ -28,6 +28,8 @@ from src.common.fixtures import load_yaml
 from src.common.types import SchemeId
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.returns import (
+    TWRR_DAYS_PER_YEAR,
+    XIRR_DAYS_PER_YEAR,
     Position,
     Returns,
     build_cashflows,
@@ -232,6 +234,38 @@ def test_idcw_reinvest_is_not_an_unmatched_outflow(txns: list[Any]) -> None:
 
 
 # --- TWRR and timing effect ------------------------------------------------
+
+
+def test_both_return_measures_use_the_same_year_length() -> None:
+    """DECISIONS V0-17, resolving V0-08. One basis, because they get subtracted.
+
+    `timing_effect = XIRR - TWRR_ann` is a difference of two near-equal
+    numbers, so any basis mismatch between them lands entirely in the result
+    rather than being diluted by it. At 365 against 365.25 that artifact is
+    0.068% of a year — comparable in size to a genuine timing effect on a
+    steadily-invested portfolio, and indistinguishable from one.
+
+    365 is the side that cannot move: `PLAN.md` §7 V0 checks XIRR against
+    Excel to four decimal places, and Excel discounts on 365. The 365.25 in
+    TWRR was guarding against calendar drift over decades, which is not a
+    concern when the figure exists to be subtracted from one computed the
+    other way.
+    """
+    assert XIRR_DAYS_PER_YEAR == TWRR_DAYS_PER_YEAR == Decimal(365)
+
+
+def test_a_two_year_twrr_annualises_on_exactly_two_years() -> None:
+    """The consequence of V0-17, stated as a number.
+
+    730 days is exactly two 365-day years, so a NAV that went 100 -> 121
+    annualises to exactly 10% — no residual from a fractional year count. Under
+    365.25 the exponent was 1/1.99863, which returned 10.0075%: right to three
+    decimals, wrong in the fourth, and wrong in the same direction every time.
+    """
+    cum, ann = twrr(Decimal("100"), Decimal("121"), days=730)
+    assert cum is not None and ann is not None
+    assert cum == Decimal("0.21")
+    assert abs(ann - Decimal("0.10")) < Decimal("0.00005")
 
 
 def test_twrr_is_a_nav_ratio() -> None:

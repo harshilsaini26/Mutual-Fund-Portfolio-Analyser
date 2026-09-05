@@ -29,13 +29,16 @@ from src.m1_ledger.txn import (
 
 #: Excel's XIRR discounts on a 365-day year, and `PLAN.md` §7 V0 checks our
 #: answer against it to four decimal places. A 365.25 basis moves the result
-#: inside that tolerance, so the two must not be confused.
+#: inside that tolerance, so this one cannot move.
 XIRR_DAYS_PER_YEAR = Decimal(365)
 
-#: TWRR annualisation uses the average year length, including leap years.
-#: MODULE_1.md §9.3 specifies 365.25 here even though XIRR uses 365 — see the
-#: note on `timing_effect` below, which subtracts one from the other.
-TWRR_DAYS_PER_YEAR = Decimal("365.25")
+#: The SAME 365, departing from MODULE_1.md §9.3's 365.25. DECISIONS V0-17.
+#:
+#: `timing_effect` subtracts one of these figures from the other, and a
+#: difference of two near-equal numbers carries the whole basis mismatch into
+#: the result instead of diluting it. §9.3's 365.25 guards against calendar
+#: drift over decades, which is not what this number is for.
+TWRR_DAYS_PER_YEAR = XIRR_DAYS_PER_YEAR
 
 _MAX_NEWTON_STEPS = 50
 _MAX_BISECTION_STEPS = 200
@@ -265,11 +268,10 @@ def compute_returns(
     days = (pos.as_of - pos.first_purchase).days
     twrr_cum, twrr_ann = twrr(nav_start, nav_end, days)
 
-    # NOTE: XIRR discounts on 365 and TWRR annualises on 365.25, both per
-    # MODULE_1.md §9. The difference is under 0.07% of a year and is far below
-    # the size of any timing effect worth showing, but the two figures are not
-    # on an identical basis and the subtraction is approximate. Recorded as
-    # DECISIONS V0-08 rather than silently reconciled.
+    # Both figures are on a 365-day basis (DECISIONS V0-17), so this
+    # subtraction is exact rather than approximate. MODULE_1.md §9.3 puts TWRR
+    # on 365.25, which would put 0.068% of a year straight into a difference
+    # of two near-equal numbers.
     timing = rate - twrr_ann if rate is not None and twrr_ann is not None else None
 
     absolute = (

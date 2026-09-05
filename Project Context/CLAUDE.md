@@ -79,4 +79,40 @@ python -m jobs.<name> [--as-of YYYY-MM-DD]
   what is blocked.
 - **Append to `docs/DECISIONS.md`** when resolving an OPEN item or departing from a spec.
   Never edit an existing entry — supersede it.
+- **Every ADR is self-contained.** State the decision and the question it answers inside
+  the entry. Never reference an entry by ID alone — `OPEN-03` and `OPEN-07` were cited
+  that way from two documents while their text was lost, and the citations pointed at
+  nothing.
 - If a spec is ambiguous or looks wrong, say so before coding around it.
+
+## Working principles
+
+**Think before coding.** State assumptions explicitly. When the specs are
+ambiguous, present the interpretations — don't pick one silently. If a simpler
+approach exists, say so before implementing the specified one. If confused,
+name what's unclear and stop.
+
+**Simplicity first.** Minimum code that satisfies the current gate. No
+abstraction for single-use code, no configurability that wasn't asked for, no
+error handling for impossible states. If 200 lines could be 50, rewrite it.
+
+**Surgical changes.** Every changed line traces to the current task. Don't
+improve adjacent code, don't refactor what isn't broken, match existing style.
+Remove only the orphans your own change created. Mention unrelated dead code;
+don't delete it.
+
+**Goal-driven.** Before multi-step work, state the plan as steps with
+verification: `1. [step] → verify: [check]`. Then loop until each verifies.
+
+### Applied here
+
+- **The V0 verifier is a V0 artifact.** `scripts/verify_v0_ledger.py` stays for
+  the ledger. Do not build an independent verifier for M0, M2, or anything else.
+  The ledger justified the cost because everything inherits its errors. Parsers
+  don't.
+- **Mutation testing is for the correctness gates only** — M1 ledger and M3
+  look-through. Not for parsers, not for view builders, not for fixtures.
+- **Prefer a real file over a better simulation.** When a synthetic fixture and
+  a real artifact would answer the same question, get the real artifact.
+- **Contracts are frozen.** Changing a Protocol or dataclass in
+  `src/common/contracts/` requires an ADR before any code.

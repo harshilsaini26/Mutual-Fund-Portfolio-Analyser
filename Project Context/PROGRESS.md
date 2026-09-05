@@ -9,7 +9,7 @@
 
 **Slice:** V0.3 complete — the V0 gate runs on a ledger that came through the parser.
 **Repo:** local git, 13 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (58 files) · 343 tests · verifier no drift.
+**Gate:** ruff clean · `mypy --strict` clean (58 files) · 345 tests · verifier no drift.
 **Next:** V0.4 — M0 behind the real provider (`BUILD_ORDER.md` R2).
 
 **Run everything:**
@@ -66,17 +66,20 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 30 entries (SZ-01…SZ-14, V0-01…V0-16).
+`DECISIONS.md` holds 34 entries (SZ-01…SZ-14, V0-01…V0-18, OPEN-03, OPEN-07).
 
-**Genuinely undecided:**
+**Nothing is undecided.** All four open items were closed on 2026-09-05:
 
-- **V0-01** — `scheme_ter` needs both base and total TER. Needs a DDL choice.
-  Blocks any fee output.
-- **V0-08** — XIRR discounts on 365, TWRR annualises on 365.25, and
-  `timing_effect` subtracts one from the other. 0.068% apart; it matters because
-  it is a difference of two near-equal numbers.
-- **OPEN-07** — NAV backfill depth. Needed before V0.5. Original text lost.
-- **OPEN-03** — `index_constituent` scheduling. Before V1 per R4. Text lost.
+| Was | Now |
+|---|---|
+| **V0-08** — XIRR on 365, TWRR on 365.25 | **V0-17.** Both on 365. `timing_effect` is a difference of two near-equal numbers, so the basis mismatch became the result rather than diluting into it — 1.1–1.2 bp on the fixture's schemes. Excel compatibility fixes XIRR at 365, so TWRR moved. |
+| **V0-01** — `scheme_ter` base vs total DDL | **V0-18.** Deferred to V2. It blocks fee output, which is V2; choosing storage for a table nothing reads is speculative. The distinction survives in `scheme_master.yaml` and in the ADR. |
+| **OPEN-07** — NAV backfill depth | **Decided.** Full history for held schemes, earliest-transaction-onward for the rest, **31-Jan-2018 required regardless** for equity grandfathering. One-time overnight job. Text was lost; restored by the user. |
+| **OPEN-03** — `index_constituent` source and depth | **Decided.** Source a constituent file with history; if unobtainable, build the universe from AMFI's semi-annual market-cap list as `universe_id = 'amfi_universe'`. Before V1, not before V0.5. Text restored by the user. |
+
+Every ADR is now self-contained — a rule added to both `DECISIONS.md` and
+`CLAUDE.md` after `OPEN-03` and `OPEN-07` spent weeks as bare IDs cited from two
+documents with their text missing, so the citations pointed at nothing.
 
 **Decided, but resting on inference until real data arrives:**
 
@@ -95,17 +98,16 @@ not against a hand-made CSV.
 
 ## Practices that have earned their place
 
-- **Mutation-test every new module.** It has found a real gap in every one it
-  has touched, across six rounds: the LTCG boundary, exit load in cashflows,
-  folio scoping in reconciliation, two masked fixes in V0-14, four survivors in
-  V0-15 (a sign convention silently rebuilt by a later step, dead code, two
-  tests passing for the wrong reason), and four in V0-16 of which three were
-  real and one genuinely equivalent. Every one survived a fully green suite.
-- **Mutate the fixture, not only the code.** New in V0-16. A gate that passes on
-  a corrupted *statement* is not a gate — and three of the four survivors there
-  were fixture and test defects, not code: a summary section with nothing
-  transaction-shaped in it, a closing-balance line nothing consulted, and a
-  correct behaviour that was accidental rather than asserted.
+- **Mutation-test the correctness gates.** `CLAUDE.md` scopes this to M1 ledger
+  and M3 look-through — **not parsers, not view builders, not fixtures**. It has
+  found a real gap in every gate it touched: the LTCG boundary, exit load in
+  cashflows, folio scoping in reconciliation, and two masked fixes in V0-14.
+  Each survived a fully green suite.
+
+  *Scope correction:* V0-15 and V0-16 ran it against the CAS parser and the
+  statement rendering, which the rule excludes. It found eight real defects
+  there, so the tests it produced are kept — but the practice stops at the gate
+  boundary from here, and the parser is not mutation-tested again.
 - **Vary the fixture, not just the assertions.** One NAV scale hid V0-10; one
   folio per scheme hid a netting bug; one exit-load rate hid a hardcoded
   constant. Each was found by adding a fund, not by review.
@@ -222,6 +224,8 @@ an interface frozen in Slice Zero, which is the whole payoff of R1 and R2. It
 also retires the `_resolve` stub the CAS tests currently pass in, and is what
 `PLAN.md` §4.2 needs before any number traces to an archived source file.
 
-Then **V0.5**, historical NAV backfill — blocked on OPEN-07 (backfill depth).
+Then **V0.5**, historical NAV backfill — **unblocked**: OPEN-07 now specifies
+full history for held schemes, earliest-transaction-onward for the rest, and
+31-Jan-2018 regardless, as a one-time overnight job.
 
 `pdf.py` stays untested until a real password-protected CAS exists.
