@@ -26,6 +26,7 @@ from src.m0_data.normalise.numbers import CoercionError, to_date, to_decimal
 from src.m0_data.parse.nav.amfi import (
     AmfiParseError,
     AmfiParseResult,
+    column_map,
     normalise_option,
     normalise_plan,
     parse_navall,
@@ -474,3 +475,89 @@ def test_rows_that_agree_are_not_treated_as_a_collision(
     collisions = scheme_id_collisions(parsed.schemes)
     for rows in collisions.values():
         assert len({(r.scheme_name, r.plan, r.option) for r in rows}) > 1
+
+
+# --- §2 two AMFI layouts, same eight columns --------------------------------
+
+HISTORY = SAMPLE.parent / "navhistory_sample.txt"
+
+
+@pytest.fixture(scope="module")
+def history() -> AmfiParseResult:
+    return parse_navall(HISTORY.read_text(encoding="utf-8").splitlines())
+
+
+def test_the_history_export_orders_its_columns_differently(
+    lines: list[str],
+) -> None:
+    """DECISIONS V0-23. Same eight columns, permuted.
+
+        NAVAll.txt  Scheme Code; ISIN Growth; ISIN Reinvestment; Scheme Name; ...
+        history     Scheme Code; NAV Name;    Plan;              Option;      ...
+
+    Column 1 is an ISIN in one file and the scheme name in the other. A parser
+    written positionally against either reads the other wrong — and reads it
+    wrong *quietly*: the name fails ISIN validation, the row resolves to
+    nothing, and a whole export lands in the quarantine queue for a reason no
+    message explains.
+    """
+    daily_header = lines[0]
+    history_header = HISTORY.read_text(encoding="utf-8").splitlines()[0]
+    assert daily_header != history_header
+    assert daily_header.count(";") == history_header.count(";") == 7
+
+    daily = column_map(daily_header)
+    hist = column_map(history_header)
+    assert daily["isin_primary"] == 1 and daily["name"] == 3
+    assert hist["name"] == 1 and hist["isin_primary"] == 4
+    assert daily != hist, "the orders genuinely differ"
+
+
+def test_both_layouts_parse_to_the_same_facts(history: AmfiParseResult) -> None:
+    """The point of reading the header: one parser, either file.
+
+    HDFC Flexi Cap Direct Growth is `INF179K01UT0` in both exports, with plan
+    `direct` and option `growth`, whichever column order it arrived in.
+    """
+    direct = [s for s in history.schemes if s.scheme_id == HDFC_DIRECT]
+    assert direct, "the history sample must contain the same scheme"
+    assert direct[0].plan == "direct"
+    assert direct[0].option == "growth"
+    assert direct[0].amfi_code == "118955"
+    assert history.warnings == [] and history.unparsed == []
+
+
+def test_the_history_export_carries_a_dated_series(history: AmfiParseResult) -> None:
+    """A backfill is only worth running if the dates come back distinct."""
+    dated = {n.nav_date: n.nav for n in history.navs if n.scheme_id == HDFC_DIRECT}
+    assert dated == {
+        date(2024, 1, 2): Decimal("1625.154"),
+        date(2024, 1, 3): Decimal("1626.456"),
+    }
+
+
+def test_a_data_row_before_any_header_raises(history: AmfiParseResult) -> None:
+    """Without a header the column order is unknown, so there is nothing to do.
+
+    Guessing a layout is how the two exports get confused in the first place.
+    """
+    with pytest.raises(AmfiParseError, match="column order is unknown"):
+        parse_navall([
+            "Some Mutual Fund",
+            "118955;INF179K01UT0;-;HDFC Flexi Cap Fund;Direct Plan;"
+            "Growth Option;1.0;02-Jan-2024",
+        ])
+
+
+def test_an_html_error_page_is_not_mistaken_for_an_empty_file() -> None:
+    """An unknown `mf` code returns HTTP 200 and an HTML error page.
+
+    Not a 404, not empty — so a job that treated a parse yielding no rows as
+    "this AMC published nothing" would record zero NAVs and report success.
+    §2: fail loudly and log the attempted URL, never fall back to a guess.
+    """
+    with pytest.raises(AmfiParseError, match="not an AMFI NAV file"):
+        parse_navall([
+            "<!DOCTYPE html>", "<html><head><script>", "(function() {",
+            "// Added print Friendly Page function", "</script></head></html>",
+        ])

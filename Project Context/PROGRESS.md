@@ -7,10 +7,10 @@
 
 ## Current state
 
-**Slice:** V0.4 complete — M0 serves `MarketDataProvider` from a real warehouse.
-**Repo:** local git, 15 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (81 files) · 409 tests · verifier no drift.
-**Next:** V0.5 — historical NAV backfill (OPEN-07 already specifies the depth).
+**Slice:** V0.5 complete — nine years of AMFI NAV history in the warehouse.
+**Repo:** local git, 16 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (84 files) · 422 tests · verifier no drift.
+**Next:** the fixture re-key — the golden portfolio onto its real ISINs.
 
 **Run everything:**
 
@@ -24,7 +24,12 @@ python -m scripts.verify_v0_ledger --check     # exits 1 on golden-file drift
 
 ```bash
 MF_CONTACT_EMAIL=you@example.com python -m jobs.fetch_nav
+MF_CONTACT_EMAIL=you@example.com python -m jobs.backfill_nav     --amc hdfc icici_prudential kotak_mahindra --from 2024-01-01
 ```
+
+`backfill_nav` clamps `--from` to 31-Jan-2018 and discovers AMFI's AMC codes on
+first run. Both jobs are safe to re-run: the archive is content-addressed and
+the loads are upserts.
 
 **Regenerate fixtures** after changing a generator. Order matters — each step
 reads the previous step's output:
@@ -47,13 +52,13 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET), `parse/nav/amfi.py`, `normalise/`, `resolve/isin.py`, `derive/nav_adj.py`, `load.py`, `validate/integrity.py`, `schema/apply.py`, `providers/warehouse.py` |
 | `migrations/` | `001_provenance.sql` (`raw_file`, `job_run`), `002_scheme_nav.sql` (`amc`, `scheme`, `nav_daily`, `scheme_idcw`). Numbered, forward-only, never edited once applied. |
-| `jobs/` | `fetch_nav.py` — fetch, archive, parse, load, one `job_run` row whatever happens |
+| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (one-time history, per OPEN-07). Both write a `job_run` row whatever happens. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — S1's verified URL and scraping limits. |
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds on real AMFI NAV: HDFC Flexi Cap **Direct**, ICICI Multi Asset **Regular**, Kotak Pioneer **Direct**. Reaches the engine as a **CAS statement**, not a CSV. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
-| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. From one live run: 53 AMCs, 18,882 schemes, 14,338 NAVs. |
-| Not built | Historical backfill, holdings, index data, tax engine, M2–M6 |
+| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3.1 M NAVs** back to 31-Jan-2018 for the three reference AMCs. |
+| Not built | Holdings, index data, tax engine, M2–M6 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -77,7 +82,7 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 38 entries (SZ-01…SZ-14, V0-01…V0-22, OPEN-03, OPEN-07).
+`DECISIONS.md` holds 41 entries (SZ-01…SZ-14, V0-01…V0-25, OPEN-03, OPEN-07).
 
 **Nothing is undecided.** The four that were open closed on 2026-09-05:
 
@@ -140,6 +145,31 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S10 · V0.5 — historical NAV backfill (2026-09-05)
+
+OPEN-07 implemented: 27 year-chunks across the three reference AMCs, ~400 MB
+archived, **3,118,359 NAV rows** back to 31-Jan-2018. `--from` is clamped to
+that date so the grandfathering NAV is inside the fetched range by construction
+rather than by a special-case request. HDFC Flexi Cap Direct on 31-Jan-2018 is
+699.5850, and `assert_m1_contract` passes for the held scheme.
+
+Two live failures found by running it (V0-24). An unknown AMC code returns
+**HTTP 200 with an HTML error page**, so "no rows parsed" would have recorded
+zero NAVs and reported success. And `MODULE_0.md` §3.1 puts `source_id` into the
+archive path while §4.2's own example `source_id` is `'S5:hdfc'` — a colon is
+illegal in a Windows path, so the two rules cannot both be followed literally.
+
+The bigger find was before that (V0-23): the history export carries the **same
+eight columns in a different order**, with the scheme name where the daily file
+puts an ISIN. Positional parsing would have read nine years of backfill quietly
+wrong — the name failing ISIN validation, every row unresolved, no message
+saying why. The parser now reads the header and maps columns by name.
+
+**And the fixture is confirmed** (V0-25). All three golden NAV series were
+compared against AMFI's own history: **3,638 overlapping values, zero
+mismatches.** The supplied workbooks are validated against the authoritative
+source, and each fund resolves to exactly one real ISIN.
 
 ### S9 · V0.4 — M0 behind the real provider (2026-09-05)
 

@@ -35,9 +35,37 @@ from src.m0_data.resolve.isin import is_valid_isin
 PARSER_ID = "nav.amfi"
 PARSER_VERSION = "1"
 
-#: The header row, which repeats in some exports. Recognised so it is skipped
-#: rather than counted as an unparsed line.
+#: The header row. It repeats mid-file in the history exports, and it is the
+#: only thing that says which column is which — see `column_map`.
 HEADER_RE = re.compile(r"^Scheme\s+Code\s*;", re.I)
+
+#: Header text -> canonical field, tried IN ORDER. AMFI publishes the same eight
+#: columns in two different orders:
+#:
+#:   NAVAll.txt  Scheme Code; ISIN Growth; ISIN Reinvestment; Scheme Name;
+#:               Plan; Option; Net Asset Value; Date
+#:   history     Scheme Code; NAV Name; Plan; Option; ISIN Growth;
+#:               ISIN Reinvestment; Net Asset Value; Date
+#:
+#: Reading either positionally puts the scheme NAME into the ISIN field on the
+#: other, which then fails ISIN validation and silently unresolves every row.
+#: DECISIONS V0-23.
+#:
+#: Order matters: "ISIN Div Payout/ ISIN Growth" contains "growth", so the ISIN
+#: rules must be tried before the name and option rules.
+_HEADER_RULES: tuple[tuple[str, str], ...] = (
+    ("scheme code", "code"),
+    ("reinvestment", "isin_reinvest"),
+    ("isin", "isin_primary"),
+    ("scheme name", "name"),
+    ("nav name", "name"),
+    ("net asset value", "nav"),
+    ("plan", "plan"),
+    ("option", "option"),
+    ("date", "nav_date"),
+)
+
+REQUIRED_COLUMNS = frozenset({"code", "name", "nav", "nav_date"})
 
 #: A SEBI category line: `Open Ended Schemes(Equity Scheme - Flexi Cap Fund)`.
 #: Everything else without a delimiter is an AMC name.
@@ -143,6 +171,46 @@ def scheme_id_for(isin: str | None, amfi_code: str, option: str) -> str:
     return isin if isin else f"AMFI:{amfi_code}:{option}"
 
 
+def column_map(header_line: str) -> dict[str, int]:
+    """Map canonical field -> column index, from the header the file printed.
+
+    Positional parsing is what makes the two AMFI layouts dangerous: they carry
+    the same eight columns in a different order, so a parser written against one
+    reads the scheme name where the other puts an ISIN. Nothing crashes — the
+    name fails ISIN validation, the row resolves to nothing, and an entire
+    export lands in the quarantine queue for a reason no message explains.
+
+    Reading the header removes the guess. §2 is explicit that the file is to be
+    verified rather than assumed, and this is that rule applied per column.
+    """
+    mapping: dict[str, int] = {}
+    for index, raw in enumerate(header_line.split(";")):
+        text = raw.strip().lower()
+        for needle, field_name in _HEADER_RULES:
+            if needle in text and field_name not in mapping:
+                mapping[field_name] = index
+                break
+    missing = REQUIRED_COLUMNS - set(mapping)
+    if missing:
+        raise AmfiParseError(
+            f"header is missing {sorted(missing)}: {header_line[:120]!r}"
+        )
+    return mapping
+
+
+def _field(fields: list[str], columns: dict[str, int], name: str) -> str:
+    """One column by name, empty when the header did not carry it.
+
+    `plan` and `option` are genuinely absent from some exports, so a missing
+    column is a blank rather than an error; `REQUIRED_COLUMNS` already refused
+    the header if anything load-bearing was missing.
+    """
+    index = columns.get(name)
+    if index is None or index >= len(fields):
+        return ""
+    return fields[index]
+
+
 def _isin_or_none(raw: str, lineno: int, result: AmfiParseResult) -> str | None:
     """Validate an ISIN column. §8.3: reject malformed, warn, fall through.
 
@@ -175,6 +243,7 @@ def parse_navall(lines: list[str]) -> AmfiParseResult:
     result = AmfiParseResult()
     amc_name: str | None = None
     category: str | None = None
+    columns: dict[str, int] | None = None
     saw_data = False
 
     for lineno, raw_line in enumerate(lines, start=1):
@@ -183,6 +252,9 @@ def parse_navall(lines: list[str]) -> AmfiParseResult:
             continue
 
         if HEADER_RE.match(line):
+            # Re-read on every occurrence. The history export repeats it, and
+            # taking the first one on faith would miss a layout change mid-file.
+            columns = column_map(line)
             continue
 
         if ";" not in line:
@@ -199,15 +271,26 @@ def parse_navall(lines: list[str]) -> AmfiParseResult:
         if len(fields) < MIN_FIELDS:
             result.unparsed.append((lineno, line))
             continue
+        if columns is None:
+            raise AmfiParseError(
+                f"line {lineno}: data row before any header; column order is unknown"
+            )
         if amc_name is None:
             raise AmfiParseError(f"line {lineno}: data row before any AMC context")
 
         saw_data = True
-        code = fields[0]
-        isin_primary = _isin_or_none(fields[1], lineno, result)
-        isin_reinvest = _isin_or_none(fields[2], lineno, result)
-        name, plan_raw, option_raw = fields[3], fields[4], fields[5]
-        nav_raw, date_raw = fields[6], fields[7] if len(fields) > 7 else ""
+        code = _field(fields, columns, "code")
+        isin_primary = _isin_or_none(
+            _field(fields, columns, "isin_primary"), lineno, result
+        )
+        isin_reinvest = _isin_or_none(
+            _field(fields, columns, "isin_reinvest"), lineno, result
+        )
+        name = _field(fields, columns, "name")
+        plan_raw = _field(fields, columns, "plan")
+        option_raw = _field(fields, columns, "option")
+        nav_raw = _field(fields, columns, "nav")
+        date_raw = _field(fields, columns, "nav_date")
 
         if not code or not name:
             result.unparsed.append((lineno, line))

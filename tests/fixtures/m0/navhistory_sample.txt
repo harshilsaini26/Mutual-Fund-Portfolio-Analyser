@@ -1,0 +1,26 @@
+Scheme Code;NAV Name;Plan;Option;ISIN Div Payout/ISIN Growth;ISIN Div Reinvestment;Net Asset Value;Date
+
+HDFC Mutual Fund
+
+118955;HDFC Flexi Cap Fund - Growth Option - Direct Plan;Direct Plan;Growth Option;INF179K01UT0;;1625.154;02-Jan-2024
+HDFC Mutual Fund
+
+118955;HDFC Flexi Cap Fund - Growth Option - Direct Plan;Direct Plan;Growth Option;INF179K01UT0;;1626.456;03-Jan-2024
+HDFC Mutual Fund
+
+101762;HDFC Flexi Cap Fund - Growth Plan;Regular Plan;Growth Option;INF179K01608;;1501.829;02-Jan-2024
+HDFC Mutual Fund
+
+101762;HDFC Flexi Cap Fund - Growth Plan;Regular Plan;Growth Option;INF179K01608;;1503.006;03-Jan-2024
+HDFC Mutual Fund
+
+118954;HDFC Flexi Cap Fund - IDCW Option - Direct Plan;Direct Plan;IDCW Option;INF179K01VL5;INF179K01VM3;83.502;02-Jan-2024
+HDFC Mutual Fund
+
+118954;HDFC Flexi Cap Fund - IDCW Option - Direct Plan;Direct Plan;IDCW Option;INF179K01VL5;INF179K01VM3;83.568;03-Jan-2024
+HDFC Mutual Fund
+
+101763;HDFC Flexi Cap Fund - IDCW Plan;Regular Plan;IDCW Option;INF179K01582;INF179K01590;72.178;02-Jan-2024
+HDFC Mutual Fund
+
+101763;HDFC Flexi Cap Fund - IDCW Plan;Regular Plan;IDCW Option;INF179K01582;INF179K01590;72.234;03-Jan-2024

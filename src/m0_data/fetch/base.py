@@ -153,6 +153,20 @@ def infer_extension(content_type: str | None, url: str) -> str:
     return suffix if suffix.isalnum() and suffix else "bin"
 
 
+#: Characters a source_id may contain that a Windows path may not. MODULE_0.md
+#: §4.2's own example source_id is `'S5:hdfc'`, and §3.1 puts source_id straight
+#: into the archive path — so the spec's two rules cannot both be followed
+#: literally on Windows, where `:` separates a drive and an alternate data
+#: stream. The id stays intact in `raw_file.source_id`; only the directory name
+#: is folded. DECISIONS V0-24.
+_PATH_UNSAFE = str.maketrans({c: "_" for c in r':*?"<>|\/'})
+
+
+def path_segment(source_id: str) -> str:
+    """A directory name for a source_id, reversible enough to recognise."""
+    return source_id.translate(_PATH_UNSAFE)
+
+
 def archive_path(root: Path, source_id: str, file_id: str, ext: str) -> Path:
     """§3.1: /raw/{source_id}/{yyyy}/{mm}/{sha256[:2]}/{sha256}.{ext}
 
@@ -160,7 +174,10 @@ def archive_path(root: Path, source_id: str, file_id: str, ext: str) -> Path:
     thousands of entries, which some filesystems handle badly.
     """
     now = datetime.now(UTC)
-    return root / source_id / f"{now:%Y}" / f"{now:%m}" / file_id[:2] / f"{file_id}.{ext}"
+    return (
+        root / path_segment(source_id) / f"{now:%Y}" / f"{now:%m}"
+        / file_id[:2] / f"{file_id}.{ext}"
+    )
 
 
 def archive(
