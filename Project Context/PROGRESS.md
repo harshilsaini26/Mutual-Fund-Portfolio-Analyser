@@ -4,15 +4,15 @@
 
 ## Current state
 
-**Slice:** V0.1 — ledger on fixtures (`BUILD_ORDER.md` R2)
-**Step:** The NAV-independent half is done and proven: lots, cost basis, FIFO
-consumption, holding periods, realised gains. Slice Zero is complete and frozen.
-**Blocked on:** the real NAV series, which the user is supplying. Without it,
-market value, unrealised P&L, XIRR and TWRR cannot be computed or verified —
-and PLAN.md §8.3 invariant 4 (P&L closure) cannot be asserted.
-Also outstanding: OPEN-07 (NAV backfill depth) before M0 step 4; OPEN-03
-(`index_constituent`) before V1, per R4; and V0-01 (base vs total TER) before
-any fee-drag output.
+**Slice:** V0.1 — ledger on fixtures (`BUILD_ORDER.md` R2). Substantially complete.
+**Step:** Lot engine, returns engine and reconciliation all built and proven on
+three real NAV series. All five `PLAN.md` §8.3 property invariants pass.
+**Blocked on:** nothing to continue. Before V0 can be *declared* done, see the
+gate assessment below — two of its five conditions are only partly met, and
+V0-12 shows one of them cannot be met as the spec writes it.
+Deferred by agreement: ABSL NAV series, HDFC Direct-plan TER (V0-05).
+Still outstanding: OPEN-07 before M0 step 4; OPEN-03 before V1 (R4);
+V0-01 (base vs total TER) before any fee output.
 
 ## Acceptance gate for the current slice
 
@@ -32,17 +32,68 @@ Slice Zero has no runtime behaviour, so its gate is static:
 - [x] Decimal round-trips through SQLite with no precision loss
 - [x] No fixture value can reach a fake as a `float`
 
-## Acceptance gate for V0 (`PLAN.md` §7)
+## Acceptance gate for V0 (`PLAN.md` §7) — honest status
 
-- [ ] Every folio reconciles: `|computed − reported| ≤ 0.001` units
-- [ ] Value reconciles within 0.5%
-- [ ] XIRR matches an independent Excel calculation to 4 dp
-- [ ] All 5 ledger property invariants pass
-- [ ] Re-importing the same CAS produces zero new rows
+- [x] **Every folio reconciles**, `|computed − reported| ≤ 0.001` units.
+      All three are at exactly 0.000000 against the statements' printed balances.
+- [~] **Value reconciles within 0.5%.** Passes as specified — but V0-12 shows
+      the specified check is the unit delta restated and cannot detect a wrong
+      NAV series, which is the failure it exists to catch. `nav_cross_check()`
+      supplies a check that works; adopting it is an open decision. **Treat
+      this condition as not genuinely met until V0-12 is resolved.**
+- [~] **XIRR matches an independent calculation to 4 dp.** Verified three ways:
+      closed-form cases, NPV≈0 at the returned rate on real data, and Excel's
+      365-day convention. Not yet compared against an actual spreadsheet — the
+      gate says Excel specifically, and that is a human step.
+- [x] **All 5 property invariants pass.** Unit conservation, cost conservation,
+      FIFO ordering, P&L closure, determinism.
+- [~] **Re-importing produces zero new rows.** `txn_id` is a deterministic hash
+      and is tested stable across reloads, so the mechanism holds. The end-to-end
+      claim cannot be made until the CAS parser exists (V0.2).
 
 ---
 
 ## Session log
+
+### 2026-09-05 — session 5
+
+**Did:**
+- Added Kotak Pioneer (third fund, third NAV scale, second exit-load rate).
+- Returns engine: XIRR, TWRR, timing effect (`src/m1_ledger/returns.py`).
+- Reconciliation and the gate (`src/m1_ledger/reconcile.py`).
+- `units_balance_rep` added to `txn` and the generator, so there is an
+  independent figure to reconcile against.
+- Closed `PLAN.md` §8.3 invariant 4 (P&L closure), the last of the five.
+
+**Passed:** ruff clean; `mypy --strict` clean on 51 files; 276/276 tests;
+verifier reports no drift.
+
+**Blocked:** nothing.
+
+**Decisions appended:** V0-07 … V0-13.
+
+**Findings worth carrying forward:**
+- **V0-12 is the significant one.** `MODULE_1.md` §11.1's value check multiplies
+  both sides by the same NAV, so the NAV cancels and the check reduces to the
+  unit delta as a fraction. It cannot detect a wrong NAV series — the exact
+  failure it claims to catch, and the one `PLAN.md` §7 V0 depends on it for.
+  V0-05 was that failure with real data and would have passed both checks.
+  `nav_cross_check()` uses the statement's printed NAV as an independent witness
+  and does catch it.
+- **Mutation testing has now found a real gap in every module it has touched:**
+  the LTCG boundary (session 3), exit load and STT in cashflows (session 4),
+  folio scoping in reconciliation (this one). Each survived the whole suite.
+  It is worth running on every new module rather than occasionally.
+- **A fixture is only as good as its variety.** One NAV scale hid V0-10; one
+  folio per scheme hid the reconciliation netting bug; one exit-load rate hid a
+  hardcoded constant. Each was found by adding a fund, not by review.
+
+**Next:**
+1. Resolve V0-12 (adopt the NAV cross-check as a gate condition) and V0-06 /
+   V0-10 together (residual allocation, both sides of the same rounding issue).
+2. Then V0.2: the CAS parser replaces the hand-made CSV, which also makes the
+   re-import gate condition real.
+
 
 ### 2026-09-05 — session 3
 

@@ -503,3 +503,51 @@ def test_cost_allocation_drifts_at_small_nav_and_large_unit_counts(
         Decimal(0),
     )
     assert hdfc_alloc == hdfc_lot.cost_total
+
+
+def test_invariant_4_pnl_closure(book: LotBook) -> None:
+    """PLAN.md §8.3 invariant 4. The last of the five, and the only one that
+    needed a NAV series before it could be asserted at all.
+
+        realised + unrealised  ==  market_value + proceeds - invested_gross
+
+    Both sides are the same profit reached two ways: by summing what each lot
+    did, and by netting all the money that ever moved. They agree only if no
+    cost or proceeds went missing anywhere in the FIFO chain.
+
+    The residual is exactly the V0-10 cost-allocation drift — not an
+    independent error, and asserted as bounded rather than zero for that
+    reason.
+    """
+    from src.m1_ledger.returns import nav_on_or_before
+
+    navs = {
+        k: {d: Decimal(str(v)) for d, v in b["navs"].items()}
+        for k, b in load_yaml(FIXTURES / "nav_series.yaml")["series"].items()
+    }
+    as_of = date(2026, 9, 4)
+
+    realised = sum((c.gain_amount for c in book.all_consumptions()), Decimal(0))
+    proceeds = sum((c.proceeds_net for c in book.all_consumptions()), Decimal(0))
+    invested_gross = sum((lot.cost_total for lot in book.all_lots()), Decimal(0))
+
+    market_value = Decimal(0)
+    cost_remaining = Decimal(0)
+    for scheme_id in navs:
+        units = book.units_remaining(scheme_id)
+        if units == 0:
+            continue
+        nav = nav_on_or_before(navs[scheme_id], as_of)
+        assert nav is not None
+        market_value += units * nav
+        cost_remaining += book.cost_basis_remaining(scheme_id)
+
+    unrealised = market_value - cost_remaining
+    by_lot = realised + unrealised
+    by_cashflow = market_value + proceeds - invested_gross
+
+    assert abs(by_lot - by_cashflow) <= Decimal("0.001"), (
+        f"P&L closure broken by {by_lot - by_cashflow}"
+    )
+    # Both routes must show a real profit, not merely agree on zero.
+    assert by_lot > 0 and realised > 0 and unrealised > 0
