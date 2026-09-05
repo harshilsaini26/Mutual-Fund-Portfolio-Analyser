@@ -11,7 +11,7 @@
 priced on AMFI's own NAVs, resolved through M0's interface.
 **Repo:** local git, 17 commits, no remote, branch `main`. Tree clean.
 **Gate:** ruff clean · `mypy --strict` clean (84 files) · 422 tests · verifier no drift.
-**Next:** V1 — but OPEN-03 (`index_constituent`) must be settled before it starts.
+**Next:** V1.1 — entity master and ISIN resolution (`BUILD_ORDER.md` R4 order).
 
 **Run everything:**
 
