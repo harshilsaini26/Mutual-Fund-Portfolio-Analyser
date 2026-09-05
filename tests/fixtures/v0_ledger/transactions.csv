@@ -12,8 +12,13 @@
 > Cases covered: six SIP lots; a redemption straddling the 365-day boundary so
 > one transaction yields both LTCG and STCG; exit load charged only on units
 > inside the load window; a bounced SIP excluded with its reversal; a switch
-> taxed on the way out with the clock restarting on the way in; IDCW payout
-> (income only) and reinvestment (income AND a lot).
+> taxed on the way out with the clock restarting on the way in; and a lot split
+> across two transactions, landing on opposite sides of the year boundary.
+>
+> NOT covered here, deliberately: IDCW. Both schemes are GROWTH options, which
+> distribute nothing, so an IDCW transaction against these NAV series would
+> conjure units and cash the NAV never paid for (DECISIONS V0-09). Those paths
+> are tested with synthetic transactions instead.
 >
 > ICICI's tax class is unknown (DECISIONS V0-03), so nothing is redeemed from
 > it — a gain there cannot be classified without inventing a threshold.
@@ -30,5 +35,3 @@ T008,USER-01,F0001/22,AMFI:HDFC-FLEXICAP-DIR-G,HDFC Flexi Cap Fund - Growth Opti
 T009,USER-01,F0001/22,AMFI:HDFC-FLEXICAP-DIR-G,HDFC Flexi Cap Fund - Growth Option - Direct Plan,2025-01-15,0,REDEMPTION,-20.000000,1970.698000,39413.9600,0,0.3941,273.2983,,
 T010,USER-01,F0001/22,AMFI:HDFC-FLEXICAP-DIR-G,HDFC Flexi Cap Fund - Growth Option - Direct Plan,2026-01-16,0,SWITCH_OUT,-10.000000,2271.185000,22711.8500,0,0.2271,0,SW001,
 T011,USER-01,F0003/01,AMFI:ICICI-MULTIASSET-REG-G,ICICI Prudential Multi Asset Allocation Fund - Growth,2026-01-16,1,SWITCH_IN,27.773917,817.691200,-22710.4873,1.1356,0,0,SW001,
-T012,USER-01,F0003/01,AMFI:ICICI-MULTIASSET-REG-G,ICICI Prudential Multi Asset Allocation Fund - Growth,2026-03-10,0,IDCW_PAYOUT,0,801.868300,2500.00,0,0,0,,
-T013,USER-01,F0003/01,AMFI:ICICI-MULTIASSET-REG-G,ICICI Prudential Multi Asset Allocation Fund - Growth,2026-06-10,0,IDCW_REINVEST,3.819965,785.308300,-2999.8500,0.1500,0,0,,

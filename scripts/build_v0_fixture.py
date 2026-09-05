@@ -131,14 +131,13 @@ def main() -> None:
     in_amount = switch_proceeds - in_duty
     in_units = (in_amount / in_nav).quantize(UNITS_Q)
 
-    # --- ICICI: IDCW payout, then IDCW reinvestment ------------------------
-    payout_day = trading_day_on_or_after(i, date(2026, 3, 10))
-    reinvest_day = trading_day_on_or_after(i, date(2026, 6, 10))
-    reinvest_payment = Decimal("3000.00")
-    reinvest_nav = i[reinvest_day]
-    reinvest_duty = (reinvest_payment * STAMP_DUTY_RATE).quantize(MONEY_Q)
-    reinvest_amount = reinvest_payment - reinvest_duty
-    reinvest_units = (reinvest_amount / reinvest_nav).quantize(UNITS_Q)
+    # NOTE: no IDCW transactions appear in this fixture. Both schemes here are
+    # GROWTH options, which accumulate and distribute nothing — a growth option
+    # structurally cannot pay IDCW. Modelling one against a NAV series that
+    # never dropped to fund it manufactures units and cash from nowhere: an
+    # earlier draft produced a +45.60pp "timing effect" that was pure artifact.
+    # IDCW code paths are covered by synthetic transactions in the test suite,
+    # where the NAV series is not claimed to be real.
 
     rows: list[str] = []
 
@@ -274,39 +273,6 @@ def main() -> None:
         switch_group_id="SW001",
     )
 
-    row(
-        txn_ref="T012",
-        user_id="USER-01",
-        folio="F0003/01",
-        scheme_id=ICICI,
-        scheme_raw_name=IN_,
-        txn_date=payout_day,
-        txn_seq=0,
-        txn_type="IDCW_PAYOUT",
-        units=0,
-        nav=i[payout_day],
-        amount="2500.00",
-        stamp_duty=0,
-        stt=0,
-        exit_load=0,
-    )
-    row(
-        txn_ref="T013",
-        user_id="USER-01",
-        folio="F0003/01",
-        scheme_id=ICICI,
-        scheme_raw_name=IN_,
-        txn_date=reinvest_day,
-        txn_seq=0,
-        txn_type="IDCW_REINVEST",
-        units=reinvest_units,
-        nav=reinvest_nav,
-        amount=-reinvest_amount,
-        stamp_duty=reinvest_duty,
-        stt=0,
-        exit_load=0,
-    )
-
     header = (
         "txn_ref,user_id,folio,scheme_id,scheme_raw_name,txn_date,txn_seq,txn_type,"
         "units,nav,amount,stamp_duty,stt,exit_load,switch_group_id,reverses_txn_ref"
@@ -325,8 +291,13 @@ def main() -> None:
 > Cases covered: six SIP lots; a redemption straddling the 365-day boundary so
 > one transaction yields both LTCG and STCG; exit load charged only on units
 > inside the load window; a bounced SIP excluded with its reversal; a switch
-> taxed on the way out with the clock restarting on the way in; IDCW payout
-> (income only) and reinvestment (income AND a lot).
+> taxed on the way out with the clock restarting on the way in; and a lot split
+> across two transactions, landing on opposite sides of the year boundary.
+>
+> NOT covered here, deliberately: IDCW. Both schemes are GROWTH options, which
+> distribute nothing, so an IDCW transaction against these NAV series would
+> conjure units and cash the NAV never paid for (DECISIONS V0-09). Those paths
+> are tested with synthetic transactions instead.
 >
 > ICICI's tax class is unknown (DECISIONS V0-03), so nothing is redeemed from
 > it — a gain there cannot be classified without inventing a threshold.
@@ -346,7 +317,6 @@ def main() -> None:
     print(f"    stt          : {redeem_stt}")
     print(f"  switch         : {switch_day} out_nav={switch_nav} in_nav={in_nav}")
     print(f"    in_units     : {in_units}")
-    print(f"  idcw reinvest  : {reinvest_day} nav={reinvest_nav} units={reinvest_units}")
     print()
     for n, s in enumerate(sips, 1):
         days = (redeem_day - s["date"]).days  # type: ignore[operator]

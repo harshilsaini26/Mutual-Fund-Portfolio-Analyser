@@ -226,6 +226,23 @@ class LotBook:
     def total_units_remaining(self) -> Decimal:
         return sum((lot.units_remaining for lot in self.lots), Decimal(0))
 
+    def cost_basis_remaining(self, scheme_id: str) -> Decimal:
+        """Cost of the units still held, after FIFO consumption.
+
+        This is what `Position.invested_net` wants. Summing purchase amounts
+        instead is the easy mistake: it counts money that has already been
+        redeemed or switched away, and drives the absolute return far negative
+        on any position that has been partly sold.
+        """
+        return sum(
+            (
+                (lot.cost_per_unit * lot.units_remaining).quantize(MONEY_Q)
+                for lot in self.lots
+                if lot.scheme_id == scheme_id
+            ),
+            Decimal(0),
+        )
+
     def units_remaining(self, scheme_id: str) -> Decimal:
         return sum(
             (lot.units_remaining for lot in self.lots if lot.scheme_id == scheme_id),

@@ -11,6 +11,7 @@ engine. If the two disagree, that disagreement is the finding.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -51,8 +52,8 @@ def book(txns: list[Txn]) -> LotBook:
 
 def test_all_transactions_parse(txns: list[Txn]) -> None:
     """14 rows, comment lines skipped, every money field a Decimal."""
-    assert len(txns) == 13
-    assert {t.txn_ref for t in txns} == {f"T{i:03d}" for i in range(1, 14)}
+    assert len(txns) == 11
+    assert {t.txn_ref for t in txns} == {f"T{i:03d}" for i in range(1, 12)}
     for t in txns:
         assert t.units is None or isinstance(t.units, Decimal)
         assert t.amount is None or isinstance(t.amount, Decimal)
@@ -146,14 +147,42 @@ def test_switch_in_restarts_the_holding_clock(
     assert (lot.acquisition_date - source.acquisition_date).days > 365
 
 
-def test_idcw_reinvest_creates_a_lot_and_idcw_payout_does_not(book: LotBook) -> None:
-    """MODULE_1.md §3.2: both effects must fire for a reinvestment."""
-    reinvest = [x for x in book.all_lots() if x.origin == "idcw_reinvest"]
-    assert len(reinvest) == 1
-    assert reinvest[0].acquisition_date == date(2026, 6, 10)
-    assert reinvest[0].units_original == Decimal("3.819965")
-    # T012 is the payout: income, no units, no lot.
-    assert not [x for x in book.all_lots() if x.open_txn_ref == "T012"]
+def test_idcw_reinvest_creates_a_lot_and_idcw_payout_does_not() -> None:
+    """MODULE_1.md §3.2: both effects must fire for a reinvestment.
+
+    Built from synthetic transactions rather than the real-NAV fixture. Both
+    schemes there are GROWTH options, which distribute nothing, so an IDCW
+    row against those NAV series would be structurally impossible — see
+    DECISIONS V0-09.
+    """
+    base = load_transactions(FIXTURES / "transactions.csv")[0]
+    payout = replace(
+        base,
+        txn_ref="X001",
+        txn_type="IDCW_PAYOUT",
+        txn_date=date(2025, 3, 10),
+        units=Decimal("0"),
+        amount=Decimal("2500.00"),
+        stamp_duty=Decimal("0"),
+    )
+    reinvest = replace(
+        base,
+        txn_ref="X002",
+        txn_type="IDCW_REINVEST",
+        txn_date=date(2025, 6, 10),
+        units=Decimal("1.500000"),
+        nav=Decimal("2000.000000"),
+        amount=Decimal("-3000.00"),
+        stamp_duty=Decimal("0.15"),
+    )
+    book = build_book([base, payout, reinvest])
+
+    lots = [x for x in book.all_lots() if x.origin == "idcw_reinvest"]
+    assert len(lots) == 1, "the reinvestment must create a lot"
+    assert lots[0].acquisition_date == date(2025, 6, 10), "with a FRESH date"
+    assert lots[0].units_original == Decimal("1.500000")
+    # The payout is income only: no units, no lot.
+    assert not [x for x in book.all_lots() if x.open_txn_ref == "X001"]
 
 
 # --- FIFO consumption ------------------------------------------------------
