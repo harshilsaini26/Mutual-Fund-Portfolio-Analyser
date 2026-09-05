@@ -1,0 +1,43 @@
+Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Plan;Option;Net Asset Value;Date
+
+Open Ended Schemes(Children’s Fund - Childrens' Fund)
+ 
+Axis Mutual Fund
+ 
+135762;INF846K01WO1;-;Axis Children's Fund;Direct Plan;Growth Option;30.3228;04-Sep-2026
+135765;INF846K01WP8;-;Axis Children's Fund;Direct Plan;IDCW Option;27.9328;04-Sep-2026
+135759;INF846K01WJ1;-;Axis Children's Fund;Regular Plan;Growth Option;26.4142;04-Sep-2026
+135760;INF846K01WK9;-;Axis Children's Fund;Regular Plan;IDCW Option;24.3692;04-Sep-2026
+135764;INF846K01WR4;-;Axis Children's Fund;Direct Plan;Growth Option;30.9027;04-Sep-2026
+135763;INF846K01WS2;INF846K01WQ6;Axis Children's Fund;Direct Plan;IDCW Option;27.9856;04-Sep-2026
+135766;INF846K01WM5;-;Axis Children's Fund;Regular Plan;Growth Option;26.4109;04-Sep-2026
+135761;INF846K01WN3;INF846K01WL7;Axis Children's Fund;Regular Plan;IDCW Option;24.3472;04-Sep-2026
+ 
+
+ 
+Nippon India Mutual Fund
+ 
+109472;-;INF204K01EG7;Nippon India Corporate Bond Fund;Regular Plan;DAILY IDCW Option;17.0833;04-Sep-2026
+118808;-;INF204K01C23;Nippon India Corporate Bond Fund;Direct Plan;DAILY IDCW Option;17.0870;04-Sep-2026
+125266;INF204KA1EO9;INF204KA1EP6;Nippon India Corporate Bond Fund;Direct Plan;IDCW Option;21.3374;04-Sep-2026
+
+ 
+HDFC Mutual Fund
+ 
+118955;INF179K01UT0;-;HDFC Flexi Cap Fund;Direct Plan;Growth Option;2271.324;04-Sep-2026
+101762;INF179K01608;-;HDFC Flexi Cap Fund;Regular Plan;Growth Option;2062.377;04-Sep-2026
+118954;INF179K01VL5;INF179K01VM3;HDFC Flexi Cap Fund;Direct Plan;IDCW Option;91.839;04-Sep-2026
+101763;INF179K01582;INF179K01590;HDFC Flexi Cap Fund;Regular Plan;IDCW Option;74.525;04-Sep-2026
+ 
+
+ 
+IL&FS Mutual Fund (IDF)
+ 
+130565;INF613Q01025;Redeemed;IL&FS Infrastructure Debt Fund Series 1A;;;1680494.0463;31-Dec-2018
+129287;INF613Q01017;Redeemed;IL&FS Infrastructure Debt Fund Series 1A;;;1680494.0463;31-Dec-2018
+129288;INF613Q01058;Redeemed;IL&FS Infrastructure Debt Fund Series 1C;;;2185944.3803;31-Mar-2024
+
+Nippon India Mutual Fund
+ 
+142916;INF204KB1XN0;-;Nippon India Fixed Horizon Fund XXXVI- Series 9;;;10.0000;10-May-2021
+143451;INF204KB1XN0;-;Nippon India Fixed Horizon Fund XXXVII- Series 9;;;13.5859;26-May-2022

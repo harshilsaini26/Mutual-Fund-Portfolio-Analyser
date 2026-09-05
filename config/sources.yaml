@@ -1,0 +1,32 @@
+# MODULE_0.md §13.1. Sources are data, not code — a URL that changes must not
+# need a release.
+#
+# §2 is emphatic that every URL in the spec is "a starting point to verify at
+# implementation time, not a constant to hardcode". The S1 URL below was
+# verified live on 2026-09-05: HTTP 200, `text/plain`, and the header line the
+# parser expects. If it 404s the job must fail loudly and log the attempted
+# URL — never fall back to a guess.
+
+defaults:
+  rate_limit_per_sec: 0.5        # 1 request per 2 seconds, per domain (§2.3)
+  burst: 2
+  timeout_connect: 30
+  timeout_read: 120
+  retries: 3
+  backoff_base_sec: 2
+  backoff_cap_sec: 60
+  user_agent: "mf-platform/0.1 (personal research; contact: {CONTACT_EMAIL})"
+  respect_robots: true
+
+sources:
+  S1:
+    name: amfi_nav
+    kind: fixed_url
+    url: "https://www.amfiindia.com/spages/NAVAll.txt"
+    parser: nav.amfi
+    verified_on: 2026-09-05
+    # This one file is also §2.1's S2 (scheme master): it carries scheme code,
+    # both ISINs, name, plan, option, NAV and date, with AMC and SEBI category
+    # from the section context lines. There is no separate S2 fetch in V0.
+    # DECISIONS V0-20.
+    provides: [nav_daily, scheme, amc]

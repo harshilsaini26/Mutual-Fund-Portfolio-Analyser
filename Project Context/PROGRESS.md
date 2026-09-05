@@ -7,17 +7,23 @@
 
 ## Current state
 
-**Slice:** V0.3 complete — the V0 gate runs on a ledger that came through the parser.
-**Repo:** local git, 13 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (58 files) · 345 tests · verifier no drift.
-**Next:** V0.4 — M0 behind the real provider (`BUILD_ORDER.md` R2).
+**Slice:** V0.4 complete — M0 serves `MarketDataProvider` from a real warehouse.
+**Repo:** local git, 15 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (81 files) · 409 tests · verifier no drift.
+**Next:** V0.5 — historical NAV backfill (OPEN-07 already specifies the depth).
 
 **Run everything:**
 
 ```bash
 python -m pytest -q
-python -m ruff check src/ tests/ scripts/ && python -m mypy
+python -m ruff check src/ tests/ scripts/ jobs/ && python -m mypy
 python -m scripts.verify_v0_ledger --check     # exits 1 on golden-file drift
+```
+
+**Load real market data** (writes to `/data`, which is gitignored in full):
+
+```bash
+MF_CONTACT_EMAIL=you@example.com python -m jobs.fetch_nav
 ```
 
 **Regenerate fixtures** after changing a generator. Order matters — each step
@@ -27,6 +33,7 @@ reads the previous step's output:
 python -m scripts.import_nav_xlsx <xlsx>... --scheme-id <id>... -o tests/fixtures/v0_ledger/nav_series.yaml
 python -m scripts.build_v0_fixture      # NAVs   -> transactions.csv + expected.yaml
 python -m scripts.build_v0_cas          # rows   -> cas_statement.txt
+python -m scripts.build_m0_fixture      # AMFI slice -> the fake's market_data.yaml
 python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 ```
 
@@ -38,11 +45,15 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
-| `config/` | `txn_types.yaml` — CAS description → type. Data, not code, per §5.5, so a new registrar wording needs no release. |
+| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET), `parse/nav/amfi.py`, `normalise/`, `resolve/isin.py`, `derive/nav_adj.py`, `load.py`, `validate/integrity.py`, `schema/apply.py`, `providers/warehouse.py` |
+| `migrations/` | `001_provenance.sql` (`raw_file`, `job_run`), `002_scheme_nav.sql` (`amc`, `scheme`, `nav_daily`, `scheme_idcw`). Numbered, forward-only, never edited once applied. |
+| `jobs/` | `fetch_nav.py` — fetch, archive, parse, load, one `job_run` row whatever happens |
+| `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — S1's verified URL and scraping limits. |
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds on real AMFI NAV: HDFC Flexi Cap **Direct**, ICICI Multi Asset **Regular**, Kotak Pioneer **Direct**. Reaches the engine as a **CAS statement**, not a CSV. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
-| Not built | M0 ingestion, tax engine, persistence, M2–M6 |
+| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. From one live run: 53 AMCs, 18,882 schemes, 14,338 NAVs. |
+| Not built | Historical backfill, holdings, index data, tax engine, M2–M6 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -66,9 +77,9 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 34 entries (SZ-01…SZ-14, V0-01…V0-18, OPEN-03, OPEN-07).
+`DECISIONS.md` holds 38 entries (SZ-01…SZ-14, V0-01…V0-22, OPEN-03, OPEN-07).
 
-**Nothing is undecided.** All four open items were closed on 2026-09-05:
+**Nothing is undecided.** The four that were open closed on 2026-09-05:
 
 | Was | Now |
 |---|---|
@@ -129,6 +140,31 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S9 · V0.4 — M0 behind the real provider (2026-09-05)
+
+`MarketDataProvider` now serves from a SQLite warehouse loaded from AMFI's own
+published file, not from YAML. The Slice Zero interface did not move, which is
+R1's entire payoff collected: this was swapping an implementation behind a
+frozen contract. `tests/unit/test_m0_provider.py` parametrises one test body
+over the real and fake providers so the equivalence is proven, not asserted.
+
+Verifying the source before writing code changed the design (V0-20). The live
+file has **eight columns, not §2.2's six, and states plan and option** — so the
+V0-05 error class is closed at source, and the file confirms V0-05's own numbers
+to the paisa: HDFC Flexi Cap Direct 2271.324 against Regular 2062.377 on
+04-Sep-2026.
+
+Four things the spec does not mention, all found in real bytes: `option` is far
+wider than the schema's three values; `(name, plan, option)` maps to more than
+one scheme for **1,467** names, which is why resolution drops the fuzzy step
+(V0-21); the ISIN columns contain the literal string `Redeemed`, which had
+collapsed nine IL&FS schemes into one row until §8.3's check-digit validation
+went in; and **four ISINs are published against two different funds**, splicing
+one NAV history onto another — now detected, counted, and reported as `partial`.
+
+Live run: 53 AMCs, 18,882 schemes, 14,338 NAVs, 14 warnings. Second run returned
+HTTP 304 — no new bytes, no second manifest row.
 
 ### S8 · V0.3 — the gate on parsed data (2026-09-05)
 

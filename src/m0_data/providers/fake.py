@@ -92,10 +92,22 @@ class FakeMarketDataProvider:
                         row, txn_date, "amfi_code", Confidence.MEDIUM
                     )
 
+        # §11.3's third step is a fuzzy name match. Narrowed to a UNIQUE exact
+        # match, so this fake cannot resolve something the real provider will
+        # not — DECISIONS V0-21. In the live AMFI file 1,467 distinct
+        # (name, plan, option) triples map to more than one scheme, so a fuzzy
+        # match is a coin flip between two real funds with different NAVs.
+        #
+        # A fake more permissive than production teaches tests to pass against
+        # behaviour that will never ship, which is the failure this module's
+        # own docstring warns about.
         needle = name.strip().lower()
-        for row in self._schemes():
-            if needle and needle in str(row["scheme_name"]).lower():
-                return self._follow_merger(row, txn_date, "name_fuzzy", Confidence.LOW)
+        matches = [
+            row for row in self._schemes()
+            if needle and needle == str(row["scheme_name"]).strip().lower()
+        ]
+        if len(matches) == 1:
+            return self._follow_merger(matches[0], txn_date, "name_exact", Confidence.LOW)
 
         return SchemeRef(None, "", "", Confidence.UNRESOLVED, "none", None)
 
