@@ -507,3 +507,80 @@ def _render(*, printed_gross: bool) -> list[str]:
         ]
     finally:
         gen.printed_amount = original
+
+
+# --- PLAN.md §8.3: the five property invariants, on the parsed book ---------
+
+
+def test_gate_invariant_1_unit_conservation(report: ImportReport) -> None:
+    """Sum of `lot.units_remaining` == sum of signed transaction units."""
+    book = build_book(report.txns)
+    assert book.total_units_remaining() == book.signed_txn_units(report.txns)
+
+
+def test_gate_invariant_2_cost_conservation(report: ImportReport) -> None:
+    """Cost is neither created nor destroyed — exact since V0-10."""
+    book = build_book(report.txns)
+    remaining = sum((lot.cost_remaining for lot in book.all_lots()), Decimal(0))
+    allocated = sum(
+        (
+            c.cost_allocated
+            for c in book.all_consumptions()
+            if c.cost_basis_method == "actual"
+        ),
+        Decimal(0),
+    )
+    opened = sum((lot.cost_total for lot in book.all_lots()), Decimal(0))
+    assert remaining + allocated == opened
+
+
+def test_gate_invariant_3_fifo_ordering_is_monotonic(report: ImportReport) -> None:
+    book = build_book(report.txns)
+    for txn_ref in book.closing_txn_refs():
+        seq = [c.acquisition_date for c in book.consumptions_for(txn_ref)]
+        assert seq == sorted(seq)
+
+
+def test_gate_invariant_4_pnl_closure(
+    report: ImportReport, navs: dict[str, dict[date, Decimal]]
+) -> None:
+    """`realised + unrealised == market_value + proceeds - invested_gross`.
+
+    The same profit reached two ways — by summing what each lot did, and by
+    netting all the money that ever moved. They agree only if no cost or
+    proceeds went missing anywhere in the FIFO chain.
+
+    Asserted on charges READ FROM THE STATEMENT rather than computed from a
+    rate. Both sides draw on the same figures, so the V0-16 printing loss
+    cancels and the closure is exact — which is the point: a ledger built from
+    a statement is internally consistent on the statement's own numbers.
+    """
+    book = build_book(report.txns)
+    realised = sum((c.gain_amount for c in book.all_consumptions()), Decimal(0))
+    proceeds = sum((c.proceeds_net for c in book.all_consumptions()), Decimal(0))
+    invested_gross = sum((lot.cost_total for lot in book.all_lots()), Decimal(0))
+
+    market_value = Decimal(0)
+    cost_remaining = Decimal(0)
+    for scheme_id in ISINS:
+        units = book.units_remaining(SchemeId(scheme_id))
+        if units == 0:
+            continue
+        nav = max(d for d in navs[scheme_id] if d <= AS_OF)
+        market_value += units * navs[scheme_id][nav]
+        cost_remaining += book.cost_basis_remaining(SchemeId(scheme_id))
+
+    by_lot = realised + (market_value - cost_remaining)
+    by_cashflow = market_value + proceeds - invested_gross
+    assert by_lot == by_cashflow, f"P&L closure broken by {by_lot - by_cashflow}"
+
+
+def test_gate_invariant_5_rebuild_is_deterministic(lines: list[str]) -> None:
+    """`CLAUDE.md` invariant 10, from the statement rather than the CSV.
+
+    A full rebuild — reparse, reimport, replay — must reproduce byte-identical
+    derived output, which is what makes every derived table droppable.
+    """
+    a = build_book(import_cas(USER, lines, _resolve).txns).fingerprint()
+    b = build_book(import_cas(USER, lines, _resolve).txns).fingerprint()
+    assert a == b
