@@ -4,11 +4,15 @@
 
 ## Current state
 
-**Slice:** Slice Zero — contracts + fakes (`BUILD_ORDER.md` R1)
-**Step:** R1 steps 1-3 complete — Protocols, result dataclasses, and the `Fake*`
-implementations with their YAML fixtures. Step 4 (commit + ADR freeze) is next.
-**Blocked on:** nothing for Slice Zero. V0 remains blocked on OPEN-07 (NAV backfill depth)
-before M0 step 4; V1 remains blocked on OPEN-03 (`index_constituent`) per R4.
+**Slice:** V0.1 — ledger on fixtures (`BUILD_ORDER.md` R2)
+**Step:** The NAV-independent half is done and proven: lots, cost basis, FIFO
+consumption, holding periods, realised gains. Slice Zero is complete and frozen.
+**Blocked on:** the real NAV series, which the user is supplying. Without it,
+market value, unrealised P&L, XIRR and TWRR cannot be computed or verified —
+and PLAN.md §8.3 invariant 4 (P&L closure) cannot be asserted.
+Also outstanding: OPEN-07 (NAV backfill depth) before M0 step 4; OPEN-03
+(`index_constituent`) before V1, per R4; and V0-01 (base vs total TER) before
+any fee-drag output.
 
 ## Acceptance gate for the current slice
 
@@ -39,6 +43,48 @@ Slice Zero has no runtime behaviour, so its gate is static:
 ---
 
 ## Session log
+
+### 2026-09-05 — session 3
+
+**Did:**
+- `git init` in the project folder (local only; no remote, nothing pushed),
+  `.gitignore` and `.gitattributes`, and the Slice Zero freeze commit per R1 step 4.
+- Transcribed three real funds from supplied screenshots into
+  `tests/fixtures/v0_ledger/scheme_master.yaml`.
+- V0.1 ledger, test-first: `src/m1_ledger/txn.py` (taxonomy, idempotent txn_id,
+  reversal handling) and `src/m1_ledger/lots.py` (FIFO engine, cost basis,
+  realised gains).
+- Golden fixture: 14 hand-verified synthetic transactions + `expected.yaml`
+  computed independently of the engine.
+
+**Passed:** ruff clean; `mypy --strict` clean on 47 files; 229/229 tests.
+
+**Blocked:** market value, XIRR and TWRR — waiting on the NAV series.
+
+**Decisions appended:** V0-01 (OPEN: base vs total TER), V0-02, V0-03, V0-04.
+
+**Findings worth carrying forward:**
+- **Mutation testing found a hole the golden fixture could not.** Changing the LTCG
+  boundary from `> 365` to `>= 365` left all 19 tests green, because no fixture
+  holding period lands on 365 days. At the quoted rates that boundary is 20% vs
+  12.5% on the whole gain. Golden fixtures do not catch off-by-ones; boundaries
+  need their own tests. Five other mutations (LIFO, dropped stamp duty, ignored
+  exit load, clamped InsufficientUnits, netted reversal) were caught.
+- **A fund with no benchmark is not the same as a fund with a PRI benchmark.**
+  The spec covers the second; the ICICI multi-asset fund is the first. Two states,
+  two reasons, both suppressed (V0-02).
+- **Real fund pages publish two TERs and the schema has one column** (V0-01). The
+  gap is 0.29-0.43pp, which is a quarter to a third of the headline fee.
+- Second B023 (closure over a loop variable) caught by ruff in `txn.py`, same
+  class as the one in `m5_market/providers/fake.py` last session. Worth watching
+  for in any fixture-parsing code.
+
+**Next:**
+1. NAV series arrives -> position valuation, XIRR, TWRR, timing effect, and
+   PLAN.md §8.3 invariant 4.
+2. Reconciliation (units AND value) — MODULE_1.md §11, the V0 gate.
+3. Then V0.2: the CAS parser replaces the hand-made CSV.
+
 
 ### 2026-09-04 — session 2
 
