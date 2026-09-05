@@ -37,19 +37,23 @@ FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "v0_ledg
 SOURCE = FIXTURES / "transactions.csv"
 TARGET = FIXTURES / "cas_statement.txt"
 
-#: ISINs are the resolution key (MODULE_1.md §5.4: "always resolve on ISIN,
-#: never name"), and the golden scheme master has none — ET Money publishes no
-#: ISIN. These are structurally valid and deliberately in the reserved-looking
-#: `INF000` range so they cannot be mistaken for a real scheme's identifier.
+#: The real ISINs, which since the re-key ARE the scheme_ids — MODULE_0.md §4.4
+#: keys a scheme on its ISIN where one exists. Confirmed against AMFI's own NAV
+#: history: 3,638 overlapping values, zero mismatches (DECISIONS V0-25).
+#:
+#: This map was invented placeholders (`INF000H01FC7`) until V0.5 produced the
+#: real ones. Kept as an explicit identity map rather than deleted, because the
+#: renderer needs *an* ISIN column and reading `scheme_id` directly would hide
+#: the assumption that the two are the same thing.
 ISINS = {
-    "AMFI:HDFC-FLEXICAP-DIR-G": "INF000H01FC7",
-    "AMFI:ICICI-MULTIASSET-REG-G": "INF000I01MA4",
-    "AMFI:KOTAK-PIONEER-DIR-G": "INF000K01PN9",
+    "INF179K01UT0": "INF179K01UT0",
+    "INF109K01761": "INF109K01761",
+    "INF174KA1EZ1": "INF174KA1EZ1",
 }
 AMCS = {
-    "AMFI:HDFC-FLEXICAP-DIR-G": "HDFC Mutual Fund",
-    "AMFI:ICICI-MULTIASSET-REG-G": "ICICI Prudential Mutual Fund",
-    "AMFI:KOTAK-PIONEER-DIR-G": "Kotak Mahindra Mutual Fund",
+    "INF179K01UT0": "HDFC Mutual Fund",
+    "INF109K01761": "ICICI Prudential Mutual Fund",
+    "INF174KA1EZ1": "Kotak Mahindra Mutual Fund",
 }
 #: How the registrar words each type. The parser maps these back through
 #: `config/txn_types.yaml`, so wording that no pattern matches will fail the

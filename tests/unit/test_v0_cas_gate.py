@@ -27,8 +27,9 @@ from pathlib import Path
 
 import pytest
 from scripts.build_v0_cas import ISINS
-from src.common.fixtures import load_yaml
-from src.common.types import SchemeId, UserId
+from src.common.fixtures import FixtureStore, load_yaml
+from src.common.types import Isin, SchemeId, UserId
+from src.m0_data.providers.fake import FakeMarketDataProvider
 from src.m1_ledger.cas import ImportReport, StagedTxn, import_cas
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.reconcile import apply_gate, nav_cross_check, reconcile_all
@@ -39,8 +40,13 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 STATEMENT = FIXTURES / "cas_statement.txt"
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
-BY_ISIN = {isin: scheme_id for scheme_id, isin in ISINS.items()}
 DATE_LINE = re.compile(r"^\d{2}-[A-Za-z]{3}-\d{4}\s")
+
+#: Since the re-key these ARE the ISINs, confirmed against AMFI's own NAV
+#: history (DECISIONS V0-25). MODULE_0.md §4.4 keys a scheme on its ISIN.
+HDFC_DIRECT = SchemeId("INF179K01UT0")
+ICICI_REGULAR = SchemeId("INF109K01761")
+KOTAK_DIRECT = SchemeId("INF174KA1EZ1")
 
 #: Money on a statement is printed to 2dp; the golden fixture computes charges
 #: from a rate at `MONEY_Q` (4dp). Half a paisa is the most one rounding can
@@ -72,10 +78,23 @@ RATE_DERIVED: dict[tuple[str, str], Decimal] = {
 NOT_ROUND_TRIPPED = {"txn_ref", "reverses_txn_ref", "txn_seq"}
 
 
+#: M0's resolver, reached the way M1 reaches everything in M0 — through the
+#: interface. This was a dict lookup in a lambda until the re-key gave the
+#: golden schemes their real ISINs; a stub cannot exercise §11.3's ordering,
+#: and it was the last place in the V0 gate where scheme identity did not
+#: trace to a source file (`PLAN.md` §4.2).
+_PROVIDER = FakeMarketDataProvider(FixtureStore(FIXTURES))
+
+
 def _resolve(s: StagedTxn) -> SchemeId | None:
-    """M0 §11.3's resolver, stubbed. Always on ISIN, never on name (§5.4)."""
-    found = BY_ISIN.get(s.scheme_raw_isin)
-    return SchemeId(found) if found else None
+    """Resolve one staged CAS row through `MarketDataProvider`. §11.3."""
+    ref = _PROVIDER.resolve_scheme(
+        Isin(s.scheme_raw_isin) if s.scheme_raw_isin else None,
+        s.scheme_raw_name,
+        None,
+        s.txn_date,
+    )
+    return ref.scheme_id
 
 
 @pytest.fixture(scope="module")
@@ -265,8 +284,11 @@ def test_the_golden_switch_crosses_amcs_and_therefore_cannot_be_linked(
     out_leg = next(t for t in report.txns if t.txn_type == "SWITCH_OUT")
     in_leg = next(t for t in report.txns if t.txn_type == "SWITCH_IN")
     assert out_leg.folio != in_leg.folio
-    assert str(out_leg.scheme_id).split(":")[1].split("-")[0] == "HDFC"
-    assert str(in_leg.scheme_id).split(":")[1].split("-")[0] == "ICICI"
+    # Since the re-key these are real ISINs, so the AMC is the issuer prefix
+    # rather than something parsed out of a placeholder string.
+    assert out_leg.scheme_id == HDFC_DIRECT      # INF179... = HDFC
+    assert in_leg.scheme_id == ICICI_REGULAR     # INF109... = ICICI Prudential
+    assert str(out_leg.scheme_id)[:6] != str(in_leg.scheme_id)[:6]
 
     assert [f for _, f in report.flags] == ["UNLINKED_SWITCH"]
     assert out_leg.switch_group_id is None
@@ -332,7 +354,7 @@ def test_gate_xirr_is_solvable_and_its_npv_returns_to_zero(
     would not produce a rate that closes.
     """
     book = build_book(report.txns)
-    scheme_id = "AMFI:KOTAK-PIONEER-DIR-G"
+    scheme_id = "INF174KA1EZ1"
     scoped = [t for t in report.txns if str(t.scheme_id) == scheme_id]
 
     units = sum(

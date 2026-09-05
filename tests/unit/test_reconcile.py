@@ -31,9 +31,9 @@ from src.m1_ledger.reconcile import (
 from src.m1_ledger.txn import Txn, load_transactions
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
-HDFC = SchemeId("AMFI:HDFC-FLEXICAP-DIR-G")
-ICICI = SchemeId("AMFI:ICICI-MULTIASSET-REG-G")
-KOTAK = SchemeId("AMFI:KOTAK-PIONEER-DIR-G")
+HDFC = SchemeId("INF179K01UT0")
+ICICI = SchemeId("INF109K01761")
+KOTAK = SchemeId("INF174KA1EZ1")
 AS_OF = date(2026, 9, 4)
 
 

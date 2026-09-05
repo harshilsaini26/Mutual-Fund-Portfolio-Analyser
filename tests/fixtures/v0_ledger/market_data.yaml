@@ -1,0 +1,48 @@
+# The three golden schemes as M0 would serve them, for resolution only.
+#
+# `scheme_id` IS the ISIN since the re-key (MODULE_0.md §4.4), and every
+# identifier here was confirmed against AMFI's own NAV history — 3,638
+# overlapping values, zero mismatches (DECISIONS V0-25).
+#
+# No `navs` block: this fixture exists so M1's CAS tests can resolve a
+# scheme through FakeMarketDataProvider instead of a lambda, and resolution
+# does not read NAVs. The real series lives in nav_series.yaml.
+
+schemes:
+  - scheme_id: INF179K01UT0
+    isin: INF179K01UT0
+    amfi_code: "118955"
+    scheme_name: "HDFC Flexi Cap Fund - Growth Option - Direct Plan"
+    amc_id: HDFC
+    plan: direct
+    option: growth
+    status: active
+  - scheme_id: INF109K01761
+    isin: INF109K01761
+    amfi_code: "101144"
+    scheme_name: "ICICI Prudential Multi Asset Allocation Fund - Growth"
+    amc_id: ICICI
+    plan: regular
+    option: growth
+    status: active
+  - scheme_id: INF174KA1EZ1
+    isin: INF174KA1EZ1
+    amfi_code: "147727"
+    scheme_name: "Kotak Pioneer Fund- Direct Plan- Growth Option"
+    amc_id: KOTAK
+    plan: direct
+    option: growth
+    status: active
+
+mergers: []
+navs: {}
+idcw_events: {}
+tax_class: {}
+ter: {}
+exit_load_days: {}
+sibling_plans: {}
+benchmarks: []
+scheme_benchmarks: {}
+index_levels: {}
+risk_free: []
+aum: {}

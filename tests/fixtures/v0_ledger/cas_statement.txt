@@ -12,7 +12,7 @@ PAN: XXXXX0000X                              Email: investor@example.invalid
 
 Folio No: F0001/22
 HDFC Mutual Fund
-HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF000H01FC7
+HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF179K01UT0
         Opening Unit Balance: 0.000000
 01-Jan-2024   Systematic Investment Purchase         10,000.00        6.131905       1,630.7330         6.131905
               *** Stamp Duty *** 0.50
@@ -38,7 +38,7 @@ HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF000H01FC7
 
 Folio No: F0003/01
 ICICI Prudential Mutual Fund
-ICICI Prudential Multi Asset Allocation Fund - Growth - ISIN: INF000I01MA4
+ICICI Prudential Multi Asset Allocation Fund - Growth - ISIN: INF109K01761
         Opening Unit Balance: 0.000000
 16-Jan-2026   Switch In                              22,711.62       27.773917         817.6912        27.773917
               *** Stamp Duty *** 1.14
@@ -46,7 +46,7 @@ ICICI Prudential Multi Asset Allocation Fund - Growth - ISIN: INF000I01MA4
 
 Folio No: F0004/18
 Kotak Mahindra Mutual Fund
-Kotak Pioneer Fund- Direct Plan- Growth Option - ISIN: INF000K01PN9
+Kotak Pioneer Fund- Direct Plan- Growth Option - ISIN: INF174KA1EZ1
         Opening Unit Balance: 0.000000
 04-Nov-2024   Purchase                               50,000.00    1,567.516303          31.8960     1,567.516303
               *** Stamp Duty *** 2.50
@@ -58,13 +58,13 @@ Kotak Pioneer Fund- Direct Plan- Growth Option - ISIN: INF000K01PN9
         Closing Unit Balance: 494.203027
 
 Portfolio Summary
-HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF000H01FC7
+HDFC Flexi Cap Fund - Growth Option - Direct Plan - ISIN: INF179K01UT0
 16-Jan-2026   Switch Out                             22,711.85     (10.000000)       2,271.1850         4.417226
         Closing Unit Balance: 4.417226
-ICICI Prudential Multi Asset Allocation Fund - Growth - ISIN: INF000I01MA4
+ICICI Prudential Multi Asset Allocation Fund - Growth - ISIN: INF109K01761
 16-Jan-2026   Switch In                              22,711.62       27.773917         817.6912        27.773917
         Closing Unit Balance: 27.773917
-Kotak Pioneer Fund- Direct Plan- Growth Option - ISIN: INF000K01PN9
+Kotak Pioneer Fund- Direct Plan- Growth Option - ISIN: INF174KA1EZ1
 15-Apr-2026   Redemption                             62,193.60  (1,800.000000)          34.5520       494.203027
         Closing Unit Balance: 494.203027
 Total Value                        49,818.53

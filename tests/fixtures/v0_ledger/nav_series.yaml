@@ -9,7 +9,7 @@
 # catches it — PLAN.md §7 V0.
 
 series:
-  AMFI:HDFC-FLEXICAP-DIR-G:
+  INF179K01UT0:
     fund: 'HDFC Flexi Cap Fund - Growth Option - Direct Plan'
     amc: 'HDFC Mutual Fund'
     plan: 'Direct Plan'
@@ -1233,7 +1233,7 @@ series:
       2026-09-03: "2273.755000"
       2026-09-04: "2271.324000"
 
-  AMFI:ICICI-MULTIASSET-REG-G:
+  INF109K01761:
     fund: 'ICICI Prudential Multi Asset Allocation Fund - Growth'
     amc: 'ICICI Prudential Mutual Fund'
     plan: 'Regular Plan'
@@ -2457,7 +2457,7 @@ series:
       2026-09-03: "814.796300"
       2026-09-04: "815.979600"
 
-  AMFI:KOTAK-PIONEER-DIR-G:
+  INF174KA1EZ1:
     fund: 'Kotak Pioneer Fund- Direct Plan- Growth Option'
     amc: 'Kotak Mahindra Mutual Fund'
     plan: 'Direct Plan'

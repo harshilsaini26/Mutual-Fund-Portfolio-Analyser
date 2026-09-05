@@ -1,17 +1,34 @@
 # V0.1 scheme master.
 #
-# PROVENANCE IS MIXED, and the mix is the point:
-#   - NAV series: AMFI historical exports (nav_series.yaml). Authoritative.
-#   - Everything else: ET Money fund pages, captured 2026-09-05, by screenshot.
-#     There is no archived source file, so `PLAN.md` §4.2 ("every number traces
-#     to a row in an archived source file") is NOT satisfied. Adequate for a
-#     V0.1 fixture; not adequate for a warehouse row. M0 replaces all of it.
+# PROVENANCE IS MIXED, and the mix is the point. It is less mixed than it was:
+#
+#   - IDENTITY (scheme_id, ISIN, AMFI code, plan, option) — AMFI's own files,
+#     archived under their content hash in Zone A. `scheme_id` IS the ISIN
+#     (MODULE_0.md §4.4). SOURCED.
+#   - NAV series (nav_series.yaml) — supplied workbooks, and since V0.5
+#     confirmed line by line against AMFI's history: 3,638 overlapping values,
+#     ZERO mismatches (DECISIONS V0-25). SOURCED.
+#   - Everything else — TER, AUM, exit load, risk label, benchmark, inception
+#     — ET Money fund pages, captured 2026-09-05, by screenshot. There is no
+#     archived source file for these, so `PLAN.md` §4.2 ("every number traces
+#     to a row in an archived source file") is NOT satisfied for them.
+#     Adequate for a V0.1 fixture; not adequate for a warehouse row.
+#
+#   So §4.2 now holds for identity and for prices, and does not yet hold for
+#   scheme attributes. That distinction matters more than the old blanket
+#   caveat did: it says exactly which numbers can be trusted and which cannot.
 #
 # THE PLAN MISMATCH, and how it was resolved:
 #   The supplied HDFC NAV workbook is the DIRECT plan. The screenshot it was
 #   paired with was the REGULAR plan — NAV Rs 2,271.32 vs Rs 2,062.38 on
 #   2026-09-04, a 10.13% gap, confirmed on a second date. Per DECISIONS V0-05
 #   the scheme record was switched to Direct to match the NAV series.
+#
+#   AMFI's own file has since confirmed both figures to the paisa — Direct
+#   2271.324, Regular 2062.377 on 2026-09-04 — and gives each plan its own
+#   ISIN, so the conflation is now impossible rather than merely corrected:
+#   INF179K01UT0 is Direct and INF179K01608 is Regular, and nothing has to
+#   read a plan out of a scheme name to tell them apart.
 #
 #   Consequence: the fields below that came from the REGULAR page do not
 #   describe the Direct plan and are nulled rather than carried across.
@@ -25,13 +42,14 @@ meta:
   archived_source_file_id: null
   confidence: low
   caveats:
-    - "Scheme identifiers are placeholders; ET Money displays no ISIN or AMFI code."
+    - "Scheme identifiers are AMFI's own, confirmed via V0-25; TER, AUM and
+       inception remain screenshot-sourced and untraceable."
     - "HDFC is the Direct plan; its TER and inception could not be sourced for that plan."
     - "Aditya Birla Large & Mid has no NAV series and is therefore absent."
     - "Two of three schemes publish no benchmark at all."
 
 schemes:
-  - scheme_id: AMFI:HDFC-FLEXICAP-DIR-G
+  - scheme_id: INF179K01UT0
     scheme_name: HDFC Flexi Cap Fund - Growth Option - Direct Plan
     amc_id: HDFC
     plan: direct
@@ -65,7 +83,7 @@ schemes:
     inception_date: null
     inception_note: "scheme inception 1994-12-08; Direct plan inception not sourced"
 
-  - scheme_id: AMFI:ICICI-MULTIASSET-REG-G
+  - scheme_id: INF109K01761
     scheme_name: ICICI Prudential Multi Asset Allocation Fund - Growth
     amc_id: ICICI
     plan: regular
@@ -95,7 +113,7 @@ schemes:
     # reason, never rendered as zero.
     benchmark_id: null
 
-  - scheme_id: AMFI:KOTAK-PIONEER-DIR-G
+  - scheme_id: INF174KA1EZ1
     scheme_name: Kotak Pioneer Fund- Direct Plan- Growth Option
     amc_id: KOTAK
     plan: direct
@@ -141,11 +159,11 @@ schemes:
 # raises rather than defaulting, because MODULE_1.md §10.2 is explicit that
 # defaulting to equity understates tax.
 tax_class:
-  AMFI:HDFC-FLEXICAP-DIR-G:
+  INF179K01UT0:
     - {valid_from: 2013-01-01, valid_to: null, tax_class: equity, source: etmoney_ui}
-  AMFI:ICICI-MULTIASSET-REG-G:
+  INF109K01761:
     - {valid_from: 2002-10-07, valid_to: null, tax_class: null, source: unknown}
-  AMFI:KOTAK-PIONEER-DIR-G:
+  INF174KA1EZ1:
     - {valid_from: 2019-10-09, valid_to: null, tax_class: equity, source: etmoney_ui}
 
 benchmarks:

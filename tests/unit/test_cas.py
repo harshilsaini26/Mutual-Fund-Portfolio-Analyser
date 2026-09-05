@@ -72,7 +72,7 @@ def staged(lines: list[str], ctx: CasContext) -> list[StagedTxn]:
 def _resolve(s: StagedTxn) -> SchemeId | None:
     """Stand-in for M0's `resolve_scheme`. Always on ISIN, never on name."""
     known = {
-        HDFC_ISIN: "AMFI:HDFC-FLEXICAP-DIR-G",
+        HDFC_ISIN: "INF179K01UT0",
         HDBA_ISIN: "AMFI:HDFC-BALADV-DIR-G",
         ICICI_ISIN: "AMFI:ICICI-BLUECHIP-REG-IDCW",
     }
@@ -637,7 +637,7 @@ def test_an_ignored_opening_balance_is_what_missing_early_cas_looks_like() -> No
     report = import_cas(USER, lines, _resolve)
     book = build_book(report.txns)
 
-    scheme_id = SchemeId("AMFI:HDFC-FLEXICAP-DIR-G")
+    scheme_id = SchemeId("INF179K01UT0")
     computed = sum(
         (
             lot.units_remaining

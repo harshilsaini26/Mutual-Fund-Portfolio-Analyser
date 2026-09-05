@@ -27,9 +27,9 @@ from src.common.fixtures import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "v0_ledger"
 
-HDFC = "AMFI:HDFC-FLEXICAP-DIR-G"
-ICICI = "AMFI:ICICI-MULTIASSET-REG-G"
-KOTAK = "AMFI:KOTAK-PIONEER-DIR-G"
+HDFC = "INF179K01UT0"
+ICICI = "INF109K01761"
+KOTAK = "INF174KA1EZ1"
 
 NAMES = {
     HDFC: "HDFC Flexi Cap Fund - Growth Option - Direct Plan",

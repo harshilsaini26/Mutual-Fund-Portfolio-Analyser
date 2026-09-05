@@ -28,9 +28,9 @@ from src.m1_ledger.lots import (
 from src.m1_ledger.txn import Txn, load_transactions
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
-HDFC = "AMFI:HDFC-FLEXICAP-DIR-G"
-ICICI = "AMFI:ICICI-MULTIASSET-REG-G"
-KOTAK = "AMFI:KOTAK-PIONEER-DIR-G"
+HDFC = "INF179K01UT0"
+ICICI = "INF109K01761"
+KOTAK = "INF174KA1EZ1"
 
 
 @pytest.fixture(scope="module")
