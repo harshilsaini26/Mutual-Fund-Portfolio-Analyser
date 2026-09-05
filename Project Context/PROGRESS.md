@@ -7,9 +7,9 @@
 
 ## Current state
 
-**Slice:** V0.2 — CAS parser (`MODULE_1.md` §5). Parser complete; PDF layer untested.
-**Repo:** local git, 12 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (57 files) · 323 tests · verifier no drift.
+**Slice:** V0.3 — the V0 gate, run on a ledger that came through the parser.
+**Repo:** local git, 13 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (58 files) · 338 tests · verifier no drift.
 
 **Run everything:**
 
@@ -24,6 +24,7 @@ python -m scripts.verify_v0_ledger --check     # exits 1 on golden-file drift
 ```bash
 python -m scripts.import_nav_xlsx <xlsx>... --scheme-id <id>... -o tests/fixtures/v0_ledger/nav_series.yaml
 python -m scripts.build_v0_fixture
+python -m scripts.build_v0_cas          # renders the golden rows as a CAS
 python -m scripts.verify_v0_ledger
 ```
 
@@ -35,7 +36,7 @@ python -m scripts.verify_v0_ledger
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py` (`config/txn_types.yaml`), `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password) |
-| Fixture portfolio | 3 real funds on real AMFI NAV: HDFC Flexi Cap **Direct**, ICICI Multi Asset **Regular**, Kotak Pioneer **Direct** |
+| Fixture portfolio | 3 real funds on real AMFI NAV: HDFC Flexi Cap **Direct**, ICICI Multi Asset **Regular**, Kotak Pioneer **Direct**. Reaches the engine as a CAS (`cas_statement.txt`), not as a CSV. |
 | Not built | M0 ingestion, tax engine, persistence, M2–M6 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
@@ -45,8 +46,9 @@ python -m scripts.verify_v0_ledger
       `nav_cross_check()` is a gate condition, so a wrong NAV series fails.
 - [x] **All 5 property invariants pass.** Two now at exact equality, not tolerance.
 - [~] **XIRR matches an independent calculation to 4 dp.** Verified three ways
-      (closed-form cases, NPV≈0 on real data, Excel's 365-day convention). The
-      spreadsheet comparison itself is a human step.
+      (closed-form cases, NPV≈0 on real data, Excel's 365-day convention), now
+      also on cashflows built from the parsed ledger. The spreadsheet
+      comparison itself remains a human step — the only item still open.
 - [x] **Re-import produces zero new rows.** Real since V0.2. Proven on two
       statements with different start dates: the shared transactions hash
       identically and the overlap inserts nothing. §5.3's per-block `txn_seq`
@@ -66,8 +68,11 @@ See `DECISIONS.md` (30 entries). Still open:
 
 - **V0-15 scope** — whether a registrar prints a purchase amount gross or net
   of stamp duty is undocumented. The importer settles it per row against
-  `units × nav` and flags rows where neither reading holds. Replace with a real
-  CAS when one is available.
+  `units × nav`, and V0-16 asserts both renderings read the same. Replace with a
+  real CAS when one is available.
+- **V0-16 data request** — the golden switch crosses AMCs and so cannot be
+  linked. Fixing it needs a second scheme from one AMC with a real NAV series.
+  Nothing downstream depends on it.
 
 **Deferred by agreement:** ABSL Large & Mid has no NAV series; HDFC's
 Direct-plan TER is unsourced (V0-05 nulled it). Neither blocks progress.
@@ -133,6 +138,18 @@ cross-check gates. Invariants 2 and 4 tightened to exact equality. Both
 surviving mutations were fixes *masked by an accident of the fixture* rather
 than genuinely exercised.
 
+**S8 · V0.3, the gate on parsed data.** The golden portfolio now reaches the
+engine as a statement (`scripts/build_v0_cas.py`), not a CSV, and the full
+`PLAN.md` §7 gate runs on the far side of the parser: 14 transactions, 3 folios,
+`status == ok`, every folio reconciling at exactly 0.000000, NAV cross-check
+clean, XIRR closing to zero NPV, re-import inserting nothing. The round trip
+loses exactly seven figures — every charge the fixture computes from a rate,
+because no statement prints 4dp — and the set is declared and asserted exact
+rather than tolerated. It also exposed a fixture defect the CSV could never
+show: **the golden "switch" crosses AMCs**, which cannot happen, so §5.8
+correctly refuses to link it (V0-16). Second time a hand-typed field has encoded
+something impossible, after V0-09.
+
 **S7 · V0.2, the CAS parser.** §5 is the only section shipping working code, and
 implementing it found **seven defects** (V0-15) — worst first: §5.3's per-block
 `txn_seq` contradicts §5.6's idempotence hash, so every overlapping re-import
@@ -146,12 +163,12 @@ against a synthetic CAS carrying one §5.4 trap per labelled line, since a real
 one is Zone B. End to end: the parsed statement replays through the FIFO engine
 and ties to its own printed closing balances exactly.
 
-**Next:** two candidates.
+**Next: V0.4** — `BUILD_ORDER.md` R2: "M0 archive + fetch + NAV + scheme master,
+behind the real provider." The fake is swapped for a real implementation behind
+an interface frozen in Slice Zero, which is the whole payoff of R1 and R2. That
+also retires the `_resolve` stub the CAS tests currently pass in, and is what
+`PLAN.md` §4.2 needs before any number traces to an archived source file.
 
-1. **Golden cross-validation** — a second synthetic CAS reproducing the 14 rows
-   of `transactions.csv`, so the hand-made fixture and the parser have to agree.
-   Cheap, and it would catch drift in either.
-2. **M0 §11.3 `resolve_scheme`** — currently a test stub. `PLAN.md` §4.2 is not
-   satisfied until a scheme resolves from an archived source rather than a dict.
+Then **V0.5**, historical NAV backfill.
 
 `pdf.py` stays untested until a real password-protected CAS exists.
