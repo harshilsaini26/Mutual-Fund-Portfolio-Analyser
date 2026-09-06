@@ -7,12 +7,20 @@
 
 ## Current state
 
-**Slice:** V1.2e — **three of five** AMC formats parse, resolve, validate and
-load, each reconciling against the total its own file states. The look-through
-engine that consumes them is not built.
-**Repo:** local git, 30 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (114 files) · 560 tests + 3 skipped ·
+**Slice:** V1.3 — **the look-through works.** Three of five AMC formats parse
+and load; `compute_lookthrough` turns them into issuer exposure, closure holds
+at delta 0.00, and `scripts/show_lookthrough.py` prints it.
+**Repo:** local git, `origin` set to
+`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed**:
+the credential helper cannot prompt in this environment, so the first `git push
+-u origin main` has to be run from a terminal. Branch `main`, tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (119 files) · 588 tests + 3 skipped ·
 verifier no drift.
+
+**Zone B is encrypted** (V1-16): `sqlcipher3` installed, `--allow-unencrypted` gone
+from the command line, and the suite runs against a real encrypted ledger. Turning
+it on exposed a defect — `sqlcipher3` has its own adapter registry, so the Decimal
+discipline had silently detached.
 
 **Nippon is in** (V1-15) — the third format, and the test of whether V1-10's rules
 generalise. Most did, unchanged. The one that did not: a table printed *below* the
@@ -27,7 +35,8 @@ the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.0000
 **Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
 writing the database, and invariant 5 asserted against real tables that get DROPped
 and rebuilt — not against two in-memory books.
-**Next:** SBI, and Kotak once a file is supplied; then §6.5 member-level ZIP staging
+**Next:** persist §4.2's exposure tables; then SBI, and Kotak once a file is
+supplied; then §6.5 member-level ZIP staging
 (ICICI ships 146 workbooks in one archive), then V1 build items 5, 7 and 8 —
 Bhavcopy prices, `scheme_issuer_weight`, and the look-through engine itself.
 
