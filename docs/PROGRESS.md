@@ -103,6 +103,7 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | Slice Zero contracts | 10 Protocols, 61 frozen dataclasses, 8 `Fake*` providers. Frozen — changes need an ADR. |
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate), `db.py` (Zone B connection + schema; refuses to open unencrypted), `persist.py` (`rebuild()` — `txn` in, every derived table out) |
+| `src/m3_lookthrough/` | `engine.py` (`compute_lookthrough`, closure asserted before returning), `weights.py` (`scheme_issuer_weight`), `concentration.py` (HHI, effective-N, top-N, Gini), `overlap.py` (pairwise, issuer-level), `persist.py` (§4.2/§4.6 tables). Pure functions; only `persist.py` touches a database. |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, `nippon`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
 | `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. `002_lookthrough.sql` — `lookthrough_exposure`, `lookthrough_contribution`, `portfolio_summary`. Separate from Zone A: a different database, not a later version of the warehouse. |
@@ -114,7 +115,7 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
 | Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3,118,359 NAVs** back to 31-Jan-2018, 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and **270 holdings** across 3 disclosure revisions — HDFC Flexi Cap (2 revisions) and Nippon Growth Mid Cap. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
 | Zone B ledger | SQLite + the `MODULE_1.md` §4 schema, **unencrypted until a SQLCipher driver is installed** — `connect_ledger` refuses rather than degrading (V1-13). Holds nothing real yet; the golden statement imports into it on demand. |
-| Not built | Kotak (bot-blocked) and SBI parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · `scheme_issuer_weight` · look-through engine (`src/m3_lookthrough/` is empty) · `direct_holding` · tax engine · **all UI** (`src/m6_views/` is Slice Zero's stub) · M2, M4, M5 |
+| Not built | Kotak (bot-blocked) and SBI parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · drift-adjusted weights (§3.2, needs prices) · `direct_holding` (§7) · fund-of-funds recursion (§6) · §4.3's `portfolio_concentration`/`fund_overlap` tables (computed, not stored) · tax engine · **all UI** (`src/m6_views/` is Slice Zero's stub) · M2, M4, M5 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -142,26 +143,32 @@ not against a hand-made CSV.
 
 ## V1 acceptance gate (`PLAN.md` §7) — honest status
 
-V1's gate cannot pass yet, and the reason is not the parsers: three of its four
-criteria are properties of the **look-through engine and the UI**, neither of
-which is built. What follows separates what has been measured from what has not
-been attempted, because a gate reported as "in progress" says nothing.
+**Three of four met.** The engine landed in V1.3 and only the UI criterion is
+untouched. What follows separates what has been measured from what has not been
+attempted, because a gate reported as "in progress" says nothing.
 
 - [x] **`pct_normalised` sums to exactly 100 per scheme-date.** Exactly, on all
       three formats: HDFC's real 31-Jul-2026 disclosure (83 holdings), Nippon's
       real one (104), and ICICI's fixture (5). `weight_residual` is stored
       beside it so the adjustment is visible rather than silent. Measured on
       three schemes, not on a portfolio.
-- [ ] **Look-through total equals portfolio value.** Not attempted —
-      `scheme_issuer_weight` is not materialised and `src/m3_lookthrough/` is
-      empty. This is V1 build items 7 and 8.
-- [~] **`unresolved_pct` < 2% for every held scheme, and is displayed.**
+- [x] **Look-through total equals portfolio value.** `compute_lookthrough`
+      asserts §2.2's closure before returning, so a caller cannot receive a
+      result that does not add up. Measured on two real disclosures at delta
+      **0.00**, and on the golden portfolio through the CAS ledger with every
+      folio reconciling at **0.000000**. V1 build items 7 and 8, done.
+- [x] **`unresolved_pct` < 2% for every held scheme, and is displayed.**
       Measured at **0.38%** on HDFC's real disclosure, **0.0760%** on Nippon's
-      and **0.0000%** on ICICI's, against the 2% bar. It is computed, persisted on
-      `holding_disclosure` and returned by the loader — but "displayed" needs
-      M6, so the criterion is half-met and counted as such.
+      and **0.0000%** on ICICI's, against the 2% bar. Computed, persisted on
+      `holding_disclosure` and `portfolio_summary`, and **printed** by
+      `scripts/show_lookthrough.py` alongside coverage and the caveats.
+      Counted as met on the substance — the number reaches the user — while
+      noting the display is a terminal report and not M6.
 - [ ] **Every chart renders its as-of date, staleness and coverage.** No charts.
-      `src/m6_views/` is Slice Zero's Protocol stub and envelope, no logic.
+      `src/m6_views/` is Slice Zero's Protocol stub and envelope, no logic. The
+      inputs exist — `holdings_as_of`, `staleness_days`, `coverage_pct` and
+      `confidence` are on every stored exposure row (§14.2 rule 1) — so this is
+      a rendering gap, not a data one.
 
 **Coverage against V1 build item 3** — "top 5 AMCs" — is **3 of 5**: HDFC,
 ICICI Prudential and Nippon India. The three disagreed on nearly everything
@@ -178,8 +185,8 @@ was written about. It needs a file downloaded by hand. SBI is untried.
 
 ## Open decisions
 
-`DECISIONS.md` holds **57 decisions across 58 entries** (SZ-01…SZ-14,
-V0-01…V0-26, V1-01…V1-15, OPEN-03, OPEN-07). OPEN-03 has two entries: the
+`DECISIONS.md` holds **61 decisions across 62 entries** (SZ-01…SZ-14,
+V0-01…V0-26, V1-01…V1-19, OPEN-03, OPEN-07). OPEN-03 has two entries: the
 conditional decision and the settlement that supersedes it — append-only, so the
 superseded text stays readable beside what replaced it.
 
@@ -244,6 +251,63 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S19 · M3 lands, Zone B is encrypted, and the warehouse loses 98% (2026-09-06)
+
+The session that made the product's actual claim work. Four slices, and each one turned up
+a storage-layer default that is wrong in a way nothing downstream can see — which is now
+three of the same family after SZ-13.
+
+**`sqlcipher3` installed, Zone B encrypted** (V1-16), `--allow-unencrypted` gone from the
+command line, and the suite runs against a real encrypted ledger. Asserted on the bytes:
+the file does not carry SQLite's plaintext magic, the stdlib driver cannot open it, a wrong
+key fails the page HMAC. Turning it on **exposed a defect** — `sqlcipher3` is a separate
+driver with its **own** adapter registry, so registering against stdlib `sqlite3` did
+nothing and the entire Decimal discipline silently detached. Writes raised `InterfaceError`,
+which is the lucky half; reads would have returned `str` for every money column.
+
+**The look-through works** (V1-17). `scheme_issuer_weight` collapses instruments to issuers;
+`compute_lookthrough` asserts closure before returning, so a caller cannot receive a result
+that does not add up. §2.2's three failure modes each have a defence and a test:
+`assert_weights_sum_to_100` wired into the engine, `__UNRESOLVED__` carried through and
+caveated above 2%, and `__NO_DISCLOSURE__` taking the full value of a fund we cannot see
+into — which is the real portfolio's shape, three funds held and one parsed.
+
+**The exposure tables persist** (V1-18), and found the sibling of the aggregation trap:
+`ORDER BY` on a `DECIMAL_TEXT` column sorts as **text**, so `"5000"` precedes `"25000"`
+and a top-20 ordered in SQL is not the top 20. §4.2's own `ix_lte_size` index is declared on
+exactly that. The test asserts both that the Python sort is right *and* that the SQL sort is
+wrong, so the fixture cannot drift into a shape where the two agree and the bug hides.
+
+**The warehouse was 44x too big** (V1-19). 3,118,359 NAV rows served 5,924 — 0.19%. The
+cause was a decision that was never implementable: OPEN-07 asked for full history on held
+schemes, and AMFI's export is keyed on the **AMC**, so three funds meant three fund houses.
+mfapi (S6) is per-scheme. 598.6 MB → 13.7 MB, verified twice — byte-identical look-through,
+and the full CAS pipeline still reconciling every folio at 0.000000. Nothing deleted.
+
+**Mutation testing, 31 mutants across three modules.** M3 engine 16/16 after one genuine gap
+— deleting `assert_closure` survived, because every fixture closes by construction and the
+net never fires; a spy test now asserts the call happens. Persistence 15/15 after two gaps,
+both **columns written and never read back**, which is a persistence layer's specific blind
+spot: `fund_inr` stored as zero, and `weight_in_fund` divided by the portfolio rather than
+the fund — the two denominators coincide for a single-fund portfolio, which is the fixture
+one reaches for first.
+
+**Two mutation survivors were my own broken mutants** and are recorded as such rather than
+counted as passes. A mutation score is worthless if a failed mutant reads as a passing test.
+
+**Also corrected, honestly:** the first draft of the SQL-coercion test asserted that
+`0.1 × 10` sums wrong. It does not — SQLite uses compensated summation and returns exactly
+1.0. What is always true is that the aggregate is a *float*, so type and scale are lost; the
+value follows only past float64, demonstrated at 22 significant digits. And HDFC's stored
+weights turned out to predate V1-06, carrying 34 significant digits where `normalise_weights`
+always quantises to six — superseded code the content-addressed loader had been skipping.
+Re-loaded from the archive.
+
+**The remote is set** to `github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` and
+**nothing is pushed**: the credential helper cannot prompt in this environment. Verified
+safe to publish first — the user's email appears only as the git author identity, zero
+occurrences in file content, and no `data/`, `.db` or `.pdf` is tracked.
 
 ### S18 · V0.4c the CAS wiring, and V1.2e the third parser (2026-09-06)
 
