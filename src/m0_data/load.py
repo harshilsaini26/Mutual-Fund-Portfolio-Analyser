@@ -138,6 +138,37 @@ def load_navs(
     return len(navs)
 
 
+def load_navs_where_absent(
+    conn: sqlite3.Connection, navs: list[StagedNav], source_file_id: str | None
+) -> int:
+    """Insert only the dates not already on record. Returns rows actually added.
+
+    The counterpart to `load_navs`, and the difference is which source wins.
+    `load_navs` upserts because AMFI restates and the later publisher file is
+    the correction. This one is for a **mirror** (S6, mfapi): it may fill dates
+    the publisher's own export did not reach, but it must never overwrite a
+    value AMFI stated.
+
+    That is not hypothetical. Measured on HDFC Flexi Cap, mfapi and AMFI agree
+    on 2,116 of 2,117 overlapping dates and disagree on 2026-03-12 —
+    `2111.846` against `2111.779`. One in two thousand, and precisely the size
+    of discrepancy that moves an XIRR without moving anything a reader would
+    notice. `DO NOTHING` keeps the publisher's number. DECISIONS V1-19.
+    """
+    added = 0
+    for n in navs:
+        cursor = conn.execute(
+            """
+            INSERT INTO nav_daily (scheme_id, nav_date, nav, source_file_id)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(scheme_id, nav_date) DO NOTHING
+            """,
+            (n.scheme_id, n.nav_date, n.nav, source_file_id),
+        )
+        added += cursor.rowcount if cursor.rowcount > 0 else 0
+    return added
+
+
 def load_parse_result(
     conn: sqlite3.Connection,
     result: AmfiParseResult,

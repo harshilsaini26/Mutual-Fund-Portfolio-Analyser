@@ -35,6 +35,24 @@ sources:
     # DECISIONS V0-20.
     provides: [nav_daily, scheme, amc]
 
+  S6:
+    name: mfapi_scheme_nav
+    kind: per_scheme
+    # `{code}` is the AMFI scheme code, which `scheme.amfi_code` already holds.
+    url: "https://api.mfapi.in/mf/{code}"
+    parser: nav.mfapi
+    verified_on: 2026-09-06
+    provides: [nav_daily]
+    # A MIRROR, not the publisher. AMFI (S1) stays the source of record per
+    # V1-02, and this only ever FILLS GAPS — see `load_navs_where_absent`.
+    # Measured on HDFC Flexi Cap: 2,117 overlapping dates, 1 disagreement
+    # (2026-03-12, mfapi 2111.846 vs AMFI 2111.779). DECISIONS V1-19.
+    #
+    # Its value is that it is PER SCHEME. AMFI's history export is per AMC
+    # code, so fetching three funds meant fetching three whole fund houses —
+    # which is why the warehouse holds 3.1M NAV rows to serve 5,924.
+    role: mirror
+
   S5:
     name: amc_portfolio_disclosure
     kind: per_amc_manifest

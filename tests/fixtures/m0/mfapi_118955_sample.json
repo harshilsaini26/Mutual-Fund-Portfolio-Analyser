@@ -1,0 +1,38 @@
+{
+ "meta": {
+  "fund_house": "HDFC Mutual Fund",
+  "scheme_type": "Open Ended Schemes",
+  "scheme_category": "Equity Scheme - Flexi Cap Fund",
+  "scheme_code": 118955,
+  "scheme_name": "HDFC Flexi Cap Fund - Direct Plan - Growth Option",
+  "isin_growth": "INF179K01UT0",
+  "isin_div_reinvestment": null
+ },
+ "data": [
+  {
+   "date": "04-09-2026",
+   "nav": "2271.32400"
+  },
+  {
+   "date": "03-09-2026",
+   "nav": "2273.75500"
+  },
+  {
+   "date": "02-09-2026",
+   "nav": "2271.07700"
+  },
+  {
+   "date": "03-01-2013",
+   "nav": "300.19600"
+  },
+  {
+   "date": "02-01-2013",
+   "nav": "299.60400"
+  },
+  {
+   "date": "01-01-2013",
+   "nav": "296.87600"
+  }
+ ],
+ "status": "SUCCESS"
+}

@@ -15,8 +15,17 @@ MODULE_3 §4.2/§4.6's tables store it.
 `github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed**:
 the credential helper cannot prompt in this environment, so the first `git push
 -u origin main` has to be run from a terminal. Branch `main`, tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (121 files) · 603 tests + 3 skipped ·
+**Gate:** ruff clean · `mypy --strict` clean (124 files) · 620 tests + 3 skipped ·
 verifier no drift.
+
+**The warehouse can be 44x smaller** (V1-19). 99.81% of its NAV history served
+schemes nobody holds, because AMFI's history export is keyed on the AMC rather
+than the scheme — OPEN-07's "full history for held schemes" was never
+implementable with it. mfapi (S6) is per-scheme; `jobs/backfill_scheme_nav.py`
+fetches only what is named and `scripts/thin_warehouse.py` rebuilds without the
+rest. 598.6 MB → 13.7 MB, byte-identical look-through, all folios still
+reconciling at 0.000000. **Nothing deleted** — the thin copy sits beside the
+original.
 
 **Zone B is encrypted** (V1-16): `sqlcipher3` installed, `--allow-unencrypted` gone
 from the command line, and the suite runs against a real encrypted ledger. Turning
@@ -98,9 +107,9 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, `nippon`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
 | `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. `002_lookthrough.sql` — `lookthrough_exposure`, `lookthrough_contribution`, `portfolio_summary`. Separate from Zone A: a different database, not a later version of the warehouse. |
 | `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
-| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
+| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (bulk history, per AMC) · `backfill_scheme_nav.py` (per-scheme history via mfapi, V1-19) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — per-source URLs and scraping limits (S5 carries the browser agent HDFC's CDN requires, contact in `From:`, per V1-05). `amc_manifest.yaml` — disclosure links per AMC; discovery is still manual (V1-03). |
-| `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
+| `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger` · `show_lookthrough` · `thin_warehouse`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds keyed on their **real ISINs** — `INF179K01UT0`, `INF109K01761`, `INF174KA1EZ1` — on NAVs confirmed against AMFI. Reaches the engine as a **CAS statement**, resolved through `MarketDataProvider`. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
 | Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3,118,359 NAVs** back to 31-Jan-2018, 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and **270 holdings** across 3 disclosure revisions — HDFC Flexi Cap (2 revisions) and Nippon Growth Mid Cap. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
