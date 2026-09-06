@@ -7,12 +7,14 @@
 
 ## Current state
 
-**Slice:** V1.2 — HDFC loads end to end; a misread sheet from any other AMC is
-now refused rather than silently loaded.
-**Repo:** local git, 22 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (105 files) · 510 tests · verifier no drift.
-**Next:** ICICI's parser (its format is understood and documented in V1-08),
-then Kotak, SBI and Nippon, then the look-through engine.
+**Slice:** V1.2d — **two of five** AMC formats parse, resolve, validate and load,
+each reconciling against the total its own file states. The look-through engine
+that consumes them is not built.
+**Repo:** local git, 24 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (106 files) · 518 tests · verifier no drift.
+**Next:** Kotak, SBI and Nippon parsers, then §6.5 member-level ZIP staging
+(ICICI ships 146 workbooks in one archive), then V1 build items 5, 7 and 8 —
+Bhavcopy prices, `scheme_issuer_weight`, and the look-through engine itself.
 
 **Run everything:**
 
@@ -27,6 +29,14 @@ python -m scripts.verify_v0_ledger --check     # exits 1 on golden-file drift
 ```bash
 MF_CONTACT_EMAIL=you@example.com python -m jobs.fetch_nav
 MF_CONTACT_EMAIL=you@example.com python -m jobs.backfill_nav     --amc hdfc icici_prudential kotak_mahindra --from 2024-01-01
+```
+
+**Load a disclosure** (`--amc` reads `config/amc_manifest.yaml`; `--file` needs
+`--scheme` because a disclosure names its scheme in prose and prose is not a key):
+
+```bash
+MF_CONTACT_EMAIL=you@example.com python -m jobs.load_holdings --amc hdfc
+python -m jobs.load_holdings --amc icici --file <extracted-member>.xlsx --scheme <ISIN>
 ```
 
 `backfill_nav` clamps `--from` to 31-Jan-2018 and discovers AMFI's AMC codes on
@@ -52,15 +62,15 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
-| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `normalise/` (numbers, names), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/integrity.py`, `schema/apply.py`, `providers/warehouse.py` |
-| `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`). Numbered, forward-only. |
-| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed). All write a `job_run` row whatever happens. |
-| `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — S1's verified URL and scraping limits. |
+| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
+| `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
+| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure). All write a `job_run` row whatever happens. |
+| `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — per-source URLs and scraping limits (S5 carries the browser agent HDFC's CDN requires, contact in `From:`, per V1-05). `amc_manifest.yaml` — disclosure links per AMC; discovery is still manual (V1-03). |
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds keyed on their **real ISINs** — `INF179K01UT0`, `INF109K01761`, `INF174KA1EZ1` — on NAVs confirmed against AMFI. Reaches the engine as a **CAS statement**, resolved through `MarketDataProvider`. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
-| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3.1 M NAVs** back to 31-Jan-2018, **5,427 issuers + instruments** with point-in-time market-cap buckets. |
-| Not built | Holdings parsers, sector taxonomy (V1-03), prices, look-through engine, tax engine, M2–M6 |
+| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3,118,359 NAVs** back to 31-Jan-2018, 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and **166 holdings** across 2 disclosure revisions — HDFC Flexi Cap only. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
+| Not built | Kotak/SBI/Nippon parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · `scheme_issuer_weight` · look-through engine (`src/m3_lookthrough/` is empty) · `direct_holding` · tax engine · **all UI** (`src/m6_views/` is Slice Zero's stub) · M2, M4, M5 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -82,9 +92,40 @@ not against a hand-made CSV.
       now also on cashflows built from the parsed ledger. **The spreadsheet
       comparison itself is a human step, and is the only gate item still open.**
 
+## V1 acceptance gate (`PLAN.md` §7) — honest status
+
+V1's gate cannot pass yet, and the reason is not the parsers: three of its four
+criteria are properties of the **look-through engine and the UI**, neither of
+which is built. What follows separates what has been measured from what has not
+been attempted, because a gate reported as "in progress" says nothing.
+
+- [x] **`pct_normalised` sums to exactly 100 per scheme-date.** Exactly, on both
+      formats: HDFC's real 31-Jul-2026 disclosure (83 holdings) and ICICI's
+      fixture (5). `weight_residual` is stored beside it so the adjustment is
+      visible rather than silent. Measured on two schemes, not on a portfolio.
+- [ ] **Look-through total equals portfolio value.** Not attempted —
+      `scheme_issuer_weight` is not materialised and `src/m3_lookthrough/` is
+      empty. This is V1 build items 7 and 8.
+- [~] **`unresolved_pct` < 2% for every held scheme, and is displayed.**
+      Measured at **0.38%** on HDFC's real disclosure and **0.0000%** on
+      ICICI's, against the 2% bar. It is computed, persisted on
+      `holding_disclosure` and returned by the loader — but "displayed" needs
+      M6, so the criterion is half-met and counted as such.
+- [ ] **Every chart renders its as-of date, staleness and coverage.** No charts.
+      `src/m6_views/` is Slice Zero's Protocol stub and envelope, no logic.
+
+**Coverage against V1 build item 3** — "top 5 AMCs" — is **2 of 5**: HDFC and
+ICICI Prudential. The two verified formats disagreed on nearly everything that
+matters (column order, date format, percentage scale, where a subtotal lives),
+which is the argument for finishing the remaining three before building the
+engine that consumes them.
+
 ## Open decisions
 
-`DECISIONS.md` holds 50 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-08, OPEN-03, OPEN-07).
+`DECISIONS.md` holds **52 decisions across 53 entries** (SZ-01…SZ-14,
+V0-01…V0-26, V1-01…V1-10, OPEN-03, OPEN-07). OPEN-03 has two entries: the
+conditional decision and the settlement that supersedes it — append-only, so the
+superseded text stays readable beside what replaced it.
 
 **Nothing is undecided.** The four that were open closed on 2026-09-05:
 
@@ -147,6 +188,60 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S16 · V1.2d — the ICICI parser, and Kite Connect declined (2026-09-06)
+
+Two formats now parse. Almost nothing ICICI needed turned out to be
+configuration — `icici.py` is three lines and a `sniff`, and both real problems
+were solved in the shared reader where the next AMC inherits them (V1-10).
+
+**A subtotal is a row that equals the sum of the rows beneath it.** ICICI prints
+the section total *on* the section row where HDFC prints a bare heading above
+the numbers, so the two AMCs need opposite answers to `classify_row`'s question
+— and V1-08 had already measured that vocabulary cannot separate them, since a
+hand-written label list still leaves ICICI 18.8% too large. Arithmetic can, at
+any depth in any wording. Only rows with no ISIN and no quantity are candidates,
+so HDFC's Rs 343194.12 of TREPS cash is considered and kept, because nothing
+beneath it sums to that. A demoted subtotal still names its rows' section,
+because V1-07 established the heading is the only thing distinguishing a short
+leg from the long position written under an identical name.
+
+**The percentage scale is read, never assumed.** HDFC writes `9.21`, ICICI
+writes `0.0596550260489`, and both columns are headed `% to Nav`. The file's own
+total row settles it — `99.99999999999996` against `0.9999999999896085` — and
+the scale is applied in the loader, not the parser, exactly as
+`market_value_unit` already works. A column totalling neither ~1 nor ~100
+raises rather than being guessed at.
+
+Both rules living in the shared reader meant HDFC's config could suddenly read
+ICICI's sheet, which **invalidated an existing test's premise**. It was replaced
+rather than dropped: the guard is now proven against a purpose-built sheet whose
+section row claims 900 while the holdings under it come to 1000, so demotion
+correctly declines to fire and it reads 1900 against its own stated 1000.
+
+Also found: `jobs/load_holdings.py --file` could never have worked — it supplied
+no `scheme_id` and `_one` reads one unconditionally, so any local file raised
+`KeyError`. Only the `--amc` path had ever been exercised. It takes `--scheme`
+now and refuses without it rather than guessing a scheme from a filename.
+
+Measured: ICICI reconciles at **1.3E-14%**, 5 holdings, **0.0000% unresolved**,
+`validation_status=ok`, weights exactly 100, revision unchanged on re-run. HDFC
+still **+0.000000%** with its TREPS, G-Sec, cash and short leg classified as
+before. The fixture load was then **deleted from the warehouse** — it is a
+5-row trimmed file and leaving it under `INF109K015K4` would misrepresent a real
+fund's portfolio.
+
+**Kite Connect evaluated and declined** (V1-09). Zerodha's API was assessed as a
+data source. It carries **no fund constituents at all**, which is the only thing
+blocking V1.2; its MF order history is **7 days**, so it cannot rebuild a
+ledger; its equity instruments dump has **no ISIN column**, which is this
+project's join key throughout; and its access token **expires at 6 AM daily**
+by regulatory requirement, against every other source here being public,
+keyless and cron-safe. Two uses kept on the shelf and recorded: `/mf/holdings`
+as a manual, human-present reconciliation witness on the ledger's *output*
+(its `tradingsymbol` **is** the ISIN, so it joins with no mapping layer), and
+historical candles revisited at V4 against NSE Bhavcopy, which is free and
+carries ISIN natively.
 
 ### S15 · V1.2c — the reconciliation guard (2026-09-05)
 
@@ -394,14 +489,32 @@ seven) plus 61 dataclasses. SZ-01…SZ-12; the substantive ones were the
 
 ## Next
 
-**V0.4** — `BUILD_ORDER.md` R2: *"M0 archive + fetch + NAV + scheme master,
-behind the real provider."* The fake is swapped for a real implementation behind
-an interface frozen in Slice Zero, which is the whole payoff of R1 and R2. It
-also retires the `_resolve` stub the CAS tests currently pass in, and is what
-`PLAN.md` §4.2 needs before any number traces to an archived source file.
+**Finish V1 build item 3** — Kotak, SBI and Nippon. Two formats are in hand and
+they disagreed on column order, date format, percentage scale and where a
+subtotal lives; both disagreements were settled by rules in the shared reader
+rather than per-AMC code, so the third format is the test of whether that
+generalises or whether V1-10's arithmetic was tuned to a sample of two.
 
-Then **V0.5**, historical NAV backfill — **unblocked**: OPEN-07 now specifies
-full history for held schemes, earliest-transaction-onward for the rest, and
-31-Jan-2018 regardless, as a one-time overnight job.
+Then **§6.5 member-level ZIP staging** — ICICI publishes 146 per-scheme
+workbooks in one 25 MB archive, so until the ZIP is archived as a single
+`raw_file` with each member staged under its own name, ICICI loads only via
+`--file --scheme` and has no manifest entry.
 
-`pdf.py` stays untested until a real password-protected CAS exists.
+Then the engine that consumes all of it — **V1 build items 5, 7 and 8**:
+Bhavcopy into `security_price` / `security_adjustment`, `scheme_issuer_weight`
+materialisation, and look-through aggregation with pairwise overlap and
+concentration. Three of V1's four gate criteria depend on those and on M6, and
+none of the three has been started.
+
+**Carried, unblocked, not urgent:**
+
+- `pdf.py` stays untested until a real password-protected CAS exists.
+- V0's own build item 9 — KPI cards and a position list — was never built. The
+  V0 acceptance gate does not require a UI and passes without one, but the
+  slice is not complete against `PLAN.md` §7's build list, and V1's gate needs
+  M6 regardless.
+- The sector taxonomy deferred in V1-03, after I throttled niftyindices by
+  probing it outside the rate limiter.
+- `/mf/holdings` from Kite Connect as a manual reconciliation witness on the
+  ledger's output (V1-09) — worth doing, needs no schema change, and is the
+  first outside check on what the ledger computes rather than what it reads.
