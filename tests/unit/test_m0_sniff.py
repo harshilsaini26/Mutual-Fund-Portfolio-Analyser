@@ -26,7 +26,7 @@ import itertools
 from pathlib import Path
 
 import pytest
-from src.m0_data.parse.base import HoldingsParseResult, HoldingsParser, RawFile
+from src.m0_data.parse.base import HoldingsParser, HoldingsParseResult, RawFile
 from src.m0_data.parse.holdings.registry import MIN_CONFIDENCE, REGISTRY
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "m0"

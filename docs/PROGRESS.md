@@ -10,8 +10,13 @@
 **Slice:** V1.2d — **two of five** AMC formats parse, resolve, validate and load,
 each reconciling against the total its own file states. The look-through engine
 that consumes them is not built.
-**Repo:** local git, 24 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (106 files) · 518 tests · verifier no drift.
+**Repo:** local git, 28 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (111 files) · 540 tests + 3 skipped ·
+verifier no drift.
+
+**Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
+writing the database, and invariant 5 asserted against real tables that get DROPped
+and rebuilt — not against two in-memory books.
 **Next:** Kotak, SBI and Nippon parsers, then §6.5 member-level ZIP staging
 (ICICI ships 146 workbooks in one archive), then V1 build items 5, 7 and 8 —
 Bhavcopy prices, `scheme_issuer_weight`, and the look-through engine itself.
@@ -60,9 +65,10 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 |---|---|
 | Slice Zero contracts | 10 Protocols, 61 frozen dataclasses, 8 `Fake*` providers. Frozen — changes need an ADR. |
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
-| `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate) |
+| `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate), `db.py` (Zone B connection + schema; refuses to open unencrypted), `persist.py` (`rebuild()` — `txn` in, every derived table out) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
+| `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. Separate from Zone A: a different database, not a later version of the warehouse. |
 | `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
 | `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure). All write a `job_run` row whatever happens. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — per-source URLs and scraping limits (S5 carries the browser agent HDFC's CDN requires, contact in `From:`, per V1-05). `amc_manifest.yaml` — disclosure links per AMC; discovery is still manual (V1-03). |
@@ -83,6 +89,10 @@ not against a hand-made CSV.
 - [x] **All 5 property invariants pass**, on the CSV-derived book and on the
       CAS-derived one. Two are at exact equality, not tolerance — including the
       P&L closure, which ties exactly on charges read from the statement.
+      **Invariant 5 is now asserted against the database** (V1-13): import,
+      rebuild, `DROP TABLE` every derived table, rebuild again, content
+      identical. It had been an in-memory comparison, which proved the engine
+      deterministic and nothing about storage.
 - [x] **Re-import produces zero new rows.** Real since V0.2. Proven on two
       statements with different start dates: the shared transactions hash
       identically and the overlap inserts nothing. §5.3's per-block `txn_seq`
@@ -188,6 +198,56 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S17 · docs/, the sniff cross-product, and V0.4b Zone B persistence (2026-09-06)
+
+**The corpus folder is `docs/`.** `PLAN.md` §8.1 and every cross-reference always said so —
+`CLAUDE.md` alone pointed at six `docs/…` paths that resolved to nothing, including the two
+lines of its working agreement telling a session where to record what it did. The rename was
+the fix; not one reference needed editing (V1-11). Only two files mentioned the old name and
+both were prose.
+
+**`sniff()` cross-product** per `MODULE_0.md` §15.2, driven by `REGISTRY` rather than a
+hand-written list, so a parser added without a fixture fails loudly instead of quietly
+shrinking the matrix. Its third case is the one with teeth: a parser claiming a foreign file
+does not crash, it produces a portfolio with the wrong shape that still sums to 100%. A
+greedy stub returning 1.0 unconditionally is asserted to be caught, so the guard cannot be
+weakened without a failure.
+
+**V0-19 got a revisit trigger** (V1-12). It had closed with "revisit when a query is actually
+slow", which is a sentiment: nobody was measuring and "slow" was undefined. The trigger is
+M5 flow computation over ~5 minutes, or `holding` over ~50M rows — it holds 166 today.
+DuckDB reads SQLite directly, so the move needs no export or dual-write window, which is
+what makes deferring correct rather than lazy.
+
+**V0.4b — the ledger is in a database** (V1-13). `MODULE_1.md` §4's schema in
+`migrations/zone_b/`, kept separate from Zone A because it is a different database rather
+than a later version of the warehouse. `rebuild()` reads `txn` and writes every derived
+table, and `txn` is its only input — anything that cannot be reconstructed from it does not
+belong in a derived table.
+
+**Invariant 5 now means what it says.** It had been two in-memory `fingerprint()` calls,
+which prove the engine deterministic and nothing about storage — no table dropped, no
+Decimal round-tripped, no evidence the derived rows are droppable. It is now import →
+rebuild → **`DROP TABLE`** every derived table → rebuild, with two comparisons answering
+different questions: a content hash that excludes the rebuild timestamps, and a whole-row
+comparison with the timestamp pinned so a column the hash misses cannot drift.
+
+**SQLCipher is not installed and the code refuses to pretend.** No binding is importable,
+and V0-19 chose SQLite precisely to avoid a native dependency. So the wiring is present with
+the driver optional — and an unencrypted Zone B database is **refused, not silently opened**.
+§6.3 puts a PAN and folio numbers under the strictest handling in the project; a quiet
+plaintext fallback is the exact failure mode this project keeps finding.
+
+**Mutation testing killed 9 of 11 and found five real gaps**, each a claim the code made and
+the tests did not check. The sharpest: `load_txns` without its `ORDER BY` still passed,
+because SQLite returns rowid order and for a single import that *is* insertion order — the
+rebuild was deterministic **by accident**, and would have stopped being so the first time a
+statement covering an earlier period was imported. Also: the FY boundary was asserted
+nowhere; the decimal-safety check had never had anything to find; and weakening the
+fingerprint survived the drop-and-rebuild test because **both sides used the same weakened
+hash** — the check was checking itself. Both remaining survivors are equivalent mutants and
+are recorded as such rather than papered over with a contorted test.
 
 ### S16 · V1.2d — the ICICI parser, and Kite Connect declined (2026-09-06)
 
