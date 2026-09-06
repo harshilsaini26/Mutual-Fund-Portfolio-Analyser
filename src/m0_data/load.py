@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from collections import defaultdict
-from datetime import date
+from datetime import UTC, date, datetime
 
 from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
@@ -237,3 +237,114 @@ def load_mcap(
             )
             counts["classification"] += 1
     return counts
+
+
+# --- holdings (MODULE_0.md §4.6) --------------------------------------------
+
+
+def next_revision(
+    conn: sqlite3.Connection, scheme_id: str, as_of: date, source_file_id: str
+) -> int | None:
+    """§4.6. A RESTATED disclosure is a new revision. A re-run is not.
+
+    `CLAUDE.md` invariant 2: never UPDATE a fact row. AMCs do restate — a
+    correction, or a file re-uploaded after a formatting fix — and the earlier
+    version is still what we reported at the time, so it keeps its rows and
+    loses `is_current`.
+
+    But a revision must mean "the AMC published something different", not "the
+    job ran twice". `source_file_id` is the sha256 of the bytes, so identical
+    bytes already loaded return None and the caller skips — the same
+    content-addressed idempotence the archive and every other loader has.
+    Without this, a nightly re-run would stack revisions of an unchanged file
+    until the revision number told you only how many times cron fired.
+    """
+    current = conn.execute(
+        "SELECT revision, source_file_id FROM holding_disclosure"
+        " WHERE scheme_id=? AND as_of_date=? AND is_current=1",
+        (scheme_id, as_of),
+    ).fetchone()
+    if current and current[1] == source_file_id:
+        return None
+
+    row = conn.execute(
+        "SELECT MAX(revision) FROM holding_disclosure WHERE scheme_id=? AND as_of_date=?",
+        (scheme_id, as_of),
+    ).fetchone()
+    return (row[0] or 0) + 1
+
+
+def load_holdings(
+    conn: sqlite3.Connection,
+    scheme_id: str,
+    as_of: date,
+    rows: list[dict[str, object]],
+    header: dict[str, object],
+    source_file_id: str,
+) -> dict[str, int]:
+    """Write one disclosure and its rows, as a new revision.
+
+    `rows` carry already-normalised values — market value in rupees absolute,
+    `pct_normalised` summing to exactly 100, and a resolved `issuer_id`. The
+    loader does no arithmetic: everything it writes was computed by a step that
+    can be re-run without re-fetching (§3's layer invariant).
+    """
+    revision = next_revision(conn, scheme_id, as_of, source_file_id)
+    if revision is None:
+        existing = conn.execute(
+            "SELECT revision, row_count FROM holding_disclosure"
+            " WHERE scheme_id=? AND as_of_date=? AND is_current=1",
+            (scheme_id, as_of),
+        ).fetchone()
+        return {"holding": existing[1], "revision": existing[0], "skipped": 1}
+    now = datetime.now(UTC)
+
+    conn.execute(
+        "UPDATE holding SET is_current = 0 WHERE scheme_id=? AND as_of_date=?",
+        (scheme_id, as_of),
+    )
+    conn.execute(
+        "UPDATE holding_disclosure SET is_current = 0 WHERE scheme_id=? AND as_of_date=?",
+        (scheme_id, as_of),
+    )
+
+    for position, row in enumerate(rows, start=1):
+        conn.execute(
+            """
+            INSERT INTO holding (
+                scheme_id, as_of_date, revision, row_number, isin, issuer_id,
+                instrument_raw_name, quantity, market_value, pct_to_nav,
+                pct_normalised, instrument_class, credit_rating, reported_sector,
+                resolution_method, resolution_conf, source_file_id, ingested_at,
+                is_current
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1)
+            """,
+            (
+                scheme_id, as_of, revision, position, row.get("isin"),
+                row["issuer_id"], row["instrument_raw_name"], row.get("quantity"),
+                row["market_value"], row.get("pct_to_nav"), row["pct_normalised"],
+                row["instrument_class"], row.get("credit_rating"),
+                row.get("reported_sector"), row["resolution_method"],
+                row.get("resolution_conf"), source_file_id, now,
+            ),
+        )
+
+    conn.execute(
+        """
+        INSERT INTO holding_disclosure (
+            scheme_id, as_of_date, revision, source_file_id, row_count,
+            pct_sum_raw, weight_residual, unresolved_mv_pct, total_mv,
+            aum_reported, mv_vs_aum_pct, reported_unit, validation_status,
+            validation_notes, is_current, ingested_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
+        """,
+        (
+            scheme_id, as_of, revision, source_file_id, len(rows),
+            header.get("pct_sum_raw"), header.get("weight_residual"),
+            header["unresolved_mv_pct"], header["total_mv"],
+            header.get("aum_reported"), header.get("mv_vs_aum_pct"),
+            header.get("reported_unit"), header["validation_status"],
+            header.get("validation_notes"), now,
+        ),
+    )
+    return {"holding": len(rows), "revision": revision}

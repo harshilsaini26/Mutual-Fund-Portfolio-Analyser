@@ -7,12 +7,11 @@
 
 ## Current state
 
-**Slice:** V1.2 in progress — HDFC's holdings parser done and verified end to
-end; four AMCs, weights, validation gates and the loader remain.
-**Repo:** local git, 20 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (100 files) · 488 tests · verifier no drift.
-**Next:** V1.2b — `normalise_weights` (§7.3), validation gates (§10.1), the
-holdings loader, the AMC manifest, and the other four parsers.
+**Slice:** V1.2 — the disclosure pipeline runs end to end on HDFC. Four AMC
+parsers remain.
+**Repo:** local git, 21 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (105 files) · 507 tests · verifier no drift.
+**Next:** ICICI, Kotak, SBI and Nippon parsers, then the look-through engine.
 
 **Run everything:**
 
@@ -84,7 +83,7 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 46 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-04, OPEN-03, OPEN-07).
+`DECISIONS.md` holds 49 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-07, OPEN-03, OPEN-07).
 
 **Nothing is undecided.** The four that were open closed on 2026-09-05:
 
@@ -147,6 +146,30 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S14 · V1.2b — the disclosure pipeline (2026-09-05)
+
+Fetch, parse, resolve, normalise, validate and load, end to end on HDFC Flexi
+Cap's real 31-Jul-2026 disclosure. 83 holdings, `validation_status=ok`, no
+failed checks, and **the fund dissolved into issuers**: 94.19% equity, 3.18%
+cash, 2.17% ReIT units, 0.46% debt, -0.001% derivative, summing to exactly
+100.000%. Top exposure ICICI Bank at 9.21% / Rs 10,198 cr.
+
+Three defects, all found by verification rather than by reading (V1-05..07):
+
+- **§2.3's honest User-Agent is unsatisfiable** on HDFC's CDN and
+  niftyindices — both 403 an honest agent *and* a browser string with the
+  contact appended. The contact moved to the RFC 7231 `From:` header, which
+  keeps §2.3's intent. Per-source; AMFI still gets an honest agent.
+- **The weight drift correction silently did nothing** when the largest weight
+  already used the decimal context's 34 digits. Weights now quantise to the
+  stored 6dp *before* the drift is settled.
+- **A revision meant "the job ran"**, not "the AMC restated". Keyed on the
+  file's sha256 now, so a re-run skips.
+
+And V8 fired for real: HDFC's short leg of Eternal Limited is written
+identically to its long position twelve rows above, so only the `OPTIONS`
+section heading distinguishes them. Section context now flows onto rows.
 
 ### S13 · V1.2a — the holdings parser (2026-09-05)
 

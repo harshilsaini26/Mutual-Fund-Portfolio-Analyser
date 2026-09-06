@@ -1,0 +1,24 @@
+# Portfolio disclosure links, per AMC. MODULE_0.md §5.4, DECISIONS V1-03.
+#
+# Discovery is NOT automated yet. Every AMC's disclosure page is JavaScript-
+# rendered, so finding a link needs a browser while fetching one does not —
+# and keeping that fragility out of the loader is the point. `scripts/
+# refresh_amc_manifest.py` regenerates this with a browser when run.
+#
+# Each entry must carry `scheme_id` (the ISIN, per MODULE_0.md §4.4), because
+# a disclosure file names its scheme in prose and prose is not a key.
+
+meta:
+  refreshed: 2026-09-05
+  note: >
+    Only HDFC is verified. The other four AMCs are pending a manifest refresh
+    and a format check; whatever their layouts violate will be recorded in
+    DECISIONS as found.
+
+disclosures:
+  - amc_id: hdfc
+    scheme_id: INF179K01UT0        # HDFC Flexi Cap Fund, Direct Growth
+    scheme_name: HDFC Flexi Cap Fund
+    as_of: 2026-07-31
+    url: "https://files.hdfcfund.com/s3fs-public/2026-08/Monthly%20HDFC%20Flexi%20Cap%20Fund%20-%2031%20July%202026.xlsx"
+    filename: "Monthly HDFC Flexi Cap Fund - 31 July 2026.xlsx"

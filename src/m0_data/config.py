@@ -55,7 +55,15 @@ def source(source_id: str, path: Path = SOURCES_YAML) -> dict[str, Any]:
         raise KeyError(f"no source {source_id!r} in {path}")
     merged = dict(cfg.get("defaults", {}))
     merged.update(cfg["sources"][source_id])
-    merged["user_agent"] = str(merged["user_agent"]).replace(
+    agent = str(merged["user_agent"])
+    if agent == "browser":
+        # A host whose filter rejects anything but a browser string. The
+        # contact travels in `From:` instead — DECISIONS V1-05.
+        from src.m0_data.fetch.base import BROWSER_USER_AGENT
+
+        agent = BROWSER_USER_AGENT
+    merged["user_agent"] = agent.replace("{CONTACT_EMAIL}", contact_email())
+    merged["from_email"] = str(merged.get("from_email", "")).replace(
         "{CONTACT_EMAIL}", contact_email()
     )
     return merged

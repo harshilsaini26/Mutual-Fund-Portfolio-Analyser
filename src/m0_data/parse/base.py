@@ -68,6 +68,15 @@ class StagedHolding:
     reported_sector: str | None
     coupon_or_rating: str | None
     sheet_name: str
+    #: The section heading this row sits under — `EQUITY & EQUITY RELATED`,
+    #: `MONEY MARKET INSTRUMENTS`, `OPTIONS`. Carried down from the last
+    #: heading seen, the same way the AMFI NAV parser carries AMC and category
+    #: context onto rows that do not repeat it.
+    #:
+    #: It is the only thing on the sheet that says a row is a derivative. The
+    #: instrument name does not: HDFC's short leg is written `Eternal Limited`,
+    #: identically to the long position twelve rows above it.
+    section: str | None = None
 
 
 @dataclass

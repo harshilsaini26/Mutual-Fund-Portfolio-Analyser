@@ -148,6 +148,7 @@ def _read_sheet(
 ) -> None:
     columns: dict[str, int] | None = None
     unit: str | None = None
+    section: str | None = None
 
     for index, raw_row in enumerate(rows, start=1):
         cells = ["" if v is None else str(v).strip() for v in raw_row]
@@ -170,7 +171,9 @@ def _read_sheet(
                 unit = _unit_for(cells, columns, result, index)
             continue
 
-        _stage_row(cells, columns, unit or "absolute", sheet_name, index, result)
+        section = _stage_row(
+            cells, columns, unit or "absolute", sheet_name, index, result, section
+        )
 
 
 def _stage_row(
@@ -180,7 +183,9 @@ def _stage_row(
     sheet_name: str,
     index: int,
     result: HoldingsParseResult,
-) -> None:
+    section: str | None,
+) -> str | None:
+    """Stage one row and return the section in force after it."""
     name = _at(cells, columns, "name")
     isin = _at(cells, columns, "isin")
 
@@ -217,7 +222,9 @@ def _stage_row(
                     )
                 )
     if kind == "blank":
-        return
+        return section
+    if kind == "section_header":
+        section = (name or isin).strip() or section
     if kind == "unknown":
         # §6.4: staged and surfaced, never discarded. An unrecognised row in a
         # disclosure is a holding we may be missing.
@@ -238,8 +245,10 @@ def _stage_row(
             reported_sector=_at(cells, columns, "sector") or None,
             coupon_or_rating=_at(cells, columns, "coupon") or None,
             sheet_name=sheet_name,
+            section=section,
         )
     )
+    return section
 
 
 def classify_row(

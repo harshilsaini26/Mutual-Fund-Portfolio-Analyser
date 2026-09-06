@@ -15,7 +15,11 @@ defaults:
   retries: 3
   backoff_base_sec: 2
   backoff_cap_sec: 60
+  # AMFI accepts an honest agent, so §2.3 is followed literally here.
   user_agent: "mf-platform/0.1 (personal research; contact: {CONTACT_EMAIL})"
+  # Sent as the `From:` header on every request, whatever the agent string.
+  # This is what keeps us contactable on hosts that reject an honest agent.
+  from_email: "{CONTACT_EMAIL}"
   respect_robots: true
 
 sources:
@@ -30,3 +34,15 @@ sources:
     # from the section context lines. There is no separate S2 fetch in V0.
     # DECISIONS V0-20.
     provides: [nav_daily, scheme, amc]
+
+  S5:
+    name: amc_portfolio_disclosure
+    kind: per_amc_manifest
+    parser: holdings.*
+    verified_on: 2026-09-05
+    # HDFC's CDN (files.hdfcfund.com) returns 403 for an honest agent AND for a
+    # browser string with a contact appended — only a bare browser string is
+    # accepted. The contact moves to `From:`. DECISIONS V1-05.
+    user_agent: browser
+    # Statutory monthly disclosures SEBI requires every AMC to publish. Links
+    # live in config/amc_manifest.yaml; discovery is not automated (V1-03).

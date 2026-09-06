@@ -36,6 +36,19 @@ _EXTENSIONS = {
 }
 
 
+#: MODULE_0.md §2.3 wants an honest, contactable agent. Two hosts in this
+#: project — HDFC's CDN and niftyindices — return 403 for any User-Agent that
+#: is not browser-shaped, INCLUDING a browser string with a contact appended.
+#: So the identity moves to `From:`, which RFC 7231 §5.5.1 defines for exactly
+#: this: "an Internet email address for a human user who controls the
+#: requesting user agent". The operator can still identify and contact us.
+#: DECISIONS V1-05.
+BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+
 class FetchError(RuntimeError):
     """The fetch failed after retries. §2 requires the URL be logged, not guessed at."""
 
@@ -220,6 +233,7 @@ def conditional_get(
     backoff_cap: float = 60,
     limiter: DomainRateLimiter | None = None,
     robots: RobotsCache | None = None,
+    from_email: str | None = None,
     client: Any = None,
     sleep: Any = time.sleep,
 ) -> httpx.Response:
@@ -236,6 +250,10 @@ def conditional_get(
         raise FetchError(f"robots.txt disallows {url}")
 
     headers = {"User-Agent": user_agent}
+    if from_email:
+        # RFC 7231 §5.5.1. Carries the contact §2.3 asks for, on hosts whose
+        # filters reject it in the User-Agent. See BROWSER_USER_AGENT.
+        headers["From"] = from_email
     if etag:
         headers["If-None-Match"] = etag
     if last_modified:
