@@ -81,7 +81,7 @@ Thumbs.db
 # ~1MB of JSON/HTML that regenerates from the same inputs.
 #
 # Patterns are deliberately NOT anchored to the repo root: there are two
-# graphify-out directories (repo root and `Project Context/`), and the cache is
+# graphify-out directories (repo root and `docs/`), and the cache is
 # keyed on mtime_ns, so it would churn on every file touch.
 graphify-out/graph.json
 graphify-out/graph.html
