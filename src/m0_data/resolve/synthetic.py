@@ -20,7 +20,16 @@ SYNTHETIC_RULES: tuple[tuple[re.Pattern[str], IssuerId], ...] = tuple(
     (re.compile(pattern, re.I), IssuerId(issuer))
     for pattern, issuer in (
         (r"\btreps?\b|tri[- ]?party|reverse\s+repo|\brepo\b", "__TREPS__"),
-        (r"net\s+receivable|net\s+payable|other\s+(current\s+)?asset", "__RECV__"),
+        # §8.4 writes this as `other\s+(current\s+)?asset`, which requires the
+        # word "other". HDFC discloses the line as `Net Current Assets`, so the
+        # spec pattern misses it and a fund's working capital lands in
+        # __UNRESOLVED__ — inflating the very metric (V3) that gates whether
+        # the look-through may be shown at all. DECISIONS V1-04.
+        (
+            r"net\s+(receivable|payable|current\s+asset)|"
+            r"other\s+(current\s+)?assets?|receivables?\s*/\s*\(?payables?",
+            "__RECV__",
+        ),
         (r"cash\s*(&|and)?\s*(bank|equivalent)|bank\s+balance", "__CASH__"),
         (r"margin|deposit\s+with|collateral", "__MARGIN__"),
         (r"\b(future|option|call|put)\b|\bfut\b|\bopt\b", "__DERIV__"),

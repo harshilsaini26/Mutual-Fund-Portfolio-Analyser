@@ -22,6 +22,15 @@ INDIAN_NUM = re.compile(r"^\(?-?[\d,]+\.?\d*\)?$")
 #: not published are different facts and must not collapse.
 NULL_TOKENS = frozenset({"", "-", "--", "N.A.", "NA", "N/A", "NIL", "NIL.", "NULL"})
 
+#: A cell holding nothing but footnote punctuation. Portfolio disclosures put
+#: these in numeric columns to reference a note — HDFC's Flexi Cap sheet marks
+#: a negative position with a bare `@` in the `% to NAV` column.
+#:
+#: This is "see the note", not a malformed number, so it coerces to None rather
+#: than raising. `12.3.4` still raises: that is a number someone got wrong, and
+#: §7.1 is right that it must surface.
+FOOTNOTE_MARKER = re.compile(r"^[@*#^$~†‡\s]+$")
+
 
 class CoercionError(ValueError):
     """A value that looks like a number but cannot be parsed. §7.1 raises."""
@@ -33,6 +42,8 @@ def to_decimal(s: str | None) -> Decimal | None:
         return None
     token = s.strip()
     if token.upper() in NULL_TOKENS:
+        return None
+    if FOOTNOTE_MARKER.match(token):
         return None
     negative = token.startswith("(") and token.endswith(")")
     token = token.strip("()").replace(",", "").replace("\u20b9", "").strip()

@@ -7,11 +7,12 @@
 
 ## Current state
 
-**Slice:** V1.1 complete — entity master seeded, resolution cascade live.
-**Repo:** local git, 19 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (94 files) · 458 tests · verifier no drift.
-**Next:** V1.2 — holdings parsers for the top five AMCs, plus the deferred
-sector taxonomy (V1-03).
+**Slice:** V1.2 in progress — HDFC's holdings parser done and verified end to
+end; four AMCs, weights, validation gates and the loader remain.
+**Repo:** local git, 20 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (100 files) · 488 tests · verifier no drift.
+**Next:** V1.2b — `normalise_weights` (§7.3), validation gates (§10.1), the
+holdings loader, the AMC manifest, and the other four parsers.
 
 **Run everything:**
 
@@ -83,7 +84,7 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 45 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-03, OPEN-03, OPEN-07).
+`DECISIONS.md` holds 46 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-04, OPEN-03, OPEN-07).
 
 **Nothing is undecided.** The four that were open closed on 2026-09-05:
 
@@ -146,6 +147,25 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S13 · V1.2a — the holdings parser (2026-09-05)
+
+HDFC Flexi Cap Fund's **real** disclosure for 31-Jul-2026 parses end to end and
+resolves through the V1.1 cascade at **`unresolved_mv_pct = 0.38%`**, against
+the V1 gate's 2%. 83 securities, zero unclassified rows, zero warnings.
+
+Three independent confirmations on one number: the disclosure's own notes say
+`Direct Plan - Growth Option 2267.177`, AMFI's NAV for `INF179K01UT0` on that
+date is 2267.177, and mfapi's mirror agrees. The parsed market values also sum
+to the file's own Grand Total with a delta of **exactly zero**, and to the AUM
+in `scheme_master.yaml` to screenshot rounding.
+
+§6.4's row classifier broke the portfolio two ways (V1-04), both invisible
+downstream because the weights still sum to 100: the trailing
+industry-summary block counts every sector twice, and dropping §6.4's
+`and mv is None` guard made the fund's entire Rs 3,432 crore cash position
+disappear. Also §8.4 misses `Net Current Assets`, and a `@` footnote marker
+was being treated as a malformed number.
 
 ### S12 · V1.1 — entity master and resolution (2026-09-05)
 
