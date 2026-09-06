@@ -39,6 +39,8 @@ from src.m1_ledger.txn import load_transactions
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
+#: The job runs against a real encrypted ledger, as production does.
+KEY = "test-key-not-a-real-secret"
 
 
 @pytest.fixture
@@ -100,7 +102,7 @@ def ledger_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _open(path: Path) -> sqlite3.Connection:
-    conn = connect_ledger(str(path), allow_unencrypted=True)
+    conn = connect_ledger(str(path), key=KEY)
     apply_ledger_schema(conn)
     return conn
 
@@ -109,7 +111,7 @@ def test_the_statement_reaches_the_ledger_and_everything_rebuilds(
     warehouse: Path, statement: Path, ledger_db: Path
 ) -> None:
     """The whole path: file -> decrypt/read -> parse -> resolve -> save -> rebuild."""
-    summary = run(statement, USER, AS_OF, allow_unencrypted=True)
+    summary = run(statement, USER, AS_OF, key=KEY)
     expected = len(load_transactions(FIXTURES / "transactions.csv"))
 
     assert summary["unparsed_lines"] == 0, summary
@@ -136,7 +138,7 @@ def test_ledger_path_is_where_the_job_wrote(
     Worth asserting rather than assuming: a path resolved at import would send
     a real import into the developer's own ledger.
     """
-    run(statement, USER, AS_OF, allow_unencrypted=True)
+    run(statement, USER, AS_OF, key=KEY)
     assert ledger_path() == ledger_db
     assert ledger_db.exists()
 
@@ -151,14 +153,14 @@ def test_reimporting_the_same_statement_inserts_nothing(
     worse failure than either alone, and it is exactly what `known_txn_ids`
     standing in for the database could have hidden.
     """
-    first = run(statement, USER, AS_OF, allow_unencrypted=True)
+    first = run(statement, USER, AS_OF, key=KEY)
     conn = _open(ledger_db)
     try:
         before = _count(conn, "txn")
     finally:
         conn.close()
 
-    second = run(statement, USER, AS_OF, allow_unencrypted=True)
+    second = run(statement, USER, AS_OF, key=KEY)
     assert second["inserted"] == 0
     assert second["duplicate"] == first["inserted"]
 
@@ -178,14 +180,14 @@ def test_a_reimport_does_not_move_the_derived_tables(
     land where it was. If it moved, either the import was not idempotent or the
     rebuild was not deterministic, and the fingerprint does not care which.
     """
-    run(statement, USER, AS_OF, allow_unencrypted=True)
+    run(statement, USER, AS_OF, key=KEY)
     conn = _open(ledger_db)
     try:
         before = derived_fingerprint(conn)
     finally:
         conn.close()
 
-    run(statement, USER, AS_OF, allow_unencrypted=True)
+    run(statement, USER, AS_OF, key=KEY)
     conn = _open(ledger_db)
     try:
         assert derived_fingerprint(conn) == before
@@ -202,8 +204,8 @@ def test_the_import_is_recorded_once_and_describes_itself(
     row rather than adding a second one — the audit trail says what the latest
     attempt did, and does not grow by one every time cron fires.
     """
-    run(statement, USER, AS_OF, allow_unencrypted=True)
-    run(statement, USER, AS_OF, allow_unencrypted=True)
+    run(statement, USER, AS_OF, key=KEY)
+    run(statement, USER, AS_OF, key=KEY)
 
     conn = _open(ledger_db)
     try:
@@ -237,7 +239,7 @@ def test_positions_are_valued_on_raw_nav_not_the_adjusted_series(
     reaches a NAV at all and that market value is the product — not that the
     two series differ.
     """
-    run(statement, USER, AS_OF, allow_unencrypted=True)
+    run(statement, USER, AS_OF, key=KEY)
     conn = _open(ledger_db)
     try:
         rows = conn.execute(
@@ -261,7 +263,7 @@ def test_the_job_refuses_without_a_warehouse(
     """
     monkeypatch.setenv("MF_WAREHOUSE", str(tmp_path / "absent.db"))
     with pytest.raises(RuntimeError, match="no Zone A warehouse"):
-        run(statement, USER, AS_OF, allow_unencrypted=True)
+        run(statement, USER, AS_OF, key=KEY)
 
 
 def _count(conn: sqlite3.Connection, table: str) -> int:

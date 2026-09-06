@@ -4,23 +4,24 @@ Zone B holds transactions, units, folios and a PAN. §6.3 puts it under the
 strictest handling in the project: encrypted at rest, and it *"never leaves the
 device unencrypted."*
 
-**SQLCipher is not installed, and this module will not pretend otherwise.**
-No binding — `sqlcipher3`, `pysqlcipher3`, `sqlcipher3_binary` — is importable
-here, and V0-19 chose SQLite for Zone A precisely because this project declares
-no runtime dependencies at all. Adding a native one now, for a database that
-holds no real data yet, would be paying a cost before there is anything to
-protect.
+**Encryption is on.** `sqlcipher3` is installed (SQLCipher 4.12.0), and
+`PRAGMA key` is applied before any other statement on the connection — which is
+what SQLCipher requires, since the first read has to decrypt page 1. Verified:
+the file does not begin with `SQLite format 3`, the stdlib `sqlite3` cannot open
+it, and a wrong key fails the page HMAC rather than returning garbage.
 
-So the wiring is here and the driver is optional, with one rule that makes the
-arrangement safe rather than convenient: **an unencrypted Zone B database is
-refused, not silently opened.** A fallback that quietly produced a plaintext
-file holding a PAN is exactly the class of failure this project keeps finding —
+This is the one runtime dependency the project has taken. V0-19 avoided a native
+dependency for **Zone A**, which holds public market data and can be rebuilt from
+the archive at any time. Zone B is the opposite: a PAN, folio numbers and a
+postal address, which `PLAN.md` §6.3 says *"never leaves the device
+unencrypted."* The cost is worth paying exactly here and nowhere else.
+
+**An unencrypted Zone B database is refused, not silently opened** — no driver,
+or no key, and `connect_ledger` raises. A fallback that quietly produced a
+plaintext file holding a PAN is the class of failure this project keeps finding:
 the write succeeds and the result is quietly wrong. `allow_unencrypted=True`
-exists for tests and says so at every call site.
-
-When the driver lands, `PRAGMA key` is applied on the connection before any
-other statement, which is what SQLCipher requires; nothing else in the ledger
-changes, because every caller already goes through `connect_ledger`.
+remains for tests and for a ledger holding nothing real, and it says so at every
+call site; it is no longer on any command line.
 """
 
 from __future__ import annotations
@@ -89,6 +90,10 @@ def connect_ledger(
     """
     register_decimal_sqlite()
     driver = sqlcipher_module()
+    if driver is not None:
+        # Per-module registries: registering on stdlib `sqlite3` does nothing
+        # for a `sqlcipher3` connection. See `register_decimal_sqlite`.
+        register_decimal_sqlite(driver)
 
     if driver is not None and key:
         conn: sqlite3.Connection = driver.connect(
@@ -96,8 +101,15 @@ def connect_ledger(
         )
         # Must precede every other statement on the connection, including the
         # schema read SQLCipher itself performs to validate the key.
-        conn.execute(f"PRAGMA key = '{key}'")
-        conn.execute("SELECT count(*) FROM sqlite_master")  # fails on a bad key
+        #
+        # PRAGMA takes no bound parameters, so the key is interpolated — and a
+        # key containing an apostrophe would otherwise end the string literal
+        # and change the statement. Doubling is SQL's own escape for a quote
+        # inside a quoted literal.
+        conn.execute("PRAGMA key = '{}'".format(key.replace("'", "''")))
+        # Forces page 1 to be decrypted, so a wrong key fails HERE rather than
+        # at some later query that looks like a schema problem.
+        conn.execute("SELECT count(*) FROM sqlite_master")
         return conn
 
     if not allow_unencrypted:

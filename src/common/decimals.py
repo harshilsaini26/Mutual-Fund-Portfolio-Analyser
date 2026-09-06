@@ -116,7 +116,7 @@ def _convert_decimal(b: bytes) -> Decimal:
     return Decimal(b.decode("utf-8"))
 
 
-def register_decimal_sqlite() -> None:
+def register_decimal_sqlite(module: Any = sqlite3) -> None:
     """Register both directions of the Decimal <-> TEXT mapping.
 
     MODULE_1.md §4.1 registers only the adapter (write side). Without a matching
@@ -125,11 +125,19 @@ def register_decimal_sqlite() -> None:
     gets introduced.
 
     The converter fires only for columns declared `DECIMAL_TEXT`, and only on
-    connections opened with `detect_types=sqlite3.PARSE_DECLTYPES`. Use
-    `connect()` below and both are handled.
+    connections opened with `detect_types=PARSE_DECLTYPES`. Use `connect()`
+    below, or `m1_ledger.db.connect_ledger`, and both are handled.
+
+    **`module` exists because these registries are per-module, not global.**
+    `sqlcipher3` is a separate DB-API driver with its own adapter and converter
+    tables, so registering against stdlib `sqlite3` does nothing for an
+    encrypted Zone B connection. Turning encryption on therefore detached the
+    whole Decimal discipline: writes raised `InterfaceError` (loud, and how this
+    was found) but reads would have returned `str` for every money column —
+    silent, and exactly the boundary a stray `float()` enters through.
     """
-    sqlite3.register_adapter(Decimal, _adapt_decimal)
-    sqlite3.register_converter(DECIMAL_SQLITE_TYPE, _convert_decimal)
+    module.register_adapter(Decimal, _adapt_decimal)
+    module.register_converter(DECIMAL_SQLITE_TYPE, _convert_decimal)
 
 
 def connect(path: str) -> sqlite3.Connection:

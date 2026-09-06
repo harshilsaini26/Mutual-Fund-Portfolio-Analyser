@@ -26,6 +26,13 @@ Violating any of these silently corrupts data. If a task seems to require it, st
 1. **`Decimal` for all money, units, NAVs, weights. Never `float`.** Floats permitted only
    inside XIRR/covariance/OLS routines, converted back at the boundary. SQLite stores
    Decimals as `TEXT` with adapters — never `REAL`.
+
+   **Never aggregate `DECIMAL_TEXT` in SQL.** SQLite coerces to float on `SUM`/`AVG`/
+   `TOTAL` over text-affinity columns. Select rows, aggregate in Python with `Decimal`.
+   Applies to every closure, weight and exposure figure. The stored values stay exact —
+   it is the aggregate that is silently a float, which is why this survives a schema
+   that is entirely `DECIMAL_TEXT` and passes `assert_schema_is_decimal_safe`. Found in
+   V1-15; `test_decimals.py` holds the demonstration.
 2. **Never `UPDATE` a fact row.** Append with a new `revision`, flip `is_current`.
 3. **Modules talk through Protocol interfaces, never direct SQL across boundaries.**
    Dependency direction is one-way: M0 → M1 → M2 → M3 → M4/M5 → M6.

@@ -44,6 +44,10 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
 PINNED = "2026-09-06T00:00:00+00:00"
+#: The suite runs against a genuinely encrypted ledger, because that is what
+#: production does. A test that only ever exercised the plaintext bypass would
+#: not have noticed if `PRAGMA key` stopped being applied.
+KEY = "test-key-not-a-real-secret"
 
 
 @pytest.fixture
@@ -61,7 +65,7 @@ def navs() -> dict[str, dict[date, Decimal]]:
 
 @pytest.fixture
 def conn(tmp_path: Path, txns: list[Txn]) -> sqlite3.Connection:
-    db = connect_ledger(str(tmp_path / "personal.db"), allow_unencrypted=True)
+    db = connect_ledger(str(tmp_path / "personal.db"), key=KEY)
     apply_ledger_schema(db)
     save_txns(db, txns, source_file_id="sha256:golden", ingested_at=PINNED)
     return db
@@ -70,16 +74,64 @@ def conn(tmp_path: Path, txns: list[Txn]) -> sqlite3.Connection:
 # --- the encryption boundary -------------------------------------------------
 
 
-def test_zone_b_refuses_to_open_unencrypted_by_default(tmp_path: Path) -> None:
+def test_zone_b_refuses_to_open_without_a_key(tmp_path: Path) -> None:
     """`PLAN.md` §6.3: Zone B never leaves the device unencrypted.
 
-    SQLCipher is not installed here, and the failure mode this guards against is
-    a fallback that quietly writes a plaintext file holding a PAN and folio
-    numbers. Refusing is the whole design — `allow_unencrypted=True` is the only
-    way past it, and it says so at every call site.
+    The driver is installed now, so the remaining way to get a plaintext file is
+    to forget the key — and that raises rather than falling back. Refusing is
+    the whole design; `allow_unencrypted=True` is the only way past it and says
+    so at every call site.
     """
     with pytest.raises(EncryptionUnavailable, match="unencrypted"):
         connect_ledger(str(tmp_path / "personal.db"))
+
+
+def test_the_ledger_on_disk_is_actually_encrypted(
+    conn: sqlite3.Connection, tmp_path: Path
+) -> None:
+    """The claim is about the bytes, so the bytes are what this checks.
+
+    Three independent ways, because "we called PRAGMA key" is not evidence that
+    anything was encrypted: the file must not carry SQLite's plaintext magic,
+    the stdlib driver must not be able to open it, and a wrong key must fail
+    rather than return garbage.
+    """
+    conn.commit()
+    path = tmp_path / "personal.db"
+    assert path.exists()
+
+    header = path.read_bytes()[:16]
+    assert not header.startswith(b"SQLite format 3"), "the file is plaintext"
+
+    with pytest.raises(sqlite3.DatabaseError):
+        sqlite3.connect(str(path)).execute("SELECT count(*) FROM txn").fetchone()
+
+    # The driver's own DatabaseError, not sqlite3's — matched on the message
+    # so this fails for the right reason rather than on any exception at all.
+    with pytest.raises(Exception, match=r"(?i)encrypted|not a database|file is"):
+        connect_ledger(str(path), key="the wrong key")
+
+    reopened = connect_ledger(str(path), key=KEY)
+    assert _count(reopened, "txn") > 0
+
+
+def test_a_key_containing_a_quote_is_escaped_not_injected(tmp_path: Path) -> None:
+    """`PRAGMA` takes no bound parameters, so the key is interpolated.
+
+    An apostrophe would otherwise close the string literal and change the
+    statement — a passphrase like `it's fine` either fails oddly or, worse,
+    sets a different key than the one the user typed and cannot be reopened.
+    """
+    awkward = "it's a 'quoted' passphrase"
+    path = tmp_path / "quoted.db"
+    first = connect_ledger(str(path), key=awkward)
+    first.execute("CREATE TABLE probe (v TEXT)")
+    first.execute("INSERT INTO probe VALUES ('ok')")
+    first.commit()
+    first.close()
+
+    reopened = connect_ledger(str(path), key=awkward)
+    assert reopened.execute("SELECT v FROM probe").fetchone()[0] == "ok"
 
 
 def test_the_schema_has_no_column_that_would_store_a_decimal_as_a_real(

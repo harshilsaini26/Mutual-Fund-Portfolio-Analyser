@@ -22,10 +22,15 @@ from the file's sha256, so the `cas_import` row is replaced rather than
 duplicated. Re-running is the normal case, not the exception — every new CAS
 re-covers periods already imported.
 
-**The password is prompted for and never stored.** §5.4 is explicit: *"From
-user input at import time. Never stored."* There is no flag and no environment
-variable for it here, deliberately — the one env-var path in this project is in
-a test, and it says so.
+**Two secrets, both prompted for and neither stored.** §5.4 is explicit about
+the CAS password: *"From user input at import time. Never stored."* The Zone B
+key gets the same treatment. There is no flag and no environment variable for
+either, deliberately — the one env-var path in this project is in a test, and
+it says so.
+
+`--allow-unencrypted` is gone from this command line. Zone B holds a PAN and
+folio numbers, and the escape hatch belongs in `connect_ledger` for tests, not
+in front of a user who is importing a real statement.
 """
 
 from __future__ import annotations
@@ -54,6 +59,7 @@ def run(
     as_of: date | None = None,
     password: str | None = None,
     allow_unencrypted: bool = False,
+    key: str | None = None,
 ) -> dict[str, object]:
     """Import one statement and rebuild everything derived from it."""
     content = path.read_bytes()
@@ -75,7 +81,11 @@ def run(
 
     db_path = ledger_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    ledger = connect_ledger(str(db_path), allow_unencrypted=allow_unencrypted)
+    if not allow_unencrypted and key is None:
+        key = getpass.getpass("Zone B ledger key: ")
+    ledger = connect_ledger(
+        str(db_path), key=key, allow_unencrypted=allow_unencrypted
+    )
     try:
         apply_ledger_schema(ledger)
 
@@ -244,16 +254,11 @@ def main() -> None:
     parser.add_argument("--file", type=Path, required=True, help="the CAS")
     parser.add_argument("--user", required=True, help="user_id")
     parser.add_argument("--as-of", help="YYYY-MM-DD; defaults to the last txn date")
-    parser.add_argument(
-        "--allow-unencrypted", action="store_true",
-        help="open Zone B without SQLCipher. Only for a ledger holding no real data.",
-    )
     args = parser.parse_args()
     summary = run(
         args.file,
         UserId(args.user),
         date.fromisoformat(args.as_of) if args.as_of else None,
-        allow_unencrypted=args.allow_unencrypted,
     )
     print(" | ".join(f"{k}={v}" for k, v in summary.items()))
 

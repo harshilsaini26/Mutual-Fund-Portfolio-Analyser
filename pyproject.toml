@@ -3,6 +3,16 @@ name = "mf-platform"
 version = "0.0.0"
 description = "Self-hosted look-through analytics for Indian mutual fund investors"
 requires-python = ">=3.11"
+dependencies = [
+    # Zone B is encrypted at rest (PLAN.md §6.3). This is the project's one
+    # runtime dependency and it is load-bearing for that: without it
+    # `connect_ledger` refuses to open the ledger at all. DECISIONS V1-16.
+    "sqlcipher3",
+    # Used throughout and previously undeclared, which V0-19 called out.
+    "pyyaml",
+    "openpyxl",
+    "httpx",
+]
 
 [tool.ruff]
 line-length = 90
