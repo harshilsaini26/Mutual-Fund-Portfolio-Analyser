@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import io
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -60,9 +60,21 @@ NOTE_ROW = re.compile(r"^\s*(notes?\s*:|\d+\)|\*|#|disclaimer)", re.I)
 #: `Portfolio as on 31-Jul-2026`. §7.5 rule 1 — an explicit date cell beats the
 #: filename, because a file can be re-uploaded under a new name.
 AS_ON_RE = re.compile(
-    r"as\s+on\s+(\d{1,2}[-/\s][A-Za-z]{3,9}[-/\s]\d{4}|\d{4}-\d{2}-\d{2})", re.I
+    r"as\s+on\s+("
+    r"\d{1,2}[-/\s][A-Za-z]{3,9}[-/\s]\d{4}"      # HDFC: 31-Jul-2026
+    r"|[A-Za-z]{3,9}\s+\d{1,2}\s*,\s*\d{4}"       # ICICI: Jul 31,2026
+    r"|\d{4}-\d{2}-\d{2}"
+    r")",
+    re.I,
 )
-_DATE_FORMATS = ("%d-%b-%Y", "%d %b %Y", "%d-%B-%Y", "%d %B %Y", "%Y-%m-%d", "%d/%m/%Y")
+_DATE_FORMATS = (
+    "%d-%b-%Y", "%d %b %Y", "%d-%B-%Y", "%d %B %Y", "%Y-%m-%d", "%d/%m/%Y",
+    # ICICI's month-first form. §7.5 would otherwise fall through to the
+    # filename, and ICICI's members are named for the scheme with no date in
+    # them at all — so the file would be refused for want of an as-of date it
+    # states plainly in row 3.
+    "%b %d,%Y", "%B %d,%Y",
+)
 
 #: A NAV-history line in the notes: `Direct Plan - Growth Option | 2267.177`.
 #: Not a holding, but an independent witness that we mapped the file to the
@@ -85,8 +97,14 @@ class HoldingsFormat:
     #: Header substrings -> canonical field. Order matters within each list.
     columns: tuple[tuple[str, tuple[str, ...]], ...] = (
         ("isin", ("isin",)),
-        ("name", ("name of the instrument", "name of instrument", "instrument",
-                  "security name", "particulars")),
+        # `instrument` is tried LAST because it is the most generic needle and
+        # ICICI's sheet also carries `Yield of the instrument`. It resolved
+        # correctly there only because the real name column happens to sit at a
+        # lower index; matching the specific spellings first finds the column
+        # by intent rather than by that accident.
+        ("name", ("name of the instrument", "name of instrument",
+                  "company/issuer", "security name", "particulars",
+                  "instrument")),
         ("sector", ("industry", "sector", "rating")),
         ("quantity", ("quantity", "qty", "units", "no. of shares")),
         ("market_value", ("market/ fair value", "market value", "fair value",
@@ -109,6 +127,19 @@ TOTAL_TOLERANCE_PCT = Decimal("2")
 
 #: The row that states what the portfolio adds up to.
 GRAND_TOTAL = re.compile(r"^\s*(grand\s+total|total\s+net\s+asset)", re.I)
+
+#: A `% to NAV` column that totals within this of 1 is written as a fraction.
+PCT_FRACTION_MAX = Decimal("2")
+#: One that totals within this range is already a percentage.
+PCT_PERCENT_MIN = Decimal(50)
+PCT_PERCENT_MAX = Decimal(200)
+
+#: How close a candidate subtotal must sit to the sum of the rows beneath it
+#: before it is read as their total rather than as a position of its own. One
+#: basis point: wide enough for the float noise a spreadsheet cell carries
+#: (`6180420.349999999` for a figure printed as `6180420.35`), far too tight
+#: for a real holding to land on by coincidence.
+SUBTOTAL_TOLERANCE = Decimal("0.0001")
 
 
 def parse_holdings(f: RawFile, fmt: HoldingsFormat) -> HoldingsParseResult:
@@ -136,6 +167,8 @@ def parse_holdings(f: RawFile, fmt: HoldingsFormat) -> HoldingsParseResult:
         raise ParseFailed(
             f"{f.filename}: no security rows found in {workbook.sheetnames}"
         )
+
+    result.pct_scale = detect_pct_scale(result)
 
     error = reconciliation_error(result)
     if error is not None and abs(error) > TOTAL_TOLERANCE_PCT:
@@ -169,6 +202,10 @@ def _read_sheet(
     columns: dict[str, int] | None = None
     unit: str | None = None
     section: str | None = None
+    # Staged per sheet rather than straight onto the result, because whether a
+    # row is a holding or the total of the rows beneath it cannot be known
+    # until the rows beneath it have been read. See _demote_subtotals.
+    staged: list[StagedHolding] = []
 
     for index, raw_row in enumerate(rows, start=1):
         cells = ["" if v is None else str(v).strip() for v in raw_row]
@@ -192,8 +229,12 @@ def _read_sheet(
             continue
 
         section = _stage_row(
-            cells, columns, unit or "absolute", sheet_name, index, result, section
+            cells, columns, unit or "absolute", sheet_name, index, result,
+            section, staged,
         )
+
+    _demote_subtotals(staged)
+    result.rows.extend(staged)
 
 
 def _stage_row(
@@ -204,6 +245,7 @@ def _stage_row(
     index: int,
     result: HoldingsParseResult,
     section: str | None,
+    staged: list[StagedHolding],
 ) -> str | None:
     """Stage one row and return the section in force after it."""
     name = _at(cells, columns, "name")
@@ -247,6 +289,9 @@ def _stage_row(
         # The file's own answer. Last one wins: a workbook with several sheets
         # states a total per sheet, and the portfolio-level one comes last.
         result.stated_total = market_value
+        # And the percentage beside it, which is what says whether this AMC
+        # writes 99.99 or 0.9999 for "the whole portfolio". See detect_pct_scale.
+        result.stated_total_pct = pct
     if kind == "blank":
         return section
     if kind == "section_header":
@@ -258,7 +303,7 @@ def _stage_row(
             ParseWarning("ROW_UNCLASSIFIED", f"{name[:60]!r}", index)
         )
 
-    result.rows.append(
+    staged.append(
         StagedHolding(
             row_number=index,
             row_kind=kind,
@@ -295,6 +340,129 @@ def reconciliation_error(result: HoldingsParseResult) -> Decimal | None:
         (r.market_value_raw or Decimal(0) for r in result.securities), Decimal(0)
     )
     return (total - result.stated_total) / abs(result.stated_total) * 100
+
+
+def detect_pct_scale(result: HoldingsParseResult) -> Decimal:
+    """What the `% to NAV` column must be multiplied by to be a percentage.
+
+    HDFC writes `9.21` for 9.21%. ICICI writes `0.0596550260489`, and its total
+    row reads `0.9999999999896085`. Both are `% to Nav` in the header, and
+    nothing in the wording distinguishes them.
+
+    Reading ICICI's column as percentages makes the disclosed weights sum to 1
+    instead of 100, which fails §10's V1 (95-105) and makes `weight_residual`
+    read 99 — a portfolio that looks almost entirely unaccounted for. Assuming
+    the other direction would inflate HDFC's by 100x.
+
+    The file settles it: **the total row states what the whole portfolio comes
+    to in this column**, so its own arithmetic says which convention it used.
+    Same witness as `stated_total` (V1-08), read one column across. Falling
+    back to the sum of the securities when there is no total row keeps the
+    check available on files that state none.
+
+    Raises rather than guessing, for the reason §7.2 gives about units: a
+    column we could not interpret is far more likely to mean the sheet was
+    misread than to mean an unusual convention.
+    """
+    witness = result.stated_total_pct
+    if witness is None:
+        witness = sum(
+            (r.pct_to_nav_raw or Decimal(0) for r in result.securities), Decimal(0)
+        )
+    magnitude = abs(witness)
+    if not magnitude:
+        # No percentage column at all, or one entirely empty. Nothing to
+        # scale, and `pct_normalised` is recomputed from market value anyway.
+        return Decimal(1)
+    if magnitude <= PCT_FRACTION_MAX:
+        return Decimal(100)
+    if PCT_PERCENT_MIN <= magnitude <= PCT_PERCENT_MAX:
+        return Decimal(1)
+    raise ParseFailed(
+        f"the % to NAV column totals {witness}, which is neither a fraction "
+        f"(~1) nor a percentage (~100); the sheet was misread"
+    )
+
+
+def _demote_subtotals(staged: list[StagedHolding]) -> None:
+    """Reclassify section rows that carry their own subtotal. §6.4, generalised.
+
+    ICICI writes the section label and that section's total on the SAME row:
+
+        Equity & Equity Related Instruments (Note -1)         1140638.30
+        Listed / Awaiting Listing On Stock Exchanges          1140638.30
+        HDFC Bank Ltd.          INE040A01034   69199542        517716.37
+        ICICI Bank Ltd.         INE090A01021   22730775        326277.54
+        Reliance Industries Ltd. INE002A01018  22682703        296644.39
+
+    `classify_row` calls those first two rows securities, and by its own rule
+    it is right to: a row carrying a market value is a position. That rule is
+    load-bearing — it is what stops HDFC's Rs 343194.12 of TREPS cash, which
+    also has no ISIN and no quantity, from being dropped as a heading (V1-04).
+
+    So two AMCs need opposite answers to the same question, and vocabulary does
+    not settle it. V1-08 measured that: excluding rows whose names match a
+    hand-written list of section labels still leaves ICICI's portfolio 18.8%
+    too large, because the nesting runs deeper than any list and the labels
+    differ per AMC.
+
+    Arithmetic settles it. **A row whose value equals the sum of the rows
+    beneath it is their total, not a peer of theirs.** That holds whatever the
+    section is called, at whatever depth, in whatever order the AMC nests them
+    — and it is `reconciliation_error`'s argument applied within the sheet
+    instead of across it.
+
+    Only rows with no ISIN and no quantity are candidates, so a genuine holding
+    is never at risk of demotion: HDFC's TREPS is considered and kept, because
+    no run of the rows beneath it sums to its value.
+
+    Nesting is resolved outermost-first by taking the first run that matches,
+    which is correct for a sheet that prints a section above its contents. A
+    parent whose value equals its only child's matches on that child alone,
+    which costs nothing — the child then labels the rows itself.
+    """
+    positions = [i for i, r in enumerate(staged) if r.row_kind == "security"]
+
+    for offset, index in enumerate(positions):
+        row = staged[index]
+        if row.isin_raw or row.quantity_raw is not None:
+            continue
+        target = row.market_value_raw
+        if target is None or not target:
+            continue
+        running = Decimal(0)
+        for position, following in enumerate(positions[offset + 1:], start=offset + 1):
+            value = staged[following].market_value_raw
+            if value is None:
+                break
+            running += value
+            if abs(running - target) <= abs(target) * SUBTOTAL_TOLERANCE:
+                staged[index] = replace(row, row_kind="subtotal")
+                _assign_section(staged, positions, offset, position, row)
+                break
+
+
+def _assign_section(
+    staged: list[StagedHolding],
+    positions: list[int],
+    offset: int,
+    last: int,
+    header: StagedHolding,
+) -> None:
+    """Give a demoted subtotal's rows the section it names.
+
+    ICICI's section labels ARE its subtotal rows, so demoting them without this
+    would leave every row beneath them with no section at all — and the section
+    heading is the only thing on the sheet that says a row is a derivative
+    rather than a holding (V1-07). Processing outermost first means a nested
+    subtotal's label overwrites its parent's, which is the specific one wanted.
+    """
+    label = header.instrument_raw_name.strip()
+    if not label:
+        return
+    for position in range(offset + 1, last + 1):
+        index = positions[position]
+        staged[index] = replace(staged[index], section=label)
 
 
 def classify_row(
@@ -468,7 +636,7 @@ def _date_from_filename(filename: str) -> date | None:
 
 
 def _parse_date(text: str) -> date | None:
-    cleaned = text.replace("/", "-").strip()
+    cleaned = re.sub(r"\s*,\s*", ",", text.replace("/", "-").strip())
     for fmt in _DATE_FORMATS:
         for candidate in (cleaned, cleaned.replace("-", " ")):
             try:

@@ -100,7 +100,11 @@ def load_manifest(path: Path = MANIFEST) -> dict[str, Any]:
     return loaded
 
 
-def run(amc_id: str | None, file_path: Path | None = None) -> list[dict[str, object]]:
+def run(
+    amc_id: str | None,
+    file_path: Path | None = None,
+    scheme_id: str | None = None,
+) -> list[dict[str, object]]:
     # S5 carries the browser agent HDFC's CDN requires, with the contact in
     # `From:` — DECISIONS V1-05.
     cfg = source("S5")
@@ -114,14 +118,15 @@ def run(amc_id: str | None, file_path: Path | None = None) -> list[dict[str, obj
         "INSERT INTO job_run (run_id, job_name, started_at, params_json)"
         " VALUES (?,?,?,?)",
         (run_id, "load_holdings", datetime.now(UTC),
-         json.dumps({"amc": amc_id, "file": str(file_path) if file_path else None})),
+         json.dumps({"amc": amc_id, "file": str(file_path) if file_path else None,
+                     "scheme": scheme_id})),
     )
     conn.commit()
 
     summaries: list[dict[str, object]] = []
     try:
         index = load_issuer_index(conn)
-        for entry in _entries(amc_id, file_path):
+        for entry in _entries(amc_id, file_path, scheme_id):
             summaries.append(_one(conn, entry, cfg, index))
 
         status = "partial" if any(
@@ -147,9 +152,22 @@ def run(amc_id: str | None, file_path: Path | None = None) -> list[dict[str, obj
         conn.close()
 
 
-def _entries(amc_id: str | None, file_path: Path | None) -> list[dict[str, Any]]:
+def _entries(
+    amc_id: str | None, file_path: Path | None, scheme_id: str | None
+) -> list[dict[str, Any]]:
     if file_path:
-        return [{"amc_id": amc_id or "unknown", "path": str(file_path)}]
+        # A disclosure names its scheme in prose, and prose is not a key — the
+        # same reason every manifest entry carries `scheme_id` (MODULE_0.md
+        # §4.4). Guessing it from the filename would file a portfolio against
+        # whichever scheme the name most resembled, which for an AMC with four
+        # plans of one fund is a coin toss.
+        if not scheme_id:
+            raise RuntimeError("--file needs --scheme: the ISIN this file describes")
+        return [{
+            "amc_id": amc_id or "unknown",
+            "path": str(file_path),
+            "scheme_id": scheme_id,
+        }]
     manifest = load_manifest()
     rows = [
         e for e in manifest["disclosures"]
@@ -217,10 +235,22 @@ def _one(
         if s.market_value_raw is not None else None
         for s in securities
     ]
-    weights = normalise_weights(values, [s.pct_to_nav_raw for s in securities])
+    # §7.3 and §10's V1 both work in percent. HDFC reports `% to NAV` as one;
+    # ICICI reports a fraction summing to 1.0. The parser observed which
+    # (`pct_scale`) and this is where it is applied — the same boundary
+    # `to_inr` sits on for market value, one column across. Skipping it makes
+    # ICICI's reported weights sum to 1, failing V1 and making
+    # `weight_residual` read 99: a portfolio that looks almost unaccounted for.
+    pcts = [
+        s.pct_to_nav_raw * parsed.pct_scale if s.pct_to_nav_raw is not None else None
+        for s in securities
+    ]
+    weights = normalise_weights(values, pcts)
 
     rows: list[dict[str, object]] = []
-    for security, value, weight in zip(securities, values, weights.weights, strict=True):
+    for security, value, weight, pct in zip(
+        securities, values, weights.weights, pcts, strict=True
+    ):
         resolution = resolve(
             conn, security.instrument_raw_name, security.isin_raw, None, index
         )
@@ -230,7 +260,7 @@ def _one(
             "instrument_raw_name": security.instrument_raw_name,
             "quantity": security.quantity_raw,
             "market_value": value or Decimal(0),
-            "pct_to_nav": security.pct_to_nav_raw,
+            "pct_to_nav": pct,
             "pct_normalised": weight,
             "instrument_class": _instrument_class(
                 security.section, str(resolution.issuer_id)
@@ -325,8 +355,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--amc", help="amc_id from config/amc_manifest.yaml")
     parser.add_argument("--file", type=Path, help="a local disclosure to load instead")
+    parser.add_argument(
+        "--scheme", help="scheme_id (ISIN) the --file describes; required with --file"
+    )
     args = parser.parse_args()
-    for summary in run(args.amc, args.file):
+    for summary in run(args.amc, args.file, args.scheme):
         print(" | ".join(f"{k}={v}" for k, v in summary.items()))
 
 

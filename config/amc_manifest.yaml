@@ -11,9 +11,13 @@
 meta:
   refreshed: 2026-09-05
   note: >
-    Only HDFC is verified. The other four AMCs are pending a manifest refresh
-    and a format check; whatever their layouts violate will be recorded in
-    DECISIONS as found.
+    HDFC and ICICI are verified (DECISIONS V1-08, V1-10). ICICI has no entry
+    here because it publishes 146 per-scheme workbooks in one 25 MB ZIP and
+    MODULE_0.md section 6.5's member-level staging is not built — until it is,
+    load one extracted member with
+    `python -m jobs.load_holdings --amc icici --file <member> --scheme <ISIN>`.
+    Kotak, SBI and Nippon are pending a manifest refresh and a format check;
+    whatever their layouts violate will be recorded in DECISIONS as found.
 
 disclosures:
   - amc_id: hdfc

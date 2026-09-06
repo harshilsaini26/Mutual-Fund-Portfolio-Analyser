@@ -58,7 +58,7 @@ class StagedHolding:
     """
 
     row_number: int
-    row_kind: str  # security|section_header|total|note|blank|unknown
+    row_kind: str  # security|subtotal|section_header|total|note|blank|unknown
     instrument_raw_name: str
     isin_raw: str | None
     quantity_raw: Decimal | None
@@ -98,6 +98,19 @@ class HoldingsParseResult:
     #: prints what the portfolio adds up to, and a parse that disagrees with
     #: that number has misread the file. See `reconciliation_error`.
     stated_total: Decimal | None = None
+    #: The percentage the file's own total row carries — 99.99999999999996 on
+    #: HDFC's sheet, 0.9999999999896085 on ICICI's. The witness `pct_scale` is
+    #: read from, and it is the publisher's own arithmetic again (see V1-08).
+    stated_total_pct: Decimal | None = None
+    #: What the `% to NAV` column must be MULTIPLIED BY to be a percentage:
+    #: 1 where the file writes 9.21 for 9.21%, 100 where it writes 0.0921.
+    #:
+    #: The percentage analogue of `StagedHolding.market_value_unit`, and the
+    #: same discipline (§6.3 rule 1): the parser *observes* the scale and
+    #: carries it as a label, and normalisation applies it. HDFC reports
+    #: percentages and ICICI reports fractions, so a parser that assumed either
+    #: would make one AMC's reported weights sum to 1 and fail §10's V1.
+    pct_scale: Decimal = Decimal(1)
     warnings: list[ParseWarning] = field(default_factory=list)
     headers_seen: tuple[str, ...] = ()
 

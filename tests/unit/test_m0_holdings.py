@@ -8,8 +8,10 @@ file is internally consistent. On the full disclosure that reconciliation is
 +0.000000% against HDFC's own printed total.
 
 `icici_holdings_sample.xlsx` is trimmed the same way from ICICI Multi-Asset's
-real file and is deliberately NOT consistent with the HDFC parser — it is what
-proves a misread sheet is refused rather than loaded.
+real file, and carries the same deliberate edit for the same reason: its
+`Total Net Assets` is the sum of the rows retained. It keeps every trap the
+full file has — name before ISIN, a month-first as-on date, `% to Nav` written
+as a fraction, and each subtotal sitting on the section row itself.
 
 The tests that matter are the ones about **not** producing a plausible wrong
 number. A disclosure that parses into a portfolio which still sums to 100% but
@@ -38,6 +40,8 @@ from src.m0_data.parse.holdings.base import (
     reconciliation_error,
 )
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
+from src.m0_data.parse.holdings.icici import IciciHoldingsParser
+from src.m0_data.parse.holdings.registry import route
 from src.m0_data.resolve.synthetic import match_synthetic
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "m0"
@@ -348,22 +352,197 @@ def test_the_parse_reconciles_to_the_files_own_stated_total(
     assert abs(error) <= TOTAL_TOLERANCE_PCT
 
 
-def test_a_misread_sheet_is_refused_rather_than_loaded(raw: RawFile) -> None:
-    """§6.3 rule 3, applied to the failure mode that matters most.
+def _workbook(rows: list[list[object]]) -> bytes:
+    """A minimal disclosure, for the negative cases that need a broken file.
 
-    A portfolio that counted its subtotals still normalises to 100%, so
-    nothing downstream can tell. Running ICICI's disclosure through the
-    HDFC-shaped parser reads +188.7% of the stated total — and raises, rather
-    than publishing a portfolio nearly three times too large.
+    Built here rather than committed as a binary: these sheets exist to be
+    wrong in one specific way, and a hand-made xlsx nobody can read in a diff
+    is a poor way to say which way that is.
     """
-    icici = FIXTURES / "icici_holdings_sample.xlsx"
-    if not icici.exists():
-        pytest.skip("ICICI sample not yet committed")
+    import io
+
+    import openpyxl
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "SHEET1"
+    for row in rows:
+        sheet.append(row)
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
+_HEADER: list[object] = [
+    "Name Of the Instrument", "ISIN", "Quantity",
+    "Market/ Fair Value (Rs. in Lacs.)", "% to NAV",
+]
+
+
+def test_a_sheet_that_disagrees_with_its_own_total_is_refused() -> None:
+    """§6.3 rule 3, on the failure mode that matters most. DECISIONS V1-08.
+
+    The section row here claims 900 while the two holdings under it come to
+    1000, so it is not their subtotal and `_demote_subtotals` correctly leaves
+    it alone — at which point it is counted as a third position and the sheet
+    reads 1900 against its own stated 1000.
+
+    That is the shape of every misread disclosure: the portfolio is nearly
+    twice too large and **still normalises to 100%**, so no weight, no
+    validation check and no look-through closure downstream can tell. Only the
+    file's own arithmetic can, and it raises.
+    """
+    content = _workbook([
+        ["Test Fund"],
+        ["Portfolio as on 31-Jul-2026"],
+        _HEADER,
+        ["EQUITY BLOCK", None, None, 900.00, 90.00],
+        ["Alpha Ltd", "INE040A01034", 10, 500.00, 50.00],
+        ["Beta Ltd", "INE090A01021", 10, 500.00, 50.00],
+        ["Grand Total", None, None, 1000.00, 100.00],
+    ])
     with pytest.raises(ParseFailed, match="stated total"):
-        HdfcHoldingsParser().parse(
-            RawFile("x", "S5:icici", "ICICI Prudential Multi-Asset Fund.xlsx",
-                    icici.read_bytes())
-        )
+        HdfcHoldingsParser().parse(RawFile("x", "S5:test", "test.xlsx", content))
+
+
+def test_a_percentage_column_that_is_neither_scale_raises() -> None:
+    """§7.2's discipline, applied to the percentage column.
+
+    A column totalling neither ~1 nor ~100 is not an unusual convention, it is
+    a sheet we misread — and guessing a scale for it would produce weights that
+    look perfectly ordinary.
+    """
+    content = _workbook([
+        ["Test Fund"],
+        ["Portfolio as on 31-Jul-2026"],
+        _HEADER,
+        ["Alpha Ltd", "INE040A01034", 10, 1000.00, 5000.00],
+        ["Grand Total", None, None, 1000.00, 5000.00],
+    ])
+    with pytest.raises(ParseFailed, match="neither a fraction"):
+        HdfcHoldingsParser().parse(RawFile("x", "S5:test", "test.xlsx", content))
+
+
+# --- ICICI: the second format ------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def icici() -> HoldingsParseResult:
+    return IciciHoldingsParser().parse(
+        RawFile("file-2", "S5:icici", "ICICI Prudential Multi-Asset Fund.xlsx",
+                (FIXTURES / "icici_holdings_sample.xlsx").read_bytes())
+    )
+
+
+def test_icici_subtotals_are_not_counted_as_holdings(
+    icici: HoldingsParseResult,
+) -> None:
+    """DECISIONS V1-08. ICICI puts the subtotal ON the section row.
+
+    `Equity & Equity Related Instruments` and `Listed / Awaiting Listing On
+    Stock Exchanges` each carry a market value, so `classify_row` calls them
+    securities — and it is right to by its own rule, which is what keeps HDFC's
+    TREPS cash from being dropped as a heading.
+
+    Arithmetic separates them: a row whose value equals the sum of the rows
+    beneath it is their total. Both are demoted, and the portfolio then equals
+    what the file says it equals.
+    """
+    kinds = {r.instrument_raw_name: r.row_kind for r in icici.rows}
+    assert kinds["Listed / Awaiting Listing On Stock Exchanges"] == "subtotal"
+    assert kinds["Equity & Equity Related Instruments (Note -1)"] == "subtotal"
+
+    error = reconciliation_error(icici)
+    assert error is not None
+    assert abs(error) < Decimal("0.000001")
+
+
+def test_counting_icicis_subtotals_would_inflate_the_portfolio(
+    icici: HoldingsParseResult,
+) -> None:
+    """The trap is present in the fixture, not merely described in a comment.
+
+    Without the demotion these two rows are staged as positions and the
+    portfolio reads 1.7x its true size — while still normalising to 100%.
+    """
+    counted = sum(
+        (r.market_value_raw or Decimal(0) for r in icici.rows
+         if r.row_kind in ("security", "subtotal")),
+        Decimal(0),
+    )
+    assert icici.stated_total is not None
+    assert counted / icici.stated_total > Decimal("1.7")
+
+
+def test_icici_reports_fractions_and_the_scale_is_read_from_the_total(
+    icici: HoldingsParseResult, parsed: HoldingsParseResult,
+) -> None:
+    """`% to Nav` means 0.0596 at ICICI and 9.21 at HDFC. The header says neither.
+
+    The total row does: HDFC's reads 99.99999999999996, ICICI's
+    0.9999999999896085. Getting this wrong makes ICICI's disclosed weights sum
+    to 1, failing §10's V1 and reporting a `weight_residual` of 99.
+    """
+    assert icici.pct_scale == Decimal(100)
+    assert parsed.pct_scale == Decimal(1)
+
+    scaled = sum(
+        (s.pct_to_nav_raw or Decimal(0)) * icici.pct_scale for s in icici.securities
+    )
+    assert Decimal(95) <= scaled <= Decimal(105)
+
+
+def test_icici_states_its_as_on_date_month_first(icici: HoldingsParseResult) -> None:
+    """§7.5 rule 1. `Portfolio as on Jul 31,2026`, not `31-Jul-2026`.
+
+    ICICI's workbooks are named for the scheme and carry no date at all, so
+    rule 2's filename fallback cannot rescue a sheet whose date went unread —
+    the file would be refused for want of a date it states plainly in row 3.
+    """
+    assert icici.as_of_date == AS_OF
+
+
+def test_icici_columns_are_found_by_header_not_position(
+    icici: HoldingsParseResult,
+) -> None:
+    """V0-23. ICICI writes name before ISIN; HDFC writes ISIN before name.
+
+    A positional parser reads one of the two silently wrong, which is exactly
+    what AMFI's two NAV endpoints did.
+    """
+    hdfc_bank = next(s for s in icici.securities if s.isin_raw == "INE040A01034")
+    assert hdfc_bank.instrument_raw_name == "HDFC Bank Ltd."
+    assert hdfc_bank.market_value_raw == Decimal("517716.37")
+    assert hdfc_bank.market_value_unit == "lakh"
+    assert hdfc_bank.reported_sector == "Banks"
+
+
+def test_icici_rows_inherit_the_section_their_subtotal_names(
+    icici: HoldingsParseResult,
+) -> None:
+    """V1-07. The section heading is the only thing that says what a row is.
+
+    ICICI's headings ARE its subtotal rows, so demoting them without carrying
+    the label down would leave every holding with no section — and
+    `instrument_class` would fall back to calling all of them equity.
+    """
+    equities = [s for s in icici.securities if s.isin_raw]
+    assert equities
+    assert {s.section for s in equities} == {
+        "Listed / Awaiting Listing On Stock Exchanges"
+    }
+    # The cash rows sit under no heading in this sheet, and are left to resolve
+    # by their synthetic issuer rather than handed a borrowed one.
+    treps = next(s for s in icici.securities if s.instrument_raw_name == "TREPS")
+    assert treps.section is None
+
+
+def test_the_router_tells_the_two_formats_apart(raw: RawFile) -> None:
+    """§6.2. Routing on evidence, not on a hardcoded AMC->parser table."""
+    icici_raw = RawFile("x", "S5:icici", "ICICI Prudential Multi-Asset Fund.xlsx",
+                        (FIXTURES / "icici_holdings_sample.xlsx").read_bytes())
+    assert route(raw).parser_id == "holdings.hdfc"
+    assert route(icici_raw).parser_id == "holdings.icici"
 
 
 def test_a_file_that_states_no_total_reports_the_check_as_absent() -> None:

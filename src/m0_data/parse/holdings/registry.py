@@ -15,9 +15,13 @@ from __future__ import annotations
 
 from src.m0_data.parse.base import HoldingsParser, ParseFailed, RawFile
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
+from src.m0_data.parse.holdings.icici import IciciHoldingsParser
 
 #: Every registered parser. Adding an AMC is one entry.
-REGISTRY: tuple[HoldingsParser, ...] = (HdfcHoldingsParser(),)
+REGISTRY: tuple[HoldingsParser, ...] = (
+    HdfcHoldingsParser(),
+    IciciHoldingsParser(),
+)
 
 #: §6.2. Below this, no parser is confident enough to be trusted with the file.
 MIN_CONFIDENCE = 0.5
