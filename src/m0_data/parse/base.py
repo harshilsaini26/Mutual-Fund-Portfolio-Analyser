@@ -89,6 +89,15 @@ class HoldingsParseResult:
     #: The NAV per unit the disclosure states for itself, by option label. An
     #: independent witness to whether we mapped the file to the right scheme.
     stated_navs: dict[str, Decimal] = field(default_factory=dict)
+    #: The portfolio total the file states for itself — `Grand Total` on HDFC's
+    #: sheet, `Total Net Assets` on ICICI's, in the file's own units.
+    #:
+    #: This is the only general defence against counting a subtotal as a
+    #: holding. Every AMC nests its sections differently and names them
+    #: differently, so no list of section labels generalises; but every AMC
+    #: prints what the portfolio adds up to, and a parse that disagrees with
+    #: that number has misread the file. See `reconciliation_error`.
+    stated_total: Decimal | None = None
     warnings: list[ParseWarning] = field(default_factory=list)
     headers_seen: tuple[str, ...] = ()
 

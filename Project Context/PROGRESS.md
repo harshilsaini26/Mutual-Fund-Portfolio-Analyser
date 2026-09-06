@@ -7,11 +7,12 @@
 
 ## Current state
 
-**Slice:** V1.2 — the disclosure pipeline runs end to end on HDFC. Four AMC
-parsers remain.
-**Repo:** local git, 21 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (105 files) · 507 tests · verifier no drift.
-**Next:** ICICI, Kotak, SBI and Nippon parsers, then the look-through engine.
+**Slice:** V1.2 — HDFC loads end to end; a misread sheet from any other AMC is
+now refused rather than silently loaded.
+**Repo:** local git, 22 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (105 files) · 510 tests · verifier no drift.
+**Next:** ICICI's parser (its format is understood and documented in V1-08),
+then Kotak, SBI and Nippon, then the look-through engine.
 
 **Run everything:**
 
@@ -83,7 +84,7 @@ not against a hand-made CSV.
 
 ## Open decisions
 
-`DECISIONS.md` holds 49 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-07, OPEN-03, OPEN-07).
+`DECISIONS.md` holds 50 entries (SZ-01…SZ-14, V0-01…V0-26, V1-01…V1-08, OPEN-03, OPEN-07).
 
 **Nothing is undecided.** The four that were open closed on 2026-09-05:
 
@@ -146,6 +147,28 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S15 · V1.2c — the reconciliation guard (2026-09-05)
+
+Fetched ICICI Prudential's disclosure to add the second parser. It is not
+shaped like HDFC's: one 25 MB ZIP of 146 workbooks rather than a file per
+scheme, name and ISIN columns swapped, **`% to Nav` as a fraction rather than a
+percentage**, subtotals printed ON the section rows and nested four deep, plus
+covered calls, stock futures and **interest-rate swaps at notional value**.
+
+Read through HDFC's rules it gives **2.887x** the true portfolio. A hand-written
+list of structural section names gets it to 1.188x — still wrong, and every
+extension of that list is a guess about the next AMC's vocabulary.
+
+So the guard is arithmetic instead (V1-08). **Every disclosure states what it
+adds up to** — `Grand Total` on HDFC's sheet, `Total Net Assets` on ICICI's —
+and the parser now reconciles against it, raising beyond ±2%. HDFC reconciles
+at **+0.000000%**; ICICI through the HDFC parser reads **+188.7%** and is
+refused. A portfolio that counted its subtotals still normalises to 100%, so
+the publisher's own arithmetic is the only independent witness there is.
+
+It would have caught V1-04's TREPS regression too — that moved the total by
+3.1%, and it was found by hand at the time.
 
 ### S14 · V1.2b — the disclosure pipeline (2026-09-05)
 

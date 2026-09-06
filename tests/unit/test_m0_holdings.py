@@ -2,8 +2,14 @@
 
 `tests/fixtures/m0/hdfc_holdings_sample.xlsx` is trimmed from HDFC Flexi Cap
 Fund's real disclosure for 31-Jul-2026 — the fund this project's own ledger
-holds. Every row is a row HDFC published. `CLAUDE.md`: prefer a real file over
-a better simulation.
+holds. Every row is a row HDFC published, with one deliberate edit: the
+`Grand Total` figure is set to the sum of the rows the fixture retains, so the
+file is internally consistent. On the full disclosure that reconciliation is
++0.000000% against HDFC's own printed total.
+
+`icici_holdings_sample.xlsx` is trimmed the same way from ICICI Multi-Asset's
+real file and is deliberately NOT consistent with the HDFC parser — it is what
+proves a misread sheet is refused rather than loaded.
 
 The tests that matter are the ones about **not** producing a plausible wrong
 number. A disclosure that parses into a portfolio which still sums to 100% but
@@ -26,7 +32,11 @@ from src.m0_data.normalise.units import (
     unit_from_header,
 )
 from src.m0_data.parse.base import HoldingsParseResult, ParseFailed, RawFile
-from src.m0_data.parse.holdings.base import classify_row
+from src.m0_data.parse.holdings.base import (
+    TOTAL_TOLERANCE_PCT,
+    classify_row,
+    reconciliation_error,
+)
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.resolve.synthetic import match_synthetic
 
@@ -313,3 +323,50 @@ def test_sniff_scores_a_matching_file_high(raw: RawFile) -> None:
     other = RawFile("x", "S5:hdfc", "sbi-portfolio.xlsx", b"PK\x03\x04")
     assert parser.sniff(other) < 0.5
     assert parser.sniff(RawFile("x", "S5:hdfc", FILENAME, b"<html>")) == 0.0
+
+
+# --- the file's own total as the general guard -------------------------------
+
+
+def test_the_parse_reconciles_to_the_files_own_stated_total(
+    parsed: HoldingsParseResult,
+) -> None:
+    """DECISIONS V1-08. The only defence that generalises across AMCs.
+
+    HDFC nests its sections one level deep and puts the numbers on a separate
+    row. ICICI nests four levels and puts each subtotal on the section row
+    itself, then adds covered calls, stock futures and interest-rate swaps at
+    *notional* value. A parser tuned to one over-counts the other by 2.9x.
+
+    No list of section labels distinguishes them — but both files state what
+    the portfolio adds up to, and a parse that disagrees with that number has
+    misread the sheet. On the full HDFC disclosure the error is +0.000000%.
+    """
+    assert parsed.stated_total is not None
+    error = reconciliation_error(parsed)
+    assert error is not None
+    assert abs(error) <= TOTAL_TOLERANCE_PCT
+
+
+def test_a_misread_sheet_is_refused_rather_than_loaded(raw: RawFile) -> None:
+    """§6.3 rule 3, applied to the failure mode that matters most.
+
+    A portfolio that counted its subtotals still normalises to 100%, so
+    nothing downstream can tell. Running ICICI's disclosure through the
+    HDFC-shaped parser reads +188.7% of the stated total — and raises, rather
+    than publishing a portfolio nearly three times too large.
+    """
+    icici = FIXTURES / "icici_holdings_sample.xlsx"
+    if not icici.exists():
+        pytest.skip("ICICI sample not yet committed")
+    with pytest.raises(ParseFailed, match="stated total"):
+        HdfcHoldingsParser().parse(
+            RawFile("x", "S5:icici", "ICICI Prudential Multi-Asset Fund.xlsx",
+                    icici.read_bytes())
+        )
+
+
+def test_a_file_that_states_no_total_reports_the_check_as_absent() -> None:
+    """An absent check is reported as absent, never as a pass."""
+    empty = HoldingsParseResult()
+    assert reconciliation_error(empty) is None

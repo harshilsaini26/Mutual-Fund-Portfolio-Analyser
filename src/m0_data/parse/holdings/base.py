@@ -101,6 +101,15 @@ class HoldingsFormat:
 #: The fields a sheet must expose before it is a holdings table at all.
 REQUIRED = ("name", "market_value")
 
+#: How far the parsed securities may sit from the file's own stated total.
+#: Generous, because a disclosure's total row is itself rounded and some AMCs
+#: exclude a line or two from it — but nowhere near the 2x a counted subtotal
+#: produces, which is what this exists to catch.
+TOTAL_TOLERANCE_PCT = Decimal("2")
+
+#: The row that states what the portfolio adds up to.
+GRAND_TOTAL = re.compile(r"^\s*(grand\s+total|total\s+net\s+asset)", re.I)
+
 
 def parse_holdings(f: RawFile, fmt: HoldingsFormat) -> HoldingsParseResult:
     """Read every table-shaped sheet in the workbook. §6.1.
@@ -126,6 +135,17 @@ def parse_holdings(f: RawFile, fmt: HoldingsFormat) -> HoldingsParseResult:
     if not result.securities:
         raise ParseFailed(
             f"{f.filename}: no security rows found in {workbook.sheetnames}"
+        )
+
+    error = reconciliation_error(result)
+    if error is not None and abs(error) > TOTAL_TOLERANCE_PCT:
+        # §6.3 rule 3. Loading a portfolio that disagrees with the file's own
+        # total by this much means we counted subtotals as holdings, or missed
+        # a block entirely — and the weights would still normalise to 100, so
+        # nothing downstream could tell. Refuse rather than publish it.
+        raise ParseFailed(
+            f"{f.filename}: parsed securities are {error:+.1f}% from the file's "
+            f"own stated total ({result.stated_total}); the sheet was misread"
         )
 
     result.headers_seen = tuple(headers_seen)
@@ -221,6 +241,12 @@ def _stage_row(
                         "CELL_UNPARSEABLE", f"{field_name} on {name[:40]!r}", index
                     )
                 )
+    if kind == "total" and market_value is not None and GRAND_TOTAL.match(
+        name or isin
+    ):
+        # The file's own answer. Last one wins: a workbook with several sheets
+        # states a total per sheet, and the portfolio-level one comes last.
+        result.stated_total = market_value
     if kind == "blank":
         return section
     if kind == "section_header":
@@ -249,6 +275,26 @@ def _stage_row(
         )
     )
     return section
+
+
+def reconciliation_error(result: HoldingsParseResult) -> Decimal | None:
+    """How far the parsed securities sit from the file's own stated total, in %.
+
+    `None` when the file states no total — some do not, and an absent check is
+    reported as absent rather than silently passing.
+
+    This is the general defence that no list of section labels can be. HDFC
+    nests its sections one level deep and puts the numbers on a separate row;
+    ICICI nests four levels and puts a subtotal on the section row itself. A
+    parser tuned to one over-counts the other by 2.9x. Neither is detectable
+    from the rows alone — but both files say what they add up to.
+    """
+    if result.stated_total is None or not result.stated_total:
+        return None
+    total = sum(
+        (r.market_value_raw or Decimal(0) for r in result.securities), Decimal(0)
+    )
+    return (total - result.stated_total) / abs(result.stated_total) * 100
 
 
 def classify_row(
