@@ -13,6 +13,13 @@ real file, and carries the same deliberate edit for the same reason: its
 full file has — name before ISIN, a month-first as-on date, `% to Nav` written
 as a fraction, and each subtotal sitting on the section row itself.
 
+`nippon_holdings_sample.xlsx` is trimmed from Nippon India Growth Mid Cap's
+sheet of a 108-sheet workbook, with the same deliberate edit again. Its traps
+are a leading internal-code column, a units header split across two lines, and
+— the one that matters — a stock-future table printed BELOW the `GRAND TOTAL`
+with the portfolio's own column shape. On the real file those trailing rows are
++0.155% of the total, which is inside the reconciliation guard's tolerance.
+
 The tests that matter are the ones about **not** producing a plausible wrong
 number. A disclosure that parses into a portfolio which still sums to 100% but
 is missing its cash, or counts its sectors twice, is wrong in a way nothing
@@ -41,6 +48,7 @@ from src.m0_data.parse.holdings.base import (
 )
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.parse.holdings.icici import IciciHoldingsParser
+from src.m0_data.parse.holdings.nippon import NipponHoldingsParser
 from src.m0_data.parse.holdings.registry import route
 from src.m0_data.resolve.synthetic import match_synthetic
 
@@ -543,6 +551,197 @@ def test_the_router_tells_the_two_formats_apart(raw: RawFile) -> None:
                         (FIXTURES / "icici_holdings_sample.xlsx").read_bytes())
     assert route(raw).parser_id == "holdings.hdfc"
     assert route(icici_raw).parser_id == "holdings.icici"
+
+
+# --- Nippon: the third format ------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def nippon() -> HoldingsParseResult:
+    return NipponHoldingsParser().parse(
+        RawFile("file-3", "S5:nippon", "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls",
+                (FIXTURES / "nippon_holdings_sample.xlsx").read_bytes())
+    )
+
+
+def test_nothing_after_the_grand_total_is_a_holding(
+    nippon: HoldingsParseResult,
+) -> None:
+    """DECISIONS V1-15, and the one the reconciliation guard could not catch.
+
+    Nippon prints a stock-future table below `GRAND TOTAL` **with the same
+    column shape as the portfolio**, and further down a derivatives annexure
+    whose `Margin maintained` column sits under `Market/Fair Value`. Read as
+    holdings they are plausible in every respect except that the file has
+    already said the portfolio is finished.
+
+    On the real disclosure that is Rs 78.5 crore on a Rs 5,075 crore portfolio
+    — **+0.155%**, comfortably inside the ±2% tolerance, so V1-08's guard sees
+    nothing wrong. Position, not size, is what disqualifies these rows.
+    """
+    future = next(
+        r for r in nippon.rows if "Astral" in r.instrument_raw_name
+    )
+    assert future.row_kind == "after_total"
+    assert future.market_value_raw == Decimal("6540.75")
+    assert future not in nippon.securities
+
+    error = reconciliation_error(nippon)
+    assert error is not None
+    assert abs(error) < Decimal("0.000001")
+
+
+def test_counting_the_post_total_table_stays_inside_the_tolerance(
+    nippon: HoldingsParseResult,
+) -> None:
+    """Why the fix had to be positional rather than a tighter tolerance.
+
+    Adding the trailing rows back moves the total by well under 2%, so no
+    threshold that still tolerates ordinary rounding would have caught them.
+    Tightening the guard instead would have produced false refusals on files
+    that are merely rounded.
+    """
+    assert nippon.stated_total is not None
+    strays = sum(
+        (r.market_value_raw or Decimal(0)
+         for r in nippon.rows if r.row_kind == "after_total"),
+        Decimal(0),
+    )
+    assert strays > 0
+    inflated = (strays / nippon.stated_total) * 100
+    assert inflated < TOTAL_TOLERANCE_PCT, (
+        f"the stray rows move the total by {inflated}%, which the ±"
+        f"{TOTAL_TOLERANCE_PCT}% guard would have caught after all"
+    )
+
+
+def test_hdfcs_summary_and_nav_history_survive_the_post_total_rule(
+    parsed: HoldingsParseResult,
+) -> None:
+    """The ordering inside `_stage_row`, asserted rather than trusted.
+
+    HDFC prints its industry summary and its NAV history *below* its own Grand
+    Total. Applying the post-total rule before the summary branch swallows both
+    — and with them `stated_navs`, which is the disclosure's own NAV and the
+    cheapest independent witness in the pipeline. This is the regression that
+    fix caused once already.
+    """
+    assert parsed.stated_navs.get("Direct Plan - Growth Option") == Decimal("2267.177")
+    assert any(r.row_kind == "summary" for r in parsed.rows)
+
+
+def test_one_workbook_of_many_schemes_needs_the_sheet_named() -> None:
+    """V1-15. Nippon ships 108 schemes as 108 sheets of a single workbook.
+
+    Reading every sheet merges every portfolio into one result that reconciles
+    against whichever total came last. On the real file that reads
+    **+222,869.8%** and is refused — loudly, which is the point — but the
+    refusal is not the feature. Naming the sheet is.
+    """
+    def sheet(name: str, mv: float) -> list[list[object]]:
+        return [
+            [name, "Scheme " + name, "", "", "", "", "", ""],
+            ["", "Monthly Portfolio Statement as on July 31,2026"],
+            [],
+            ["", "ISIN", "Name of the Instrument", "Industry / Rating",
+             "Quantity", "Market/Fair Value\n( Rs. in Lacs)", "% to NAV", ""],
+            ["X1", "INE040A01034", "HDFC Bank Limited", "Banks", 10, mv, 1.0, ""],
+            ["", "", "GRAND TOTAL", "", "", mv, 1, ""],
+        ]
+
+    import io as _io
+
+    import openpyxl as _openpyxl
+
+    book = _openpyxl.Workbook()
+    book.remove(book.active)
+    for name, mv in (("AA", 100.0), ("BB", 250.0)):
+        ws = book.create_sheet(name)
+        for row in sheet(name, mv):
+            ws.append(row)
+    buffer = _io.BytesIO()
+    book.save(buffer)
+    raw = RawFile("x", "S5:nippon", "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls",
+                  buffer.getvalue())
+
+    with pytest.raises(ParseFailed, match="stated total"):
+        NipponHoldingsParser().parse(raw)
+
+    for name, stated in (("AA", "100"), ("BB", "250")):
+        one = NipponHoldingsParser().parse(raw, sheet=name)
+        assert len(one.securities) == 1
+        assert one.stated_total == Decimal(stated)
+        # Not `or Decimal(1)`: an exact reconciliation IS zero, and zero is
+        # falsy. `None` (no total stated) and 0.0 (a perfect match) are
+        # opposite outcomes and must not collapse into one branch.
+        error = reconciliation_error(one)
+        assert error is not None and abs(error) < Decimal("0.000001")
+
+    with pytest.raises(ParseFailed, match="no sheet 'ZZ'"):
+        NipponHoldingsParser().parse(raw, sheet="ZZ")
+
+
+def test_nippon_reports_fractions_like_icici_not_percentages_like_hdfc(
+    nippon: HoldingsParseResult,
+) -> None:
+    """The rule written for ICICI in V1-10, doing its job unchanged on a third AMC.
+
+    Nippon writes `0.029` for 2.9% and its GRAND TOTAL row reads `1`. Nothing
+    in the header distinguishes that from HDFC's `9.21`.
+    """
+    assert nippon.pct_scale == Decimal(100)
+    scaled = sum(
+        (s.pct_to_nav_raw or Decimal(0)) * nippon.pct_scale
+        for s in nippon.securities
+    )
+    assert Decimal(95) <= scaled <= Decimal(105)
+
+
+def test_nippon_states_a_month_first_date_and_a_unit_split_across_lines(
+    nippon: HoldingsParseResult,
+) -> None:
+    """Two more rules that generalised without change.
+
+    The as-on line is `July 31,2026` — month-first, learned for ICICI in V1-10.
+    The units header is `Market/Fair Value\\n( Rs. in Lacs)`, with an embedded
+    newline and an unclosed parenthesis; §7.2's reader handles it, and getting
+    it wrong is the 100x path.
+    """
+    assert nippon.as_of_date == AS_OF
+    assert {s.market_value_unit for s in nippon.securities} == {"lakh"}
+
+
+def test_nippons_extra_code_column_does_not_shift_the_mapping(
+    nippon: HoldingsParseResult,
+) -> None:
+    """V0-23 again. Nippon carries a leading internal-code column no one else has.
+
+    Its header cell is blank, so nothing maps to it — but a positional parser
+    would read every column one to the left and silently mistake the industry
+    for the quantity.
+    """
+    federal = next(
+        s for s in nippon.securities if s.isin_raw == "INE171A01029"
+    )
+    assert federal.instrument_raw_name == "The Federal Bank Limited"
+    assert federal.reported_sector == "Banks"
+    assert federal.quantity_raw == Decimal("41000000")
+    assert federal.market_value_raw == Decimal("147128.50")
+
+
+def test_nippons_cash_rows_are_positions_not_headings(
+    nippon: HoldingsParseResult,
+) -> None:
+    """V1-04's guard, still load-bearing on the third format.
+
+    `Triparty Repo`, `Cash Margin - Derivatives` and `Net Current Assets` carry
+    a market value and no ISIN and no quantity — the exact shape
+    `_demote_subtotals` considers. None is a subtotal of the rows beneath it,
+    so all three survive as the positions they are.
+    """
+    names = {s.instrument_raw_name for s in nippon.securities}
+    assert {"Triparty Repo", "Cash Margin - Derivatives", "Net Current Assets"} <= names
+    assert not [r for r in nippon.rows if r.row_kind == "subtotal"]
 
 
 def test_a_file_that_states_no_total_reports_the_check_as_absent() -> None:

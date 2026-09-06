@@ -49,5 +49,7 @@ class HdfcHoldingsParser:
             score += 0.1
         return min(score, 1.0)
 
-    def parse(self, f: RawFile) -> HoldingsParseResult:
-        return parse_holdings(f, FORMAT)
+    def parse(
+        self, f: RawFile, sheet: str | None = None
+    ) -> HoldingsParseResult:
+        return parse_holdings(f, FORMAT, sheet)

@@ -142,8 +142,17 @@ PCT_PERCENT_MAX = Decimal(200)
 SUBTOTAL_TOLERANCE = Decimal("0.0001")
 
 
-def parse_holdings(f: RawFile, fmt: HoldingsFormat) -> HoldingsParseResult:
-    """Read every table-shaped sheet in the workbook. §6.1.
+def parse_holdings(
+    f: RawFile, fmt: HoldingsFormat, sheet: str | None = None
+) -> HoldingsParseResult:
+    """Read every table-shaped sheet in the workbook, or just the one named. §6.1.
+
+    `sheet` exists because Nippon publishes **one workbook holding 108 schemes,
+    one per sheet**. Reading all of them merges 108 portfolios into a single
+    result — a fund of everything, reconciling against whichever total came
+    last. HDFC ships a file per scheme and ICICI a ZIP of files per scheme, so
+    this is the third packaging model in three AMCs and none of them is the
+    spec's assumption.
 
     Raises rather than returning a partial result (§6.3 rule 3): a disclosure
     that half-parsed is a portfolio that is half-there, and a look-through
@@ -157,8 +166,18 @@ def parse_holdings(f: RawFile, fmt: HoldingsFormat) -> HoldingsParseResult:
     result = HoldingsParseResult()
     headers_seen: list[str] = []
 
+    if sheet is not None and sheet not in workbook.sheetnames:
+        raise ParseFailed(
+            f"{f.filename}: no sheet {sheet!r}; has {workbook.sheetnames[:12]}"
+            f"{'...' if len(workbook.sheetnames) > 12 else ''}"
+        )
+
     for sheet_name in workbook.sheetnames:
-        if any(skip in sheet_name.lower() for skip in fmt.skip_sheets):
+        if sheet is not None and sheet_name != sheet:
+            continue
+        if sheet is None and any(
+            skip in sheet_name.lower() for skip in fmt.skip_sheets
+        ):
             continue
         rows = [list(r) for r in workbook[sheet_name].iter_rows(values_only=True)]
         _read_sheet(rows, sheet_name, fmt, result, headers_seen)
@@ -202,6 +221,8 @@ def _read_sheet(
     columns: dict[str, int] | None = None
     unit: str | None = None
     section: str | None = None
+    # Set once the sheet states what the portfolio adds up to. See _stage_row.
+    after_total = False
     # Staged per sheet rather than straight onto the result, because whether a
     # row is a holding or the total of the rows beneath it cannot be known
     # until the rows beneath it have been read. See _demote_subtotals.
@@ -228,9 +249,9 @@ def _read_sheet(
                 unit = _unit_for(cells, columns, result, index)
             continue
 
-        section = _stage_row(
+        section, after_total = _stage_row(
             cells, columns, unit or "absolute", sheet_name, index, result,
-            section, staged,
+            section, staged, after_total,
         )
 
     _demote_subtotals(staged)
@@ -246,8 +267,9 @@ def _stage_row(
     result: HoldingsParseResult,
     section: str | None,
     staged: list[StagedHolding],
-) -> str | None:
-    """Stage one row and return the section in force after it."""
+    after_total: bool,
+) -> tuple[str | None, bool]:
+    """Stage one row; return the section and whether the total has been passed."""
     name = _at(cells, columns, "name")
     isin = _at(cells, columns, "isin")
 
@@ -266,6 +288,30 @@ def _stage_row(
         # Not unknown — a row of the SECOND table. See `_is_summary_row`.
         kind = "summary"
         _capture_stated_nav(cells, result)
+    if after_total and kind in ("security", "unknown"):
+        # §6.3 rule 4, positional. The file has already said what the portfolio
+        # comes to, so a row beneath that line is not part of it however much
+        # it looks like a holding.
+        #
+        # Nippon's sheet is why. After `GRAND TOTAL` it prints a stock-future
+        # table with the SAME column shape, and then a derivatives annexure
+        # whose `Margin maintained` column lands under `Market/Fair Value`.
+        # Read as holdings those add Rs 78.5 crore to a Rs 5,075 crore
+        # portfolio — **+0.155%, comfortably inside the 2% reconciliation
+        # tolerance**, so the guard that catches a doubled portfolio cannot
+        # see this one. Measured, not supposed.
+        #
+        # `unknown` is rewritten too: past the total a row we did not expect is
+        # noise rather than a mystery, and the real sheet raises 19 of them
+        # from its derivatives annexure alone.
+        #
+        # **This runs AFTER the summary branch above, and the order is
+        # load-bearing.** HDFC prints its industry summary and its NAV history
+        # *below* its own Grand Total, so rewriting `unknown` first swallows
+        # them — and with them `stated_navs`, the disclosure's own NAV, which
+        # is the cheapest independent witness in the pipeline and the thing
+        # that gave V1.2a its three-way agreement on 2267.177.
+        kind = "after_total"
 
     if kind == "security":
         if mv_bad:
@@ -292,8 +338,9 @@ def _stage_row(
         # And the percentage beside it, which is what says whether this AMC
         # writes 99.99 or 0.9999 for "the whole portfolio". See detect_pct_scale.
         result.stated_total_pct = pct
+        after_total = True
     if kind == "blank":
-        return section
+        return section, after_total
     if kind == "section_header":
         section = (name or isin).strip() or section
     if kind == "unknown":
@@ -319,7 +366,7 @@ def _stage_row(
             section=section,
         )
     )
-    return section
+    return section, after_total
 
 
 def reconciliation_error(result: HoldingsParseResult) -> Decimal | None:

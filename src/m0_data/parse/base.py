@@ -58,7 +58,8 @@ class StagedHolding:
     """
 
     row_number: int
-    row_kind: str  # security|subtotal|section_header|total|note|blank|unknown
+    #: security|subtotal|after_total|section_header|total|note|blank|unknown
+    row_kind: str
     instrument_raw_name: str
     isin_raw: str | None
     quantity_raw: Decimal | None
@@ -136,4 +137,14 @@ class HoldingsParser(Protocol):
         """
         ...
 
-    def parse(self, f: RawFile) -> HoldingsParseResult: ...
+    def parse(
+        self, f: RawFile, sheet: str | None = None
+    ) -> HoldingsParseResult:
+        """Parse the whole workbook, or the one sheet named.
+
+        `sheet` is additive and optional because only one AMC needs it so far:
+        Nippon publishes 108 schemes as 108 sheets of a single workbook, where
+        HDFC ships a file per scheme and ICICI a ZIP of them. Reading every
+        sheet there merges 108 portfolios into one result.
+        """
+        ...

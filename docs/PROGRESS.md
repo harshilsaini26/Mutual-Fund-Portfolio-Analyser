@@ -7,12 +7,18 @@
 
 ## Current state
 
-**Slice:** V1.2d — **two of five** AMC formats parse, resolve, validate and load,
-each reconciling against the total its own file states. The look-through engine
-that consumes them is not built.
-**Repo:** local git, 29 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (113 files) · 547 tests + 3 skipped ·
+**Slice:** V1.2e — **three of five** AMC formats parse, resolve, validate and
+load, each reconciling against the total its own file states. The look-through
+engine that consumes them is not built.
+**Repo:** local git, 30 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (114 files) · 560 tests + 3 skipped ·
 verifier no drift.
+
+**Nippon is in** (V1-15) — the third format, and the test of whether V1-10's rules
+generalise. Most did, unchanged. The one that did not: a table printed *below* the
+GRAND TOTAL is +0.155% of the portfolio, **inside** the ±2% guard, so the rule had
+to become positional. **Kotak is blocked** — its site is behind Radware bot
+detection, which this project will not solve; it needs a hand-downloaded file.
 
 **A CAS now goes in one command** (V1-14): `jobs/import_cas.py` joins the parser to
 Zone B — read, decrypt, parse, resolve, import, save, rebuild. Verified live against
@@ -21,7 +27,7 @@ the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.0000
 **Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
 writing the database, and invariant 5 asserted against real tables that get DROPped
 and rebuilt — not against two in-memory books.
-**Next:** Kotak, SBI and Nippon parsers, then §6.5 member-level ZIP staging
+**Next:** SBI, and Kotak once a file is supplied; then §6.5 member-level ZIP staging
 (ICICI ships 146 workbooks in one archive), then V1 build items 5, 7 and 8 —
 Bhavcopy prices, `scheme_issuer_weight`, and the look-through engine itself.
 

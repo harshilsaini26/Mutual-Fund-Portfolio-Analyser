@@ -41,6 +41,8 @@ PUBLISHED = {
              "Monthly HDFC Flexi Cap Fund - 31 July 2026.xlsx"),
     "icici": ("icici_holdings_sample.xlsx",
               "ICICI Prudential Multi-Asset Fund.xlsx"),
+    "nippon": ("nippon_holdings_sample.xlsx",
+               "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls"),
 }
 
 PARSERS = {p.amc_id: p for p in REGISTRY}
@@ -115,7 +117,7 @@ def test_the_cross_product_catches_an_unconditionally_greedy_sniff() -> None:
             return 1.0
 
         def parse(
-            self, f: RawFile
+            self, f: RawFile, sheet: str | None = None
         ) -> HoldingsParseResult:  # pragma: no cover - never called
             raise NotImplementedError
 

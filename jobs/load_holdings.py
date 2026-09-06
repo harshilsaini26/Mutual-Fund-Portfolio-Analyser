@@ -223,7 +223,10 @@ def _one(
 
     raw = RawFile(str(result.file_id), source_id, filename, content)
     parser = route(raw)
-    parsed = parser.parse(raw)
+    # Nippon publishes 108 schemes as 108 sheets of one workbook, so the
+    # manifest entry names the sheet. Absent, the whole workbook is read —
+    # which is right for HDFC and ICICI, one scheme per file (V1-15).
+    parsed = parser.parse(raw, entry.get("sheet"))
     assert parsed.as_of_date is not None  # parse_holdings raises otherwise
 
     scheme_id = entry["scheme_id"]
