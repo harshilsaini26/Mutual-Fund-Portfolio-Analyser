@@ -19,6 +19,12 @@ canonical.duckdb*
 /quarantine/
 /backups/
 
+# A real CAS used as a local-only test fixture. `pdf.py` is the only module
+# that touches a password, and it cannot be covered by a synthetic statement,
+# so the test skips unless this directory holds one. Zone B: it carries a PAN,
+# folio numbers and a postal address, and must never reach the repository.
+tests/fixtures/local/
+
 # --- Zone A: raw archive ---------------------------------------------------
 # PLAN.md §4.4 archives every fetched byte permanently and content-hashed, but
 # on disk under /data/raw — it is an archive, not source, and would be GBs.

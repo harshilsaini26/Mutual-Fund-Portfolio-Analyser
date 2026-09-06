@@ -115,4 +115,14 @@ verification: `1. [step] → verify: [check]`. Then loop until each verifies.
 - **Prefer a real file over a better simulation.** When a synthetic fixture and
   a real artifact would answer the same question, get the real artifact.
 - **Contracts are frozen.** Changing a Protocol or dataclass in
-  `src/common/contracts/` requires an ADR before any code.
+  `src/common/contracts/` requires an ADR before any code.- **Do not extend the fixture pipeline.** Four scripts with an order dependency
+  is the ceiling. A fifth generator makes the fixtures a system in their own
+  right, and a system that produces test data is a system nothing tests.
+- **Parsers get** a golden fixture, a `sniff()` cross-product test, and a
+  schema-drift check. That is the ceiling, per `MODULE_0.md` §15.2 — parsers
+  are not mutation-tested and get no independent verifier.
+- **Say what a check does not prove.** If a test's fixture was produced by the
+  code path under test, record that in the docstring. The CAS round trip
+  re-reads rows `build_v0_fixture.py` computed, so it tests the parser and not
+  the arithmetic — writing that down is what stops it being cited later as
+  evidence it never was.
