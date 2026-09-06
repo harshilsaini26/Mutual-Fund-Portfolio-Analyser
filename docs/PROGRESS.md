@@ -84,7 +84,7 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate), `db.py` (Zone B connection + schema; refuses to open unencrypted), `persist.py` (`rebuild()` — `txn` in, every derived table out) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
-| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
+| `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, `nippon`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
 | `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. Separate from Zone A: a different database, not a later version of the warehouse. |
 | `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
 | `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
@@ -92,8 +92,9 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds keyed on their **real ISINs** — `INF179K01UT0`, `INF109K01761`, `INF174KA1EZ1` — on NAVs confirmed against AMFI. Reaches the engine as a **CAS statement**, resolved through `MarketDataProvider`. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
-| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3,118,359 NAVs** back to 31-Jan-2018, 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and **166 holdings** across 2 disclosure revisions — HDFC Flexi Cap only. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
-| Not built | Kotak/SBI/Nippon parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · `scheme_issuer_weight` · look-through engine (`src/m3_lookthrough/` is empty) · `direct_holding` · tax engine · **all UI** (`src/m6_views/` is Slice Zero's stub) · M2, M4, M5 |
+| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3,118,359 NAVs** back to 31-Jan-2018, 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and **270 holdings** across 3 disclosure revisions — HDFC Flexi Cap (2 revisions) and Nippon Growth Mid Cap. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
+| Zone B ledger | SQLite + the `MODULE_1.md` §4 schema, **unencrypted until a SQLCipher driver is installed** — `connect_ledger` refuses rather than degrading (V1-13). Holds nothing real yet; the golden statement imports into it on demand. |
+| Not built | Kotak (bot-blocked) and SBI parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · `scheme_issuer_weight` · look-through engine (`src/m3_lookthrough/` is empty) · `direct_holding` · tax engine · **all UI** (`src/m6_views/` is Slice Zero's stub) · M2, M4, M5 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -126,31 +127,39 @@ criteria are properties of the **look-through engine and the UI**, neither of
 which is built. What follows separates what has been measured from what has not
 been attempted, because a gate reported as "in progress" says nothing.
 
-- [x] **`pct_normalised` sums to exactly 100 per scheme-date.** Exactly, on both
-      formats: HDFC's real 31-Jul-2026 disclosure (83 holdings) and ICICI's
-      fixture (5). `weight_residual` is stored beside it so the adjustment is
-      visible rather than silent. Measured on two schemes, not on a portfolio.
+- [x] **`pct_normalised` sums to exactly 100 per scheme-date.** Exactly, on all
+      three formats: HDFC's real 31-Jul-2026 disclosure (83 holdings), Nippon's
+      real one (104), and ICICI's fixture (5). `weight_residual` is stored
+      beside it so the adjustment is visible rather than silent. Measured on
+      three schemes, not on a portfolio.
 - [ ] **Look-through total equals portfolio value.** Not attempted —
       `scheme_issuer_weight` is not materialised and `src/m3_lookthrough/` is
       empty. This is V1 build items 7 and 8.
 - [~] **`unresolved_pct` < 2% for every held scheme, and is displayed.**
-      Measured at **0.38%** on HDFC's real disclosure and **0.0000%** on
-      ICICI's, against the 2% bar. It is computed, persisted on
+      Measured at **0.38%** on HDFC's real disclosure, **0.0760%** on Nippon's
+      and **0.0000%** on ICICI's, against the 2% bar. It is computed, persisted on
       `holding_disclosure` and returned by the loader — but "displayed" needs
       M6, so the criterion is half-met and counted as such.
 - [ ] **Every chart renders its as-of date, staleness and coverage.** No charts.
       `src/m6_views/` is Slice Zero's Protocol stub and envelope, no logic.
 
-**Coverage against V1 build item 3** — "top 5 AMCs" — is **2 of 5**: HDFC and
-ICICI Prudential. The two verified formats disagreed on nearly everything that
-matters (column order, date format, percentage scale, where a subtotal lives),
-which is the argument for finishing the remaining three before building the
-engine that consumes them.
+**Coverage against V1 build item 3** — "top 5 AMCs" — is **3 of 5**: HDFC,
+ICICI Prudential and Nippon India. The three disagreed on nearly everything
+that matters — column order, date format, percentage scale, where a subtotal
+lives, how many schemes share a file, and whether anything is printed below the
+total. The third one settled V1-10's open question: the shared rules mostly
+generalise, and the exception (a table below the grand total, +0.155%) was
+**inside the reconciliation guard's tolerance**, which is the kind of gap only a
+third real file could have exposed.
+
+**Kotak is blocked, not pending.** Its disclosure page sits behind Radware bot
+detection; solving it is out of bounds and probing for a file URL is what V1-03
+was written about. It needs a file downloaded by hand. SBI is untried.
 
 ## Open decisions
 
-`DECISIONS.md` holds **52 decisions across 53 entries** (SZ-01…SZ-14,
-V0-01…V0-26, V1-01…V1-10, OPEN-03, OPEN-07). OPEN-03 has two entries: the
+`DECISIONS.md` holds **57 decisions across 58 entries** (SZ-01…SZ-14,
+V0-01…V0-26, V1-01…V1-15, OPEN-03, OPEN-07). OPEN-03 has two entries: the
 conditional decision and the settlement that supersedes it — append-only, so the
 superseded text stays readable beside what replaced it.
 
@@ -215,6 +224,60 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S18 · V0.4c the CAS wiring, and V1.2e the third parser (2026-09-06)
+
+**The ledger runs end to end from a file** (V1-14). `jobs/import_cas.py` joins the two
+halves that had been finished and disconnected: read → decrypt → parse → resolve → import →
+save → rebuild, Zone A read-only for resolution and NAVs, Zone B written.
+`import_cas.known_txn_ids` stops being a stand-in — its docstring said persistence *"does
+not exist yet"*, so the duplicate count was a claim about a database rather than an
+observation of one. The job passes the real set now.
+
+Two bugs the wiring tests found. The provider addresses columns by name and needs
+`sqlite3.Row`, which failed deep inside resolution rather than near the call. And the audit
+row described the *insert* rather than the *statement*: `report.txns` holds only new rows,
+so a re-import recorded a statement spanning **zero folios and no dates** — false about the
+file, and useless for the one question `cas_import` exists to answer.
+
+Verified live against the real warehouse, not the test one: 14 inserted, 0 unmatched, 0
+unparsed; re-run inserts 0 and reports 14 duplicates; **all three folios reconcile at
+exactly 0.000000**.
+
+**Nippon is the third format** (V1-15), and it was the test V1-10 named: general rules, or
+rules tuned to a sample of two? Mostly general. The percentage-scale detection, the
+month-first date, header-driven mapping, the subtotal demotion and the total-row patterns
+all worked unchanged, and `nippon.py` is a config plus a `sniff`.
+
+Two things did not. Nippon publishes **108 schemes as 108 sheets of one workbook** — the
+third packaging model in three AMCs — so `parse_holdings` gained an optional `sheet`;
+without it the merge reads **+222,869.8%** and is refused.
+
+And the one that mattered: a stock-future table printed **below the GRAND TOTAL** with the
+portfolio's own column shape, plus a derivatives annexure whose `Margin maintained` column
+lands under `Market/Fair Value`. Read as holdings they add Rs 78.5 crore to a Rs 5,075 crore
+portfolio — **+0.155%, inside the ±2% reconciliation tolerance**. V1-08's guard cannot see
+it, and tightening the threshold would start refusing files that are merely rounded. So the
+rule became positional: nothing below the file's own total is a holding.
+
+**The ordering cost a regression on the way.** Applying that rule before the summary branch
+swallowed HDFC's industry summary and NAV history — which sit below *its* grand total — and
+with them `stated_navs`, the three-way NAV agreement from V1.2a. The existing tests caught
+it; a test now asserts the ordering rather than trusting it.
+
+**Kotak could not be fetched.** Its disclosure page is behind Radware bot detection, which
+this project will not solve, and probing for a file URL is what V1-03 was written about. No
+retries, no URL guessing — it needs a hand-downloaded file, and that is recorded rather than
+worked around.
+
+Measured on Nippon's real file: reconciles at **−0.0000000315%**, 104 securities from 185
+rows, 21 rows correctly excluded, warnings **20 → 1**, **0.0760% unresolved** against the 2%
+gate, `validation_status=ok`, 98.953707% equity + 1.046293% cash summing to exactly
+**100.000000%**.
+
+Also found, and worth carrying: **`SELECT sum(col)` over a `DECIMAL_TEXT` column returns a
+float.** SZ-13's family in aggregate form — the stored values stay exact, but SQLite coerces.
+That lands squarely on M3, whose whole claim is that exposures add up.
 
 ### S17 · docs/, the sniff cross-product, and V0.4b Zone B persistence (2026-09-06)
 
