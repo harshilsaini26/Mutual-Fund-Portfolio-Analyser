@@ -1,0 +1,290 @@
+"""Storing the look-through. MODULE_3.md §4.2, §4.6, §5.5, §14.
+
+The engine is a pure function; this is the only part of M3 that touches a
+database. Keeping the split means the arithmetic is tested without a connection
+and the storage is tested without re-deriving anything.
+
+**These tables are derived, and that changes the write rule.** `CLAUDE.md`
+invariant 2 forbids updating a fact row — but nothing here is a fact anyone
+stated, it is all recomputed from `txn` and `scheme_issuer_weight`. So a rebuild
+**replaces**: same user, same as-of, same basis, one row per issuer. Appending
+instead would double-count on the second run, which is a failure nothing
+downstream could see.
+
+**Every aggregation is a Python `Decimal`** (`CLAUDE.md` invariant 1). The
+contribution-to-exposure reconciliation is the obvious place for
+`SUM(exposure_inr) GROUP BY issuer_id` and it is not used.
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
+from decimal import Decimal
+
+from src.common.types import IssuerId, SchemeId, UserId
+from src.m3_lookthrough.engine import Exposure, LookThroughResult, PortfolioSummary
+
+#: `MODULE_6.md` states 45. It is defined HERE because `MODULE_3.md` §14.1 uses
+#: it without declaring it, and M3 cannot import from M6 — the dependency runs
+#: M3 -> M6, never back. M6 should import this one rather than keep its own.
+STALENESS_WARN_DAYS = 45
+
+#: The only basis that exists until `security_price` is built (§3.2). Stored
+#: rather than assumed, so drift-adjusted rows can land beside these instead of
+#: overwriting them — the primary key already separates them.
+DISCLOSED = "disclosed"
+
+TABLES = ("lookthrough_exposure", "lookthrough_contribution", "portfolio_summary")
+
+
+def confidence_for(
+    coverage_pct: Decimal, unresolved_pct: Decimal, worst_staleness_days: int
+) -> str:
+    """§14.1, verbatim.
+
+    §14.2 rule 3 makes portfolio confidence *"the weakest link, not an average"*,
+    which is why any one condition failing drops the whole result a level rather
+    than being blended away.
+    """
+    if (
+        coverage_pct >= Decimal(98)
+        and unresolved_pct <= Decimal(2)
+        and worst_staleness_days <= STALENESS_WARN_DAYS
+    ):
+        return "high"
+    return "medium" if coverage_pct >= Decimal(80) else "low"
+
+
+def save_lookthrough(
+    conn: sqlite3.Connection,
+    user_id: UserId,
+    as_of: date,
+    result: LookThroughResult,
+    as_of_by_scheme: dict[SchemeId, date] | None = None,
+    weight_basis: str = DISCLOSED,
+    computed_at: str | None = None,
+) -> int:
+    """Write §4.2's two tables and §4.6's summary. Returns exposure rows written.
+
+    `as_of_by_scheme` carries each scheme's own disclosure date, because §5.5
+    lets every scheme contribute from *its* latest disclosure. Absent, staleness
+    is stored NULL rather than guessed — an unknown date is not today's.
+    """
+    dates = as_of_by_scheme or {}
+    stamp = computed_at or datetime.now(UTC).isoformat()
+
+    # §5.5: per issuer, the EARLIEST contributing disclosure date.
+    earliest: dict[IssuerId, date] = {}
+    for contribution in result.contributions:
+        found = dates.get(contribution.scheme_id)
+        if found is None:
+            continue
+        current = earliest.get(contribution.issuer_id)
+        if current is None or found < current:
+            earliest[contribution.issuer_id] = found
+
+    worst_staleness = max(
+        ((as_of - d).days for d in earliest.values()), default=0
+    )
+    summary = result.summary
+    confidence = confidence_for(
+        summary.coverage_pct, summary.unresolved_pct, worst_staleness
+    )
+
+    # Derived, so a rebuild replaces. `portfolio_summary` has no `weight_basis`
+    # column — its key is (user, as_of) — so it is cleared without one.
+    for table in TABLES:
+        if table == "portfolio_summary":
+            conn.execute(
+                f"DELETE FROM {table} WHERE user_id = ? AND as_of = ?",
+                (str(user_id), as_of.isoformat()),
+            )
+        else:
+            conn.execute(
+                f"DELETE FROM {table}"
+                " WHERE user_id = ? AND as_of = ? AND weight_basis = ?",
+                (str(user_id), as_of.isoformat(), weight_basis),
+            )
+
+    for exposure in result.exposures:
+        holdings_as_of = earliest.get(exposure.issuer_id)
+        conn.execute(
+            "INSERT INTO lookthrough_exposure ("
+            " user_id, as_of, weight_basis, issuer_id, exposure_inr, exposure_pct,"
+            " via_funds, fund_inr, direct_inr, instrument_class, is_synthetic,"
+            " holdings_as_of, staleness_days, coverage_pct, confidence, computed_at"
+            ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                str(user_id), as_of.isoformat(), weight_basis, str(exposure.issuer_id),
+                exposure.exposure_inr, exposure.pct_of_portfolio,
+                exposure.fund_count,
+                # No `direct_holding` yet (§7), so all of it comes through funds.
+                exposure.exposure_inr, Decimal(0),
+                exposure.instrument_class, 1 if exposure.is_synthetic else 0,
+                holdings_as_of.isoformat() if holdings_as_of else None,
+                (as_of - holdings_as_of).days if holdings_as_of else None,
+                summary.coverage_pct, confidence, stamp,
+            ),
+        )
+
+    for contribution in result.contributions:
+        position_value = _position_value(result, contribution.scheme_id)
+        conn.execute(
+            "INSERT INTO lookthrough_contribution ("
+            " user_id, as_of, weight_basis, issuer_id, scheme_id, depth,"
+            " weight_in_fund, exposure_inr"
+            ") VALUES (?,?,?,?,?,0,?,?)",
+            (
+                str(user_id), as_of.isoformat(), weight_basis,
+                str(contribution.issuer_id), str(contribution.scheme_id),
+                (
+                    contribution.exposure_inr / position_value * 100
+                    if position_value
+                    else Decimal(0)
+                ),
+                contribution.exposure_inr,
+            ),
+        )
+
+    conn.execute(
+        "INSERT INTO portfolio_summary ("
+        " user_id, as_of, total_value_inr, fund_value_inr, direct_value_inr,"
+        " scheme_count, issuer_count, direct_issuer_count, coverage_pct,"
+        " schemes_covered, unresolved_pct, worst_staleness_days, confidence,"
+        " caveats, computed_at"
+        ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            str(user_id), as_of.isoformat(), summary.total_value_inr,
+            summary.total_value_inr, Decimal(0),
+            len({c.scheme_id for c in result.contributions}),
+            summary.issuer_count, 0, summary.coverage_pct,
+            len(
+                {
+                    c.scheme_id
+                    for c in result.contributions
+                    if str(c.issuer_id) != "__NO_DISCLOSURE__"
+                }
+            ),
+            summary.unresolved_pct, worst_staleness, confidence,
+            json.dumps(result.caveats), stamp,
+        ),
+    )
+    conn.commit()
+    return len(result.exposures)
+
+
+def load_exposures(
+    conn: sqlite3.Connection,
+    user_id: UserId,
+    as_of: date,
+    weight_basis: str = DISCLOSED,
+) -> list[Exposure]:
+    """Read them back largest first, which is the order every view wants.
+
+    **Sorted in Python, and that is not fussiness.** `ORDER BY exposure_inr DESC`
+    on a `DECIMAL_TEXT` column sorts it as TEXT, so `"5000"` comes before
+    `"25000"` because `'5' > '2'`. The column is text by design (SZ-13), the SQL
+    looks entirely correct, and the wrong order is invisible until someone reads
+    a top-20 list that is not the top 20.
+
+    §4.2's own `ix_lte_size` index is declared on `exposure_inr DESC` and has
+    the same problem; it is kept because it still helps the equality part of the
+    key, but it must never be trusted for ordering. Same family as invariant 1's
+    aggregation clause: a storage-layer default that is wrong in a way nothing
+    downstream can see.
+    """
+    rows = conn.execute(
+        "SELECT issuer_id, exposure_inr, exposure_pct, instrument_class,"
+        " is_synthetic, via_funds FROM lookthrough_exposure"
+        " WHERE user_id = ? AND as_of = ? AND weight_basis = ?",
+        (str(user_id), as_of.isoformat(), weight_basis),
+    ).fetchall()
+    rows.sort(key=lambda r: (-r[1], str(r[0])))
+    return [
+        Exposure(
+            issuer_id=IssuerId(r[0]),
+            exposure_inr=r[1],
+            pct_of_portfolio=r[2],
+            instrument_class=r[3] or "unknown",
+            is_synthetic=bool(r[4]),
+            fund_count=r[5],
+        )
+        for r in rows
+    ]
+
+
+def load_summary(
+    conn: sqlite3.Connection, user_id: UserId, as_of: date
+) -> StoredSummary:
+    """§4.6, with the fields M3 fills. The rest are NULL until M1/M2 feed them."""
+    row = conn.execute(
+        "SELECT total_value_inr, coverage_pct, unresolved_pct, issuer_count,"
+        " worst_staleness_days, confidence, caveats FROM portfolio_summary"
+        " WHERE user_id = ? AND as_of = ?",
+        (str(user_id), as_of.isoformat()),
+    ).fetchone()
+    if row is None:
+        raise LookupError(f"no portfolio_summary for {user_id} at {as_of}")
+    return StoredSummary(
+        total_value_inr=row[0],
+        coverage_pct=row[1],
+        unresolved_pct=row[2],
+        issuer_count=row[3],
+        worst_staleness_days=row[4],
+        confidence=row[5],
+        caveats=json.loads(row[6]) if row[6] else [],
+    )
+
+
+def drop_lookthrough(conn: sqlite3.Connection) -> None:
+    """Drop every derived look-through table. `CLAUDE.md` invariant 10.
+
+    A real DROP rather than a DELETE, for the reason V1-13 gave: the claim is
+    that these are reconstructible, and deleting rows leaves the schema behind
+    and proves half of it.
+    """
+    for table in TABLES:
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+    conn.commit()
+
+
+def _position_value(result: LookThroughResult, scheme_id: SchemeId) -> Decimal:
+    """What this scheme was worth, recovered from its own contributions.
+
+    Python `Decimal`, not `SUM` — invariant 1. The value is not carried on the
+    result, and re-deriving it from the rows that came from it keeps
+    `weight_in_fund` consistent with `exposure_inr` by construction.
+    """
+    return sum(
+        (c.exposure_inr for c in result.contributions if c.scheme_id == scheme_id),
+        Decimal(0),
+    )
+
+
+@dataclass(frozen=True)
+class StoredSummary:
+    """The subset of §4.6 that M3 can fill today."""
+
+    total_value_inr: Decimal
+    coverage_pct: Decimal
+    unresolved_pct: Decimal
+    issuer_count: int
+    worst_staleness_days: int | None
+    confidence: str
+    caveats: list[str]
+
+
+__all__ = [
+    "DISCLOSED",
+    "STALENESS_WARN_DAYS",
+    "PortfolioSummary",
+    "StoredSummary",
+    "confidence_for",
+    "drop_lookthrough",
+    "load_exposures",
+    "load_summary",
+    "save_lookthrough",
+]

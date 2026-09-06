@@ -7,14 +7,15 @@
 
 ## Current state
 
-**Slice:** V1.3 — **the look-through works.** Three of five AMC formats parse
-and load; `compute_lookthrough` turns them into issuer exposure, closure holds
-at delta 0.00, and `scripts/show_lookthrough.py` prints it.
+**Slice:** V1.4 — **the look-through works and persists.** Three of five AMC
+formats parse and load; `compute_lookthrough` turns them into issuer exposure,
+closure holds at delta 0.00, `scripts/show_lookthrough.py` prints it, and
+MODULE_3 §4.2/§4.6's tables store it.
 **Repo:** local git, `origin` set to
 `github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed**:
 the credential helper cannot prompt in this environment, so the first `git push
 -u origin main` has to be run from a terminal. Branch `main`, tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (119 files) · 588 tests + 3 skipped ·
+**Gate:** ruff clean · `mypy --strict` clean (121 files) · 603 tests + 3 skipped ·
 verifier no drift.
 
 **Zone B is encrypted** (V1-16): `sqlcipher3` installed, `--allow-unencrypted` gone
@@ -35,8 +36,9 @@ the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.0000
 **Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
 writing the database, and invariant 5 asserted against real tables that get DROPped
 and rebuilt — not against two in-memory books.
-**Next:** persist §4.2's exposure tables; then SBI, and Kotak once a file is
-supplied; then §6.5 member-level ZIP staging
+**Next:** §4.3's `portfolio_concentration` and `fund_overlap` (both computed,
+neither stored); then SBI, and Kotak once a file is supplied; then §6.5
+member-level ZIP staging
 (ICICI ships 146 workbooks in one archive), then V1 build items 5, 7 and 8 —
 Bhavcopy prices, `scheme_issuer_weight`, and the look-through engine itself.
 
@@ -94,7 +96,7 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate), `db.py` (Zone B connection + schema; refuses to open unencrypted), `persist.py` (`rebuild()` — `txn` in, every derived table out) |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, `nippon`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
-| `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. Separate from Zone A: a different database, not a later version of the warehouse. |
+| `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. `002_lookthrough.sql` — `lookthrough_exposure`, `lookthrough_contribution`, `portfolio_summary`. Separate from Zone A: a different database, not a later version of the warehouse. |
 | `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
 | `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — per-source URLs and scraping limits (S5 carries the browser agent HDFC's CDN requires, contact in `From:`, per V1-05). `amc_manifest.yaml` — disclosure links per AMC; discovery is still manual (V1-03). |

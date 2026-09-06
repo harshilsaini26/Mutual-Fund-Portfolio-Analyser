@@ -33,6 +33,10 @@ Violating any of these silently corrupts data. If a task seems to require it, st
    it is the aggregate that is silently a float, which is why this survives a schema
    that is entirely `DECIMAL_TEXT` and passes `assert_schema_is_decimal_safe`. Found in
    V1-15; `test_decimals.py` holds the demonstration.
+
+   **Never `ORDER BY` one either.** It sorts as TEXT, so `"5000"` comes before
+   `"25000"`. A top-20 list ordered in SQL is not the top 20, and the SQL reads
+   as obviously correct. Sort in Python. V1-18.
 2. **Never `UPDATE` a fact row.** Append with a new `revision`, flip `is_current`.
 3. **Modules talk through Protocol interfaces, never direct SQL across boundaries.**
    Dependency direction is one-way: M0 → M1 → M2 → M3 → M4/M5 → M6.
@@ -122,7 +126,8 @@ verification: `1. [step] → verify: [check]`. Then loop until each verifies.
 - **Prefer a real file over a better simulation.** When a synthetic fixture and
   a real artifact would answer the same question, get the real artifact.
 - **Contracts are frozen.** Changing a Protocol or dataclass in
-  `src/common/contracts/` requires an ADR before any code.- **Do not extend the fixture pipeline.** Four scripts with an order dependency
+  `src/common/contracts/` requires an ADR before any code.
+- **Do not extend the fixture pipeline.** Four scripts with an order dependency
   is the ceiling. A fifth generator makes the fixtures a system in their own
   right, and a system that produces test data is a system nothing tests.
 - **Parsers get** a golden fixture, a `sniff()` cross-product test, and a

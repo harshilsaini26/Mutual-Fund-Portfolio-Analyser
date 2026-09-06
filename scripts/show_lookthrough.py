@@ -17,15 +17,17 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import sqlite3
 from datetime import date
 from decimal import Decimal
 
 from src.common.decimals import connect
-from src.common.types import SchemeId
+from src.common.types import SchemeId, UserId
 from src.m0_data.config import warehouse_path
-from src.m1_ledger.db import connect_ledger, ledger_path
+from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m3_lookthrough.concentration import concentration
 from src.m3_lookthrough.engine import Position, compute_lookthrough
+from src.m3_lookthrough.persist import save_lookthrough
 from src.m3_lookthrough.weights import (
     latest_as_of,
     load_issuer_weights,
@@ -63,7 +65,7 @@ def main() -> None:
             weights_by_scheme[scheme_id] = found
             as_of_by_scheme[scheme_id] = as_of
 
-    positions, basis = _positions(args, weights_by_scheme)
+    positions, basis, ledger = _positions(args, weights_by_scheme)
     if not positions:
         raise SystemExit(
             "no positions. Import a CAS, or pass --equal 100000 to see the shape."
@@ -104,6 +106,19 @@ def main() -> None:
             f"equity concentration: HHI {equity.hhi}  effective-N "
             f"{equity.effective_n}  top-10 {equity.top10_pct}%"
         )
+    if ledger is not None:
+        # Persisted only for a real ledger. `--equal` is an illustration, and
+        # writing it into `lookthrough_exposure` would leave numbers that are
+        # not this portfolio sitting exactly where the portfolio's numbers
+        # belong — indistinguishable on the next read.
+        apply_ledger_schema(ledger)
+        written = save_lookthrough(
+            ledger, UserId(args.user), as_of, result, as_of_by_scheme
+        )
+        print(f"\nstored {written} exposure rows for {as_of}")
+    else:
+        print("\nnot stored: --equal is illustrative, not your portfolio")
+
     for caveat in result.caveats:
         print(f"\n  ! {caveat}")
     print()
@@ -111,12 +126,18 @@ def main() -> None:
 
 def _positions(
     args: argparse.Namespace, weights_by_scheme: dict[SchemeId, object]
-) -> tuple[list[Position], str]:
+) -> tuple[list[Position], str, sqlite3.Connection | None]:
+    """Positions, a label for them, and the ledger to store into — or None.
+
+    The third element is what stops an illustration being written as though it
+    were the portfolio.
+    """
     if args.equal:
         value = Decimal(args.equal)
         return (
             [Position(s, value) for s in weights_by_scheme],
             f"ILLUSTRATIVE — every fund valued at Rs {value:,.2f}, NOT your ledger",
+            None,
         )
     db = ledger_path()
     if not db.exists():
@@ -132,6 +153,7 @@ def _positions(
     return (
         [Position(SchemeId(r[0]), r[1]) for r in rows],
         "your ledger",
+        ledger,
     )
 
 
