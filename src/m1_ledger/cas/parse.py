@@ -40,6 +40,12 @@ from enum import Enum, auto
 
 from src.common.decimals import dec
 
+#: Bumped on ANY change to what this parser produces, so a fixed parser can be
+#: replayed over every statement the old one touched. `cas_import` records it
+#: per import, which is what makes "which parser version produced this row?"
+#: answerable three months from now.
+PARSER_VERSION = "1"
+
 
 class CasParseError(ValueError):
     """The statement is not shaped like a CAS at all."""

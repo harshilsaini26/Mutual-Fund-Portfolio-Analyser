@@ -35,6 +35,22 @@ from src.m0_data.schema.apply import MigrationError, unsafe_decimal_columns
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations" / "zone_b"
 
 
+def ledger_path() -> Path:
+    """Zone B on disk. §13.2, and gitignored in full along with the rest of /data.
+
+    Lives here rather than in `m0_data.config` beside `warehouse_path`: M0 has
+    no business knowing where the personal ledger is, and the dependency only
+    runs the other way. `data_root()` is shared infrastructure, so that much is
+    borrowed.
+    """
+    import os
+
+    from src.m0_data.config import data_root
+
+    env = os.environ.get("MF_LEDGER")
+    return Path(env) if env else data_root() / "ledger" / "personal.db"
+
+
 class EncryptionUnavailable(RuntimeError):
     """No SQLCipher driver, and the caller did not accept a plaintext database."""
 

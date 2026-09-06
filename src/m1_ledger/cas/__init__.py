@@ -17,6 +17,7 @@ from src.m1_ledger.cas.importer import (
 )
 from src.m1_ledger.cas.mapping import map_txn_type
 from src.m1_ledger.cas.parse import (
+    PARSER_VERSION,
     BalanceMarker,
     CasContext,
     CasParseError,
@@ -27,6 +28,7 @@ from src.m1_ledger.cas.parse import (
 )
 
 __all__ = [
+    "PARSER_VERSION",
     "BalanceMarker",
     "CasContext",
     "CasParseError",

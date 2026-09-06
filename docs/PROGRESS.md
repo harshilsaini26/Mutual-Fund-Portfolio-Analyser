@@ -10,9 +10,13 @@
 **Slice:** V1.2d — **two of five** AMC formats parse, resolve, validate and load,
 each reconciling against the total its own file states. The look-through engine
 that consumes them is not built.
-**Repo:** local git, 28 commits, no remote, branch `main`. Tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (111 files) · 540 tests + 3 skipped ·
+**Repo:** local git, 29 commits, no remote, branch `main`. Tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (113 files) · 547 tests + 3 skipped ·
 verifier no drift.
+
+**A CAS now goes in one command** (V1-14): `jobs/import_cas.py` joins the parser to
+Zone B — read, decrypt, parse, resolve, import, save, rebuild. Verified live against
+the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.000000.
 
 **Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
 writing the database, and invariant 5 asserted against real tables that get DROPped
@@ -44,6 +48,13 @@ MF_CONTACT_EMAIL=you@example.com python -m jobs.load_holdings --amc hdfc
 python -m jobs.load_holdings --amc icici --file <extracted-member>.xlsx --scheme <ISIN>
 ```
 
+**Import a CAS** (prompts for the password; `--allow-unencrypted` is required until
+a SQLCipher driver is installed — V1-13):
+
+```bash
+python -m jobs.import_cas --file statement.pdf --user USER-01 --allow-unencrypted
+```
+
 `backfill_nav` clamps `--from` to 31-Jan-2018 and discovers AMFI's AMC codes on
 first run. Both jobs are safe to re-run: the archive is content-addressed and
 the loads are upserts.
@@ -70,7 +81,7 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
 | `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. Separate from Zone A: a different database, not a later version of the warehouse. |
 | `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
-| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure). All write a `job_run` row whatever happens. |
+| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (history, per OPEN-07) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — per-source URLs and scraping limits (S5 carries the browser agent HDFC's CDN requires, contact in `From:`, per V1-05). `amc_manifest.yaml` — disclosure links per AMC; discovery is still manual (V1-03). |
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds keyed on their **real ISINs** — `INF179K01UT0`, `INF109K01761`, `INF174KA1EZ1` — on NAVs confirmed against AMFI. Reaches the engine as a **CAS statement**, resolved through `MarketDataProvider`. |

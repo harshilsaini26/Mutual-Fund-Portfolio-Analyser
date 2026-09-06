@@ -146,13 +146,18 @@ def import_cas(
     resolve_scheme: Callable[[StagedTxn], SchemeId | None] | None = None,
     known_txn_ids: set[str] | None = None,
 ) -> ImportReport:
-    """MODULE_1.md §5.7, minus the database.
+    """MODULE_1.md §5.7. Staged rows in, ledger facts out — still no database.
 
-    Persistence is Zone B and does not exist yet, so `known_txn_ids` stands in
-    for the `INSERT OR IGNORE`: anything already present counts as a duplicate.
-    That keeps the idempotence property testable now rather than after the
-    warehouse lands, which matters because it is a `PLAN.md` §7 V0 gate
-    condition.
+    `known_txn_ids` is what the caller has already stored. `jobs/import_cas.py`
+    passes the real set straight out of Zone B, so `inserted` and `duplicate`
+    describe what `INSERT OR IGNORE` will actually do rather than approximating
+    it. Passing nothing treats every row as new, which is what the parser tests
+    want.
+
+    This function stays free of the database on purpose: it is the piece that
+    has to be exercised against synthetic statements, because a real CAS is Zone
+    B and cannot be committed. Persistence is `persist.save_txns`, one call
+    away, and the job is where the two meet.
     """
     ctx = CasContext()
     staged = parse_cas(lines, ctx)
