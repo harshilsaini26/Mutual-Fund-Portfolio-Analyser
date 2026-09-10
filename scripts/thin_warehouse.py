@@ -87,7 +87,7 @@ def build(source_db: Path, target: Path, keep: list[str]) -> dict[str, int]:
                     f"INSERT OR REPLACE INTO {table} ({names})"
                     f" SELECT {names} FROM src.{table}"
                 )
-            counts[table] = cursor.rowcount if cursor.rowcount > 0 else 0
+            counts[table] = max(cursor.rowcount, 0)
         out.commit()
     except Exception:
         # Without this the DETACH below fails too, and the real error is buried

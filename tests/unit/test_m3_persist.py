@@ -401,3 +401,60 @@ def test_weight_in_fund_is_the_share_of_that_fund_not_the_portfolio(  # type: ig
             (v for (_i, s), v in rows.items() if s == scheme), Decimal(0)
         )
         assert total == Decimal(100), f"{scheme} weights sum to {total}"
+
+
+# --- regressions from the V1.5 review ----------------------------------------
+
+
+def test_unknown_staleness_is_not_scored_as_fresh() -> None:
+    """`None` means nobody measured, and unmeasured is not strong.
+
+    Before the fix `worst_staleness` used `max(..., default=0)`, so a save with
+    no per-scheme dates scored `high` while every stored row's
+    `staleness_days` was correctly NULL — the summary contradicting the rows
+    beneath it. §14.2 rule 3 makes confidence the weakest link.
+    """
+    assert confidence_for(Decimal(100), Decimal(0), None) == "medium"
+    assert confidence_for(Decimal(70), Decimal(0), None) == "low"
+    assert confidence_for(Decimal(100), Decimal(0), 10) == "high"
+
+
+def test_saving_without_dates_stores_unknown_staleness(conn, result) -> None:  # type: ignore[no-untyped-def]
+    """And it reaches the database, rather than being a local nicety."""
+    save_lookthrough(conn, USER, AS_OF, result, None)
+    summary = load_summary(conn, USER, AS_OF)
+    assert summary.worst_staleness_days is None
+    assert summary.confidence != "high"
+
+
+def test_a_disclosure_dated_after_the_as_of_is_refused(conn, result) -> None:  # type: ignore[no-untyped-def]
+    """§5.5's "on or before", and `CLAUDE.md` invariant 5: raise, don't clamp.
+
+    A negative age is not a small error — it reads as fresher than fresh and
+    passes the staleness arm of the confidence rule outright.
+    """
+    future = {SchemeId("S1"): date(2027, 1, 1), SchemeId("S2"): JUNE}
+    with pytest.raises(ValueError, match="after the look-through date"):
+        save_lookthrough(conn, USER, AS_OF, result, future)
+
+
+def test_weight_in_fund_is_unchanged_by_the_hoist(conn, result) -> None:  # type: ignore[no-untyped-def]
+    """The O(n^2) rescan became one pass; the numbers must not move.
+
+    `_position_values` builds the same per-scheme totals `_position_value`
+    recomputed per contribution, so every stored weight is identical and each
+    fund's weights still sum to 100.
+    """
+    save_lookthrough(conn, USER, AS_OF, result, DATES)
+    rows = {
+        (r[0], r[1]): r[2]
+        for r in conn.execute(
+            "SELECT issuer_id, scheme_id, weight_in_fund"
+            " FROM lookthrough_contribution WHERE user_id = ?", (str(USER),)
+        )
+    }
+    assert rows[("BETA", "S1")] == Decimal(35)
+    assert rows[("BETA", "S2")] == Decimal(100)
+    for scheme in ("S1", "S2"):
+        total = sum((v for (_i, s), v in rows.items() if s == scheme), Decimal(0))
+        assert total == Decimal(100), f"{scheme} weights sum to {total}"

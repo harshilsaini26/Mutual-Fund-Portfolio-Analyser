@@ -20,12 +20,18 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from src.common.types import IssuerId, SchemeId, UserId
-from src.m3_lookthrough.engine import Exposure, LookThroughResult, PortfolioSummary
+from src.m3_lookthrough.engine import (
+    NO_DISCLOSURE,
+    Exposure,
+    LookThroughResult,
+    PortfolioSummary,
+)
 
 #: `MODULE_6.md` states 45. It is defined HERE because `MODULE_3.md` §14.1 uses
 #: it without declaring it, and M3 cannot import from M6 — the dependency runs
@@ -41,17 +47,25 @@ TABLES = ("lookthrough_exposure", "lookthrough_contribution", "portfolio_summary
 
 
 def confidence_for(
-    coverage_pct: Decimal, unresolved_pct: Decimal, worst_staleness_days: int
+    coverage_pct: Decimal, unresolved_pct: Decimal, worst_staleness_days: int | None
 ) -> str:
-    """§14.1, verbatim.
+    """§14.1, verbatim, with one addition §14.1 does not cover.
 
     §14.2 rule 3 makes portfolio confidence *"the weakest link, not an average"*,
     which is why any one condition failing drops the whole result a level rather
     than being blended away.
+
+    **`None` means staleness is unknown, and unknown is not fresh.** It reaches
+    here when no per-scheme disclosure dates were supplied, and the previous
+    `max(..., default=0)` turned that into "zero days old" — so a portfolio
+    whose age nobody knew scored `high`, beside stored rows whose
+    `staleness_days` were correctly NULL. An unmeasured weakest link cannot be
+    asserted to be strong.
     """
     if (
         coverage_pct >= Decimal(98)
         and unresolved_pct <= Decimal(2)
+        and worst_staleness_days is not None
         and worst_staleness_days <= STALENESS_WARN_DAYS
     ):
         return "high"
@@ -86,9 +100,19 @@ def save_lookthrough(
         if current is None or found < current:
             earliest[contribution.issuer_id] = found
 
-    worst_staleness = max(
-        ((as_of - d).days for d in earliest.values()), default=0
-    )
+    ages = [(as_of - d).days for d in earliest.values()]
+    if any(age < 0 for age in ages):
+        # §5.5 says each scheme contributes from its latest disclosure ON OR
+        # BEFORE `as_of`. A negative age means the caller paired a look-through
+        # date with holdings from after it, and `CLAUDE.md` invariant 5 says
+        # raise rather than clamp — a silently negative staleness reads as
+        # fresher than fresh and scores `high`.
+        raise ValueError(
+            f"disclosure dated after the look-through date {as_of}: "
+            f"{sorted(d for d in earliest.values() if (as_of - d).days < 0)}. "
+            f"Pass `on_or_before=as_of` to weights.latest_as_of."
+        )
+    worst_staleness = max(ages) if ages else None
     summary = result.summary
     confidence = confidence_for(
         summary.coverage_pct, summary.unresolved_pct, worst_staleness
@@ -130,8 +154,12 @@ def save_lookthrough(
             ),
         )
 
+    # Hoisted: `_position_value` scanned every contribution, once per
+    # contribution, which is O(n^2) — ~16M comparisons for a 20-fund portfolio
+    # inside an open transaction. The totals are loop-invariant.
+    position_values = _position_values(result)
     for contribution in result.contributions:
-        position_value = _position_value(result, contribution.scheme_id)
+        position_value = position_values.get(contribution.scheme_id, Decimal(0))
         conn.execute(
             "INSERT INTO lookthrough_contribution ("
             " user_id, as_of, weight_basis, issuer_id, scheme_id, depth,"
@@ -165,7 +193,7 @@ def save_lookthrough(
                 {
                     c.scheme_id
                     for c in result.contributions
-                    if str(c.issuer_id) != "__NO_DISCLOSURE__"
+                    if c.issuer_id != NO_DISCLOSURE
                 }
             ),
             summary.unresolved_pct, worst_staleness, confidence,
@@ -251,17 +279,18 @@ def drop_lookthrough(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _position_value(result: LookThroughResult, scheme_id: SchemeId) -> Decimal:
-    """What this scheme was worth, recovered from its own contributions.
+def _position_values(result: LookThroughResult) -> dict[SchemeId, Decimal]:
+    """What each scheme was worth, recovered from its own contributions.
 
+    One pass over the contributions instead of one pass per contribution.
     Python `Decimal`, not `SUM` — invariant 1. The value is not carried on the
     result, and re-deriving it from the rows that came from it keeps
     `weight_in_fund` consistent with `exposure_inr` by construction.
     """
-    return sum(
-        (c.exposure_inr for c in result.contributions if c.scheme_id == scheme_id),
-        Decimal(0),
-    )
+    totals: dict[SchemeId, Decimal] = defaultdict(Decimal)
+    for contribution in result.contributions:
+        totals[contribution.scheme_id] += contribution.exposure_inr
+    return totals
 
 
 @dataclass(frozen=True)

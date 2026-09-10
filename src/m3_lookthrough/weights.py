@@ -66,7 +66,7 @@ def materialise_weights(
     quantity: dict[str, Decimal] = defaultdict(Decimal)
     has_quantity: set[str] = set()
     klass: dict[str, str] = {}
-    largest: dict[str, Decimal] = defaultdict(Decimal)
+    largest: dict[str, Decimal] = {}
 
     for issuer_id, pct, instrument_class, qty in rows:
         disclosed[issuer_id] += pct
@@ -77,14 +77,32 @@ def materialise_weights(
         # Taking the largest holding's class instead makes the answer
         # independent of row order, which matters because an issuer held as
         # both equity and debt would otherwise flip with the sheet's ordering.
-        if pct >= largest[issuer_id]:
+        #
+        # Compared on ABSOLUTE weight, and `largest` is a plain dict rather than
+        # one defaulting to zero. A short leg has a negative `pct_normalised`
+        # (V1-07: HDFC writes Eternal Limited's short at -0.001%), so a
+        # zero-default meant an issuer held ONLY short never cleared the bar,
+        # never got a class, and raised KeyError below. Absolute size is also
+        # the right comparison: a large short is the dominant position in that
+        # issuer, not the smallest.
+        if issuer_id not in largest or abs(pct) > abs(largest[issuer_id]):
             largest[issuer_id] = pct
             klass[issuer_id] = instrument_class
 
     stamp = datetime.now(UTC).isoformat()
+    # Delete before insert, not `INSERT OR REPLACE` alone. Replace updates the
+    # issuers the new revision still has and leaves behind any it dropped: a
+    # restatement that sells a holding left the old row in place and the
+    # scheme's weights summed to 120, which `assert_weights_sum_to_100` then
+    # blamed on MODULE_0's normalise_weights. These rows are derived, so
+    # rebuilding them means replacing the set, not merging into it.
+    conn.execute(
+        "DELETE FROM scheme_issuer_weight WHERE scheme_id = ? AND as_of_date = ?",
+        (str(scheme_id), as_of),
+    )
     for issuer_id, weight in disclosed.items():
         conn.execute(
-            "INSERT OR REPLACE INTO scheme_issuer_weight ("
+            "INSERT INTO scheme_issuer_weight ("
             " scheme_id, as_of_date, issuer_id, weight_disclosed, weight_drift_adj,"
             " instrument_class, quantity, built_at"
             ") VALUES (?,?,?,?,NULL,?,?,?)",
@@ -111,13 +129,25 @@ def load_issuer_weights(
     return [IssuerWeight(IssuerId(r[0]), r[1], r[2]) for r in rows]
 
 
-def latest_as_of(conn: sqlite3.Connection, scheme_id: SchemeId) -> date | None:
-    """The most recent disclosure date on record for a scheme."""
-    row = conn.execute(
+def latest_as_of(
+    conn: sqlite3.Connection, scheme_id: SchemeId, on_or_before: date | None = None
+) -> date | None:
+    """§5.5: a scheme contributes from *its* latest disclosure on or before `as_of`.
+
+    `on_or_before` implements the bound. Without it this returned the newest
+    disclosure whatever its date, so a look-through computed for an earlier date
+    would use holdings from the future and store a negative `staleness_days`
+    that `confidence_for` reads as fresher than fresh.
+    """
+    sql = (
         "SELECT max(as_of_date) FROM holding_disclosure"
-        " WHERE scheme_id = ? AND is_current = 1",
-        (str(scheme_id),),
-    ).fetchone()
+        " WHERE scheme_id = ? AND is_current = 1"
+    )
+    params: list[object] = [str(scheme_id)]
+    if on_or_before is not None:
+        sql += " AND as_of_date <= ?"
+        params.append(on_or_before)
+    row = conn.execute(sql, tuple(params)).fetchone()
     if not row or row[0] is None:
         return None
     return row[0] if isinstance(row[0], date) else date.fromisoformat(str(row[0]))

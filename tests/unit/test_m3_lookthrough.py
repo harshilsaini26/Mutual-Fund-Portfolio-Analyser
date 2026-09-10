@@ -432,9 +432,11 @@ def test_the_engine_asserts_closure_on_every_computation(
     calls: list[tuple[Decimal, Decimal]] = []
     real = engine.assert_closure
 
-    def spy(got: Decimal, expected: Decimal) -> None:
+    def spy(
+        got: Decimal, expected: Decimal, permitted_drift: Decimal = Decimal(0)
+    ) -> None:
         calls.append((got, expected))
-        real(got, expected)
+        real(got, expected, permitted_drift)
 
     monkeypatch.setattr(engine, "assert_closure", spy)
     compute_lookthrough(
@@ -442,3 +444,55 @@ def test_the_engine_asserts_closure_on_every_computation(
     )
     assert calls, "compute_lookthrough returned without asserting closure"
     assert calls[0] == (Decimal("100000"), Decimal("100000"))
+
+
+# --- regressions from the V1.5 review ----------------------------------------
+
+
+def test_weights_inside_the_weight_guard_do_not_break_closure() -> None:
+    """The two §5.2 tolerances contradicted each other until `permitted_drift`.
+
+    `WEIGHT_TOL` accepts a sum 0.01 off 100; that moves exposure by
+    `value x 0.0001`, so on anything above ₹10,000 closure was violated by the
+    very slack the line above had granted. Measured before the fix: weights of
+    99.995 on a ₹1 crore position raised
+    `ClosureViolation ... delta -500.000`.
+    """
+    weights = {SchemeId("S1"): [w("ACME", "99.995")]}
+    result = compute_lookthrough(
+        [pos("S1", "10000000")], weights, AS_OF
+    )
+    assert result.exposures[0].exposure_inr == Decimal("9999500.000")
+
+
+def test_exact_weights_still_get_the_strict_one_rupee_tolerance() -> None:
+    """The slack is only ever as wide as the slack already granted.
+
+    When weights sum to exactly 100 — what `MODULE_0.md` §7.3 guarantees and
+    what every real disclosure produces — `permitted_drift` is zero and closure
+    is ±₹1 unchanged. Without this, widening the tolerance for the drifting case
+    would quietly widen it for the correct one too.
+    """
+    assert_closure(Decimal("100000.50"), Decimal("100000"), Decimal(0))
+    with pytest.raises(ClosureViolation, match="tolerance"):
+        assert_closure(Decimal("99998"), Decimal("100000"), Decimal(0))
+    # And drift is respected when it was actually permitted.
+    assert_closure(Decimal("99998"), Decimal("100000"), Decimal("500"))
+
+
+def test_a_position_with_no_value_is_named_rather_than_dropped() -> None:
+    """`CLAUDE.md` invariant 4: never silently drop rows.
+
+    A scheme with no NAV on the valuation date arrives worth 0. It cannot enter
+    the exposures and it cannot be counted in coverage — the total it would be
+    measured against already excludes it — so the only honest place for it is a
+    caveat naming the fund.
+    """
+    result = compute_lookthrough(
+        [pos("S1", "100000"), pos("S_NO_NAV", "0")],
+        {SchemeId("S1"): [w("ACME", "100")]},
+        AS_OF,
+    )
+    assert {str(e.issuer_id) for e in result.exposures} == {"ACME"}
+    assert any("S_NO_NAV" in c for c in result.caveats), result.caveats
+    assert any("no value" in c for c in result.caveats)

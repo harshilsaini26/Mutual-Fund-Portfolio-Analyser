@@ -138,27 +138,49 @@ class LookThroughResult:
     caveats: list[str] = field(default_factory=list)
 
 
-def assert_closure(got: Decimal, expected: Decimal) -> None:
+def assert_closure(
+    got: Decimal, expected: Decimal, permitted_drift: Decimal = Decimal(0)
+) -> None:
     """§5.2. *"Run this on every computation, not just in tests."*
 
     Takes the computed total rather than the exposure list, so it is callable
     from anywhere a total exists and cannot be accidentally passed a filtered
     list — which would make it pass while proving nothing.
+
+    **`permitted_drift` reconciles two tolerances that otherwise contradict.**
+    §5.2 gives closure ±₹1 absolute and gives the weight check ±0.01
+    percentage points. Weights that are off by 0.01 move a position's exposure
+    by `value x 0.0001`, so on anything above ₹10,000 the weight guard accepts
+    data that the closure guard then refuses: 99.995% on a ₹1 crore position
+    sums ₹500 short and raised `ClosureViolation` for a discrepancy the
+    previous line had explicitly allowed.
+
+    So the caller passes the drift it actually tolerated, and closure is exact
+    to ₹1 *beyond* that. When weights sum to exactly 100 — which is what
+    `MODULE_0.md` §7.3 guarantees and what every real disclosure produces — the
+    drift is zero and the tolerance is ₹1 unchanged. Nothing is loosened for
+    correct data; the slack is only ever as wide as the slack already granted.
     """
-    if abs(got - expected) > CLOSURE_TOL:
+    tolerance = CLOSURE_TOL + abs(permitted_drift)
+    if abs(got - expected) > tolerance:
         raise ClosureViolation(
             f"look-through sums to {got}, expected {expected}, "
-            f"delta {got - expected}"
+            f"delta {got - expected} (tolerance {tolerance})"
         )
 
 
 def assert_weights_sum_to_100(
     weights: list[IssuerWeight], scheme_id: SchemeId, as_of: date
-) -> None:
-    """§5.2. If this fires, the bug is upstream in M0."""
+) -> Decimal:
+    """§5.2. If this fires, the bug is upstream in M0. Returns the actual sum.
+
+    The sum is returned rather than discarded so the caller can tell
+    `assert_closure` how much drift it just tolerated — see that function.
+    """
     total = sum((x.weight for x in weights), Decimal(0))
     if abs(total - Decimal(100)) > WEIGHT_TOL:
         raise WeightsNotNormalised(scheme_id, as_of, total)
+    return total
 
 
 def compute_lookthrough(
@@ -172,8 +194,16 @@ def compute_lookthrough(
     that does not add up.
     """
     live = [p for p in positions if p.value_inr > 0]
+    # `CLAUDE.md` invariant 4: never silently drop rows. A position can arrive
+    # non-positive when its scheme had no NAV on the valuation date, and
+    # dropping it quietly leaves a portfolio that looks whole while missing a
+    # fund — `coverage_pct` cannot show it either, since it is computed against
+    # a total that already excludes it.
+    unvalued = [p.scheme_id for p in positions if p.value_inr <= 0]
     total_value = sum((p.value_inr for p in live), Decimal(0))
 
+    #: How far the weights were allowed to miss 100, in rupees. See assert_closure.
+    permitted_drift = Decimal(0)
     exposure_inr: dict[IssuerId, Decimal] = defaultdict(Decimal)
     funds: dict[IssuerId, set[SchemeId]] = defaultdict(set)
     largest: dict[IssuerId, tuple[Decimal, str]] = {}
@@ -195,7 +225,10 @@ def compute_lookthrough(
             )
             continue
 
-        assert_weights_sum_to_100(weights, position.scheme_id, as_of)
+        weight_sum = assert_weights_sum_to_100(weights, position.scheme_id, as_of)
+        permitted_drift += (
+            position.value_inr * abs(Decimal(100) - weight_sum) / Decimal(100)
+        )
         covered_value += position.value_inr
 
         for weight in weights:
@@ -230,7 +263,11 @@ def compute_lookthrough(
     ]
 
     # §5.2, before anything is returned.
-    assert_closure(sum((e.exposure_inr for e in exposures), Decimal(0)), total_value)
+    assert_closure(
+        sum((e.exposure_inr for e in exposures), Decimal(0)),
+        total_value,
+        permitted_drift,
+    )
 
     unresolved_pct = (
         (exposure_inr.get(UNRESOLVED, Decimal(0)) / total_value * 100).quantize(PCT_Q)
@@ -242,6 +279,12 @@ def compute_lookthrough(
             f"{unresolved_pct}% of the portfolio sits in {UNRESOLVED}: holdings "
             f"whose issuer could not be identified. Every exposure below is "
             f"understated by up to that much."
+        )
+    if unvalued:
+        caveats.append(
+            f"{len(unvalued)} held scheme(s) had no value on {as_of} and are "
+            f"absent from every figure below, coverage included "
+            f"({', '.join(str(s) for s in sorted(unvalued))})"
         )
     if undisclosed:
         caveats.append(

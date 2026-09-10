@@ -4,8 +4,9 @@
     python -m scripts.show_lookthrough --equal 100000  # or a flat weighting
 
 Reads issuer weights from Zone A and positions from the encrypted Zone B
-ledger, materialising `scheme_issuer_weight` first for any scheme that has a
-disclosure and no weights yet.
+ledger, re-materialising `scheme_issuer_weight` for every scheme with a current
+disclosure — unconditionally, because a restated disclosure must not keep the
+withdrawn revision's weights.
 
 `--equal` exists because the Zone B ledger needs a key and may hold nothing:
 it values every disclosed scheme at the same amount so the exposure *shape* is
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import itertools
 import sqlite3
 from datetime import date
 from decimal import Decimal
@@ -26,7 +28,12 @@ from src.common.types import SchemeId, UserId
 from src.m0_data.config import warehouse_path
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m3_lookthrough.concentration import concentration
-from src.m3_lookthrough.engine import Position, compute_lookthrough
+from src.m3_lookthrough.engine import (
+    IssuerWeight,
+    Position,
+    compute_lookthrough,
+)
+from src.m3_lookthrough.overlap import pairwise_overlap
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m3_lookthrough.weights import (
     latest_as_of,
@@ -52,14 +59,18 @@ def main() -> None:
             "SELECT DISTINCT scheme_id FROM holding_disclosure WHERE is_current = 1"
         )
     ]
-    weights_by_scheme = {}
+    weights_by_scheme: dict[SchemeId, list[IssuerWeight]] = {}
     as_of_by_scheme: dict[SchemeId, date] = {}
     for scheme_id in schemes:
         as_of = latest_as_of(conn, scheme_id)
         if as_of is None:
             continue
-        if not load_issuer_weights(conn, scheme_id, as_of):
-            materialise_weights(conn, scheme_id, as_of)
+        # Unconditionally, not "only if absent". Guarding on absence meant a
+        # restated disclosure never refreshed the weights and every later
+        # report was computed from the withdrawn revision, silently.
+        # `materialise_weights` replaces the set, so re-running is cheap and
+        # idempotent.
+        materialise_weights(conn, scheme_id, as_of)
         found = load_issuer_weights(conn, scheme_id, as_of)
         if found:
             weights_by_scheme[scheme_id] = found
@@ -104,8 +115,10 @@ def main() -> None:
     if equity.issuer_count:
         print(
             f"equity concentration: HHI {equity.hhi}  effective-N "
-            f"{equity.effective_n}  top-10 {equity.top10_pct}%"
+            f"{equity.effective_n}  top-10 {equity.top10_pct}%  "
+            f"gini {equity.gini}"
         )
+    _print_overlap(weights_by_scheme, as_of_by_scheme)
     if ledger is not None:
         # Persisted only for a real ledger. `--equal` is an illustration, and
         # writing it into `lookthrough_exposure` would leave numbers that are
@@ -124,8 +137,41 @@ def main() -> None:
     print()
 
 
+def _print_overlap(
+    weights_by_scheme: dict[SchemeId, list[IssuerWeight]],
+    as_of_by_scheme: dict[SchemeId, date],
+) -> None:
+    """§9.1. "How much of these two funds is the same thing?"
+
+    Usually the launch story: a portfolio of five large-cap funds tends to be
+    one fund bought five times. Keyed on issuer, never ISIN (§2.3), and
+    synthetics are dropped so two funds both holding cash do not read as
+    overlapping.
+    """
+    schemes = sorted(weights_by_scheme)
+    if len(schemes) < 2:
+        return
+    pairs = [
+        pairwise_overlap(
+            a, b, as_of_by_scheme[a], as_of_by_scheme[b],
+            weights_by_scheme[a], weights_by_scheme[b],
+        )
+        for a, b in itertools.combinations(schemes, 2)
+    ]
+    pairs.sort(key=lambda o: -o.overlap_pct)
+    print("\nfund overlap (shared issuers, by weight):")
+    for o in pairs[:5]:
+        flag = "" if o.aligned else f"  [dates {o.as_of_gap_days}d apart]"
+        print(
+            f"  {str(o.scheme_a)[:14]:<14} x {str(o.scheme_b)[:14]:<14}"
+            f" {o.overlap_pct:>7.2f}%   {o.common_issuers} shared"
+            f" of {o.union_issuers}{flag}"
+        )
+
+
 def _positions(
-    args: argparse.Namespace, weights_by_scheme: dict[SchemeId, object]
+    args: argparse.Namespace,
+    weights_by_scheme: dict[SchemeId, list[IssuerWeight]],
 ) -> tuple[list[Position], str, sqlite3.Connection | None]:
     """Positions, a label for them, and the ledger to store into — or None.
 
@@ -157,12 +203,14 @@ def _positions(
     )
 
 
-def _issuer_names(conn: object, issuer_ids: list[str]) -> dict[str, str]:
+def _issuer_names(
+    conn: sqlite3.Connection, issuer_ids: list[str]
+) -> dict[str, str]:
     """Best-effort display names. Falls back to the id, which is never wrong."""
     if not issuer_ids:
         return {}
     placeholders = ",".join("?" * len(issuer_ids))
-    rows = conn.execute(  # type: ignore[attr-defined]
+    rows = conn.execute(
         f"SELECT issuer_id, canonical_name FROM issuer"
         f" WHERE issuer_id IN ({placeholders})",
         issuer_ids,

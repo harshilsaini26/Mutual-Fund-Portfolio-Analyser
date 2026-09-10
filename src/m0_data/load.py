@@ -165,7 +165,8 @@ def load_navs_where_absent(
             """,
             (n.scheme_id, n.nav_date, n.nav, source_file_id),
         )
-        added += cursor.rowcount if cursor.rowcount > 0 else 0
+        # SQLite reports -1 when the ON CONFLICT clause skipped the row.
+        added += max(cursor.rowcount, 0)
     return added
 
 
