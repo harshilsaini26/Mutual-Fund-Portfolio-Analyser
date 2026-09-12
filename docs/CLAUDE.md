@@ -16,8 +16,7 @@ Module specs are 1,400–1,800 lines each. Read the sections you need, not whole
 ## Build order — vertical slices, never horizontal
 
 Do not build "all of M0" then "all of M1". Build V0 end-to-end, pass its gate, then V1.
-Slice definitions and acceptance gates are `PLAN.md` §7. Current slice is in
-`docs/PROGRESS.md`.
+Slice definitions and acceptance gates are `PLAN.md` §7.
 
 ## Non-negotiable invariants
 
@@ -64,8 +63,7 @@ src/m2_fund/      style, holdings, performance, manager, peers, position
 src/m3_lookthrough/ engine, metrics, tilts, returns, quality
 src/m4_risk/      series, metrics, covariance, attribution, factors, stress
 src/m5_market/    sectors, flows, conviction, relevance, companies
-src/m6_views/     envelope, builders, format, export, api
-frontend/         React + Vite
+src/m6_views/     envelope, builders, format, export, api, templates, static
 tests/            unit, property, golden, integration
 migrations/       numbered, forward-only
 ```
@@ -86,8 +84,6 @@ python -m jobs.<name> [--as-of YYYY-MM-DD]
   before writing code.
 - **Write the test first for anything in `src/m1_ledger/` or `src/m3_lookthrough/`.**
   Those two carry the correctness gates.
-- **Update `docs/PROGRESS.md`** at the end of every session: slice, step, what passed,
-  what is blocked.
 - **Append to `docs/DECISIONS.md`** when resolving an OPEN item or departing from a spec.
   Never edit an existing entry — supersede it.
 - **Every ADR is self-contained.** State the decision and the question it answers inside

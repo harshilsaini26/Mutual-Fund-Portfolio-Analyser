@@ -76,15 +76,8 @@ frontend/.vite/
 Thumbs.db
 
 # --- graphify output -------------------------------------------------------
-# Regenerable analysis artefacts. GRAPH_REPORT.md is the readable summary that
-# BUILD_ORDER.md's recommendations were derived from, so it stays; the rest is
-# ~1MB of JSON/HTML that regenerates from the same inputs.
-#
-# Patterns are deliberately NOT anchored to the repo root: there are two
-# graphify-out directories (repo root and `docs/`), and the cache is
-# keyed on mtime_ns, so it would churn on every file touch.
-graphify-out/graph.json
-graphify-out/graph.html
-graphify-out/cost.json
-graphify-out/cache/
-**/graphify-out/cache/
+# Regenerable analysis artefacts, none of them tracked. The whole directory is
+# ignored wherever it appears: it regenerates from the source it analysed, and
+# its cache is keyed on mtime_ns so it churns on every file touch.
+graphify-out/
+**/graphify-out/

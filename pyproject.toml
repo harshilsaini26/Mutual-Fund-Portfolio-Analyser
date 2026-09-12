@@ -1,3 +1,10 @@
+# Setuptools finds the packages under `src/` by itself; this table is what
+# makes `pip install -e .` work at all — without a build backend declared, pip
+# has nothing to build the project with.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mf-platform"
 version = "0.0.0"
@@ -21,6 +28,13 @@ dependencies = [
     # src/m6_views/static/vendor/, so there is no JS toolchain and no CDN call.
     "jinja2",
 ]
+
+# Explicit, not auto-discovered. This is a flat layout with several importable
+# top-level directories (`src`, `jobs`, `scripts`, `tests`), and setuptools
+# refuses to guess between them on some versions. Only `src` is library code;
+# `jobs` and `scripts` are entry points run from a checkout.
+[tool.setuptools.packages.find]
+include = ["src*"]
 
 [tool.ruff]
 line-length = 90
