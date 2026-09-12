@@ -262,7 +262,14 @@ def _one(
             "issuer_id": str(resolution.issuer_id),
             "instrument_raw_name": security.instrument_raw_name,
             "quantity": security.quantity_raw,
-            "market_value": value or Decimal(0),
+            # `holding.market_value` is NOT NULL, so an unpriced row has to be
+            # stored as zero. That loses the distinction between "worth
+            # nothing" and "the file did not price it", so the count is carried
+            # to the disclosure header below rather than left silent —
+            # `CLAUDE.md` invariant 4 is that a row is never dropped without a
+            # record, and a row whose exposure is zeroed is dropped in every
+            # way that matters downstream.
+            "market_value": value if value is not None else Decimal(0),
             "pct_to_nav": pct,
             "pct_normalised": weight,
             "instrument_class": _instrument_class(
@@ -290,6 +297,17 @@ def _one(
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"
 
+    # A row the file did not price is stored with market_value 0 (the column is
+    # NOT NULL) and `normalise_weights` independently gives it weight 0, so it
+    # contributes nothing to any look-through while every quality figure is
+    # computed against a total that already excludes it — nothing moves, and
+    # nobody is told. Counting them here is what makes the loss visible.
+    unpriced = [
+        securities[i].instrument_raw_name
+        for i, value in enumerate(values)
+        if value is None
+    ]
+
     counts = load_holdings(
         conn, scheme_id, parsed.as_of_date, rows,
         {
@@ -300,7 +318,7 @@ def _one(
             "aum_reported": aum,
             "reported_unit": securities[0].market_value_unit if securities else None,
             "validation_status": status,
-            "validation_notes": as_json(checks),
+            "validation_notes": as_json(checks, unpriced=unpriced),
         },
         str(result.file_id),
     )

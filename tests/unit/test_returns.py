@@ -277,9 +277,16 @@ def test_twrr_is_a_nav_ratio() -> None:
 
 
 def test_twrr_does_not_annualise_under_one_year() -> None:
-    """Annualising a two-month return produces a number nobody should act on."""
+    """Annualising a two-month return produces a number nobody should act on.
+
+    Updated in the V1.9 review: it used to return the cumulative figure in the
+    annualised SLOT, which `MODULE_2.md` §7.3 forbids — and `compute_returns`
+    then subtracted it from an annualised XIRR. Under a year there is no
+    annualised figure, so the field is None and the cumulative one is unchanged.
+    """
     cum, ann = twrr(Decimal("100"), Decimal("110"), days=60)
-    assert cum == ann, "sub-year TWRR must report the cumulative figure unchanged"
+    assert cum == Decimal("0.1"), "the cumulative figure is unaffected"
+    assert ann is None, "there is no annualised figure for a sub-year period"
 
 
 def test_twrr_is_none_when_the_opening_nav_is_unusable() -> None:
@@ -493,6 +500,15 @@ def test_returns_computed_for_every_held_scheme(
             pos, [t for t in txns if t.scheme_id == scheme_id], navs[scheme_id]
         )
         assert r.xirr is not None, f"{scheme_id} XIRR undefined"
-        assert r.twrr_ann is not None, f"{scheme_id} TWRR undefined"
+        assert r.twrr_cum is not None, f"{scheme_id} TWRR undefined"
         assert r.absolute is not None
-        assert r.timing_effect == r.xirr - r.twrr_ann
+        # `twrr_ann` is None for a position held under a year, and the timing
+        # effect goes with it: subtracting a cumulative return from an
+        # annualised one reports a difference that is purely the unit mismatch.
+        # One of the golden portfolio's schemes is exactly that case, which is
+        # why this branches rather than asserting both are present.
+        if r.twrr_ann is None:
+            assert r.timing_effect is None, f"{scheme_id} mixed two bases"
+            assert r.obs_note is not None and "annualis" in r.obs_note
+        else:
+            assert r.timing_effect == r.xirr - r.twrr_ann

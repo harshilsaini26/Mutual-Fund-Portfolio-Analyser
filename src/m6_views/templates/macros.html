@@ -91,10 +91,21 @@
   <footer class="view__footer">
     <dl>
       <div><dt>As of</dt><dd>{{ env.as_of | fmt_date }}</dd></div>
+      {#
+        A non-ok envelope carries `staleness_days = 0` and `data_as_of =
+        as_of`, because `ViewEnvelope` types both non-optional with no default
+        (§3.1, deliberately — a view must not be able to omit its staleness).
+        Rendering them anyway printed "31 Jul 2026 (today)" under a panel that
+        has no data at all, which reads as a freshness claim for something that
+        does not exist. The footer still appears in every state — that is the
+        gate — but the fields it has no answer for say so.
+      #}
       <div>
         <dt>Holdings as of</dt>
-        <dd>{{ env.data_as_of | fmt_date }}
+        <dd>
+          {%- if env.state.value == 'ok' %}{{ env.data_as_of | fmt_date }}
           <span class="staleness">({{ env.staleness_days | fmt_staleness }})</span>
+          {%- else %}&mdash;{% endif %}
         </dd>
       </div>
       <div><dt>Coverage</dt><dd>{{ env.coverage_pct | fmt_pct }}</dd></div>

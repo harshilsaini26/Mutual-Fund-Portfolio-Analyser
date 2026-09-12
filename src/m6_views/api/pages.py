@@ -36,6 +36,7 @@ from src.m6_views.builder import Scope
 from src.m6_views.envelope import ViewEnvelope
 from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY, catalogue
 from src.m6_views.render import FILTERS, chart_context, needs_sankey_script
+from src.m6_views.states import error_envelope
 
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
 STATIC = Path(__file__).resolve().parent.parent / "static"
@@ -63,16 +64,41 @@ def templates() -> Jinja2Templates:
     return engine
 
 
+def safe_chart_context(env: ViewEnvelope, scope: Scope) -> dict[str, Any]:
+    """`chart_context`, inside the same boundary the builder has.
+
+    `build_view` catches everything a builder raises and returns an `error`
+    envelope — and then the route called `chart_context(env)` unguarded, in a
+    list comprehension over all three landing panels. `heatmap_grid` indexes
+    `index[cell["scheme_a"]]` and the formatters coerce with
+    `Decimal(str(...))`, so one malformed stored payload took down the page
+    carrying the summary and the Sankey with it.
+
+    `PLAN.md` §4.9 is "degrade one panel, never the screen", and the boundary
+    stopped one call short of that.
+    """
+    try:
+        return chart_context(env)
+    except Exception as exc:
+        return chart_context(
+            error_envelope(env.view_id, env.question, scope, exc)
+        )
+
+
 def make_router(
     ledger: sqlite3.Connection,
     warehouse: sqlite3.Connection,
     build: Any,
+    health: Any,
 ) -> APIRouter:
-    """`build` is `app.build_view`, passed in rather than imported.
+    """`build` is `app.build_view` and `health` is `app.health_snapshot`, both
+    passed in rather than imported.
 
-    It carries the lock and the never-raise boundary, and taking it as an
-    argument keeps this module free of the connection plumbing — the pages need
-    envelopes, not databases.
+    They carry the lock and the never-raise boundary, and taking them as
+    arguments keeps this module free of the connection plumbing — the pages
+    need envelopes, not databases. It is also what keeps `app -> pages` a
+    one-way import: `pages` importing back from `app` is a cycle, since `app`
+    imports this module to mount the router.
     """
     router = APIRouter()
     engine = templates()
@@ -84,30 +110,13 @@ def make_router(
             scope_type="portfolio",
         )
 
-    def _health() -> dict[str, Any]:
-        """The masthead's freshness line. §15.3: say when this was computed
-        rather than implying it is live."""
-        row = ledger.execute(
-            "SELECT max(as_of), max(computed_at) FROM portfolio_summary"
-        ).fetchone()
-        disclosures = warehouse.execute(
-            "SELECT count(*), max(as_of_date) FROM holding_disclosure"
-            " WHERE is_current = 1"
-        ).fetchone()
-        return {
-            "lookthrough_as_of": row[0] if row else None,
-            "lookthrough_computed_at": row[1] if row else None,
-            "current_disclosures": (disclosures[0] if disclosures else 0) or 0,
-            "latest_disclosure": disclosures[1] if disclosures else None,
-        }
-
     def _shell(user_id: str, as_of: str | None, active: str) -> dict[str, Any]:
         query = f"?user_id={user_id}"
         if as_of:
             query += f"&as_of={as_of}"
         return {
             "catalogue": catalogue(),
-            "health": _health(),
+            "health": health(ledger, warehouse),
             "qs": query,
             "active": active,
         }
@@ -127,7 +136,7 @@ def make_router(
             "landing.html",
             {
                 **_shell(user_id, as_of, active=""),
-                "panels": [chart_context(env) for env in envelopes],
+                "panels": [safe_chart_context(env, scope) for env in envelopes],
                 "chart_scripts": (
                     SANKEY_SCRIPTS if needs_sankey_script(envelopes) else ""
                 ),
@@ -156,13 +165,16 @@ def make_router(
             params["top_n"] = top_n
         if scope is not None:
             params["scope"] = scope
-        env = build(view_id, _scope(user_id, as_of), params, ledger, warehouse)
+        # Named apart from the `scope` query parameter, which is the exposure
+        # pool ("equity", "all") and not an analysis scope at all.
+        view_scope = _scope(user_id, as_of)
+        env = build(view_id, view_scope, params, ledger, warehouse)
         return engine.TemplateResponse(
             request,
             "page.html",
             {
                 **_shell(user_id, as_of, active=view_id),
-                **chart_context(env),
+                **safe_chart_context(env, view_scope),
                 "chart_scripts": (
                     SANKEY_SCRIPTS if needs_sankey_script([env]) else ""
                 ),
@@ -172,4 +184,12 @@ def make_router(
     return router
 
 
-__all__ = ["LANDING", "STATIC", "TEMPLATES", "make_router", "templates"]
+__all__ = [
+    "LANDING",
+    "STATIC",
+    "TEMPLATES",
+    "chart_context",
+    "make_router",
+    "safe_chart_context",
+    "templates",
+]

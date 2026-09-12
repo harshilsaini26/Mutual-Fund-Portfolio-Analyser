@@ -30,7 +30,7 @@ from decimal import Decimal
 from typing import Any
 
 from src.common.types import SchemeId, UserId
-from src.m1_ledger.lots import LotBook, build_book
+from src.m1_ledger.lots import GRANDFATHER_DATE, LotBook, build_book
 from src.m1_ledger.reconcile import reconcile_all
 from src.m1_ledger.txn import Txn, drop_reversed
 
@@ -174,11 +174,17 @@ def rebuild(
     everything the transactions determine. When it is absent those columns are
     NULL rather than zero: a position whose value is unknown is not a position
     worth nothing.
+
+    It now carries one thing that is NOT presentational: the 31-Jan-2018 NAV
+    each equity scheme needs for §7.5's §112A grandfathering. Passing it makes
+    the relief apply on the production rebuild path, not only in tests — it was
+    never passed at all, so `effective_cost` returned early for every lot and
+    every pre-2018 consumption was stamped `confidence="low"` instead.
     """
     stamp = rebuilt_at or datetime.now(UTC).isoformat()
     txns = load_txns(conn, user_id)
     live = drop_reversed(txns)
-    book = build_book(live)
+    book = build_book(live, grandfathering_navs=_grandfathering_navs(navs))
 
     for table in DERIVED_TABLES:
         conn.execute(f"DELETE FROM {table}")
@@ -190,6 +196,24 @@ def rebuild(
     _write_reconciliations(conn, results, user_id, stamp)
     conn.commit()
     return book
+
+
+def _grandfathering_navs(
+    navs: dict[str, dict[date, Decimal]] | None,
+) -> dict[str, Decimal]:
+    """Each scheme's NAV on the §112A cutoff, for the lots that predate it.
+
+    Read on the exact date, never rolled forward: §7.5's substitution is the
+    *fair market value on 31 January 2018*, and the nearest earlier price is a
+    different number with no statutory standing. A scheme that did not price
+    that day is simply absent, and the lot is flagged low confidence — which is
+    what §7.5 asks for when the FMV cannot be established.
+    """
+    return {
+        scheme_id: series[GRANDFATHER_DATE]
+        for scheme_id, series in (navs or {}).items()
+        if GRANDFATHER_DATE in series
+    }
 
 
 def derived_fingerprint(conn: sqlite3.Connection) -> str:

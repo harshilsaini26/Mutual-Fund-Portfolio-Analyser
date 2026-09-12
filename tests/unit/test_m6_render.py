@@ -399,3 +399,82 @@ def test_an_unknown_view_is_a_404_that_names_the_known_ones(
     response = client.get(f"/view/nope{QS}")
     assert response.status_code == 404
     assert "fund_list" in response.text
+
+
+# --- V1.9 review fixes -------------------------------------------------------
+
+
+def test_an_empty_panel_does_not_claim_its_data_is_current(
+    client: TestClient,
+) -> None:
+    """A non-ok envelope carries `staleness_days = 0` and `data_as_of = as_of`,
+    because §3.1 types both non-optional so a view cannot omit its staleness.
+    Rendering them anyway printed "31 Jul 2026 (today)" beneath a panel with no
+    data at all — a freshness claim for something that does not exist."""
+    html = client.get(f"/view/fund_list?user_id={USER}&as_of=1999-01-01").text
+    assert "placeholder--empty" in html
+    footer = re.search(r'<footer class="view__footer">(.*?)</footer>', html, re.S)
+    assert footer
+    # The footer still renders — that is the gate — but says nothing it cannot.
+    assert "Holdings as of" in footer.group(1)
+    assert "(today)" not in footer.group(1)
+    assert "days old" not in footer.group(1)
+
+
+def test_a_panel_that_fails_to_render_does_not_take_the_page_with_it(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`PLAN.md` §4.9: degrade one panel, never the screen.
+
+    `build_view` caught everything the builder raised and then the route called
+    `chart_context` unguarded, so a malformed stored payload 500'd the landing
+    page along with the two panels either side of it.
+    """
+    import src.m6_views.api.pages as pages
+
+    healthy = pages.chart_context
+    seen = {"n": 0}
+
+    def fails_once(env: object) -> dict[str, object]:
+        seen["n"] += 1
+        if seen["n"] == 1:
+            raise KeyError("scheme_a")
+        return healthy(env)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(pages, "chart_context", fails_once)
+    response = client.get(f"/{QS}")
+
+    assert response.status_code == 200
+    assert "Could not be built" in response.text
+    # The other two panels are untouched: three sections still render.
+    assert response.text.count('class="view view--') == 3
+
+
+def test_the_export_link_is_url_encoded() -> None:
+    """`export_url` concatenated raw values, so a user_id or scope_id carrying
+    an `&`, `=` or a space truncated the URL — the CSV route then fell back to
+    its own `Query` defaults and exported a different scope than the panel
+    above the link had displayed."""
+    from src.m6_views.builder import Scope
+    from src.m6_views.compose import export_url
+
+    scope = Scope(
+        user_id=UserId("USER ONE&admin=1"),
+        as_of=AS_OF,
+        scope_type="portfolio",
+        scope_id="FOLIO 42&x",
+    )
+    url = export_url("fund_list", scope, {"top_n": 40})
+
+    # Nothing after the first field can be read as a new parameter.
+    assert url.count("?") == 1
+    assert url.split("?")[1].count("&") == 3
+    assert "admin=1" not in url.split("?")[1].replace("%26admin%3D1", "")
+    assert "USER+ONE%26admin%3D1" in url
+    assert "FOLIO+42%26x" in url
+
+
+def test_a_populated_view_still_offers_a_working_export_link(
+    client: TestClient,
+) -> None:
+    assert f"/api/export/fund_list.csv?user_id={USER}" in page(client, "fund_list")

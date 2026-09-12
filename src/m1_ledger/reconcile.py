@@ -95,7 +95,9 @@ class GateResult:
     excluded_scheme_ids: set[SchemeId]
 
 
-def diagnose(delta: Decimal, has_earlier_txns: bool, txn_count: int) -> list[str]:
+def diagnose(
+    delta: Decimal, starts_at_zero: bool | None, txn_count: int
+) -> list[str]:
     """Name a probable cause. MODULE_1.md §11.2.
 
     When reconciliation fails the system must say *why*, not merely *that* —
@@ -112,8 +114,17 @@ def diagnose(delta: Decimal, has_earlier_txns: bool, txn_count: int) -> list[str
 
     if delta < 0:
         # Fewer units than the statement reports: something bought them that we
-        # have not imported.
-        if not has_earlier_txns:
+        # have not imported. Blame the start of the history only when the
+        # history does not demonstrably start at zero — `starts_at_zero=True`
+        # means the first transaction we hold opened the position, so the gap
+        # is somewhere later and pointing at an earlier statement wastes the
+        # user's time on a file that will not fix anything.
+        #
+        # `None` is the third state: the statement printed no running balance,
+        # so we cannot tell. An unknown is reported as the actionable
+        # hypothesis rather than suppressed, because a missing early CAS is by
+        # far the most common cause of a negative delta.
+        if starts_at_zero is not True:
             hypotheses.append("MISSING_EARLY_CAS")
     else:
         # More units than reported: something sold them that we have not seen.
@@ -170,7 +181,11 @@ def reconcile(
     # there are no transactions to witness against — a caller checking a bare
     # unit count has nothing to cross-check.
     nav_check = nav_cross_check(txns, navs) if txns else None
-    nav_ok = nav_check is None or nav_check.status == "ok"
+    nav_ok = nav_check is None or nav_check.status != "fail"
+    # `warn` is this module's existing word for "nothing to check against, so
+    # the position is unverified rather than verified-correct" — the same
+    # reasoning the missing-reported-balance path above already applies.
+    nav_unverified = nav_check is not None and nav_check.status == "unverified"
 
     units_ok = abs(delta_units) <= UNIT_TOL
     value_ok = delta_value <= VALUE_TOL
@@ -180,21 +195,19 @@ def reconcile(
             scheme_id=scheme_id,
             folio=folio,
             as_of=as_of,
-            status="ok",
-            confidence="high",
+            status="warn" if nav_unverified else "ok",
+            confidence="medium" if nav_unverified else "high",
             units_computed=computed,
             units_reported=reported,
             delta_units=delta_units,
             delta_value_pct=delta_value * 100,
+            diagnosis=["NAV_SERIES_UNVERIFIED"] if nav_unverified else [],
             nav_check=nav_check,
         )
 
-    earliest = min((t.txn_date for t in txns), default=None)
-    has_earlier = any(t.txn_date < earliest for t in txns) if earliest else False
-
     findings = []
     if not units_ok or not value_ok:
-        findings.extend(diagnose(delta_units, has_earlier, len(txns)))
+        findings.extend(diagnose(delta_units, _starts_at_zero(txns), len(txns)))
     if not nav_ok:
         assert nav_check is not None
         # The actionable message: the units are fine, the SCHEME is wrong.
@@ -250,14 +263,20 @@ def nav_cross_check(txns: list[Txn], navs: dict[date, Decimal]) -> NavCrossCheck
         else:
             mismatched += 1
 
+    checked = matched + mismatched
     return NavCrossCheck(
         scheme_id=scheme_id,
-        checked=matched + mismatched,
+        checked=checked,
         matched=matched,
         mismatched=mismatched,
         unavailable=unavailable,
         worst_deviation_pct=worst,
-        status="fail" if mismatched else "ok",
+        # Three states, not two. `status = "fail" if mismatched else "ok"` could
+        # not tell 500 checked and 0 mismatched from nothing checked at all, and
+        # the second is exactly V0-05's case: with no NAV rows loaded for the
+        # scheme we wrongly resolved, the witness reported success at high
+        # confidence. An absence of evidence is not evidence of agreement.
+        status="fail" if mismatched else ("ok" if checked else "unverified"),
     )
 
 
@@ -273,8 +292,15 @@ def reconcile_all(
     aggregate for display only; a mismatch in one must not be netted away by a
     surplus in another.
     """
+    # `drop_reversed` FIRST. The engine never saw the reversed pair
+    # (`build_book` drops them) and `nav_cross_check` drops them internally, so
+    # bucketing the raw list was the one place they survived: a reversed
+    # redemption's printed running balance could become `units_reported`, and a
+    # folio-scheme pair existing only in reversed rows produced computed == 0
+    # against a live balance and failed the V0 gate for a position that is not
+    # there.
     books: dict[tuple[str, SchemeId], list[Txn]] = {}
-    for t in txns:
+    for t in drop_reversed(txns):
         if t.scheme_id is None:
             continue
         books.setdefault((t.folio, t.scheme_id), []).append(t)
@@ -332,6 +358,27 @@ def _latest_reported_balance(txns: list[Txn], as_of: date) -> Decimal | None:
         return None
     latest = max(candidates, key=lambda t: (t.txn_date, t.txn_seq, t.txn_ref))
     return latest.units_balance_rep
+
+
+def _starts_at_zero(txns: list[Txn]) -> bool | None:
+    """Did this folio's history begin with the earliest transaction we hold?
+
+    The statement is the witness. It prints a running balance against every
+    entry, so if the earliest one's balance equals its own units, the position
+    opened there and nothing precedes it. A larger balance means units existed
+    before anything we have imported — which IS the missing-early-CAS case.
+
+    `None` when the statement printed no balance, or the earliest entry carries
+    no units: the question is unanswerable rather than answered either way, and
+    `diagnose` treats an unknown as the actionable hypothesis.
+    """
+    live = [t for t in drop_reversed(txns) if t.units is not None]
+    if not live:
+        return None
+    first = min(live, key=lambda t: (t.txn_date, t.txn_seq, t.txn_ref))
+    if first.units_balance_rep is None:
+        return None
+    return abs(first.units_balance_rep) == abs(first.units or Decimal(0))
 
 
 def _nav_on_or_before(navs: dict[date, Decimal], on: date) -> Decimal | None:

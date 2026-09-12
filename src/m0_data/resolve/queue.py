@@ -68,7 +68,24 @@ def enqueue(
     payload = json.dumps(
         [{"name": n, "issuer_id": i, "score": round(s, 2)} for n, i, s in candidates]
     )
-    value = market_value or Decimal(0)
+    value = market_value if market_value is not None else Decimal(0)
+
+    # The running total is accumulated HERE, in Python, not in the ON CONFLICT
+    # clause. `SET total_mv_inr = resolution_queue.total_mv_inr + excluded...`
+    # reads as ordinary SQL and is `CLAUDE.md` invariant 1's other half: the
+    # column is `DECIMAL_TEXT`, so SQLite coerces both operands through a REAL
+    # to add them and writes the float's error back as text. Measured — 0.1
+    # accumulated eleven times stored 1.0999999999999999, and
+    # 12345678901234567.89 + 0.01 stored 12345678901234568.0, losing the paise
+    # outright. An `INTEGER` column would be safe; this one is not, and a bare
+    # `+` is not caught by a search for SUM/AVG/TOTAL.
+    existing = conn.execute(
+        "SELECT total_mv_inr, occurrence_count FROM resolution_queue"
+        " WHERE queue_id = ?",
+        (qid,),
+    ).fetchone()
+    total = (existing[0] or Decimal(0)) + value if existing else value
+    occurrences = (existing[1] or 0) + 1 if existing else 1
 
     conn.execute(
         """
@@ -76,32 +93,45 @@ def enqueue(
             queue_id, raw_name, raw_name_norm, raw_isin, first_seen, last_seen,
             occurrence_count, total_mv_inr, schemes_affected,
             best_guess_issuer, best_score, candidates_json, status
-        ) VALUES (?,?,?,?,?,?, 1, ?, 1, ?, ?, ?, 'pending')
+        ) VALUES (?,?,?,?,?,?, ?, ?, 1, ?, ?, ?, 'pending')
         ON CONFLICT(queue_id) DO UPDATE SET
             last_seen        = excluded.last_seen,
-            occurrence_count = resolution_queue.occurrence_count + 1,
-            total_mv_inr     = resolution_queue.total_mv_inr + excluded.total_mv_inr,
+            occurrence_count = excluded.occurrence_count,
+            total_mv_inr     = excluded.total_mv_inr,
             candidates_json  = excluded.candidates_json,
             best_guess_issuer= excluded.best_guess_issuer,
             best_score       = excluded.best_score
         """,
-        (qid, raw_name, raw_name_norm, raw_isin, seen_on, seen_on, value,
-         best_issuer, Decimal(str(round(best_score / 100, 3))), payload),
+        (qid, raw_name, raw_name_norm, raw_isin, seen_on, seen_on, occurrences,
+         total, best_issuer, Decimal(str(round(best_score / 100, 3))), payload),
     )
     _ = best_name, scheme_id  # scheme fan-out is counted when holdings land
     return qid
 
 
 def pending(conn: sqlite3.Connection, limit: int = 20) -> list[QueueEntry]:
-    """The rows worth a human's time, most valuable first. §8.5."""
+    """The rows worth a human's time, most valuable first. §8.5.
+
+    **Ordered and limited in Python, not in SQL.** `ORDER BY total_mv_inr DESC`
+    reads as obviously correct and is `CLAUDE.md` invariant 1's trap: the column
+    is `DECIMAL_TEXT`, so SQLite sorts it as text. Measured on this table —
+    9000, 2500000, 25000, 5000 came back as `['9000', '5000', '2500000',
+    '25000']`, putting a Rs 9,000 unresolved holding above a Rs 25,00,000 one.
+
+    `LIMIT` in SQL would then compound it: it is a human's attention being
+    rationed, and truncating a text-sorted list keeps precisely the entries
+    least worth their time. The whole pending set is read and cut here instead.
+    The index on `(status, total_mv_inr DESC)` still serves the `status`
+    equality; it must never be trusted for the ordering.
+    """
     rows = conn.execute(
         "SELECT queue_id, raw_name, raw_name_norm, occurrence_count, total_mv_inr,"
         " schemes_affected, best_guess_issuer, best_score, status"
         " FROM resolution_queue WHERE status = 'pending'"
-        " ORDER BY total_mv_inr DESC, queue_id LIMIT ?",
-        (limit,),
     ).fetchall()
-    return [QueueEntry(*r) for r in rows]
+    entries = [QueueEntry(*r) for r in rows]
+    entries.sort(key=lambda e: (-(e.total_mv_inr or Decimal(0)), e.queue_id))
+    return entries[:limit]
 
 
 def accept(

@@ -221,8 +221,13 @@ def twrr(
     M0 supplies a daily IDCW-adjusted series — no sub-period chaining needed.
     That is a direct payoff from building `nav_adj` correctly.
 
-    Under one year the cumulative figure is returned unannualised: annualising
-    a two-month return produces a number nobody should act on.
+    Under one year there IS no annualised figure — the second element is
+    `None`, not a copy of the cumulative one. Returning the cumulative value in
+    the annualised slot is what `MODULE_2.md` §7.3 forbids, and it did not stay
+    cosmetic: `compute_returns` subtracts `twrr_ann` from an annualised XIRR to
+    get `timing_effect`, so a four-month position with 5% cumulative and 16%
+    XIRR reported +11 percentage points of "timing benefit" that was entirely
+    the unit mismatch between the two operands.
     """
     if nav_start is None or nav_end is None or nav_start <= 0 or days <= 0:
         return None, None
@@ -231,7 +236,7 @@ def twrr(
     cumulative = growth - 1
     years = Decimal(days) / TWRR_DAYS_PER_YEAR
     if years < 1:
-        return cumulative, cumulative
+        return cumulative, None
 
     annualised = Decimal(str(float(growth) ** (1.0 / float(years)))) - 1
     return cumulative, annualised
@@ -274,9 +279,13 @@ def compute_returns(
     # of two near-equal numbers.
     timing = rate - twrr_ann if rate is not None and twrr_ann is not None else None
 
+    # `> 0`, not truthiness. A position that has returned more cash than it
+    # took in carries a NEGATIVE `invested_net` (the column is net of
+    # redemption proceeds), and dividing by it flips the sign of a real profit —
+    # a falsy check only rejects exactly zero.
     absolute = (
         (pos.market_value - pos.invested_net) / pos.invested_net
-        if pos.invested_net
+        if pos.invested_net > 0
         else None
     )
 
@@ -285,6 +294,11 @@ def compute_returns(
         note = "XIRR is undefined for this cashflow pattern."
     elif nav_start is None:
         note = "No NAV at first purchase; TWRR unavailable."
+    elif twrr_ann is None:
+        note = (
+            "Held under a year, so the fund return is cumulative and not "
+            "annualised; the timing effect needs both on the same basis."
+        )
 
     return Returns(
         xirr=rate,

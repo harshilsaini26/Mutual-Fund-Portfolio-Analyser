@@ -283,13 +283,13 @@ def test_nav_cross_check_tolerates_a_missing_nav(
 
 def test_diagnose_names_a_cause_rather_than_returning_empty() -> None:
     """MODULE_1.md §11.2. 'UNKNOWN' is a diagnosis; silence is not."""
-    assert diagnose(Decimal("-5"), has_earlier_txns=False, txn_count=10) == [
+    assert diagnose(Decimal("-5"), starts_at_zero=False, txn_count=10) == [
         "MISSING_EARLY_CAS"
     ]
     assert "MISSING_REDEMPTION" in diagnose(
-        Decimal("5"), has_earlier_txns=True, txn_count=10
+        Decimal("5"), starts_at_zero=True, txn_count=10
     )
-    assert diagnose(Decimal("-5"), has_earlier_txns=True, txn_count=10) == ["UNKNOWN"]
+    assert diagnose(Decimal("-5"), starts_at_zero=True, txn_count=10) == ["UNKNOWN"]
 
 
 def test_diagnose_flags_float_contamination_on_a_long_history() -> None:
@@ -299,11 +299,11 @@ def test_diagnose_flags_float_contamination_on_a_long_history() -> None:
     demonstrates: below the 0.001 gate, so it never trips the tolerance — it
     just makes the number quietly wrong.
     """
-    found = diagnose(Decimal("0.0004"), has_earlier_txns=True, txn_count=240)
+    found = diagnose(Decimal("0.0004"), starts_at_zero=True, txn_count=240)
     assert "FLOAT_CONTAMINATION" in found
     # The same delta on a short history is not evidence of accumulation.
     assert "FLOAT_CONTAMINATION" not in diagnose(
-        Decimal("0.0004"), has_earlier_txns=True, txn_count=5
+        Decimal("0.0004"), starts_at_zero=True, txn_count=5
     )
 
 

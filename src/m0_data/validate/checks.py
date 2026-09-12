@@ -181,8 +181,17 @@ def promote_or_quarantine(results: list[CheckResult]) -> str:
     return WARN if any(not r.passed for r in results) else "ok"
 
 
-def as_json(results: list[CheckResult]) -> str:
-    """§10.2: persist every result, passes included."""
+def as_json(results: list[CheckResult], unpriced: list[str] | None = None) -> str:
+    """§10.2: persist every result, passes included.
+
+    `unpriced` names the rows the file listed but did not price.
+    `holding.market_value` is NOT NULL, so such a row is stored as zero and
+    `normalise_weights` gives it a zero weight — it then contributes nothing to
+    any look-through while every quality figure is computed against a total
+    that already excludes it, so no number moves. `CLAUDE.md` invariant 4 is
+    "never silently drop rows"; the row survives, its exposure does not, and
+    this is the record that says so.
+    """
     return json.dumps(
         [
             {
@@ -193,6 +202,22 @@ def as_json(results: list[CheckResult]) -> str:
         ]
         + [{"code": k, "passed": None, "severity": INFO, "message": v}
            for k, v in sorted(not_evaluated().items())]
+        + (
+            [{
+                "code": "UNPRICED",
+                "passed": False,
+                "severity": WARN,
+                "message": (
+                    f"{len(unpriced)} row(s) carry no market value and are "
+                    f"stored at zero, so they contribute no exposure: "
+                    f"{', '.join(unpriced[:5])}"
+                    + (" ..." if len(unpriced) > 5 else "")
+                ),
+                "observed": str(len(unpriced)),
+            }]
+            if unpriced
+            else []
+        )
     )
 
 

@@ -81,6 +81,35 @@ def build_view(
         return error_envelope(view_id, question, scope, exc)
 
 
+def health_snapshot(
+    ledger: sqlite3.Connection, warehouse: sqlite3.Connection
+) -> dict[str, Any]:
+    """§15.3's freshness, read once and under the lock.
+
+    Module-level and shared with the HTML masthead rather than duplicated
+    there: the page router had its own copy that queried both connections with
+    no lock at all, which is the protection `check_same_thread=False` removed.
+    Two implementations of one query also meant a fix to one silently left the
+    other wrong.
+    """
+    with DB_LOCK:
+        row = ledger.execute(
+            "SELECT max(as_of), max(computed_at) FROM portfolio_summary"
+        ).fetchone()
+        disclosures = warehouse.execute(
+            "SELECT count(*), max(as_of_date) FROM holding_disclosure"
+            " WHERE is_current = 1"
+        ).fetchone()
+    return {
+        "status": "ok",
+        "lookthrough_as_of": row[0] if row else None,
+        "lookthrough_computed_at": row[1] if row else None,
+        "current_disclosures": (disclosures[0] if disclosures else 0) or 0,
+        "latest_disclosure": disclosures[1] if disclosures else None,
+        "views_registered": len(VIEW_REGISTRY),
+    }
+
+
 def create_app(
     ledger: sqlite3.Connection, warehouse: sqlite3.Connection
 ) -> FastAPI:
@@ -105,22 +134,7 @@ def create_app(
     async def health() -> dict[str, Any]:
         """§15.3: report freshness so the UI can say "last updated" honestly
         rather than implying the data is live."""
-        with DB_LOCK:
-            row = ledger.execute(
-                "SELECT max(as_of), max(computed_at) FROM portfolio_summary"
-            ).fetchone()
-            disclosures = warehouse.execute(
-                "SELECT count(*), max(as_of_date) FROM holding_disclosure"
-                " WHERE is_current = 1"
-            ).fetchone()
-        return {
-            "status": "ok",
-            "lookthrough_as_of": row[0] if row else None,
-            "lookthrough_computed_at": row[1] if row else None,
-            "current_disclosures": disclosures[0] if disclosures else 0,
-            "latest_disclosure": disclosures[1] if disclosures else None,
-            "views_registered": len(VIEW_REGISTRY),
-        }
+        return health_snapshot(ledger, warehouse)
 
     @app.get("/api/views/{view_id}")
     async def get_view(
@@ -190,8 +204,16 @@ def create_app(
     # The HTML surface, over the same envelopes the JSON routes return. Mounted
     # last so `/api/*` always wins: a view named `views` could otherwise be
     # shadowed by the page router's `/view/{view_id}`.
-    app.include_router(make_router(ledger, warehouse, build_view))
+    app.include_router(
+        make_router(ledger, warehouse, build_view, health_snapshot)
+    )
     return app
 
 
-__all__ = ["BIND_HOST", "BIND_PORT", "build_view", "create_app"]
+__all__ = [
+    "BIND_HOST",
+    "BIND_PORT",
+    "build_view",
+    "create_app",
+    "health_snapshot",
+]

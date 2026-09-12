@@ -340,6 +340,18 @@ def apply_transaction(
         if t.scheme_id is None:
             raise InvalidOpeningTransaction(f"{t.txn_ref}: unresolved scheme")
 
+        if t.amount is None and not t.nav:
+            # `abs(t.units * (t.nav or 0))` made `cost_total` the stamp duty
+            # alone, so the lot carried ~zero cost and reported essentially its
+            # whole proceeds as a capital gain when sold — and nothing flagged
+            # it, because `confidence` is reserved for the grandfathering path.
+            # CLAUDE.md invariant 5: raise, don't clamp. The two guards above
+            # already refuse a purchase with no units and no scheme; a purchase
+            # with no price belongs with them.
+            raise InvalidOpeningTransaction(
+                f"{t.txn_ref}: no amount and no NAV, so the units have no cost. "
+                f"This is a parse gap, not a free purchase."
+            )
         base = abs(t.amount) if t.amount is not None else abs(t.units * (t.nav or 0))
         # Stamp duty is part of what the units cost. Omitting it understates
         # cost and so overstates the gain.
@@ -477,18 +489,37 @@ def build_book(
     txns: list[Txn],
     tax_classes: dict[str, str] | None = None,
     default_tax_class: str = "equity",
+    grandfathering_navs: dict[str, Decimal] | None = None,
 ) -> LotBook:
     """Replay every transaction in order and return the derived book.
 
     Reversals and the transactions they reverse are dropped first, before the
     engine sees anything — MODULE_1.md §3.2.
+
+    `grandfathering_navs` maps `scheme_id` to that scheme's **31-Jan-2018** NAV,
+    and is what makes §7.5's §112A relief actually apply. Without it this
+    function called `apply_transaction` with the parameter's `None` default, so
+    `effective_cost` returned early for every lot and the relief never ran —
+    while every pre-2018 lot was simultaneously stamped `confidence="low"`, so
+    the symptom was visible and read as a data gap rather than a wiring one.
+    `jobs/backfill_nav.py` clamps `--from` to 31-Jan-2018 specifically to fetch
+    these, and `persist.py` already writes the column.
+
+    Passed as a mapping rather than looked up here: this module does no I/O, and
+    the NAV is point-in-time data that belongs to M0.
     """
     book = LotBook()
     live = drop_reversed(txns)
+    navs = grandfathering_navs or {}
 
     for t in sorted(live, key=lambda x: (x.txn_date, x.txn_seq, x.txn_ref)):
         tax_class = (tax_classes or {}).get(str(t.scheme_id), default_tax_class)
-        apply_transaction(t, book, tax_class=tax_class)
+        apply_transaction(
+            t,
+            book,
+            tax_class=tax_class,
+            grandfathered_nav=navs.get(str(t.scheme_id)),
+        )
 
     _assign_golden_refs(book)
     return book

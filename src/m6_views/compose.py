@@ -18,6 +18,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import UTC, date, datetime
 from typing import Any
+from urllib.parse import urlencode
 
 from src.common.types import ViewState
 from src.m6_views.builder import Scope
@@ -33,12 +34,20 @@ def export_url(view_id: str, scope: Scope, params: dict[str, Any]) -> str:
     It signals the user's data is not trapped in this UI, which for a
     self-hosted single-user tool is most of why they would trust it at all.
     """
-    query = f"?user_id={scope.user_id}&as_of={scope.as_of.isoformat()}"
+    # `urlencode`, not concatenation. `user_id` and `scope_id` are free-form,
+    # and a value carrying an `&`, `=`, `#` or a space truncated the URL at that
+    # point — the CSV route then fell back to its own `Query` defaults and
+    # exported a different user's or a different date's data than the panel
+    # above the link had displayed. §2.5 calls the export a trust feature;
+    # silently exporting the wrong scope is worse than a broken link.
+    fields: list[tuple[str, str]] = [
+        ("user_id", str(scope.user_id)),
+        ("as_of", scope.as_of.isoformat()),
+    ]
     if scope.scope_id:
-        query += f"&scope_id={scope.scope_id}"
-    for key, value in sorted(params.items()):
-        query += f"&{key}={value}"
-    return f"/api/export/{view_id}.csv{query}"
+        fields.append(("scope_id", str(scope.scope_id)))
+    fields.extend((key, str(value)) for key, value in sorted(params.items()))
+    return f"/api/export/{view_id}.csv?{urlencode(fields)}"
 
 
 def ok_envelope(

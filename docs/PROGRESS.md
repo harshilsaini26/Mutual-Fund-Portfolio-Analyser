@@ -7,7 +7,8 @@
 
 ## Current state
 
-**Slice:** V1.9 — **V1 is complete. The acceptance gate passes four of four.**
+**Slice:** V1.10 — **V1 complete, and the whole codebase reviewed.** The
+acceptance gate passes four of four.
 Six views render in a browser with their as-of date, staleness and coverage
 beneath every one of them; three of five AMC formats parse and load; closure
 holds at delta 0.00 from the disclosure through to the pixels.
@@ -15,8 +16,8 @@ holds at delta 0.00 from the disclosure through to the pixels.
 `github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed, by
 decision**: the user is holding the first push until the project is finished.
 Branch `main`, tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (162 files) · 840 tests + 3 skipped ·
-verifier no drift · M3 mutation 35/35 killed, 0 skipped.
+**Gate:** ruff clean · `mypy --strict` clean (163 files) · 867 tests + 3 skipped ·
+verifier no drift · mutation **M1 26/26, M3 35/35**, 0 skipped.
 
 **V1's acceptance gate passes, four of four:**
 
@@ -30,6 +31,25 @@ verifier no drift · M3 mutation 35/35 killed, 0 skipped.
 And §7's success criterion — *"it tells the user something they didn't know"* — is
 on a screen: **13% overlap between the two reference funds, ₹1.33 L of the portfolio
 held through more than one of them, across 17 companies.**
+
+**A whole-project review found 14 defects, 9 of them correctness** (V1-24).
+All fixed. Two were `CLAUDE.md` invariant 1, in one file and both measured:
+`resolution_queue.pending()` ordered its "most valuable first, LIMIT 20" review
+list with `ORDER BY` on a `DECIMAL_TEXT` column, so ₹9,000 outranked ₹25,00,000
+and the reviewer got the twenty *least* significant names; and its `ON CONFLICT`
+accumulated the running total with a bare `+` in SQL, which coerces through a
+float — 0.1 added eleven times stored 1.0999999999999999. **Invariant 1's second
+clause covers any SQL arithmetic on a DECIMAL_TEXT column, not only
+SUM/AVG/TOTAL.**
+
+Three more were the same shape — code that produced a plausible answer rather
+than a correct one or none: §112A grandfathering was implemented, tested and
+**never wired** (`build_book` never passed the NAV, so every pre-2018 lot was
+silently taxed on full cost and flagged low confidence); `has_earlier` was
+`any(date < min(those same dates))`, so MISSING_EARLY_CAS was emitted for every
+negative delta; and `nav_cross_check` could not tell "500 checked, 0 mismatched"
+from "nothing checked", so the V0-05 wrong-plan case reported success at high
+confidence.
 
 **The screen is Jinja and a vendored d3, not React** (V1-23), overriding
 `PLAN.md` §9.10 and `MODULE_6.md` Appendix A. That decision's own argument was
@@ -342,6 +362,37 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S23 · V1.10 — a whole-project review, and 14 fixes (2026-09-12)
+
+Ten angles over 17,500 lines of `src/`. Fourteen findings, nine correctness, all fixed.
+Details in V1-24; four things worth carrying.
+
+**Invariant 1 was broken twice in one file, and neither was caught by the obvious grep.**
+`resolve/queue.py` ordered its review queue with `ORDER BY total_mv_inr DESC` on a
+`DECIMAL_TEXT` column — measured as `['9000', '5000', '2500000', '25000']`, so `LIMIT 20`
+returned the twenty least significant unresolved names to a human whose attention is the
+scarce resource. And its `ON CONFLICT` accumulated with a bare `+` in SQL, which a search
+for `SUM`/`AVG`/`TOTAL` does not find: 0.1 accumulated eleven times stored
+1.0999999999999999, and a large value lost its paise outright.
+
+**Grandfathering was implemented, tested, and never called.** `build_book` omitted the
+parameter and took its `None` default, so §112A relief never applied to any lot — while
+the same lots were stamped `confidence="low"`, which made the symptom look like a data gap.
+`backfill_nav` clamps `--from` to 31-Jan-2018 specifically to fetch that NAV and
+`persist.py` already wrote the column. Only the argument was missing, and nothing failed.
+
+**The mutation harness found four survivors in my own fixes** — two of them in
+grandfathering, where dropping `max(actual, ...)` would let the relief be taken when it
+*hurt* the taxpayer, and dropping `min(fmv, sale)` would manufacture a capital loss. M1 is
+now 26/26 and M3 35/35, 0 skipped.
+
+**And a process note.** I ran the M3 harness in the background and kept editing the same
+tree. Its in-flight mutations looked exactly like corruption — two "stranded" edits, a red
+baseline, two failing tests — and I spent a detour restoring files that did not need it.
+Nothing was wrong; the harness restores in a `finally` and finished 35/35. **A mutation
+harness must not run in the background alongside other work on the same working tree.** It
+is the one tool here that deliberately makes the source wrong.
 
 ### S22 · V1.9 — the screen, and V1 closes (2026-09-12)
 
