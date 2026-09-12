@@ -7,23 +7,35 @@
 
 ## Current state
 
-**Slice:** V1.7 — **M3 is complete, and M6 has a boundary to read through.**
-Three of five AMC formats parse and load; `compute_lookthrough` turns them into
-issuer exposure, closure holds at delta 0.00, and every MODULE_3 table that V1
-needs now stores — §4.2's exposures and contributions, §4.6's summary, and
-§4.3's concentration, overlap and duplication.
+**Slice:** V1.8 — **M6 exists, everywhere except the browser.** Six views build,
+serialise, export and serve over HTTP; three of five AMC formats parse and load;
+closure holds at delta 0.00 all the way through to the payload a chart would
+draw.
 **Repo:** local git, `origin` set to
 `github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed, by
 decision**: the user is holding the first push until the project is finished.
 Branch `main`, tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (130 files) · 681 tests + 3 skipped ·
+**Gate:** ruff clean · `mypy --strict` clean (159 files) · 791 tests + 3 skipped ·
 verifier no drift · M3 mutation 35/35 killed, 0 skipped.
 
-**V1's acceptance gate stands at three of four.** `pct_normalised` sums to
-exactly 100; the look-through total equals portfolio value at delta 0.00;
-`unresolved_pct` is under 2% for every held scheme and is displayed. The fourth —
-*"every chart renders its as-of date, staleness, and coverage"* — is unmet
-because **there are no charts**. M6 is the whole remaining gap.
+**V1's acceptance gate still stands at three of four**, and V1.8 did not close
+it. `pct_normalised` sums to exactly 100; the look-through total equals portfolio
+value at delta 0.00; `unresolved_pct` is under 2% for every held scheme and is
+displayed. The fourth — *"every chart renders its as-of date, staleness, and
+coverage"* — needs a chart, and every assertion in V1.8 is on a Python object or
+a JSON body. **V1.9 is what closes it.**
+
+**M6's backend is built** (V1-22). `ViewEnvelope` carries provenance as required
+fields with no defaults; `assemble_caveats` is the single source of caveat text;
+six builders turn M1 and M3 into payloads; CSV export carries §13.1's provenance
+header; FastAPI serves it on 127.0.0.1. Verified against the real warehouse
+through a live uvicorn — every provenance field populated, every Decimal a
+string, **closure delta 0.00 on the payload a chart would draw.**
+
+Five of §8.1's eleven portfolio views are **absent rather than stubbed**: the
+treemap, sector tilt, mcap allocation, redundancy and marginal contribution all
+need M2 or M5. §5.3's startup check asserts the registry and the catalogue match
+exactly, so an unbuildable view cannot quietly ship as a screen that never works.
 
 **`LookThroughProvider` is implemented** (V1-21). `MODULE_6.md` §1.3 forbids M6
 from touching analytics tables, so until this existed no view could be built
@@ -33,6 +45,12 @@ seam, deliberately, because issuer names are Zone A and exposures are Zone B.
 What is not built (`redundancy`, `marginal`, `tilts`, `sector_exposure`) raises
 and names the missing module rather than returning an empty list that reads as
 "measured, and there is nothing".
+
+**Two spec defects found and recorded, not coded around.** §5.2's closure and
+weight tolerances contradict each other above ₹10,000 of position value (V1-20).
+And §9.1's `group_indian` disagrees with §19.4's own test table on the same
+input — `12,34,56,78,901` versus `1,23,45,67,89,01`; the code is right and the
+tests follow the code (V1-22).
 
 **Two figures the report could not make before:**
 
@@ -83,21 +101,18 @@ the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.0000
 writing the database, and invariant 5 asserted against real tables that get DROPped
 and rebuilt — not against two in-memory books.
 
-**Next: M6.** It is the only unmet V1 gate criterion and everything it needs to
-render is computed, stored and reachable through a provider. V1.8 builds the
-contract layer (`ViewEnvelope` is already frozen from Slice Zero, plus
-`assemble_caveats`, states, formatting, colours) and the V1 launch surface's
-builders — `portfolio_summary`, `fund_list`, `lookthrough_sankey`,
-`overlap_heatmap`, `holdings_treemap`, `concentration_curve`,
-`duplication_summary` — with FastAPI and CSV export. V1.9 puts them on a screen.
+**Next: V1.9, the screen.** The last unmet gate criterion, and the last thing
+between this project and its own launch story. Jinja templates over the existing
+API, `d3-sankey` for the flagship, and §16.3's `ViewContainer` — the wrapper no
+chart renders outside of — as a macro. Nothing new is computed; V1.8's payloads
+are already the right shape.
 
 **The frontend decision is taken and not yet recorded.** `PLAN.md` §9.10 and
 `MODULE_6.md` Appendix A lock React 18 + Vite + TypeScript. V1.9 overrides it:
 FastAPI + Jinja + a pinned d3, no npm and no build step. The reasoning behind the
 locked decision was that the Sankey is the flagship — but the Sankey is
-`d3-sankey` either way, and React was never doing that work. §16.3's rule that no
-chart renders outside `ViewContainer` survives as a Jinja macro. **Write the ADR
-when V1.9 lands.**
+`d3-sankey` either way, and React was never doing that work. **Write the ADR when
+V1.9 lands.**
 
 Then, in whatever order: SBI, and Kotak once a file is supplied by hand; §6.5
 member-level ZIP staging (ICICI ships 146 workbooks in one archive); V1 build
@@ -132,6 +147,14 @@ key; `--allow-unencrypted` was removed in V1-16 when `sqlcipher3` landed):
 
 ```bash
 python -m jobs.import_cas --file statement.pdf --user USER-01
+```
+
+**Serve the views** (prompts for the ledger key; loopback only, no auth):
+
+```bash
+python -m jobs.serve
+#   http://127.0.0.1:8765/api/views
+#   http://127.0.0.1:8765/api/docs
 ```
 
 `backfill_nav` clamps `--from` to 31-Jan-2018 and discovers AMFI's AMC codes on
@@ -304,6 +327,50 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S21 · V1.8 — M6's backend, and a spec that fails its own test (2026-09-12)
+
+Six views build, serialise, export and serve. Everything except the browser, and
+deliberately so: this is the half that carries the honesty commitments, and it is the half
+that can be tested without one. Details in V1-22; four things worth carrying forward.
+
+**§9.1's `group_indian` and §19.4's test table disagree on the same input.** Running the
+spec's own function on the spec's own test case gives `12,34,56,78,901.00` where the table
+expects `1,23,45,67,89,01.00`. The code is right — Indian grouping is
+last-three-then-pairs, so a grouped number always ends in a three-digit block — and the
+tests follow the code. That property is asserted directly rather than row by row, because
+it is the one the table violates. Second spec defect this project has found by
+implementing rather than reading, after §5.2's contradictory tolerances (V1-20).
+
+**Five of §8.1's eleven portfolio views are absent, not stubbed.** The treemap, sector
+tilt, mcap allocation, redundancy and marginal contribution all need M2 or M5. §5.3's
+startup check asserts the registry and the catalogue match exactly in both directions, so
+an unbuildable view is an honest gap the check enforces rather than a screen that ships
+broken. Same reasoning one level down: the provider's unbuilt methods raise and name the
+missing module instead of returning `[]`, which reads as "measured, and there is nothing".
+
+**The async-route reasoning was wrong and the first API test caught it.** The claim was
+that `async def` routes run on the event loop's single thread so sqlite3's same-thread
+check would be satisfied. It is not — the loop runs in whatever thread the server started
+it in. It surfaced as a `ProgrammingError` swallowed into a well-formed `error` envelope,
+which is precisely how a wrong assumption hides when the error path works. `connect` and
+`connect_ledger` now take an explicit `check_same_thread`, defaulting to `True`; the API is
+the only caller that turns it off and it puts the guarantee back with a lock.
+
+**§19.3's static check did its job before it was written.** `concentration_curve` needs a
+Lorenz curve, and each point is a cumulative share of a cumulative share — two divisions on
+provider-sourced values, which §2.1 forbids in a view. `lorenz_points` went into M3
+instead, test-first, with V1-21's signed-pool rule. The check that forbids division in
+`builders/` is what kept it out.
+
+Verified against the real warehouse through a live uvicorn, not just `TestClient`:
+**closure delta 0.00 on the payload a chart would draw**, every synthetic pinned and
+visible, overlap 13.316447% and duplication 6.658224% unchanged through the whole stack,
+and five KPI tiles honestly `None` because M1's returns engine has not run.
+
+**The V1 gate did not move, and this slice must not be reported as closing it.** Every
+assertion here is on a Python object or a JSON body. "Every chart renders its as-of date,
+staleness, and coverage" needs a chart.
 
 ### S20 · V1.6 the review fixes, V1.7 the M3 boundary (2026-09-12)
 

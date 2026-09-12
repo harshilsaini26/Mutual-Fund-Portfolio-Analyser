@@ -140,15 +140,26 @@ def register_decimal_sqlite(module: Any = sqlite3) -> None:
     module.register_converter(DECIMAL_SQLITE_TYPE, _convert_decimal)
 
 
-def connect(path: str) -> sqlite3.Connection:
-    """Open a Zone B connection with Decimal handling already wired up.
+def connect(path: str, *, check_same_thread: bool = True) -> sqlite3.Connection:
+    """Open a connection with Decimal handling already wired up.
 
     `detect_types=PARSE_DECLTYPES` is what makes the registered converter fire.
     Opening a connection any other way returns `str` for every money column, so
-    prefer this over `sqlite3.connect` for anything touching Zone B.
+    prefer this over `sqlite3.connect` for anything touching a Decimal column.
+
+    `check_same_thread=False` is an explicit opt-out, not a default. sqlite3's
+    same-thread check is a real safety property — a connection shared across
+    threads without external serialisation corrupts its own cursor state — and
+    the only caller that needs it off is M6's HTTP API, which serves requests on
+    an event loop that is not the thread that opened the database. It takes a
+    lock around every use; see `src/m6_views/api/app.py`.
     """
     register_decimal_sqlite()
-    return sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+    return sqlite3.connect(
+        path,
+        detect_types=sqlite3.PARSE_DECLTYPES,
+        check_same_thread=check_same_thread,
+    )
 
 
 # Registered on import so that a bare `sqlite3.connect(...)` still writes

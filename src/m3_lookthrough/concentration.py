@@ -15,14 +15,46 @@ Every sum is a Python `Decimal` (`CLAUDE.md` invariant 1).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Protocol, TypeVar
 
 from src.common.types import ExposureScope, IssuerId
 from src.m3_lookthrough.engine import Exposure
 
 #: HHI and Gini are ratios; six decimals is far finer than the input weights.
 METRIC_Q = Decimal("0.000001")
+
+
+class Exposed(Protocol):
+    """The three fields a concentration figure needs from an exposure.
+
+    There are two `Exposure` dataclasses in this project — the engine's, which
+    the computation produces, and the frozen contract's, which M4 and M6
+    consume (V1-21). Both carry these three, so typing against the shape rather
+    than either class lets `filter_scope` and `lorenz_points` be called from
+    both sides without a conversion. A conversion in a view builder would be a
+    second place the two shapes meet, and V1-21 recorded that the provider is
+    the only one.
+
+    Declared as properties rather than attributes deliberately: mypy treats a
+    Protocol's plain attributes as invariant, so `instrument_class: str | None`
+    here would reject the engine's `str`. Read-only members are covariant, and
+    nothing here writes.
+    """
+
+    @property
+    def exposure_inr(self) -> Decimal: ...
+
+    @property
+    def instrument_class(self) -> str | None: ...
+
+    @property
+    def is_synthetic(self) -> bool: ...
+
+
+E = TypeVar("E", bound=Exposed)
 
 
 @dataclass(frozen=True)
@@ -41,7 +73,7 @@ class Concentration:
     largest_issuer_id: IssuerId | None = None
 
 
-def filter_scope(exposures: list[Exposure], scope: str) -> list[Exposure]:
+def filter_scope(exposures: Sequence[E], scope: str) -> list[E]:
     """§8.2. Synthetics never enter a concentration denominator, in any scope."""
     real = [e for e in exposures if not e.is_synthetic]
     if scope == "all":
@@ -111,3 +143,43 @@ def concentration(exposures: list[Exposure], scope: ExposureScope) -> Concentrat
         gini=gini.quantize(METRIC_Q) if gini is not None else None,
         largest_issuer_id=pool[0].issuer_id,
     )
+
+
+def lorenz_points(
+    exposures: Sequence[Exposed], scope: ExposureScope = "all"
+) -> list[tuple[Decimal, Decimal]]:
+    """§8.3's Lorenz curve: the shape `gini_coefficient` summarises to one number.
+
+    Returns `(cumulative share of issuers, cumulative share of exposure)`,
+    smallest first, starting at the origin and ending at (1, 1). The diagonal is
+    perfect equality; the further the curve sags below it, the more concentrated
+    the portfolio.
+
+    **Built smallest-first, and that is not a presentation choice.** Ordering
+    from the largest draws the mirror image — a curve arcing *above* the
+    diagonal, which is a perfectly plausible-looking chart that inverts the
+    meaning.
+
+    **This lives in M3, not in M6's builder.** `MODULE_6.md` §2.1 forbids the
+    view layer from deriving a number and gives `value / total * 100` as its
+    example of the mistake; each point here is a cumulative share of a
+    cumulative share. A number computed in a view is a second source of truth
+    nobody can reconcile against the first.
+
+    Returns `[]` for a signed pool, for the same reason `gini_coefficient`
+    returns None (V1-21): with a negative exposure the cumulative share is not
+    monotonic and the curve crosses its own diagonal. An absent curve says the
+    question does not apply; a drawn one would not.
+    """
+    pool = sorted(filter_scope(exposures, scope), key=lambda e: e.exposure_inr)
+    total = sum((e.exposure_inr for e in pool), Decimal(0))
+    if not pool or total <= 0 or any(e.exposure_inr < 0 for e in pool):
+        return []
+
+    n = Decimal(len(pool))
+    points = [(Decimal(0), Decimal(0))]
+    running = Decimal(0)
+    for index, exposure in enumerate(pool, start=1):
+        running += exposure.exposure_inr
+        points.append((Decimal(index) / n, running / total))
+    return points

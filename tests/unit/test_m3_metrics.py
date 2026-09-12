@@ -21,7 +21,11 @@ from pathlib import Path
 import pytest
 from src.common.types import IssuerId, SchemeId, UserId
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
-from src.m3_lookthrough.concentration import concentration, gini_coefficient
+from src.m3_lookthrough.concentration import (
+    concentration,
+    gini_coefficient,
+    lorenz_points,
+)
 from src.m3_lookthrough.duplication import portfolio_duplication
 from src.m3_lookthrough.engine import Contribution, Exposure, IssuerWeight
 from src.m3_lookthrough.overlap import Overlap, pairwise_overlap
@@ -242,6 +246,69 @@ def test_concentration_reports_no_gini_for_a_portfolio_holding_a_net_short() -> 
 def test_concentration_still_reports_gini_for_a_long_only_portfolio() -> None:
     got = concentration([e("ACME", "60000"), e("BETA", "40000")], "all")
     assert got.gini is not None
+
+
+# --- §8.3 the Lorenz curve ---------------------------------------------------
+#
+# This lives in M3 rather than in M6's builder, and not for tidiness: MODULE_6
+# §2.1 forbids the view layer from deriving a number, and its WRONG example is
+# literally `pct = holding.value / total * 100`. A Lorenz point is a cumulative
+# share of a cumulative share — two divisions on provider-sourced values — so
+# computing it in a builder would be the exact thing §19.3's static check exists
+# to catch.
+
+
+def test_the_lorenz_curve_starts_at_the_origin_and_ends_at_one() -> None:
+    """Both endpoints are definitional. A curve that does not reach (1, 1) is
+    not a Lorenz curve and the Gini beside it would not match it."""
+    points = lorenz_points([e("ACME", "60000"), e("BETA", "40000")])
+    assert points[0] == (Decimal(0), Decimal(0))
+    assert points[-1] == (Decimal(1), Decimal(1))
+
+
+def test_a_perfectly_even_portfolio_is_the_diagonal() -> None:
+    """Four equal issuers: 25% of the companies hold 25% of the money."""
+    equal = [e(f"I{i}", "25000") for i in range(4)]
+    points = lorenz_points(equal)
+    assert points == [
+        (Decimal(0), Decimal(0)),
+        (Decimal("0.25"), Decimal("0.25")),
+        (Decimal("0.5"), Decimal("0.5")),
+        (Decimal("0.75"), Decimal("0.75")),
+        (Decimal(1), Decimal(1)),
+    ]
+
+
+def test_the_curve_is_built_smallest_first() -> None:
+    """Lorenz reads left-to-right from the poorest share. Starting from the
+    largest would draw the curve above the diagonal — a mirror image that looks
+    like a plausible chart and inverts the meaning."""
+    points = lorenz_points([e("BIG", "90000"), e("SMALL", "10000")])
+    assert points[1] == (Decimal("0.5"), Decimal("0.1"))
+
+
+def test_synthetics_are_excluded_like_every_other_concentration_figure() -> None:
+    """§8.2's denominator trap. __CASH__ is not a company and counting it would
+    flatten the curve toward the diagonal."""
+    with_cash = [
+        e("ACME", "60000"),
+        e("BETA", "40000"),
+        e("__CASH__", "100000", "cash", synth=True),
+    ]
+    assert lorenz_points(with_cash) == lorenz_points(
+        [e("ACME", "60000"), e("BETA", "40000")]
+    )
+
+
+def test_a_signed_pool_has_no_lorenz_curve() -> None:
+    """Same reason Gini goes None (V1-21): with a negative weight the cumulative
+    share is not monotonic and the curve crosses its own diagonal. An empty list
+    says so; a drawn curve would not."""
+    assert lorenz_points([e("ACME", "100000"), e("SHORTED", "-5000")]) == []
+
+
+def test_an_empty_pool_has_no_curve_rather_than_a_degenerate_one() -> None:
+    assert lorenz_points([]) == []
 
 
 # --- §4.3 storage: the rebuild rule -----------------------------------------

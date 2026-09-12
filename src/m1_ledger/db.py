@@ -77,6 +77,7 @@ def connect_ledger(
     *,
     key: str | None = None,
     allow_unencrypted: bool = False,
+    check_same_thread: bool = True,
 ) -> sqlite3.Connection:
     """Open Zone B with Decimal handling and, where possible, encryption.
 
@@ -87,6 +88,11 @@ def connect_ledger(
     Raises `EncryptionUnavailable` rather than degrading. The two ways to open
     a database are therefore "encrypted" and "explicitly, visibly not" — there
     is no third that happens by accident.
+
+    `check_same_thread=False` is an explicit opt-out with one caller: M6's HTTP
+    API, which serves requests on an event loop running in a thread that did not
+    open this connection. It serialises every use behind a lock. Nothing else
+    should pass it.
     """
     register_decimal_sqlite()
     driver = sqlcipher_module()
@@ -97,7 +103,9 @@ def connect_ledger(
 
     if driver is not None and key:
         conn: sqlite3.Connection = driver.connect(
-            path, detect_types=sqlite3.PARSE_DECLTYPES
+            path,
+            detect_types=sqlite3.PARSE_DECLTYPES,
+            check_same_thread=check_same_thread,
         )
         # Must precede every other statement on the connection, including the
         # schema read SQLCipher itself performs to validate the key.
@@ -124,7 +132,11 @@ def connect_ledger(
             f"allow_unencrypted=True only for a database holding no real data."
         )
 
-    return sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+    return sqlite3.connect(
+        path,
+        detect_types=sqlite3.PARSE_DECLTYPES,
+        check_same_thread=check_same_thread,
+    )
 
 
 def apply_ledger_schema(

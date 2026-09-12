@@ -12,6 +12,10 @@ dependencies = [
     "pyyaml",
     "openpyxl",
     "httpx",
+    # M6's API. Loopback-bound and single-user (MODULE_6 §15.3) — this is a
+    # local server for one person, not a deployment.
+    "fastapi",
+    "uvicorn",
 ]
 
 [tool.ruff]
