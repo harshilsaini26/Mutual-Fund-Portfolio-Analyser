@@ -7,16 +7,53 @@
 
 ## Current state
 
-**Slice:** V1.4 — **the look-through works and persists.** Three of five AMC
-formats parse and load; `compute_lookthrough` turns them into issuer exposure,
-closure holds at delta 0.00, `scripts/show_lookthrough.py` prints it, and
-MODULE_3 §4.2/§4.6's tables store it.
+**Slice:** V1.7 — **M3 is complete, and M6 has a boundary to read through.**
+Three of five AMC formats parse and load; `compute_lookthrough` turns them into
+issuer exposure, closure holds at delta 0.00, and every MODULE_3 table that V1
+needs now stores — §4.2's exposures and contributions, §4.6's summary, and
+§4.3's concentration, overlap and duplication.
 **Repo:** local git, `origin` set to
-`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed**:
-the credential helper cannot prompt in this environment, so the first `git push
--u origin main` has to be run from a terminal. Branch `main`, tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (124 files) · 620 tests + 3 skipped ·
-verifier no drift.
+`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed, by
+decision**: the user is holding the first push until the project is finished.
+Branch `main`, tree clean.
+**Gate:** ruff clean · `mypy --strict` clean (130 files) · 681 tests + 3 skipped ·
+verifier no drift · M3 mutation 35/35 killed, 0 skipped.
+
+**V1's acceptance gate stands at three of four.** `pct_normalised` sums to
+exactly 100; the look-through total equals portfolio value at delta 0.00;
+`unresolved_pct` is under 2% for every held scheme and is displayed. The fourth —
+*"every chart renders its as-of date, staleness, and coverage"* — is unmet
+because **there are no charts**. M6 is the whole remaining gap.
+
+**`LookThroughProvider` is implemented** (V1-21). `MODULE_6.md` §1.3 forbids M6
+from touching analytics tables, so until this existed no view could be built
+without breaking that rule on day one. `SqliteLookThroughProvider` holds a Zone A
+connection and a Zone B one — the only place in the codebase that crosses the
+seam, deliberately, because issuer names are Zone A and exposures are Zone B.
+What is not built (`redundancy`, `marginal`, `tilts`, `sector_exposure`) raises
+and names the missing module rather than returning an empty list that reads as
+"measured, and there is nothing".
+
+**Two figures the report could not make before:**
+
+- **duplication — 6.658224% of the portfolio, ₹133,164.47 across 17 issuers.**
+  §9.4's question, which pairwise overlap does not answer: how much of the money
+  is a company already held by another fund.
+- **`overlap_value_inr`** — the overlap figure in rupees. HDFC Flexi Cap ×
+  Nippon Growth Mid Cap is 13.32%, 17 shared issuers of 156, **₹133,164 held by
+  both**.
+
+Those two agree **to the paisa**, from functions sharing no code and reading
+different tables. That is not a coincidence: at *n* = 2 they are the same sum
+rearranged. It is a real cross-check and it expires the moment a third fund
+loads.
+
+**Gini goes NULL on a signed pool** (V1-21, closing V1-20's deferral). A short
+leg makes an issuer's net exposure negative, and the Lorenz construction Gini
+summarises assumes a non-negative pool — the formula still returns an
+ordinary-looking number that means nothing. HDFC discloses exactly this (V1-07),
+so it is not hypothetical. HHI, effective-N and the topN figures are unaffected;
+only the undefined one goes absent, rendered as an em dash.
 
 **The warehouse can be 44x smaller** (V1-19). 99.81% of its NAV history served
 schemes nobody holds, because AMFI's history export is keyed on the AMC rather
@@ -45,11 +82,27 @@ the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.0000
 **Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
 writing the database, and invariant 5 asserted against real tables that get DROPped
 and rebuilt — not against two in-memory books.
-**Next:** §4.3's `portfolio_concentration` and `fund_overlap` (both computed,
-neither stored); then SBI, and Kotak once a file is supplied; then §6.5
-member-level ZIP staging
-(ICICI ships 146 workbooks in one archive), then V1 build items 5, 7 and 8 —
-Bhavcopy prices, `scheme_issuer_weight`, and the look-through engine itself.
+
+**Next: M6.** It is the only unmet V1 gate criterion and everything it needs to
+render is computed, stored and reachable through a provider. V1.8 builds the
+contract layer (`ViewEnvelope` is already frozen from Slice Zero, plus
+`assemble_caveats`, states, formatting, colours) and the V1 launch surface's
+builders — `portfolio_summary`, `fund_list`, `lookthrough_sankey`,
+`overlap_heatmap`, `holdings_treemap`, `concentration_curve`,
+`duplication_summary` — with FastAPI and CSV export. V1.9 puts them on a screen.
+
+**The frontend decision is taken and not yet recorded.** `PLAN.md` §9.10 and
+`MODULE_6.md` Appendix A lock React 18 + Vite + TypeScript. V1.9 overrides it:
+FastAPI + Jinja + a pinned d3, no npm and no build step. The reasoning behind the
+locked decision was that the Sankey is the flagship — but the Sankey is
+`d3-sankey` either way, and React was never doing that work. §16.3's rule that no
+chart renders outside `ViewContainer` survives as a Jinja macro. **Write the ADR
+when V1.9 lands.**
+
+Then, in whatever order: SBI, and Kotak once a file is supplied by hand; §6.5
+member-level ZIP staging (ICICI ships 146 workbooks in one archive); V1 build
+item 5, Bhavcopy → `security_price` / `security_adjustment`, which is what makes
+`weight_basis = 'drift_adj'` mean anything; and §7's `direct_holding`.
 
 **Run everything:**
 
@@ -74,11 +127,11 @@ MF_CONTACT_EMAIL=you@example.com python -m jobs.load_holdings --amc hdfc
 python -m jobs.load_holdings --amc icici --file <extracted-member>.xlsx --scheme <ISIN>
 ```
 
-**Import a CAS** (prompts for the password; `--allow-unencrypted` is required until
-a SQLCipher driver is installed — V1-13):
+**Import a CAS** (prompts for the statement password, then for the Zone B ledger
+key; `--allow-unencrypted` was removed in V1-16 when `sqlcipher3` landed):
 
 ```bash
-python -m jobs.import_cas --file statement.pdf --user USER-01 --allow-unencrypted
+python -m jobs.import_cas --file statement.pdf --user USER-01
 ```
 
 `backfill_nav` clamps `--from` to 31-Jan-2018 and discovers AMFI's AMC codes on
@@ -251,6 +304,58 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S20 · V1.6 the review fixes, V1.7 the M3 boundary (2026-09-12)
+
+Two slices. The first fixed all 13 findings from a review of `10a0102..HEAD`; the second
+finished M3 so M6 has something legitimate to read.
+
+**V1.6 — the 13 findings** (V1-20). Five were correctness, four reproduced before being
+reported. The one worth remembering is not a code defect at all: **§5.2's two tolerances
+contradict each other.** Closure is ±₹1 absolute and the weight check is ±0.01 percentage
+points, so above ₹10,000 of position value the weight guard accepts data the closure guard
+then refuses. Measured — 99.995% on a ₹1 crore position raised `ClosureViolation` for a
+discrepancy the line above had explicitly permitted. Fixed by making the engine accumulate
+the rupee drift it actually tolerated and pass it to `assert_closure`, so closure is exact
+to ₹1 *beyond* the slack already granted and unchanged for correct data.
+
+Also in V1.6: an issuer held **only** short crashed the weight materialisation (a
+`defaultdict(Decimal)` that a negative weight could never beat); a restatement left behind
+the issuers it dropped, so a scheme's weights summed to 120; `show_lookthrough` never
+re-materialised at all, so every report after a restatement used the withdrawn revision
+silently; unknown staleness scored `high`; and §5.5's "on or before" bound was
+unimplemented, so a look-through could use holdings from after its own date and store a
+**negative** staleness. `overlap.py` — 106 tested lines nothing called — was wired into the
+report, and immediately paid: HDFC Flexi Cap × Nippon Growth Mid Cap **overlap 13.32%, 17
+shared issuers of 156**.
+
+**And the mutation harness was lying.** Hoisting a helper removed the line one mutant
+targeted; the harness reported `15/15 killed` while that mutant had merely been *skipped*.
+A score that counts an un-run mutant as passing is worse than no score. Skips are now
+separated and named, everywhere.
+
+**V1.7 — M3's boundary** (V1-21). `LookThroughProvider` implemented over the stored
+tables, plus §4.3's three metrics persisted (`portfolio_concentration`, `fund_overlap`,
+`portfolio_duplication`), plus §9.4's duplication computation, plus `overlap_value_inr`,
+plus the signed-pool Gini decision V1-20 had deferred to exactly this slice. Details in
+V1-21; the two things worth carrying forward:
+
+- **Two `Exposure` dataclasses meet in one place, by design.** The engine's and the frozen
+  contract's differ, and R3 freezes the contract's because M4 depends on its shape. The
+  adapter reads the stored columns directly rather than back-filling from
+  `load_exposures` — a back-fill would have to invent `holdings_as_of`, which is stored
+  precisely because it cannot be re-derived.
+- **Duplication and `overlap_value_inr` agree to the paisa** — ₹133,164.47 — from functions
+  sharing no code and reading different tables. At *n* = 2 they are the same sum
+  rearranged, so the agreement is an identity rather than luck, and it expires when a third
+  fund loads.
+
+Mutation: 35 mutants, **5 survived on the first pass**, all in the new persistence module
+and all genuine test gaps — the delete-then-insert rule copied from V1-18 and V1-20's
+lesson and then never tested, a write-only `largest_issuer_pct` column, and `drop_metrics`
+untouched by any test. Tests added; **35/35 killed, 0 skipped**. That is the gate doing the
+job it exists for: the code was right and nothing held it right, which is how a lesson gets
+unlearned by the next edit.
 
 ### S19 · M3 lands, Zone B is encrypted, and the warehouse loses 98% (2026-09-06)
 
@@ -713,32 +818,21 @@ seven) plus 61 dataclasses. SZ-01…SZ-12; the substantive ones were the
 
 ## Next
 
-**Finish V1 build item 3** — Kotak, SBI and Nippon. Two formats are in hand and
-they disagreed on column order, date format, percentage scale and where a
-subtotal lives; both disagreements were settled by rules in the shared reader
-rather than per-AMC code, so the third format is the test of whether that
-generalises or whether V1-10's arithmetic was tuned to a sample of two.
-
-Then **§6.5 member-level ZIP staging** — ICICI publishes 146 per-scheme
-workbooks in one 25 MB archive, so until the ZIP is archived as a single
-`raw_file` with each member staged under its own name, ICICI loads only via
-`--file --scheme` and has no manifest entry.
-
-Then the engine that consumes all of it — **V1 build items 5, 7 and 8**:
-Bhavcopy into `security_price` / `security_adjustment`, `scheme_issuer_weight`
-materialisation, and look-through aggregation with pairwise overlap and
-concentration. Three of V1's four gate criteria depend on those and on M6, and
-none of the three has been started.
+See **Current state** at the top of this file — it is the live list. In short: **M6**, the
+only unmet V1 gate criterion, then SBI and Kotak, then §6.5 ZIP staging, then Bhavcopy
+prices.
 
 **Carried, unblocked, not urgent:**
 
-- `pdf.py` stays untested until a real password-protected CAS exists.
-- V0's own build item 9 — KPI cards and a position list — was never built. The
-  V0 acceptance gate does not require a UI and passes without one, but the
-  slice is not complete against `PLAN.md` §7's build list, and V1's gate needs
-  M6 regardless.
-- The sector taxonomy deferred in V1-03, after I throttled niftyindices by
-  probing it outside the rate limiter.
-- `/mf/holdings` from Kite Connect as a manual reconciliation witness on the
-  ledger's output (V1-09) — worth doing, needs no schema change, and is the
-  first outside check on what the ledger computes rather than what it reads.
+- `pdf.py` stays untested until a real password-protected CAS exists in
+  `tests/fixtures/local/`.
+- The sector taxonomy deferred in V1-03, after niftyindices was throttled by a probe made
+  outside the rate limiter. M5 needs it, and so do `tilts()` and `sector_exposure()` — both
+  currently raise and name it.
+- `/mf/holdings` from Kite Connect as a manual reconciliation witness on the ledger's
+  output (V1-09) — worth doing, needs no schema change, and is the first outside check on
+  what the ledger *computes* rather than what it reads.
+- Which source is right on 2026-03-12 — mfapi says 2111.846, AMFI says 2111.779. One
+  mismatch in 2,117 dates, unresolved.
+- The thin-warehouse copy still carries `raw_file` rows for archived NAV files whose rows
+  it no longer holds. Harmless; pruning provenance is worse than over-reporting it.

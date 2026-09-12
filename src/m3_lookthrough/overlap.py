@@ -49,6 +49,10 @@ class Overlap:
     as_of_b: date
     as_of_gap_days: int
     aligned: bool
+    #: §4.3's `overlap_value_inr` — rupees held by both funds at once. `None`
+    #: when either position's value is unknown, which is not the same as zero:
+    #: zero would read as "nothing is duplicated".
+    overlap_value_inr: Decimal | None = None
 
 
 def pairwise_overlap(
@@ -58,14 +62,40 @@ def pairwise_overlap(
     as_of_b: date,
     weights_a: list[IssuerWeight],
     weights_b: list[IssuerWeight],
+    value_a: Decimal | None = None,
+    value_b: Decimal | None = None,
 ) -> Overlap:
-    """§9.1. Two funds' issuer weights in, one comparable figure out."""
+    """§9.1. Two funds' issuer weights in, one comparable figure out.
+
+    `value_a` / `value_b` are the two positions' rupee values. Supply both and
+    §4.3's `overlap_value_inr` is computed; omit either and it is `None`. They
+    are optional because `--equal` and every caller written before this slice
+    has weights without values, and because an unknown value must not become a
+    zero rupee figure.
+    """
     wa = {x.issuer_id: x.weight for x in weights_a if not is_synthetic(str(x.issuer_id))}
     wb = {x.issuer_id: x.weight for x in weights_b if not is_synthetic(str(x.issuer_id))}
 
     common = wa.keys() & wb.keys()
     union = wa.keys() | wb.keys()
     overlap = sum((min(wa[i], wb[i]) for i in common), Decimal(0))
+
+    # §4.3's rupee figure, summed PER ISSUER rather than derived from
+    # `overlap_pct`. The percentage is `Σ min(w_a, w_b)` in each fund's own
+    # weights, so multiplying it by any single total answers a question about
+    # neither fund. min(w_a·V_a, w_b·V_b) is the amount of that issuer both
+    # funds hold simultaneously, which is what "duplicated in rupees" means.
+    overlap_value = (
+        sum(
+            (
+                min(wa[i] * value_a / 100, wb[i] * value_b / 100)
+                for i in common
+            ),
+            Decimal(0),
+        )
+        if value_a is not None and value_b is not None
+        else None
+    )
 
     # The equity-only view renormalises within each fund's equity sleeve, so a
     # hybrid fund is not penalised for the part that is not equity at all.
@@ -103,4 +133,5 @@ def pairwise_overlap(
         as_of_b=as_of_b if forward else as_of_a,
         as_of_gap_days=gap,
         aligned=(gap == 0),
+        overlap_value_inr=overlap_value,
     )

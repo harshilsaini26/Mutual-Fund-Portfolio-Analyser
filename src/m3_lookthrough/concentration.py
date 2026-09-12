@@ -51,8 +51,27 @@ def filter_scope(exposures: list[Exposure], scope: str) -> list[Exposure]:
     raise ValueError(f"unknown exposure scope {scope!r}")
 
 
-def gini_coefficient(weights: list[Decimal]) -> Decimal:
-    """§8.3. More intuitive than HHI for a lay reader; feeds M6's Lorenz curve."""
+def gini_coefficient(weights: list[Decimal]) -> Decimal | None:
+    """§8.3. More intuitive than HHI for a lay reader; feeds M6's Lorenz curve.
+
+    **`None` when any weight is negative.** Gini summarises a Lorenz curve, and
+    that construction assumes a non-negative pool: with a short leg the
+    cumulative share is not monotonic, the "curve" crosses its own diagonal, and
+    the formula below still returns a perfectly ordinary-looking number between
+    -1 and 1 that describes nothing. V1-07 records that HDFC discloses exactly
+    this — Eternal Limited's short at -0.001% — so an issuer's net exposure
+    going negative is a real case, not a hypothetical.
+
+    An absent figure is the honest output. §4.3 types the column nullable, and
+    M6 renders a null as an em dash (§9.3) rather than as zero. V1-20 deferred
+    this decision to §4.3's persistence; this is that slice.
+
+    Zero still means zero: an empty pool, or one that is entirely worthless, has
+    no inequality to measure, which is a different statement from "the question
+    does not apply".
+    """
+    if any(x < 0 for x in weights):
+        return None
     ascending = sorted(weights)
     n = len(ascending)
     total = sum(ascending, Decimal(0))
@@ -73,6 +92,7 @@ def concentration(exposures: list[Exposure], scope: ExposureScope) -> Concentrat
 
     weights = [e.exposure_inr / total for e in pool]
     hhi = sum((x * x for x in weights), Decimal(0))
+    gini = gini_coefficient(weights)
 
     def top(n: int) -> Decimal:
         # Saturates rather than overrunning: `top10_pct` of a three-issuer
@@ -88,6 +108,6 @@ def concentration(exposures: list[Exposure], scope: ExposureScope) -> Concentrat
         top5_pct=top(5),
         top10_pct=top(10),
         top20_pct=top(20),
-        gini=gini_coefficient(weights).quantize(METRIC_Q),
+        gini=gini.quantize(METRIC_Q) if gini is not None else None,
         largest_issuer_id=pool[0].issuer_id,
     )
