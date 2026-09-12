@@ -7,152 +7,106 @@
 
 ## Current state
 
-**Slice:** V1.10 — **V1 complete, and the whole codebase reviewed.** The
-acceptance gate passes four of four.
-Six views render in a browser with their as-of date, staleness and coverage
-beneath every one of them; three of five AMC formats parse and load; closure
-holds at delta 0.00 from the disclosure through to the pixels.
+**Slice:** V1.10 — V1 is complete and the whole codebase has been reviewed.
 **Repo:** local git, `origin` set to
-`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed, by
-decision**: the user is holding the first push until the project is finished.
-Branch `main`, tree clean.
+`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser`. **41 commits
+unpushed, by decision** — the first push is being held until the project is
+finished. Branch `main`, tree clean.
 **Gate:** ruff clean · `mypy --strict` clean (163 files) · 867 tests + 3 skipped ·
 verifier no drift · mutation **M1 26/26, M3 35/35**, 0 skipped.
 
-**V1's acceptance gate passes, four of four:**
+### What it does
+
+Point it at a CAS statement and a few AMC disclosure files and it tells you what
+you actually own beneath your funds. `python -m jobs.serve` opens six views on
+`127.0.0.1`, every one of them carrying its as-of date, staleness and coverage in
+a footer that cannot be switched off.
+
+Three of five AMC formats parse and load (HDFC, ICICI, Nippon). Closure holds at
+delta **0.00** from the disclosure through to the pixels — the same rupees the
+engine asserts are the rupees the Sankey draws.
+
+### The V1 acceptance gate, four of four
 
 | Criterion | |
 |---|---|
 | `pct_normalised` sums to exactly 100 per scheme-date | ✅ V1.2 |
 | Look-through total equals portfolio value | ✅ delta **0.00** |
 | `unresolved_pct` < 2% per held scheme, **and displayed** | ✅ 0.2%, in every footer |
-| Every chart renders its as-of date, staleness, and coverage | ✅ **V1.9** |
+| Every chart renders its as-of date, staleness, and coverage | ✅ V1.9 |
 
-And §7's success criterion — *"it tells the user something they didn't know"* — is
-on a screen: **13% overlap between the two reference funds, ₹1.33 L of the portfolio
-held through more than one of them, across 17 companies.**
+`PLAN.md` §7's success criterion — *"it tells the user something they didn't
+know"* — is on a screen: **13% overlap between the two reference funds, ₹1.33 L held
+through more than one of them, across 17 companies.**
 
-**A whole-project review found 14 defects, 9 of them correctness** (V1-24).
-All fixed. Two were `CLAUDE.md` invariant 1, in one file and both measured:
-`resolution_queue.pending()` ordered its "most valuable first, LIMIT 20" review
-list with `ORDER BY` on a `DECIMAL_TEXT` column, so ₹9,000 outranked ₹25,00,000
-and the reviewer got the twenty *least* significant names; and its `ON CONFLICT`
-accumulated the running total with a bare `+` in SQL, which coerces through a
-float — 0.1 added eleven times stored 1.0999999999999999. **Invariant 1's second
-clause covers any SQL arithmetic on a DECIMAL_TEXT column, not only
-SUM/AVG/TOTAL.**
+### What is not proven
 
-Three more were the same shape — code that produced a plausible answer rather
-than a correct one or none: §112A grandfathering was implemented, tested and
-**never wired** (`build_book` never passed the NAV, so every pre-2018 lot was
-silently taxed on full cost and flagged low confidence); `has_earlier` was
-`any(date < min(those same dates))`, so MISSING_EARLY_CAS was emitted for every
-negative delta; and `nav_cross_check` could not tell "500 checked, 0 mismatched"
-from "nothing checked", so the V0-05 wrong-plan case reported success at high
-confidence.
+**That it is usable.** Nobody has used it. The tests assert the honesty
+properties and a browser confirms it draws; whether a 40-node Sankey is legible
+on a laptop, and whether the caveat strip is read or scrolled past, only use will
+show.
 
-**The screen is Jinja and a vendored d3, not React** (V1-23), overriding
-`PLAN.md` §9.10 and `MODULE_6.md` Appendix A. That decision's own argument was
-against *Streamlit* — "awkward for Sankey/RRG" — and the Sankey is `d3-sankey`
-under any frontend; §16.2 says so. What the override avoids is a second place the
-envelope shape is written down, a JS toolchain in the repo, and a CDN call from a
-page showing one person's finances. **Given up:** client-side interactivity
-beyond a link and a `<details>`; V1 asks for none.
+`pdf.py` stays untested until a real password-protected CAS lands in
+`tests/fixtures/local/`. And no independent source has ever checked what the
+ledger *computes* — only what it reads (V1-09 proposes Kite's `/mf/holdings` as
+the first outside witness).
 
-§16.3's rule — *no chart renders outside `ViewContainer`* — survives as a Jinja
-call block, and is enforced harder than the spec's ESLint rule: a test parses the
-rendered HTML and asserts every `[data-chart]` is inside a `section.view`. It
-checks the page is right, not that the code looks right.
+### Carried, and honest about it
 
-**M6's backend** (V1-22). `ViewEnvelope` carries provenance as required fields
-with no defaults; `assemble_caveats` is the single source of caveat text; six
-builders turn M1 and M3 into payloads; CSV export carries §13.1's provenance
-header; FastAPI serves it on 127.0.0.1.
+- **`holding.market_value` is `NOT NULL`**, so a row the file did not price is
+  stored at zero and counted into `validation_notes` as `UNPRICED` rather than
+  stored as NULL. Removing the silence was possible without a migration;
+  removing the ambiguity is not (V1-24).
+- **`weight_basis` is always `disclosed`.** Drift-adjusted weights need
+  `security_price`, which is V1 build item 5 and unbuilt, so the column exists
+  and one of its two values never appears.
+- **Five of `MODULE_6.md` §8.1's eleven portfolio views are absent, not
+  stubbed** — treemap, sector tilt, mcap allocation, redundancy, marginal
+  contribution — because each needs M2 or M5. The startup check enforces that a
+  defined view has a builder, so an unbuildable one cannot ship as a broken
+  screen (V1-22).
+- **Five KPI tiles read `—`** because M1's returns engine and M2's fee data have
+  not run. That is the design working, not a gap being hidden.
+- **Drill-down is unbuilt.** Every view has its own URL and is bookmarkable
+  (§12.1), but §12.2's targets all need M2 or M5, and a link into a screen that
+  does not exist is worse than no link (V1-23).
+- **Kotak is blocked** behind Radware bot detection, which this project will not
+  solve; it needs a hand-downloaded file. SBI is simply untried.
+- **The sector taxonomy** deferred in V1-03 still blocks `tilts()` and
+  `sector_exposure()`, which raise and name it.
+- **One unresolved disagreement**: mfapi says 2111.846 for 2026-03-12, AMFI says
+  2111.779. One mismatch in 2,117 dates, and nothing establishes which is right.
+- **`overlap_value_inr` equalling `duplicated_inr`** is an identity only at two
+  funds. It is a real cross-check today and it expires the moment a third fund
+  loads (V1-21).
 
-Five of §8.1's eleven portfolio views are **absent rather than stubbed**: the
-treemap, sector tilt, mcap allocation, redundancy and marginal contribution all
-need M2 or M5. §5.3's startup check asserts the registry and the catalogue match
-exactly, so an unbuildable view cannot quietly ship as a screen that never works.
+### Two rules this project learned the hard way
 
-**`LookThroughProvider` is implemented** (V1-21). `MODULE_6.md` §1.3 forbids M6
-from touching analytics tables, so until this existed no view could be built
-without breaking that rule on day one. `SqliteLookThroughProvider` holds a Zone A
-connection and a Zone B one — the only place in the codebase that crosses the
-seam, deliberately, because issuer names are Zone A and exposures are Zone B.
-What is not built (`redundancy`, `marginal`, `tilts`, `sector_exposure`) raises
-and names the missing module rather than returning an empty list that reads as
-"measured, and there is nothing".
+Both are in `CLAUDE.md` now, and both cost a defect to find:
 
-**Two spec defects found and recorded, not coded around.** §5.2's closure and
-weight tolerances contradict each other above ₹10,000 of position value (V1-20).
-And §9.1's `group_indian` disagrees with §19.4's own test table on the same
-input — `12,34,56,78,901` versus `1,23,45,67,89,01`; the code is right and the
-tests follow the code (V1-22).
+1. **Invariant 1's second clause covers any SQL arithmetic on a `DECIMAL_TEXT`
+   column**, not only `SUM`/`AVG`/`TOTAL`. A bare `+` inside an `ON CONFLICT`
+   coerces through a float just the same, and a grep for the aggregate names
+   walks straight past it (V1-24).
+2. **A mutation harness must not run in the background alongside other work on
+   the same working tree.** It is the one tool here that deliberately makes the
+   source wrong, and its in-flight edits are indistinguishable from corruption
+   (V1-24).
 
-**Two figures the report could not make before:**
+### Next: nothing is forced
 
-- **duplication — 6.658224% of the portfolio, ₹133,164.47 across 17 issuers.**
-  §9.4's question, which pairwise overlap does not answer: how much of the money
-  is a company already held by another fund.
-- **`overlap_value_inr`** — the overlap figure in rupees. HDFC Flexi Cap ×
-  Nippon Growth Mid Cap is 13.32%, 17 shared issuers of 156, **₹133,164 held by
-  both**.
+V1 is done, so what follows is a choice rather than a dependency. In rough order
+of what the product would notice:
 
-Those two agree **to the paisa**, from functions sharing no code and reading
-different tables. That is not a coincidence: at *n* = 2 they are the same sum
-rearranged. It is a real cross-check and it expires the moment a third fund
-loads.
-
-**Gini goes NULL on a signed pool** (V1-21, closing V1-20's deferral). A short
-leg makes an issuer's net exposure negative, and the Lorenz construction Gini
-summarises assumes a non-negative pool — the formula still returns an
-ordinary-looking number that means nothing. HDFC discloses exactly this (V1-07),
-so it is not hypothetical. HHI, effective-N and the topN figures are unaffected;
-only the undefined one goes absent, rendered as an em dash.
-
-**The warehouse can be 44x smaller** (V1-19). 99.81% of its NAV history served
-schemes nobody holds, because AMFI's history export is keyed on the AMC rather
-than the scheme — OPEN-07's "full history for held schemes" was never
-implementable with it. mfapi (S6) is per-scheme; `jobs/backfill_scheme_nav.py`
-fetches only what is named and `scripts/thin_warehouse.py` rebuilds without the
-rest. 598.6 MB → 13.7 MB, byte-identical look-through, all folios still
-reconciling at 0.000000. **Nothing deleted** — the thin copy sits beside the
-original.
-
-**Zone B is encrypted** (V1-16): `sqlcipher3` installed, `--allow-unencrypted` gone
-from the command line, and the suite runs against a real encrypted ledger. Turning
-it on exposed a defect — `sqlcipher3` has its own adapter registry, so the Decimal
-discipline had silently detached.
-
-**Nippon is in** (V1-15) — the third format, and the test of whether V1-10's rules
-generalise. Most did, unchanged. The one that did not: a table printed *below* the
-GRAND TOTAL is +0.155% of the portfolio, **inside** the ±2% guard, so the rule had
-to become positional. **Kotak is blocked** — its site is behind Radware bot
-detection, which this project will not solve; it needs a hand-downloaded file.
-
-**A CAS now goes in one command** (V1-14): `jobs/import_cas.py` joins the parser to
-Zone B — read, decrypt, parse, resolve, import, save, rebuild. Verified live against
-the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.000000.
-
-**Zone B persists now** (V0.4b): `MODULE_1.md` §4's schema, `rebuild()` reading and
-writing the database, and invariant 5 asserted against real tables that get DROPped
-and rebuilt — not against two in-memory books.
-
-**Next: nothing is forced.** V1 is done, so what follows is a choice rather
-than a dependency. In rough order of what the product would notice:
-
-- **Use it.** Nobody has. The tests assert the honesty properties and a browser
-  confirms it draws; whether a 40-node Sankey is legible on a laptop, and whether
-  the caveat strip is read or scrolled past, only use will show.
-- **More funds.** SBI is untried and Kotak needs a hand-downloaded file — its
-  site is behind bot detection this project will not solve. §6.5's member-level
-  ZIP staging would let ICICI load from its 146-workbook archive by manifest
-  rather than by hand.
+- **Use it.** See "What is not proven" above.
+- **More funds.** SBI, then Kotak once a file is supplied by hand. §6.5's
+  member-level ZIP staging would let ICICI load from its 146-workbook archive by
+  manifest rather than by hand.
 - **V1 build item 5** — Bhavcopy into `security_price` / `security_adjustment`,
-  which is what would make `weight_basis = 'drift_adj'` mean anything, and §7's
+  which is what would make `weight_basis = 'drift_adj'` mean anything — and §7's
   `direct_holding`.
 - **V2** (`PLAN.md` §7): M2's fund x-ray, the three-window returns, and M1's tax
-  engine — which is also what fills the five KPI tiles currently reading "—".
+  engine — which is also what fills the five tiles currently reading `—`.
 
 **Run everything:**
 
@@ -213,20 +167,21 @@ python -m scripts.verify_v0_ledger      # recomputes expected.yaml longhand
 |---|---|
 | Slice Zero contracts | 10 Protocols, 61 frozen dataclasses, 8 `Fake*` providers. Frozen — changes need an ADR. |
 | `src/common/` | `decimals.py` (Decimal/SQLite discipline), `fixtures.py` (Decimal-safe YAML), `types.py`, `contracts/` |
-| `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate), `db.py` (Zone B connection + schema; refuses to open unencrypted), `persist.py` (`rebuild()` — `txn` in, every derived table out) |
-| `src/m3_lookthrough/` | `engine.py` (`compute_lookthrough`, closure asserted before returning), `weights.py` (`scheme_issuer_weight`), `concentration.py` (HHI, effective-N, top-N, Gini), `overlap.py` (pairwise, issuer-level), `persist.py` (§4.2/§4.6 tables). Pure functions; only `persist.py` touches a database. |
+| `src/m1_ledger/` | `txn.py`, `lots.py` (FIFO engine, §112A grandfathering), `returns.py` (XIRR/TWRR/timing), `reconcile.py` (the V0 gate), `db.py` (Zone B connection + schema; refuses to open unencrypted), `persist.py` (`rebuild()` — `txn` in, every derived table out), `providers/position.py` (what M6 reads instead of the `position` table) |
+| `src/m3_lookthrough/` | `engine.py` (`compute_lookthrough`, closure asserted before returning), `weights.py` (`scheme_issuer_weight`), `concentration.py` (HHI, effective-N, top-N, Gini, Lorenz), `overlap.py` (pairwise, issuer-level), `duplication.py` (§9.4), `persist.py` + `persist_metrics.py` (§4.2/§4.3/§4.6 tables), `providers/sqlite.py` (the `LookThroughProvider` M4/M5/M6 read through — the one object holding a Zone A and a Zone B connection). Pure functions; only the two `persist*` modules and the provider touch a database. |
 | `src/m1_ledger/cas/` | `parse.py` (state machine, pure), `mapping.py`, `importer.py` (seq, linking, idempotence), `pdf.py` (the only module touching a password — **untested**, needs a real CAS) |
+| `src/m6_views/` | `envelope.py` + `builder.py` (Slice Zero, frozen), `registry.py` (catalogue + the startup consistency check), `caveats.py` (the single source of caveat text), `states.py`, `format.py` (Indian numbers), `colors.py`, `aggregate.py`, `hashing.py`, `serialise.py`, `compose.py`, `render.py`, six `builders/portfolio/`, `export/csv.py`, `api/` (FastAPI + the Jinja page router), `templates/` and `static/` (a vendored, pinned d3 — no CDN, no npm) |
 | `src/m0_data/` | `fetch/` (archive, rate limit, robots, conditional GET, AMFI history), `parse/nav/amfi.py` + `parse/mcap/amfi.py`, `parse/holdings/` (shared reader + `hdfc`, `icici`, `nippon`, registry), `normalise/` (numbers, names, units, weights), `resolve/` (isin, synthetic, fuzzy, cascade, queue), `derive/nav_adj.py`, `load.py`, `validate/` (integrity, checks), `schema/apply.py`, `providers/warehouse.py` |
-| `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. `002_lookthrough.sql` — `lookthrough_exposure`, `lookthrough_contribution`, `portfolio_summary`. Separate from Zone A: a different database, not a later version of the warehouse. |
-| `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`). Numbered, forward-only. |
-| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (bulk history, per AMC) · `backfill_scheme_nav.py` (per-scheme history via mfapi, V1-19) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
+| `migrations/zone_b/` | `001_ledger.sql` — `app_user`, `cas_import`, `txn`, `lot`, `lot_consumption`, `position`, `reconciliation`. `002_lookthrough.sql` — `lookthrough_exposure`, `lookthrough_contribution`, `portfolio_summary`. `003_metrics.sql` — §4.3's `portfolio_concentration`, `fund_overlap`, `portfolio_duplication`. `004_views.sql` — `color_assignment`. Separate from Zone A: a different database, not a later version of the warehouse. |
+| `migrations/` | `001_provenance.sql`, `002_scheme_nav.sql`, `003_entity.sql` (`issuer` + a **nine**-row synthetic seed, `instrument`, `name_alias`, `resolution_queue`, `issuer_classification`), `004_holdings.sql` (`holding`, `holding_disclosure`), `005_lookthrough.sql` (`scheme_issuer_weight`), `006_views.sql` (`view_definition`, seeded from code). Numbered, forward-only. |
+| `jobs/` | `fetch_nav.py` (daily leading edge) · `backfill_nav.py` (bulk history, per AMC) · `backfill_scheme_nav.py` (per-scheme history via mfapi, V1-19) · `build_entity_master.py` (AMFI market-cap seed) · `load_holdings.py` (L0→L3 for one disclosure) · `import_cas.py` (a statement into Zone B, then a full rebuild) · `serve.py` (the views, on 127.0.0.1, prompting for the ledger key). The Zone A jobs write a `job_run` row; `import_cas` writes `cas_import`, Zone B's equivalent. |
 | `config/` | `txn_types.yaml` — CAS description → type, per §5.5. `sources.yaml` — per-source URLs and scraping limits (S5 carries the browser agent HDFC's CDN requires, contact in `From:`, per V1-05). `amc_manifest.yaml` — disclosure links per AMC; discovery is still manual (V1-03). |
 | `scripts/` | `import_nav_xlsx` · `build_v0_fixture` · `build_v0_cas` · `verify_v0_ledger` · `show_lookthrough` · `thin_warehouse`. Not part of `src/`; the verifier deliberately imports nothing from it. |
 | Fixture portfolio | 3 real funds keyed on their **real ISINs** — `INF179K01UT0`, `INF109K01761`, `INF174KA1EZ1` — on NAVs confirmed against AMFI. Reaches the engine as a **CAS statement**, resolved through `MarketDataProvider`. |
 | Test fixtures | `v0_ledger/` (real NAVs, golden rows, `cas_statement.txt`, `expected.yaml`) · `cas/traps.txt` (one §5.4 trap per labelled line) |
-| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. Loaded: 53 AMCs (28 with AMFI codes), 19,598 schemes, **3,118,359 NAVs** back to 31-Jan-2018, 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and **270 holdings** across 3 disclosure revisions — HDFC Flexi Cap (2 revisions) and Nippon Growth Mid Cap. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
-| Zone B ledger | SQLite + the `MODULE_1.md` §4 schema, **unencrypted until a SQLCipher driver is installed** — `connect_ledger` refuses rather than degrading (V1-13). Holds nothing real yet; the golden statement imports into it on demand. |
-| Not built | Kotak (bot-blocked) and SBI parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · drift-adjusted weights (§3.2, needs prices) · `direct_holding` (§7) · fund-of-funds recursion (§6) · §4.3's `portfolio_concentration`/`fund_overlap` tables (computed, not stored) · tax engine · **all UI** (`src/m6_views/` is Slice Zero's stub) · M2, M4, M5 |
+| Zone A warehouse | SQLite (V0-19), `DECIMAL_TEXT` throughout. **Two files on disk, and `MF_WAREHOUSE` picks one.** `canonical.db` (599 MB) holds 53 AMCs, 19,598 schemes and **3,118,359 NAVs** back to 31-Jan-2018. `thin.db` (13.7 MB) is the same warehouse with NAV history kept only for held schemes — 13,452 rows — built by `scripts/thin_warehouse.py` after V1-19 measured that 99.81% of the history served schemes nobody holds. The thin copy answers every look-through question identically and **nothing was deleted**: the fat one sits beside it. Both carry 5,427 instruments + 5,436 issuers (nine synthetic) with point-in-time market-cap buckets, and the loaded disclosures. `scheme_idcw` is **empty**: `nav_adj` is built and consumed, but no IDCW source has been ingested, so it equals `nav` everywhere. |
+| Zone B ledger | SQLCipher + the `MODULE_1.md` §4 schema. **Encrypted at rest** since V1-16; `connect_ledger` refuses to open it unkeyed rather than degrading. Holds nothing real yet; the golden statement imports into it on demand. |
+| Not built | Kotak (bot-blocked) and SBI parsers · §6.5 ZIP member staging · sector taxonomy (V1-03) · `security_price`/`security_adjustment` · drift-adjusted weights (§3.2, needs prices) · `direct_holding` (§7) · fund-of-funds recursion (§6) · tax engine · M6's payload cache, saved views, annotations, display preferences, PNG export and drill-down targets · five of §8.1's eleven portfolio views (each needs M2 or M5) · M2, M4, M5 |
 
 ## V0 acceptance gate (`PLAN.md` §7) — honest status
 
@@ -254,9 +209,9 @@ not against a hand-made CSV.
 
 ## V1 acceptance gate (`PLAN.md` §7) — honest status
 
-**Three of four met.** The engine landed in V1.3 and only the UI criterion is
-untouched. What follows separates what has been measured from what has not been
-attempted, because a gate reported as "in progress" says nothing.
+**Four of four met**, as of V1.9. What follows separates what was measured from
+what was not, because a gate reported as "passing" says nothing about which half
+of it was checked and which was assumed.
 
 - [x] **`pct_normalised` sums to exactly 100 per scheme-date.** Exactly, on all
       three formats: HDFC's real 31-Jul-2026 disclosure (83 holdings), Nippon's
@@ -275,11 +230,18 @@ attempted, because a gate reported as "in progress" says nothing.
       `scripts/show_lookthrough.py` alongside coverage and the caveats.
       Counted as met on the substance — the number reaches the user — while
       noting the display is a terminal report and not M6.
-- [ ] **Every chart renders its as-of date, staleness and coverage.** No charts.
-      `src/m6_views/` is Slice Zero's Protocol stub and envelope, no logic. The
-      inputs exist — `holdings_as_of`, `staleness_days`, `coverage_pct` and
-      `confidence` are on every stored exposure row (§14.2 rule 1) — so this is
-      a rendering gap, not a data one.
+- [x] **Every chart renders its as-of date, staleness and coverage.** Six views
+      render in a browser, and the provenance footer is part of `view_container`
+      rather than part of each chart — §16.3's rule that no chart renders outside
+      the wrapper is what makes that structural. Asserted on the **rendered
+      HTML**, not on a payload: one test parses the page and requires every
+      `[data-chart]` element to be a descendant of a `section.view`, another
+      requires the footer to carry an as-of date, a holdings date, coverage and
+      the unresolved share. A non-ok panel renders the footer too, with an em
+      dash for what it cannot answer (V1-24).
+
+      What this does **not** establish is that any of it is legible or useful.
+      Nobody has used the thing.
 
 **Coverage against V1 build item 3** — "top 5 AMCs" — is **3 of 5**: HDFC,
 ICICI Prudential and Nippon India. The three disagreed on nearly everything
@@ -296,8 +258,8 @@ was written about. It needs a file downloaded by hand. SBI is untried.
 
 ## Open decisions
 
-`DECISIONS.md` holds **61 decisions across 62 entries** (SZ-01…SZ-14,
-V0-01…V0-26, V1-01…V1-19, OPEN-03, OPEN-07). OPEN-03 has two entries: the
+`DECISIONS.md` holds **66 decisions across 67 entries** (SZ-01…SZ-14,
+V0-01…V0-26, V1-01…V1-24, OPEN-03, OPEN-07). OPEN-03 has two entries: the
 conditional decision and the settlement that supersedes it — append-only, so the
 superseded text stays readable beside what replaced it.
 
