@@ -1,0 +1,59 @@
+{#
+  The shell. MODULE_6.md §16.
+
+  Server-rendered Jinja rather than React, per DECISIONS V1-23 — which overrides
+  `PLAN.md` §9.10 and `MODULE_6.md` Appendix A. The reasoning behind the locked
+  decision was that the Sankey is the flagship and worth a real frontend; the
+  Sankey is `d3-sankey` either way, and React was never doing that work.
+
+  d3 is **vendored**, not linked from a CDN. `PLAN.md` §6 makes this a
+  self-hosted tool for one person's financial data; a page that phones a CDN on
+  every load stops working offline and tells a third party when the user looks at
+  their portfolio.
+#}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Look-through{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="masthead">
+  <nav>
+    <a class="brand" href="/">Look-through</a>
+    <ul>
+      {% for view in catalogue %}
+      <li><a href="/view/{{ view.view_id }}{{ qs }}"
+             {% if view.view_id == active %}aria-current="page"{% endif %}
+          >{{ view.view_name }}</a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {#
+    §15.3: report freshness so the page can say "last updated" honestly rather
+    than implying the data is live. Nothing here is a live feed — every number
+    on this site is as old as the job that produced it, and saying so is the
+    whole design.
+  #}
+  <p class="freshness">
+    Look-through computed {{ health.lookthrough_computed_at | fmt_datetime }}
+    · {{ health.current_disclosures }} current disclosure{{ '' if health.current_disclosures == 1 else 's' }}
+    {%- if health.latest_disclosure %}, latest {{ health.latest_disclosure | fmt_date }}{% endif %}
+  </p>
+</header>
+
+<main>
+{% block content %}{% endblock %}
+</main>
+
+<footer class="colophon">
+  <p>
+    Self-hosted. Nothing on this page left your machine.
+    Every figure traces to an archived source file.
+  </p>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

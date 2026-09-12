@@ -16,6 +16,10 @@ dependencies = [
     # local server for one person, not a deployment.
     "fastapi",
     "uvicorn",
+    # M6's HTML surface. Server-rendered rather than React — DECISIONS V1-23,
+    # which overrides PLAN.md §9.10. d3 is vendored under
+    # src/m6_views/static/vendor/, so there is no JS toolchain and no CDN call.
+    "jinja2",
 ]
 
 [tool.ruff]

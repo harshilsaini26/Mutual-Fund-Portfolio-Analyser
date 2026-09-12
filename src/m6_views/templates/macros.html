@@ -1,0 +1,115 @@
+{#
+  ViewContainer — MODULE_6.md §16.3.
+
+  **No chart renders outside this macro.** §16.3 calls that the mechanism that
+  makes the honesty commitments structural rather than per-chart discipline: a
+  contributor adding a chart cannot forget the caveats, because there is nowhere
+  to put a chart except inside something that renders them.
+
+  The spec writes it as a React component with an ESLint rule. Here it is a Jinja
+  call block, and `tests/unit/test_m6_render.py` asserts the property on the
+  rendered HTML rather than on the source — every chart's root element must be a
+  descendant of a `section.view`. That tests the thing itself instead of a proxy
+  for it.
+
+  The footer is the V1 acceptance gate: "every chart renders its as-of date,
+  staleness, and coverage". It is unconditional. There is no variant of this
+  macro without it.
+#}
+
+{% macro confidence_badge(confidence) -%}
+  {#
+    §7.2. Present but unobtrusive at every level — never hidden. §4.4 rules out a
+    `hide_low_confidence` preference: a toggle that hides weak data makes a
+    cleaner product that is quietly less truthful.
+
+    The title text is the redundant channel §10.3 requires, so the badge does not
+    depend on colour alone.
+  #}
+  <span class="badge badge--{{ confidence }}"
+        title="{{ {'high': 'Current, complete, and resolved',
+                   'medium': 'Usable with the notes above',
+                   'low': 'Weakest contributing input is weak'}[confidence] }}"
+  >{{ confidence }}</span>
+{%- endmacro %}
+
+
+{% macro caveat_strip(caveats, expanded=True) -%}
+  {#
+    §6.1 rule 5: never truncate. If there are six, six render. M6 may collapse
+    them behind an affordance, but **the count is always visible** — which is why
+    the summary line carries the number even when closed.
+  #}
+  {% if caveats %}
+  <details class="caveats" {% if expanded %}open{% endif %}>
+    <summary>{{ caveats | length }} note{{ '' if caveats | length == 1 else 's' }} about this data</summary>
+    <ul>
+      {% for caveat in caveats %}<li role="note">{{ caveat }}</li>{% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+{%- endmacro %}
+
+
+{% macro placeholder(env) -%}
+  {#
+    §3.3 and §7.3. A blank chart teaches the user the tool is broken; an
+    explained absence teaches them how the tool works. `state_reason` is
+    required for every non-ok state and the builders are tested for it.
+  #}
+  <div class="placeholder placeholder--{{ env.state.value }}">
+    <p class="placeholder__state">{{ {'empty': 'Nothing to show yet',
+                                      'suppressed': 'Not shown',
+                                      'error': 'Could not be built'}[env.state.value] }}</p>
+    <p class="placeholder__reason">{{ env.state_reason }}</p>
+  </div>
+{%- endmacro %}
+
+
+{% macro view_container(env, expanded=True) -%}
+<section class="view view--{{ env.confidence }}"
+         data-view-id="{{ env.view_id }}"
+         aria-labelledby="q-{{ env.view_id }}">
+
+  <header class="view__header">
+    <h2 id="q-{{ env.view_id }}">{{ env.question }}</h2>
+    {{ confidence_badge(env.confidence) }}
+  </header>
+
+  {% if env.state.value != 'ok' %}
+    {{ placeholder(env) }}
+  {% else %}
+    {{ caveat_strip(env.caveats, expanded) }}
+    <div class="view__chart">{{ caller() }}</div>
+  {% endif %}
+
+  {#
+    The gate, and it renders in every state — an empty view still has an as-of
+    date, and hiding the provenance when there is no data is how a reader ends up
+    unsure whether they are looking at nothing or at yesterday.
+  #}
+  <footer class="view__footer">
+    <dl>
+      <div><dt>As of</dt><dd>{{ env.as_of | fmt_date }}</dd></div>
+      <div>
+        <dt>Holdings as of</dt>
+        <dd>{{ env.data_as_of | fmt_date }}
+          <span class="staleness">({{ env.staleness_days | fmt_staleness }})</span>
+        </dd>
+      </div>
+      <div><dt>Coverage</dt><dd>{{ env.coverage_pct | fmt_pct }}</dd></div>
+      <div><dt>Unresolved</dt><dd>{{ env.unresolved_pct | fmt_pct }}</dd></div>
+      <div><dt>Rows</dt><dd>{{ env.row_count }}{% if env.truncated %} <span class="truncated">grouped</span>{% endif %}</dd></div>
+      <div><dt>Source</dt><dd>{{ env.source_modules | join(', ') or '—' }}</dd></div>
+    </dl>
+    {% if env.export_url %}
+    <p class="view__export">
+      <a href="{{ env.export_url }}">Export CSV</a>
+      {% if env.truncated %}
+        · <a href="{{ env.export_url }}&amp;full=1">every row</a>
+      {% endif %}
+    </p>
+    {% endif %}
+  </footer>
+</section>
+{%- endmacro %}

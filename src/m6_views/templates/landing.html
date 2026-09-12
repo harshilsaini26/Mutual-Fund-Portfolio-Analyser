@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "macros.html" as vc %}
+{% block title %}Your portfolio{% endblock %}
+
+{#
+  The landing surface. MODULE_6.md §16.5, following `PLAN.md` §5.10 on metric
+  walls: the default view answers **three** questions and everything else is one
+  click down.
+
+    1. Where do I stand?              portfolio_summary
+    2. What do I actually own?        lookthrough_sankey
+    3. What's duplicated?             overlap_heatmap
+
+  §16.5 ends with "Resist adding a fourth." The nav above carries the other three
+  views; they are a click away and they are not here.
+#}
+{% block content %}
+{% for panel in panels %}
+  {#
+    Each panel is an independent envelope. `PLAN.md` §4.9: degrade one panel,
+    never the screen — a builder that failed returns an `error` envelope and its
+    neighbours still render.
+
+    The `with` block is what lets a chart partial be written once and included
+    from both this page and `page.html`: the partials read `env`, `grid`,
+    `curve_path` and so on by those names, and here they come off the panel.
+  #}
+  {% with env = panel.env,
+          labels = panel.labels,
+          grid = panel.grid,
+          curve_path = panel.curve_path,
+          payload_json = panel.payload_json %}
+    {% call vc.view_container(env, expanded=loop.first) %}
+      {% include panel.chart_template %}
+    {% endcall %}
+  {% endwith %}
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}{{ chart_scripts | safe }}{% endblock %}

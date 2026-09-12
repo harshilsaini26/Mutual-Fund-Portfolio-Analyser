@@ -1,0 +1,76 @@
+{#
+  Overlap heatmap — MODULE_6.md §8.1, §9.3.
+
+  Plain SVG with the cells positioned server-side. There is no layout algorithm
+  here worth a library: a grid of n(n-1)/2 pairs is arithmetic on indices, and
+  §9.5 notes the matrix is 10-105 cells for a realistic portfolio.
+
+  **An unaligned pair is a distinct visual state, not a tooltip.** §9.3: overlap
+  is exactly the metric where a month's trading moves the answer, and rendering a
+  cross-date comparison identically to a same-date one presents a soft figure as
+  a hard one. The dashed stroke is the redundant channel (§10.3), and the gap in
+  days is written into the cell's label rather than only its title.
+
+  The percentage in each cell is formatted server-side. Nothing in this file
+  computes.
+#}
+<figure class="heatmap" data-chart="heatmap">
+  <figcaption class="sr-only">
+    Overlap between each pair of funds, as a share of each fund's weight.
+    The table below carries the same figures.
+  </figcaption>
+  {#
+    Explicit width and height, not just a viewBox. With a viewBox alone the SVG
+    is a replaced element with no intrinsic size, so `max-width: 100%` stretches
+    it to the panel — a two-fund matrix is one cell, and it was being blown up
+    to fill 600px. Natural size with `max-width` still lets a large matrix
+    shrink on a narrow screen.
+  #}
+  <svg width="{{ grid.width }}" height="{{ grid.height }}"
+       viewBox="0 0 {{ grid.width }} {{ grid.height }}" role="img"
+       aria-label="Fund overlap matrix"
+       preserveAspectRatio="xMinYMin meet">
+    {% for label in grid.columns %}
+    <text class="axis" x="{{ label.x }}" y="{{ label.y }}"
+          transform="rotate(-35 {{ label.x }} {{ label.y }})">{{ label.text }}</text>
+    {% endfor %}
+    {% for label in grid.rows %}
+    <text class="axis axis--row" x="{{ label.x }}" y="{{ label.y }}">{{ label.text }}</text>
+    {% endfor %}
+    {% for cell in grid.cells %}
+    <g class="cell {{ 'cell--unaligned' if not cell.aligned else '' }}">
+      <rect x="{{ cell.x }}" y="{{ cell.y }}" width="{{ grid.size }}" height="{{ grid.size }}"
+            fill="{{ cell.fill }}"
+            stroke-dasharray="{{ '4 3' if not cell.aligned else '0' }}">
+        <title>{{ cell.title }}</title>
+      </rect>
+      <text x="{{ cell.cx }}" y="{{ cell.cy }}" class="cell__label">{{ cell.label }}</text>
+    </g>
+    {% endfor %}
+  </svg>
+</figure>
+
+<details class="chart-table">
+  <summary>The same pairs as a table ({{ env.payload.cells | length }} rows)</summary>
+  <div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th scope="col">Fund A</th><th scope="col">Fund B</th>
+      <th scope="col">Overlap</th><th scope="col">In rupees</th>
+      <th scope="col">Shared</th><th scope="col">Dates</th>
+    </tr></thead>
+    <tbody>
+      {% for cell in env.payload.cells %}
+      <tr class="{{ 'row--unaligned' if not cell.aligned else '' }}">
+        <td>{{ cell.scheme_a }}</td>
+        <td>{{ cell.scheme_b }}</td>
+        <td class="col--pct">{{ cell.overlap_pct | fmt_pct }}</td>
+        <td class="col--inr">{{ cell.overlap_value_inr | fmt_inr_full }}</td>
+        <td>{{ cell.common_issuers }} of {{ cell.union_issuers }}</td>
+        <td>{% if cell.aligned %}same date{% else %}{{ cell.as_of_gap_days }} days apart{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</details>

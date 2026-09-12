@@ -36,8 +36,10 @@ from typing import Any
 
 from fastapi import FastAPI, Query, Response
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.common.types import UserId
+from src.m6_views.api.pages import STATIC, make_router
 from src.m6_views.builder import Scope
 from src.m6_views.builders import (  # noqa: F401  — import registers the builders
     portfolio,
@@ -84,6 +86,7 @@ def create_app(
 ) -> FastAPI:
     """A factory, so tests drive the same app over temporary databases."""
     app = FastAPI(title="MF look-through", docs_url="/api/docs")
+    app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
     def _scope(user_id: str, as_of: str | None, scope_id: str | None) -> Scope:
         return Scope(
@@ -184,6 +187,10 @@ def create_app(
             },
         )
 
+    # The HTML surface, over the same envelopes the JSON routes return. Mounted
+    # last so `/api/*` always wins: a view named `views` could otherwise be
+    # shadowed by the page router's `/view/{view_id}`.
+    app.include_router(make_router(ledger, warehouse, build_view))
     return app
 
 

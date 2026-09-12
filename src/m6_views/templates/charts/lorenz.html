@@ -1,0 +1,55 @@
+{#
+  Lorenz curve — `concentration_curve`. MODULE_6.md §8.1, §8.3.
+
+  The diagonal is perfect equality; the further the curve sags below it, the more
+  concentrated the portfolio. The curve is what makes the single numbers legible
+  — "HHI 0.014" means nothing to most readers, and "the smallest 100 of your 156
+  companies are 30% of your money" means something immediately.
+
+  **Every point came from M3.** `lorenz_points` lives in
+  `src/m3_lookthrough/concentration.py` because a Lorenz point is a cumulative
+  share of a cumulative share, and §2.1 forbids the view layer from deriving a
+  number. This file scales them to pixels, which is a coordinate rather than a
+  figure.
+
+  The curve can legitimately be absent: V1-21 makes both it and its Gini
+  undefined once a net-short holding puts a negative weight in the pool. When
+  that happens the builder says so in a caveat and this renders the metrics
+  alone.
+#}
+<div data-chart="lorenz">
+{% if curve_path %}
+<figure class="lorenz">
+  <figcaption class="sr-only">
+    Lorenz curve of issuer concentration. The straight diagonal is an evenly
+    spread portfolio; the plotted curve is this one.
+  </figcaption>
+  <svg viewBox="0 0 320 320" role="img"
+       aria-label="Concentration curve" preserveAspectRatio="xMidYMid meet">
+    <line class="equality" x1="20" y1="300" x2="300" y2="20" />
+    <path class="curve" d="{{ curve_path }}" fill="none" />
+    <line class="axis-line" x1="20" y1="300" x2="300" y2="300" />
+    <line class="axis-line" x1="20" y1="20" x2="20" y2="300" />
+    <text class="axis" x="160" y="316" text-anchor="middle">companies, smallest first</text>
+    <text class="axis" x="12" y="160" text-anchor="middle" transform="rotate(-90 12 160)">share of exposure</text>
+  </svg>
+</figure>
+{% endif %}
+
+<dl class="kpi kpi--inline">
+  <div class="kpi__tile"><dt>Companies</dt><dd>{{ env.payload.issuer_count }}</dd></div>
+  <div class="kpi__tile"><dt>HHI</dt><dd>{{ env.payload.hhi | fmt_metric }}</dd></div>
+  <div class="kpi__tile"><dt>Effective N</dt><dd>{{ env.payload.effective_n | fmt_metric }}</dd></div>
+  <div class="kpi__tile"><dt>Top 10</dt><dd>{{ env.payload.top10_pct | fmt_pct }}</dd></div>
+  {#
+    Gini is nullable by design, not by omission — V1-21. An em dash here means
+    the question does not apply to this pool, and the caveat above says why.
+  #}
+  <div class="kpi__tile{% if env.payload.gini is none %} kpi__tile--absent{% endif %}">
+    <dt>Gini</dt>
+    <dd {% if env.payload.gini is none %}
+          title="Undefined for a pool containing a negative net exposure."
+        {% endif %}>{{ env.payload.gini | fmt_metric }}</dd>
+  </div>
+</dl>
+</div>

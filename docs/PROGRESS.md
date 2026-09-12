@@ -7,30 +7,47 @@
 
 ## Current state
 
-**Slice:** V1.8 — **M6 exists, everywhere except the browser.** Six views build,
-serialise, export and serve over HTTP; three of five AMC formats parse and load;
-closure holds at delta 0.00 all the way through to the payload a chart would
-draw.
+**Slice:** V1.9 — **V1 is complete. The acceptance gate passes four of four.**
+Six views render in a browser with their as-of date, staleness and coverage
+beneath every one of them; three of five AMC formats parse and load; closure
+holds at delta 0.00 from the disclosure through to the pixels.
 **Repo:** local git, `origin` set to
 `github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser` — **not yet pushed, by
 decision**: the user is holding the first push until the project is finished.
 Branch `main`, tree clean.
-**Gate:** ruff clean · `mypy --strict` clean (159 files) · 791 tests + 3 skipped ·
+**Gate:** ruff clean · `mypy --strict` clean (162 files) · 840 tests + 3 skipped ·
 verifier no drift · M3 mutation 35/35 killed, 0 skipped.
 
-**V1's acceptance gate still stands at three of four**, and V1.8 did not close
-it. `pct_normalised` sums to exactly 100; the look-through total equals portfolio
-value at delta 0.00; `unresolved_pct` is under 2% for every held scheme and is
-displayed. The fourth — *"every chart renders its as-of date, staleness, and
-coverage"* — needs a chart, and every assertion in V1.8 is on a Python object or
-a JSON body. **V1.9 is what closes it.**
+**V1's acceptance gate passes, four of four:**
 
-**M6's backend is built** (V1-22). `ViewEnvelope` carries provenance as required
-fields with no defaults; `assemble_caveats` is the single source of caveat text;
-six builders turn M1 and M3 into payloads; CSV export carries §13.1's provenance
-header; FastAPI serves it on 127.0.0.1. Verified against the real warehouse
-through a live uvicorn — every provenance field populated, every Decimal a
-string, **closure delta 0.00 on the payload a chart would draw.**
+| Criterion | |
+|---|---|
+| `pct_normalised` sums to exactly 100 per scheme-date | ✅ V1.2 |
+| Look-through total equals portfolio value | ✅ delta **0.00** |
+| `unresolved_pct` < 2% per held scheme, **and displayed** | ✅ 0.2%, in every footer |
+| Every chart renders its as-of date, staleness, and coverage | ✅ **V1.9** |
+
+And §7's success criterion — *"it tells the user something they didn't know"* — is
+on a screen: **13% overlap between the two reference funds, ₹1.33 L of the portfolio
+held through more than one of them, across 17 companies.**
+
+**The screen is Jinja and a vendored d3, not React** (V1-23), overriding
+`PLAN.md` §9.10 and `MODULE_6.md` Appendix A. That decision's own argument was
+against *Streamlit* — "awkward for Sankey/RRG" — and the Sankey is `d3-sankey`
+under any frontend; §16.2 says so. What the override avoids is a second place the
+envelope shape is written down, a JS toolchain in the repo, and a CDN call from a
+page showing one person's finances. **Given up:** client-side interactivity
+beyond a link and a `<details>`; V1 asks for none.
+
+§16.3's rule — *no chart renders outside `ViewContainer`* — survives as a Jinja
+call block, and is enforced harder than the spec's ESLint rule: a test parses the
+rendered HTML and asserts every `[data-chart]` is inside a `section.view`. It
+checks the page is right, not that the code looks right.
+
+**M6's backend** (V1-22). `ViewEnvelope` carries provenance as required fields
+with no defaults; `assemble_caveats` is the single source of caveat text; six
+builders turn M1 and M3 into payloads; CSV export carries §13.1's provenance
+header; FastAPI serves it on 127.0.0.1.
 
 Five of §8.1's eleven portfolio views are **absent rather than stubbed**: the
 treemap, sector tilt, mcap allocation, redundancy and marginal contribution all
@@ -101,23 +118,21 @@ the real 3.1M-NAV warehouse: all three golden folios reconcile at exactly 0.0000
 writing the database, and invariant 5 asserted against real tables that get DROPped
 and rebuilt — not against two in-memory books.
 
-**Next: V1.9, the screen.** The last unmet gate criterion, and the last thing
-between this project and its own launch story. Jinja templates over the existing
-API, `d3-sankey` for the flagship, and §16.3's `ViewContainer` — the wrapper no
-chart renders outside of — as a macro. Nothing new is computed; V1.8's payloads
-are already the right shape.
+**Next: nothing is forced.** V1 is done, so what follows is a choice rather
+than a dependency. In rough order of what the product would notice:
 
-**The frontend decision is taken and not yet recorded.** `PLAN.md` §9.10 and
-`MODULE_6.md` Appendix A lock React 18 + Vite + TypeScript. V1.9 overrides it:
-FastAPI + Jinja + a pinned d3, no npm and no build step. The reasoning behind the
-locked decision was that the Sankey is the flagship — but the Sankey is
-`d3-sankey` either way, and React was never doing that work. **Write the ADR when
-V1.9 lands.**
-
-Then, in whatever order: SBI, and Kotak once a file is supplied by hand; §6.5
-member-level ZIP staging (ICICI ships 146 workbooks in one archive); V1 build
-item 5, Bhavcopy → `security_price` / `security_adjustment`, which is what makes
-`weight_basis = 'drift_adj'` mean anything; and §7's `direct_holding`.
+- **Use it.** Nobody has. The tests assert the honesty properties and a browser
+  confirms it draws; whether a 40-node Sankey is legible on a laptop, and whether
+  the caveat strip is read or scrolled past, only use will show.
+- **More funds.** SBI is untried and Kotak needs a hand-downloaded file — its
+  site is behind bot detection this project will not solve. §6.5's member-level
+  ZIP staging would let ICICI load from its 146-workbook archive by manifest
+  rather than by hand.
+- **V1 build item 5** — Bhavcopy into `security_price` / `security_adjustment`,
+  which is what would make `weight_basis = 'drift_adj'` mean anything, and §7's
+  `direct_holding`.
+- **V2** (`PLAN.md` §7): M2's fund x-ray, the three-window returns, and M1's tax
+  engine — which is also what fills the five KPI tiles currently reading "—".
 
 **Run everything:**
 
@@ -149,12 +164,12 @@ key; `--allow-unencrypted` was removed in V1-16 when `sqlcipher3` landed):
 python -m jobs.import_cas --file statement.pdf --user USER-01
 ```
 
-**Serve the views** (prompts for the ledger key; loopback only, no auth):
+**Open the thing** (prompts for the ledger key; loopback only, no auth):
 
 ```bash
 python -m jobs.serve
-#   http://127.0.0.1:8765/api/views
-#   http://127.0.0.1:8765/api/docs
+#   http://127.0.0.1:8765/            the three landing questions
+#   http://127.0.0.1:8765/api/views   the same envelopes as JSON
 ```
 
 `backfill_nav` clamps `--from` to 31-Jan-2018 and discovers AMFI's AMC codes on
@@ -327,6 +342,43 @@ documents with their text missing, so the citations pointed at nothing.
 
 Newest first. Full detail is in `DECISIONS.md` and the commit messages; this is
 the shape of how the work got here.
+
+### S22 · V1.9 — the screen, and V1 closes (2026-09-12)
+
+The last criterion. Six views render in a browser with their as-of date, staleness and
+coverage beneath every one of them, and **V1's acceptance gate passes four of four**.
+
+**Jinja and a vendored d3, not React** (V1-23) — overriding `PLAN.md` §9.10 and
+`MODULE_6.md` Appendix A. Worth being precise about why, because the locked decision was
+not wrong: its argument was against **Streamlit**, whose weakness §9.10 names exactly
+("awkward for Sankey/RRG"). The Sankey is `d3-sankey` under any frontend — §16.2 says so
+itself — so the flagship screen was never going to be React components. What the override
+avoids is a second place `ViewEnvelope` is written down, a JS toolchain in a repo served to
+one person, and a CDN call from a page showing that person's finances. **Given up:**
+client-side interactivity beyond a link and a `<details>`. V1 asks for none, and the
+envelope contract is unchanged, so the door stays open.
+
+**§16.3's rule is enforced harder than the spec asks.** The spec lints React sources for
+charts outside `ViewContainer`; here a test parses the rendered HTML and asserts every
+`[data-chart]` is a descendant of a `section.view`. A source lint checks the code looks
+right; this checks the page *is* right, and survives a refactor that moves the templates.
+
+**Three defects the screen found that no unit test had.** Jinja was autoescaping the script
+block, so the page shipped `&lt;script src="…d3…"&gt;` and d3 never loaded — and the test
+that should have caught it matched the *substring* inside the escaped text. The holdings
+table used the compact rupee form, rendering `₹1.00 L` where the user's own statement says
+`1,00,000.00`, on the one screen whose job is to be checkable against that statement
+(§9.1's never-mix rule, now split into `fmt_tile` and `fmt_cell`). And a two-fund overlap
+matrix is one cell, which an SVG with a viewBox and no width stretched to 600px.
+
+Rendered against the real warehouse: the Sankey draws 161 exposures with the tail folded
+into `144 smaller holdings`, and every synthetic — unresolved, TREPS, margin, receivables,
+government securities — pinned outside `top_n` in italic with dashed links, exactly as
+Appendix A requires.
+
+**What it does not prove: that it is usable.** Nobody has used it. The tests assert the
+honesty properties and a browser confirms it draws. Whether a 40-node Sankey is legible on
+a laptop, and whether the caveat strip is read or scrolled past, only use will show.
 
 ### S21 · V1.8 — M6's backend, and a spec that fails its own test (2026-09-12)
 

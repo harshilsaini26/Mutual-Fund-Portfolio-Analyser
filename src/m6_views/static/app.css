@@ -1,0 +1,210 @@
+/*
+ * MODULE_6.md §10.
+ *
+ * Three rules here are not taste:
+ *
+ *   §10.3  Nothing is encoded by colour alone. Every colour distinction in this
+ *          file is paired with a pattern, a stroke, a symbol or a label.
+ *   §10.4  Minimum contrast 4.5:1 for text, 3:1 for graphical objects, and
+ *          `prefers-reduced-motion` respected.
+ *   §7.2   Low confidence is present but unobtrusive — muted and dashed, never
+ *          hidden. §4.4 rules out a toggle that would hide it.
+ *
+ * The caveat strip and the footer are deliberately hard to miss. A chart whose
+ * provenance is styled into invisibility satisfies the letter of the gate and
+ * none of its point.
+ */
+
+:root {
+  --ink: #1a1a1a;
+  --ink-soft: #53585e;
+  --rule: #d8dbdf;
+  --bg: #ffffff;
+  --bg-soft: #f6f7f9;
+  --accent: #0072b2;
+  --warn-bg: #fdf6e3;
+  --warn-rule: #d8b44a;
+  --gain: #009e73;
+  --loss: #d55e00;
+  --synthetic: #9e9e9e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg-soft);
+}
+
+/* --- shell --------------------------------------------------------------- */
+
+.masthead {
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.75rem 1.25rem 0.5rem;
+}
+.masthead nav { display: flex; align-items: baseline; gap: 1.25rem; flex-wrap: wrap; }
+.brand { font-weight: 700; text-decoration: none; color: var(--ink); }
+.masthead ul { display: flex; gap: 1rem; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.masthead a { color: var(--ink-soft); text-decoration: none; }
+.masthead a:hover { text-decoration: underline; }
+.masthead a[aria-current="page"] { color: var(--accent); font-weight: 600; }
+.freshness { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+
+main { max-width: 1100px; margin: 1.25rem auto; padding: 0 1.25rem; }
+.colophon { max-width: 1100px; margin: 2rem auto; padding: 0 1.25rem 2rem;
+            font-size: 0.8rem; color: var(--ink-soft); }
+
+/* --- the view container -------------------------------------------------- */
+
+.view {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.view__header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--rule);
+}
+.view__header h2 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+.view__chart { padding: 1.1rem; overflow-x: auto; }
+
+/*
+ * §7.2. Low confidence: muted palette and a dashed border. Both, because the
+ * mute alone is a colour-only encoding and §10.3 forbids that.
+ */
+.view--low { border-style: dashed; }
+.view--low .view__chart { opacity: 0.86; }
+
+.badge {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem; border-radius: 3px; border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.badge--high { color: #1f6f4a; }
+.badge--medium { color: #8a6100; }
+.badge--low { color: #8a2f1a; border-style: dashed; }
+
+/* --- caveats: never quiet ------------------------------------------------ */
+
+.caveats {
+  margin: 0; padding: 0.6rem 1.1rem;
+  background: var(--warn-bg);
+  border-bottom: 1px solid var(--warn-rule);
+}
+.caveats summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.caveats ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+.caveats li { margin: 0.3rem 0; font-size: 0.88rem; }
+
+/* --- the gate: as-of, staleness, coverage -------------------------------- */
+
+.view__footer {
+  border-top: 1px solid var(--rule);
+  background: var(--bg-soft);
+  padding: 0.7rem 1.1rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+.view__footer dl { display: flex; flex-wrap: wrap; gap: 0.35rem 1.6rem; margin: 0; }
+.view__footer dt { font-weight: 600; display: inline; }
+.view__footer dt::after { content: ": "; }
+.view__footer dd { display: inline; margin: 0; }
+.view__footer div { white-space: nowrap; }
+.staleness { color: var(--ink-soft); }
+.truncated { color: #8a6100; font-weight: 600; }
+.view__export { margin: 0.5rem 0 0; }
+.view__export a { color: var(--accent); }
+
+/* --- explained absence --------------------------------------------------- */
+
+.placeholder { padding: 1.6rem 1.1rem; }
+.placeholder__state { margin: 0 0 0.35rem; font-weight: 650; }
+.placeholder__reason { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+.placeholder--error .placeholder__state { color: var(--loss); }
+.chart-error { margin: 0.6rem 0 0; color: var(--loss); font-size: 0.88rem; }
+
+/* --- KPI ----------------------------------------------------------------- */
+
+.kpi { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0; }
+.kpi__tile {
+  flex: 1 1 150px; min-width: 150px;
+  border: 1px solid var(--rule); border-radius: 5px; padding: 0.6rem 0.75rem;
+}
+.kpi__tile dt { font-size: 0.76rem; color: var(--ink-soft); }
+.kpi__tile dd { margin: 0.15rem 0 0; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+/* An absent figure is muted AND dashed — colour alone would not carry it. */
+.kpi__tile--absent { border-style: dashed; }
+.kpi__tile--absent dd { color: var(--ink-soft); }
+.kpi--inline { margin-top: 1rem; }
+.definition { margin: 0.9rem 0 0; font-size: 0.85rem; color: var(--ink-soft); max-width: 62ch; }
+
+/* --- tables -------------------------------------------------------------- */
+
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--rule); }
+th { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); }
+.col--inr, .col--pct, .col--units, .col--nav {
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+/* Unreconciled rows carry the `!` marker as well as the tint. §10.3. */
+.row--unreconciled { background: #fdf6e3; }
+.row--unaligned td { font-style: italic; }
+.flag {
+  color: #8a6100; font-weight: 700; border: none; text-decoration: none;
+  cursor: help; margin-left: 0.2rem;
+}
+.chart-table { margin-top: 1rem; }
+.chart-table summary { cursor: pointer; font-size: 0.85rem; color: var(--ink-soft); }
+.chart-table .table-wrap { margin-top: 0.6rem; max-height: 26rem; overflow-y: auto; }
+
+/* --- sankey -------------------------------------------------------------- */
+
+.sankey { margin: 0; }
+.sankey svg { width: 100%; }
+.link { fill: none; stroke: #0072b2; stroke-opacity: 0.22; }
+.link:hover { stroke-opacity: 0.5; }
+/* Flow into missing mass is dashed as well as grey. */
+.link--synthetic { stroke: var(--synthetic); stroke-opacity: 0.4; stroke-dasharray: 5 3; }
+.node text { font-size: 10px; fill: var(--ink); paint-order: stroke;
+             stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.node--synthetic text { font-style: italic; }
+.node rect { stroke: #ffffff; stroke-width: 0.5; }
+
+/* --- heatmap ------------------------------------------------------------- */
+
+.heatmap { margin: 0; }
+.heatmap svg { max-width: 100%; height: auto; }
+.heatmap .axis { font-size: 10px; fill: var(--ink-soft); }
+.heatmap .axis--row { text-anchor: end; }
+.cell rect { stroke: #ffffff; stroke-width: 2; }
+.cell--unaligned rect { stroke: #8a6100; }
+.cell__label { font-size: 11px; text-anchor: middle; fill: var(--ink);
+               font-variant-numeric: tabular-nums; }
+
+/* --- lorenz -------------------------------------------------------------- */
+
+.lorenz { margin: 0; }
+.lorenz svg { max-width: 340px; height: auto; }
+.equality { stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 4 4; }
+.curve { stroke: var(--accent); stroke-width: 2; }
+.axis-line { stroke: var(--rule); stroke-width: 1; }
+.lorenz .axis { font-size: 9px; fill: var(--ink-soft); }
+
+/* --- accessibility ------------------------------------------------------- */
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+a:focus-visible, summary:focus-visible, details:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

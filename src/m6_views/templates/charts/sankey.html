@@ -1,0 +1,54 @@
+{#
+  The Sankey — the flagship. MODULE_6.md §8.1.
+
+  Funds on the left, companies on the right, flow width in rupees. It explains
+  look-through in one glance, which is the product thesis.
+
+  The payload crosses into JavaScript as JSON with **every Decimal still a
+  string** (§15.2). `d3-sankey` needs numbers for layout, so `sankey.js` parses
+  them at the one point where a pixel width is being computed — a coordinate, not
+  a figure anyone reads. Every number the user actually sees is formatted here,
+  server-side, and shipped as text.
+
+  Two hard requirements from Appendix A, both enforced in the builder and
+  asserted in tests: cap at ~40 companies with an aggregated `__OTHERS__` node,
+  and render `__UNRESOLVED__` / `__NO_DISCLOSURE__` as visually distinct nodes
+  pinned outside `top_n`. Missing mass that disappears into "smaller holdings" is
+  the one outcome this project exists to prevent.
+#}
+<figure class="sankey" data-chart="sankey">
+  <figcaption class="sr-only">
+    Sankey diagram: {{ env.payload.links | length }} flows from
+    {{ env.payload.nodes | selectattr('side', 'equalto', 'left') | list | length }} funds to
+    {{ env.payload.nodes | selectattr('side', 'equalto', 'right') | list | length }} companies.
+    The table below the chart carries the same figures.
+  </figcaption>
+  <svg id="sankey" role="img"
+       aria-label="Look-through exposure from funds to companies"></svg>
+</figure>
+
+{#
+  §10.4: every chart has an accessible table equivalent reachable from the same
+  view. Collapsed by default so it does not compete with the diagram, but present
+  in the DOM — a screen reader, a text browser and Ctrl-F all find it, and it is
+  the same numbers rather than a summary of them.
+#}
+<details class="chart-table">
+  <summary>The same flows as a table ({{ env.payload.links | length }} rows)</summary>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Fund</th><th scope="col">Company</th><th scope="col">Exposure</th></tr></thead>
+    <tbody>
+      {% for link in env.payload.links %}
+      <tr>
+        <td>{{ link.source }}</td>
+        <td>{{ labels.get(link.target, link.target) }}</td>
+        <td class="col--inr">{{ link.value | fmt_inr_full }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</details>
+
+<script id="sankey-data" type="application/json">{{ payload_json | safe }}</script>
