@@ -9,6 +9,8 @@ build-backend = "setuptools.build_meta"
 name = "mf-platform"
 version = "0.0.0"
 description = "Self-hosted look-through analytics for Indian mutual fund investors"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     # Zone B is encrypted at rest (PLAN.md §6.3). This is the project's one

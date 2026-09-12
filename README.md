@@ -1,5 +1,9 @@
 # Mutual Fund Portfolio Analyser
 
+[![gate](https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser/actions/workflows/ci.yml/badge.svg)](https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser/actions/workflows/ci.yml)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+
 A self-hosted look-through analytics platform for Indian mutual fund investors. It
 dissolves the funds you hold into the companies you actually own, and it tells you the
 things a fund factsheet cannot: how much of two funds is the same stock, how much of your
@@ -117,7 +121,7 @@ empty is a broken feature pretending to be a data problem.
 Requires **Python 3.11+**.
 
 ```bash
-git clone https://github.com/<your-username>/Mutual-Fund-Portfolio-Analyser.git
+git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
 cd Mutual-Fund-Portfolio-Analyser
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -e .
@@ -137,6 +141,20 @@ python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                        # strict, 163 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
+
+### Configuration
+
+Five environment variables, all optional except the first when fetching. There is no
+`.env` loader — these are read straight from the environment, so export them or prefix the
+command.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `MF_CONTACT_EMAIL` | `unset@example.invalid` | Sent in the `From:` header of every outbound request. Set it before fetching anything. |
+| `MF_DATA_ROOT` | `./data` | Where the warehouse, the ledger and the raw archive live. |
+| `MF_WAREHOUSE` | `$MF_DATA_ROOT/warehouse/canonical.db` | Points at a specific warehouse file — useful for keeping a full one and a slimmed one side by side. |
+| `MF_LEDGER` | `$MF_DATA_ROOT/ledger/personal.db` | The encrypted personal ledger. |
+| `MF_CAS_PASSWORD` | unset | Read **only** by the optional real-CAS test, which cannot prompt. Everything else asks interactively. |
 
 ### Load market data
 
@@ -250,6 +268,11 @@ cross-product test, and a schema-drift check.
 A separate verifier recomputes the golden portfolio independently and fails on any drift.
 It imports nothing from `src/`, on purpose.
 
+The suite needs **no network and no data**: on a bare checkout it is 865 passed, 5
+skipped, where the five are the ones that want a real warehouse or a real password-
+protected statement and skip cleanly rather than failing. GitHub Actions runs exactly the
+four commands above on every push.
+
 ---
 
 ## Built with Claude
@@ -270,4 +293,4 @@ has not been used in anger by anyone including its author. Every figure it rende
 its own as-of date, staleness and coverage precisely so you can judge how much to trust
 it — which, for now, should be "not with money that matters".
 
-No licence file is included yet. Until one is added, default copyright applies.
+Licensed under the [MIT Licence](LICENSE).

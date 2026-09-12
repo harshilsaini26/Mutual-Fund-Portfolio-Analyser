@@ -1,0 +1,52 @@
+# The gate, on every push.
+#
+# It runs exactly what `README.md` tells a contributor to run locally — the same
+# four commands, in the same order — because a CI that checks something else is
+# a second definition of "passing" and the two drift.
+#
+# `libsqlcipher-dev` is installed first and is not optional. Zone B is encrypted
+# at rest and `connect_ledger` REFUSES to open an unencrypted ledger rather than
+# degrading (DECISIONS V1-16), so the suite genuinely needs SQLCipher present —
+# a runner without it does not fail gracefully, it fails at collection.
+
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install SQLCipher
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlcipher-dev
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Lint
+        run: python -m ruff check src/ tests/ scripts/ jobs/
+
+      - name: Types
+        run: python -m mypy
+
+      - name: Tests
+        run: python -m pytest -q
+
+      # The golden portfolio, recomputed by a verifier that imports nothing from
+      # `src/`. Exits 1 on any drift from the committed expectations, which is
+      # what makes the fixtures a regression baseline rather than a snapshot.
+      - name: Golden-file drift
+        run: python -m scripts.verify_v0_ledger --check
