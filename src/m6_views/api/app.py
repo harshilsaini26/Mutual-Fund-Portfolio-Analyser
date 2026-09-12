@@ -34,7 +34,7 @@ import threading
 from datetime import date
 from typing import Any
 
-from fastapi import FastAPI, Query, Response
+from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -116,6 +116,33 @@ def create_app(
     """A factory, so tests drive the same app over temporary databases."""
     app = FastAPI(title="MF look-through", docs_url="/api/docs")
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next: Any) -> Response:
+        """Defence in depth for a page built from downloaded files.
+
+        Issuer names reach the browser from AMC disclosures fetched over the
+        internet. `render.embeddable_json` escapes them so they cannot close a
+        script element; this is the second lock on the same door, and it is the
+        one that still holds if the first regresses.
+
+        The policy can afford to be strict because the page has no inline
+        script, no inline style, no external font and no image host: d3 is
+        vendored under `/static`, so `'self'` covers everything it loads.
+        `frame-ancestors 'none'` matters even on loopback — a page in another
+        tab must not be able to frame the portfolio and read it.
+        """
+        response: Response = await call_next(request)
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "img-src 'self' data:; connect-src 'self'; font-src 'self'; "
+            "base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        )
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        return response
 
     def _scope(user_id: str, as_of: str | None, scope_id: str | None) -> Scope:
         return Scope(

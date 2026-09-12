@@ -20,7 +20,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from src.m6_views.envelope import ViewEnvelope
@@ -63,6 +63,41 @@ def provenance_header(env: ViewEnvelope, full: bool = False) -> list[str]:
     return lines
 
 
+#: Characters that make a spreadsheet treat a cell as a formula rather than as
+#: text. `-` and `+` are here because `-1+1` is a formula too, not only `=`.
+FORMULA_LEADS = ("=", "+", "-", "@", chr(9), chr(13))
+
+
+def _defang(text: str) -> str:
+    """Stop a spreadsheet executing a cell that came from a downloaded file.
+
+    `to_csv` writes a UTF-8 BOM **specifically so Excel opens the file
+    natively**, which is the exact configuration CSV injection targets. Issuer
+    names come from AMC disclosure files fetched over the internet, so a
+    hostile or compromised disclosure can put `=cmd|'/c calc.exe'!A1` in a name
+    and this export hands it to Excel. Demonstrated before this existed:
+
+        S1,EVIL,=cmd|'/c calc.exe'!A1,100000
+
+    A leading apostrophe is the spreadsheet's own "treat as text" marker. It is
+    used rather than stripping the character because the name is data: the user
+    should still see what the file actually said.
+
+    **A plain negative number is left alone.** `-` leads a formula and also
+    every negative figure this product produces, so the guard checks whether
+    what follows parses as a number — blanket-prefixing would turn a short
+    position into text and break the column.
+    """
+    stripped = text.lstrip()
+    if not stripped.startswith(FORMULA_LEADS):
+        return text
+    try:
+        Decimal(stripped)
+    except InvalidOperation:
+        return "'" + text
+    return text
+
+
 def _cell(value: Any) -> str:
     """`Decimal` as its own digits, never a float. `None` as empty.
 
@@ -78,7 +113,7 @@ def _cell(value: Any) -> str:
         return str(value.isoformat())
     if isinstance(value, bool):
         return "true" if value else "false"
-    return str(value)
+    return _defang(str(value))
 
 
 def rows_for(env: ViewEnvelope) -> tuple[list[str], list[dict[str, Any]]]:
@@ -157,4 +192,11 @@ def filename_for(env: ViewEnvelope, full: bool = False) -> str:
     return f"{env.view_id}_{env.as_of.isoformat()}{suffix}.csv"
 
 
-__all__ = ["ENCODING", "filename_for", "provenance_header", "rows_for", "to_csv"]
+__all__ = [
+    "ENCODING",
+    "FORMULA_LEADS",
+    "filename_for",
+    "provenance_header",
+    "rows_for",
+    "to_csv",
+]

@@ -131,14 +131,21 @@ pip install -e .
 present on your system. On Debian/Ubuntu `apt install libsqlcipher-dev`, on macOS
 `brew install sqlcipher`.
 
+Importing a CAS statement needs two more, kept optional because the PDF libraries are
+large and most of the tool never touches a PDF:
+
+```bash
+pip install -e ".[cas]"
+```
+
 ### Run the test suite
 
 Everything below runs with no network and no data files.
 
 ```bash
-python -m pytest -q                                   # 867 tests
+python -m pytest -q                                   # 881 tests
 python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 163 files
+python -m mypy                                        # strict, 164 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
 
@@ -207,8 +214,18 @@ disclosures. All of it public information about funds, none of it about you.
 
 Nothing here calls home. The one JavaScript dependency (d3, for the Sankey) is vendored
 into the repository at a pinned version rather than loaded from a CDN, so the UI works
-offline and no third party learns when you look at your portfolio. There is no telemetry,
-no account, and no server beyond the one you start yourself on loopback.
+offline and no third party learns when you look at your portfolio. `SHA256SUMS` in that
+directory records what was vendored, and a test fails if a file stops matching. There is
+no telemetry, no account, and no server beyond the one you start yourself on loopback.
+
+**The untrusted input is the disclosure files.** They are downloaded from AMC websites,
+and an instrument name in one is a string that reaches both a web page and a spreadsheet.
+Both sinks are handled: names are escaped before they are embedded in the page's JSON
+(`</script>` in a name would otherwise close the element), a cell that a spreadsheet would
+execute as a formula is prefixed so it stays text, and every response carries a
+`Content-Security-Policy` that would block an injected script even if the escaping
+regressed. The ledger file is created `0600`. See `tests/unit/test_security.py`, where
+each of those is a regression test written against a demonstrated exploit.
 
 ---
 
@@ -268,7 +285,7 @@ cross-product test, and a schema-drift check.
 A separate verifier recomputes the golden portfolio independently and fails on any drift.
 It imports nothing from `src/`, on purpose.
 
-The suite needs **no network and no data**: on a bare checkout it is 865 passed, 5
+The suite needs **no network and no data**: on a bare checkout it is 879 passed, 6
 skipped, where the five are the ones that want a real warehouse or a real password-
 protected statement and skip cleanly rather than failing. GitHub Actions runs exactly the
 four commands above on every push.

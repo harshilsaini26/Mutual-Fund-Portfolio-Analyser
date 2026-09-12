@@ -280,6 +280,35 @@ def lorenz_path(env: ViewEnvelope) -> str:
     return " ".join(commands)
 
 
+def embeddable_json(payload: dict[str, Any]) -> str:
+    """JSON that is safe to place inside a `<script>` element.
+
+    **`json.dumps` escapes quotes and backslashes. It does not escape `<` or
+    `/`.** So an issuer name containing `</script>` closed the element and
+    everything after it parsed as HTML — demonstrated with
+    `</script><img src=x onerror=...>`, which reached the page live, same-origin
+    with `/api/*`, and could therefore read the whole portfolio and post it
+    anywhere.
+
+    That input is remote. Issuer names come from AMC disclosure files fetched
+    over the internet: `instrument_raw_name` -> resolution -> `canonical_name`
+    -> this payload. A hostile or compromised disclosure is the attack.
+
+    `<` and friends are the SAME characters to a JSON parser, so the
+    browser reads the original string — this changes the encoding, not the data.
+    U+2028 and U+2029 are included because they are literal line terminators in
+    JavaScript source and JSON does not escape them either.
+    """
+    return (
+        json.dumps(jsonable(payload))
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace(chr(0x2028), "\\u2028")
+        .replace(chr(0x2029), "\\u2029")
+    )
+
+
 def sankey_labels(env: ViewEnvelope) -> dict[str, str]:
     """Node id -> display name, for the accessible table under the diagram."""
     return {n["id"]: n.get("label", n["id"]) for n in env.payload.get("nodes", [])}
@@ -315,7 +344,7 @@ def chart_context(env: ViewEnvelope) -> dict[str, Any]:
         context["labels"] = sankey_labels(env)
         # Decimals stay strings across this boundary — §15.2. `sankey.js` parses
         # them only where a pixel width is being computed.
-        context["payload_json"] = json.dumps(jsonable(env.payload))
+        context["payload_json"] = embeddable_json(env.payload)
     return context
 
 
@@ -331,6 +360,7 @@ __all__ = [
     "CHART_TEMPLATES",
     "FILTERS",
     "chart_context",
+    "embeddable_json",
     "fmt_cell",
     "fmt_tile",
     "heatmap_grid",

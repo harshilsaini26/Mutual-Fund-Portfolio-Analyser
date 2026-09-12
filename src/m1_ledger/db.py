@@ -26,7 +26,10 @@ call site; it is no longer on any command line.
 
 from __future__ import annotations
 
+import contextlib
+import os
 import sqlite3
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -44,8 +47,6 @@ def ledger_path() -> Path:
     runs the other way. `data_root()` is shared infrastructure, so that much is
     borrowed.
     """
-    import os
-
     from src.m0_data.config import data_root
 
     env = os.environ.get("MF_LEDGER")
@@ -70,6 +71,25 @@ def sqlcipher_module() -> Any | None:
         if hasattr(module, "connect"):
             return module
     return None
+
+
+def _restrict(path: str) -> None:
+    """Make the ledger readable only by its owner. `PLAN.md` §6.3.
+
+    Measured before this existed: created with mode 0666, readable by every
+    local account. The contents are encrypted, so this is depth rather than
+    disclosure — but an encrypted blob anyone can copy is an offline-attack
+    target, and `allow_unencrypted=True` produces a PLAINTEXT ledger with the
+    same mode.
+
+    Best effort by design. On Windows `os.chmod` only toggles the read-only
+    bit and POSIX modes do not apply; on a filesystem that does not support
+    them it raises. Neither is a reason to refuse to open the database, so the
+    failure is swallowed — the encryption is the control that matters, and this
+    is the belt beside it.
+    """
+    with contextlib.suppress(OSError, NotImplementedError):
+        os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
 
 def connect_ledger(
@@ -118,6 +138,7 @@ def connect_ledger(
         # Forces page 1 to be decrypted, so a wrong key fails HERE rather than
         # at some later query that looks like a schema problem.
         conn.execute("SELECT count(*) FROM sqlite_master")
+        _restrict(path)
         return conn
 
     if not allow_unencrypted:
@@ -132,11 +153,14 @@ def connect_ledger(
             f"allow_unencrypted=True only for a database holding no real data."
         )
 
-    return sqlite3.connect(
+    plain = sqlite3.connect(
         path,
         detect_types=sqlite3.PARSE_DECLTYPES,
         check_same_thread=check_same_thread,
     )
+    # An unencrypted ledger needs this MORE than an encrypted one, not less.
+    _restrict(path)
+    return plain
 
 
 def apply_ledger_schema(

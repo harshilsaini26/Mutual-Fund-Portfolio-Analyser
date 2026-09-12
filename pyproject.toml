@@ -16,20 +16,27 @@ dependencies = [
     # Zone B is encrypted at rest (PLAN.md §6.3). This is the project's one
     # runtime dependency and it is load-bearing for that: without it
     # `connect_ledger` refuses to open the ledger at all. DECISIONS V1-16.
-    "sqlcipher3",
+    "sqlcipher3>=0.5",
     # Used throughout and previously undeclared, which V0-19 called out.
-    "pyyaml",
-    "openpyxl",
-    "httpx",
+    "pyyaml>=6.0",
+    "openpyxl>=3.1",
+    "httpx>=0.27",
     # M6's API. Loopback-bound and single-user (MODULE_6 §15.3) — this is a
     # local server for one person, not a deployment.
-    "fastapi",
-    "uvicorn",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
     # M6's HTML surface. Server-rendered rather than React — DECISIONS V1-23,
     # which overrides PLAN.md §9.10. d3 is vendored under
     # src/m6_views/static/vendor/, so there is no JS toolchain and no CDN call.
-    "jinja2",
+    "jinja2>=3.1",
 ]
+
+# `cas/pdf.py` imports these INSIDE its functions so the ledger stays
+# importable without them — but importing lazily is not the same as not
+# depending on them, and undeclared meant `pip install -e .` followed by
+# `python -m jobs.import_cas` failed with ImportError.
+[project.optional-dependencies]
+cas = ["pypdf>=4.2", "pdfplumber>=0.11"]
 
 # Explicit, not auto-discovered. This is a flat layout with several importable
 # top-level directories (`src`, `jobs`, `scripts`, `tests`), and setuptools
