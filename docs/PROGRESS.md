@@ -9,7 +9,7 @@
 
 **Slice:** V1.10 — V1 is complete and the whole codebase has been reviewed.
 **Repo:** local git, `origin` set to
-`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser`. **41 commits
+`github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser`. **43 commits
 unpushed, by decision** — the first push is being held until the project is
 finished. Branch `main`, tree clean.
 **Gate:** ruff clean · `mypy --strict` clean (163 files) · 867 tests + 3 skipped ·
@@ -22,9 +22,11 @@ you actually own beneath your funds. `python -m jobs.serve` opens six views on
 `127.0.0.1`, every one of them carrying its as-of date, staleness and coverage in
 a footer that cannot be switched off.
 
-Three of five AMC formats parse and load (HDFC, ICICI, Nippon). Closure holds at
-delta **0.00** from the disclosure through to the pixels — the same rupees the
-engine asserts are the rupees the Sankey draws.
+**Two of five AMC formats have parsed a real file** — HDFC and Nippon. ICICI's
+parser has only ever seen a 12-row hand-built fixture, and fails V1-08's
+reconciliation guard at **+93.8%** on the first real ICICI disclosure it was
+shown (V1-25). Closure holds at delta **0.00** from the disclosure through to the
+pixels — the same rupees the engine asserts are the rupees the Sankey draws.
 
 ### The V1 acceptance gate, four of four
 
@@ -36,8 +38,16 @@ engine asserts are the rupees the Sankey draws.
 | Every chart renders its as-of date, staleness, and coverage | ✅ V1.9 |
 
 `PLAN.md` §7's success criterion — *"it tells the user something they didn't
-know"* — is on a screen: **13% overlap between the two reference funds, ₹1.33 L held
-through more than one of them, across 17 companies.**
+know"* — is on a screen: **13.32% overlap, 17 shared companies of 156, and 6.66%
+of the portfolio held through more than one fund.**
+
+**Read that as the mechanism working, not as a fact about this portfolio.** The
+pair is HDFC Flexi Cap × Nippon India Growth Mid Cap, and **Nippon is not held** —
+it is loaded because it was the third parser's test subject (V1-15). The rupee
+figures come from `--equal`, which values every *disclosed* scheme at ₹10 L to
+show the shape without a ledger, and the report labels that run `ILLUSTRATIVE —
+NOT your ledger`. An earlier version of this file called it "the two reference funds",
+which is the error the product itself refuses to make (V1-25).
 
 ### What is not proven
 
@@ -53,6 +63,11 @@ the first outside witness).
 
 ### Carried, and honest about it
 
+- **Two of the three reference schemes have no disclosure**, so the look-through sees
+  into one of three positions and `__NO_DISCLOSURE__` carries the rest.
+  `INF109K01761` ICICI Multi Asset fails the parser; `INF174KA1EZ1` Kotak Pioneer
+  is bot-blocked and needs a hand-downloaded file. Only HDFC Flexi Cap is visible
+  (V1-25).
 - **`holding.market_value` is `NOT NULL`**, so a row the file did not price is
   stored at zero and counted into `validation_notes` as `UNPRICED` rather than
   stored as NULL. Removing the silence was possible without a migration;
@@ -71,7 +86,9 @@ the first outside witness).
   (§12.1), but §12.2's targets all need M2 or M5, and a link into a screen that
   does not exist is worse than no link (V1-23).
 - **Kotak is blocked** behind Radware bot detection, which this project will not
-  solve; it needs a hand-downloaded file. SBI is simply untried.
+  solve; it needs a hand-downloaded file. **SBI is not held**, so it is industry
+  coverage rather than portfolio coverage and belongs with V3's flow analytics —
+  not, as an earlier version of this file had it, ahead of Kotak (V1-25).
 - **The sector taxonomy** deferred in V1-03 still blocks `tilts()` and
   `sector_exposure()`, which raise and name it.
 - **One unresolved disagreement**: mfapi says 2111.846 for 2026-03-12, AMFI says
@@ -99,9 +116,21 @@ V1 is done, so what follows is a choice rather than a dependency. In rough order
 of what the product would notice:
 
 - **Use it.** See "What is not proven" above.
-- **More funds.** SBI, then Kotak once a file is supplied by hand. §6.5's
-  member-level ZIP staging would let ICICI load from its 146-workbook archive by
-  manifest rather than by hand.
+- **More funds — in this order: ICICI, then Kotak, then SBI.** The first two are
+  *held*; SBI is not, so it is industry coverage for M5's flow analytics and
+  `PLAN.md` §7 puts that in V3 (V1-25).
+  - **ICICI first.** The real file is already on disk and the defect is in code
+    that exists: V1-10's arithmetic demotion keeps four section rows as holdings
+    on a multi-asset sheet, which is the +93.8%. V1-10 asked whether its rules
+    were tuned to a sample of two; on a fourth file the answer is yes. Needs its
+    own slice — a behaviour change to the shared reader plus a golden fixture
+    rebuilt from a real file.
+  - **Kotak second.** Held, and only a download blocks it. `--file --scheme`
+    already works; the site is behind Radware bot detection this project will not
+    solve (V1-03).
+  - **SBI last**, and §6.5's member-level ZIP staging with it — that would let
+    ICICI load from its 146-workbook archive by manifest rather than by hand, but
+    it is convenience, not coverage.
 - **V1 build item 5** — Bhavcopy into `security_price` / `security_adjustment`,
   which is what would make `weight_basis = 'drift_adj'` mean anything — and §7's
   `direct_holding`.
