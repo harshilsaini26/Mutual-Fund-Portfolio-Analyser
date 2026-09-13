@@ -35,6 +35,21 @@ def raw_root() -> Path:
     return data_root() / "raw"
 
 
+def inbox_root() -> Path:
+    """Where a human drops a disclosure they downloaded themselves.
+
+    Fetching is automated where an AMC allows it and manual where it does not —
+    Kotak serves a CAPTCHA (V1-32), and 47 of 52 AMCs have no manifest entry at
+    all. `jobs/ingest_inbox.py` reads whatever is here, works out which AMC each
+    file belongs to and loads every scheme in it, so the manual step is a
+    download and nothing else.
+
+    Gitignored with the rest of `data/`.
+    """
+    env = os.environ.get("MF_INBOX")
+    return Path(env) if env else data_root() / "inbox"
+
+
 def contact_email() -> str:
     """Goes into the User-Agent. §2.3 requires an honest, contactable agent."""
     return os.environ.get("MF_CONTACT_EMAIL", "unset@example.invalid")

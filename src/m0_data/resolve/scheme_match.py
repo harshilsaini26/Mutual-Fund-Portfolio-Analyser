@@ -110,6 +110,101 @@ def live_families(
     }
 
 
+def live_families_by_amc(
+    conn: sqlite3.Connection, as_of: date
+) -> dict[str, set[str]]:
+    """Every live family across every AMC: family key -> the AMCs claiming it.
+
+    Used to work out which AMC a dropped file belongs to. That the keys are
+    almost never shared is not luck — an AMFI scheme name begins with its fund
+    house, so `kotak gold etf` and `nippon india gold etf` are different keys
+    for the same kind of fund.
+    """
+    rows = conn.execute(
+        "SELECT s.scheme_family, s.amc_id,"
+        "       (SELECT max(n.nav_date) FROM nav_daily n"
+        "         WHERE n.scheme_id = s.scheme_id) AS last_priced"
+        "  FROM scheme s"
+        " WHERE s.scheme_family IS NOT NULL AND s.status = 'active'",
+        (),
+    ).fetchall()
+    out: dict[str, set[str]] = defaultdict(set)
+    cutoff = as_of.isoformat()
+    for family, amc_id, last_priced in rows:
+        if last_priced and str(last_priced) >= cutoff:
+            out[str(family)].add(str(amc_id))
+    return out
+
+
+def amc_names(conn: sqlite3.Connection) -> dict[str, str]:
+    """Normalised fund-house name -> `amc_id`. The second detection signal."""
+    return {
+        _norm(str(name)): str(amc_id)
+        for amc_id, name in conn.execute("SELECT amc_id, amc_name FROM amc")
+        if name and _norm(str(name))
+    }
+
+
+def detect_amc(
+    sheets: list[list[str]],
+    families: dict[str, set[str]],
+    houses: dict[str, str] | None = None,
+) -> tuple[str | None, dict[str, int]]:
+    """Whose workbook is this? Whichever AMC's funds are named in it.
+
+    The alternative was a table mapping each parser's `amc_id` to the scheme
+    master's, which would have been three lines and wrong the first time an AMC
+    was added without one. This asks the file.
+
+    Two signals, because one is not enough. **Fund names** carry most files:
+    an AMFI scheme name begins with its house, so `kotak gold etf` and
+    `nippon india gold etf` are different keys for the same kind of fund. But
+    containment fails wherever an AMC does not spell its own fund the way AMFI
+    does, and ICICI does not — its sheet says `Multi-Asset Fund` where AMFI
+    says `Multi Asset Allocation Fund`, so no family is contained and the file
+    was skipped entirely.
+
+    So the **house's own name** counts too. ICICI's first header line is
+    literally `ICICI Prudential Mutual Fund`, which is verbatim what the `amc`
+    table holds. Cheap — 53 names — and it does not need the fuzzy matcher's
+    guard, because an exact containment of a fund house's registered name is
+    not a similarity judgement.
+
+    Returns `(amc_id, tally)` and refuses — `None` — unless one AMC accounts
+    for a **strict majority** of the sheets that matched anything. A workbook is
+    one house's monthly disclosure; a file where two AMCs are both well
+    represented is not the thing this was built to read, and guessing which
+    half to believe is exactly the kind of confident wrong answer the matcher
+    exists to avoid.
+    """
+    tally: dict[str, int] = defaultdict(int)
+    for candidates in sheets:
+        lines = [_norm(c) for c in candidates]
+        seen: set[str] = set()
+        for line in lines:
+            if not line:
+                continue
+            padded = f" {line} "
+            for family, owners in families.items():
+                if family and f" {family} " in padded:
+                    seen |= owners
+            for house, amc_id in (houses or {}).items():
+                if f" {house} " in padded:
+                    seen.add(amc_id)
+        # A sheet naming two houses' funds votes for neither.
+        if len(seen) == 1:
+            tally[next(iter(seen))] += 1
+
+    if not tally:
+        return None, {}
+    ranked = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
+    total = sum(tally.values())
+    best_amc, best_count = ranked[0]
+    if best_count * 2 <= total:
+        return None, dict(tally)
+    return best_amc, dict(tally)
+
+
 def identify_scheme(candidates: list[str], families: dict[str, list[str]]) -> SchemeMatch:
     """Match a sheet's header lines to one family, or refuse.
 
@@ -201,8 +296,11 @@ def canonical_scheme(
 
 __all__ = [
     "SchemeMatch",
+    "amc_names",
     "canonical_scheme",
+    "detect_amc",
     "identify_scheme",
     "live_families",
+    "live_families_by_amc",
     "refuse_contested",
 ]

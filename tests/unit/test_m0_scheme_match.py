@@ -17,9 +17,12 @@ from pathlib import Path
 import pytest
 from src.common.decimals import connect
 from src.m0_data.resolve.scheme_match import (
+    amc_names,
     canonical_scheme,
+    detect_amc,
     identify_scheme,
     live_families,
+    live_families_by_amc,
     refuse_contested,
 )
 from src.m0_data.schema.apply import apply_migrations
@@ -174,3 +177,70 @@ def test_the_scheme_chosen_from_a_family_is_stable(
     assert first == "INF109K015K4"          # direct + growth wins
     assert canonical_scheme(conn, family, "icici_prudential") == first
     assert canonical_scheme(conn, "no such family", "icici_prudential") is None
+
+# --- V1-39, whose workbook is this ------------------------------------------
+
+
+def test_the_house_is_read_off_the_funds_it_names(conn: sqlite3.Connection) -> None:
+    """An AMFI scheme name begins with its fund house, so the family keys are
+    naturally house-scoped and a workbook full of them votes for one AMC."""
+    families = live_families_by_amc(conn, AS_OF)
+    sheets = [
+        ["ICICI Prudential Multi Asset Allocation Fund", "Portfolio as on"],
+        ["ICICI Prudential Multi Asset Allocation Fund"],
+    ]
+    amc_id, tally = detect_amc(sheets, families, {})
+    assert amc_id == "icici_prudential"
+    assert tally["icici_prudential"] == 2
+
+
+def test_the_house_s_own_name_rescues_a_file_naming_no_family(
+    conn: sqlite3.Connection,
+) -> None:
+    """Fund names carry most files and fail on ICICI's, which says
+    `Multi-Asset Fund` where AMFI says `Multi Asset Allocation Fund`. No family
+    is contained, the tally is empty, and the file is skipped entirely.
+
+    Its first header line is literally `ICICI Prudential Mutual Fund` — verbatim
+    what the `amc` table holds. An exact containment of a registered fund-house
+    name is not a similarity judgement and needs no guard.
+    """
+    families = live_families_by_amc(conn, AS_OF)
+    sheets = [["ICICI Prudential Mutual Fund", "ICICI Prudential Multi-Asset Fund"]]
+
+    without, _ = detect_amc(sheets, families, {})
+    assert without is None, "the fund-name signal alone cannot see this file"
+
+    with_houses, tally = detect_amc(sheets, families, amc_names(conn))
+    assert with_houses == "icici_prudential"
+    assert tally["icici_prudential"] == 1
+
+
+def test_a_file_naming_two_houses_equally_is_refused(
+    conn: sqlite3.Connection,
+) -> None:
+    """A workbook is one house's monthly disclosure. Where two are equally
+    represented there is no majority, and guessing which half to believe is the
+    confident wrong answer this module exists to avoid.
+    """
+    conn.execute("INSERT INTO amc (amc_id, amc_name) VALUES ('hdfc','HDFC Mutual Fund')")
+    conn.commit()
+    houses = amc_names(conn)
+    families = live_families_by_amc(conn, AS_OF)
+    sheets = [["ICICI Prudential Mutual Fund"], ["HDFC Mutual Fund"]]
+    amc_id, tally = detect_amc(sheets, families, houses)
+    assert amc_id is None
+    assert tally == {"hdfc": 1, "icici_prudential": 1}
+
+
+def test_a_sheet_naming_two_houses_votes_for_neither(
+    conn: sqlite3.Connection,
+) -> None:
+    """One sheet mentioning two houses is a contents page or a fund-of-fund,
+    not evidence. It abstains rather than splitting its vote."""
+    conn.execute("INSERT INTO amc (amc_id, amc_name) VALUES ('hdfc','HDFC Mutual Fund')")
+    conn.commit()
+    sheets = [["ICICI Prudential Mutual Fund and HDFC Mutual Fund"]]
+    amc_id, tally = detect_amc(sheets, live_families_by_amc(conn, AS_OF), amc_names(conn))
+    assert amc_id is None
+    assert tally == {}

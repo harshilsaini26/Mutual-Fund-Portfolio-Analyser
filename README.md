@@ -143,6 +143,25 @@ python -m jobs.import_cas --file statement.pdf --user USER-01
 python -m jobs.serve                                  # browser UI on 127.0.0.1:8765
 ```
 
+### Cover the funds you actually hold
+
+Most AMCs publish their monthly portfolio behind a page that needs a browser, and one
+answers a portfolio request with a CAPTCHA. So the fetch is yours; everything after it is
+not. Download your fund house's monthly portfolio workbook, drop it in `data/inbox/`, and:
+
+```bash
+python -m jobs.ingest_inbox
+```
+
+It works out which house published the file, which scheme each sheet describes, and loads
+all of them — 86 schemes from one Kotak workbook, 91 from one Nippon. Every disclosure then
+covers all of that scheme's share classes, so Direct and Regular and every IDCW variant are
+answered by one file. A sheet it cannot identify with certainty is reported and skipped,
+never guessed at.
+
+`config/amc_disclosure_index.yaml` has the disclosure page for all 52 AMCs, so finding the
+download is a link away.
+
 Passwords are always prompted, never read from the environment. Every fetch is
 rate-limited per domain, respects `robots.txt`, uses conditional GET, and archives the raw
 bytes under their SHA-256 before anything parses them; re-running any job is safe.
