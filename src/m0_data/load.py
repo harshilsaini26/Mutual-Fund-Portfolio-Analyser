@@ -391,9 +391,9 @@ def load_holdings(
             scheme_id, as_of_date, revision, source_file_id, row_count,
             pct_sum_raw, weight_residual, unresolved_mv_pct, total_mv,
             aum_reported, mv_vs_aum_pct, reported_unit, validation_status,
-            validation_notes, resolver_version, parser_version, is_current,
-            ingested_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
+            validation_notes, resolver_version, parser_version, source_tier,
+            is_current, ingested_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
         """,
         (
             scheme_id, as_of, revision, source_file_id, len(rows),
@@ -402,6 +402,11 @@ def load_holdings(
             header.get("aum_reported"), header.get("mv_vs_aum_pct"),
             header.get("reported_unit"), header["validation_status"],
             header.get("validation_notes"), resolver_version, parser_version,
+            # V1-43. Defaulted rather than required: every caller before the
+            # coverage tier existed was reading an AMC's own file, and a
+            # missing tier meaning `amc_direct` keeps those callers honest
+            # instead of making them all say so.
+            header.get("source_tier", "amc_direct"),
             now,
         ),
     )

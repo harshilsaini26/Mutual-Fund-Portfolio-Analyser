@@ -1,0 +1,33 @@
+-- DECISIONS V1-43. Where a disclosure came from, as a first-class column.
+--
+-- Until now every disclosure in the warehouse was the AMC's own statutory
+-- file, so provenance was implicit and `raw_file.source_id` carried it well
+-- enough. The coverage tier ends that: an aggregator publishes the same
+-- portfolio WITHOUT the ISIN column, and an ISIN is what four of our
+-- resolution rules key on (V1-29 issuer segment, V1-30 sovereign, V1-41 fund,
+-- V1-42 commodity-by-absence).
+--
+-- Measured on HDFC Flexi Cap, August 2026, through the real cascade against
+-- the real entity master:
+--
+--     from the AMC's file      0.00% unresolved
+--     from the aggregator      8.96% unresolved  (7 of 86 rows)
+--
+-- The seven are not obscure. `Zomato Ltd` is `Eternal Limited` in the master
+-- and has been since the rename; `Kalpataru Power Transmission` is now
+-- `Kalpataru Projects International`. A name-only matcher cannot fix either,
+-- ever, and the ISIN never moved. The rest are ambiguity the cascade REFUSES
+-- on purpose -- three `Kotak Mahindra` issuers, `Apollo Hospitals Enterprise`
+-- against `...Enterprises Ltd.` -- which is V1-02 departure 2 working exactly
+-- as designed.
+--
+-- So both numbers are honest and they are not the same kind of number. §4.10
+-- forbids dropping a row; the same argument forbids presenting a 91% answer
+-- as though it were a 100% one. This column is what lets a view say which it
+-- is holding.
+--
+-- `amc_direct` is the default because every row already in the table is one,
+-- and because the safer thing to be wrong about is which rows need review.
+
+ALTER TABLE holding_disclosure
+  ADD COLUMN source_tier TEXT NOT NULL DEFAULT 'amc_direct';

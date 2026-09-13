@@ -64,3 +64,28 @@ sources:
     user_agent: browser
     # Statutory monthly disclosures SEBI requires every AMC to publish. Links
     # live in config/amc_manifest.yaml; discovery is not automated (V1-03).
+
+  S7:
+    name: groww_scheme_portfolio
+    kind: per_scheme
+    # `{slug}` is Groww's own URL segment, which is NOT derivable from the
+    # scheme name -- HDFC Flexi Cap lives at `hdfc-equity-fund-direct-growth`,
+    # the fund's name before it was renamed. config/groww_slugs.yaml maps them
+    # and the fetch REFUSES a page whose ISIN is not the one expected.
+    url: "https://groww.in/mutual-funds/{slug}"
+    parser: holdings.groww
+    verified_on: 2026-09-13
+    provides: [holding]
+    user_agent: browser
+    # robots.txt allows /mutual-funds/<slug> and the page sets
+    # `meta_robots: index`. /v1/api/* is Disallow, so the internal JSON API is
+    # NOT used -- only the server-rendered page, which carries the whole
+    # portfolio in its `__NEXT_DATA__` payload.
+    respect_robots: true
+    # THE COVERAGE TIER, not the source of record. It reaches every scheme
+    # Groww lists rather than the five AMCs with a parser, and it pays for that
+    # with the ISIN column: 8.96% of HDFC Flexi Cap goes unresolved where the
+    # AMC's own file gives 0.00%. Where an AMC file exists, it wins.
+    # DECISIONS V1-43.
+    role: coverage
+    tier: aggregator

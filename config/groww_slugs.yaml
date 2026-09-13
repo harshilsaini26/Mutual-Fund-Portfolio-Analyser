@@ -1,0 +1,53 @@
+# Scheme ISIN -> Groww's URL segment. DECISIONS V1-43.
+#
+# THE SLUG IS NOT DERIVABLE FROM THE NAME. Two of the three funds below prove
+# it, and both in the same way -- Groww's slug preserves the name the fund had
+# BEFORE it was renamed:
+#
+#   HDFC Flexi Cap Fund          -> hdfc-equity-fund-direct-growth
+#   Parag Parikh Flexi Cap Fund  -> parag-parikh-long-term-value-fund-direct-growth
+#
+# Both were guessed from the current name first and both 404'd. A wrong guess
+# is not always so polite: a plausible slug can fetch a REAL page for a
+# DIFFERENT fund and load a real portfolio under the wrong scheme_id, which is
+# the failure this file exists to prevent. So the map is only a hint -- every
+# fetch re-reads the `isin` the page states for itself and REFUSES when it is
+# not the one promised here.
+#
+# DISCOVERY: https://groww.in/mf-sitemap.xml lists 1,973 fund pages, and
+# grepping it for the AMC's name is how both slugs above were found once
+# guessing failed. Take the last path segment, then:
+#
+#     python -m jobs.fetch_groww --slug <slug> --dry-run
+#
+# which prints the scheme name, ISIN, as-of date and row count the page states
+# for itself, loads nothing, and prints the line to paste here.
+
+meta:
+  verified_on: 2026-09-13
+  discovery: https://groww.in/mf-sitemap.xml
+  note: >
+    Seeded with the funds actually held, verified live one at a time. This is
+    the COVERAGE tier: where an AMC parser exists the AMC's own file is the
+    source of record and wins, because this page carries no ISIN column --
+    8.96% of rows unresolved against 0.00% on the same fund and month.
+
+slugs:
+  # Verified 2026-09-13: 86 holdings, aum 113,606.4660 Cr, as on 2026-08-31.
+  INF179K01UT0:
+    slug: hdfc-equity-fund-direct-growth
+    scheme_name: HDFC Flexi Cap Direct Plan Growth
+    amc_direct: true
+
+  # Verified 2026-09-13: 150 holdings, aum 147,404.5072 Cr, as on 2026-08-31.
+  INF879O01027:
+    slug: parag-parikh-long-term-value-fund-direct-growth
+    scheme_name: Parag Parikh Flexi Cap Fund Direct Growth
+    amc_direct: true
+
+  # Verified 2026-09-13: 57 holdings, as on 2026-08-31. The only one of the
+  # three whose slug matches its current name.
+  INF174KA1EZ1:
+    slug: kotak-pioneer-fund-direct-growth
+    scheme_name: Kotak Pioneer Fund Direct Growth
+    amc_direct: true

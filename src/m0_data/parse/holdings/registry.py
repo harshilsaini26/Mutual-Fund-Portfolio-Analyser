@@ -14,6 +14,7 @@ failure says what it considered.
 from __future__ import annotations
 
 from src.m0_data.parse.base import HoldingsParser, ParseFailed, RawFile
+from src.m0_data.parse.holdings.groww import GrowwHoldingsParser
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.parse.holdings.icici import IciciHoldingsParser
 from src.m0_data.parse.holdings.kotak import KotakHoldingsParser
@@ -22,6 +23,11 @@ from src.m0_data.parse.holdings.ppfas import PpfasHoldingsParser
 
 #: Every registered parser. Adding an AMC is one entry.
 REGISTRY: tuple[HoldingsParser, ...] = (
+    # Not an AMC. The coverage tier -- an aggregator's page rather than a fund
+    # house's workbook -- and it scores 0.00 on anything that is a workbook, so
+    # it never competes with the five below for a file one of them should read.
+    # DECISIONS V1-43.
+    GrowwHoldingsParser(),
     HdfcHoldingsParser(),
     IciciHoldingsParser(),
     KotakHoldingsParser(),

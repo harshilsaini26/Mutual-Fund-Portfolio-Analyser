@@ -43,27 +43,35 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "m0"
 #: routes on what the file is called in the wild, so testing it against
 #: `hdfc_holdings_sample.xlsx` would test a filename no AMC has ever used.
 PUBLISHED = {
-    "hdfc": ("hdfc_holdings_sample.xlsx",
-             "Monthly HDFC Flexi Cap Fund - 31 July 2026.xlsx"),
-    "icici": ("icici_holdings_sample.xlsx",
-              "ICICI Prudential Multi-Asset Fund.xlsx"),
-    "nippon": ("nippon_holdings_sample.xlsx",
-               "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls"),
+    "hdfc": (
+        "hdfc_holdings_sample.xlsx",
+        "Monthly HDFC Flexi Cap Fund - 31 July 2026.xlsx",
+    ),
+    "icici": ("icici_holdings_sample.xlsx", "ICICI Prudential Multi-Asset Fund.xlsx"),
+    "nippon": ("nippon_holdings_sample.xlsx", "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls"),
     # Kotak's published name says what the document is, not who published it,
     # which is the case §6.1 said would one day earn a content check. It has
     # not yet — the cross-product below is what proves that.
-    "kotak": ("kotak_pioneer_2026-07-31.xlsx",
-              "ConsolidatedSEBIPortfolioJuly2026.xlsx"),
+    "kotak": ("kotak_pioneer_2026-07-31.xlsx", "ConsolidatedSEBIPortfolioJuly2026.xlsx"),
     # PPFAS is the easy case: its filename says both who published it and
     # which scheme it is.
-    "ppfas": ("ppfas_flexi_cap_2026-07-31.xlsx",
-              "PPFCF_PPFAS_Monthly_Portfolio_Report_July_31_2026.xlsx"),
+    "ppfas": (
+        "ppfas_flexi_cap_2026-07-31.xlsx",
+        "PPFCF_PPFAS_Monthly_Portfolio_Report_July_31_2026.xlsx",
+    ),
+    # Not an AMC and not a workbook: a page, from the coverage tier (V1-43).
+    # It is in the cross-product for exactly the reason the others are — five
+    # workbook parsers that each open with a magic-byte check must all score it
+    # 0.00, and it must not claim any of theirs. The published name is the
+    # slug, because a page is not downloaded under a name of the AMC's choosing.
+    "groww": (
+        "groww_hdfc_flexi_cap_2026-08-31.html",
+        "hdfc-equity-fund-direct-growth.html",
+    ),
 }
 
 PARSERS = {p.amc_id: p for p in REGISTRY}
-CROSS_PRODUCT = [
-    (a, b) for a, b in itertools.permutations(sorted(PUBLISHED), 2)
-]
+CROSS_PRODUCT = [(a, b) for a, b in itertools.permutations(sorted(PUBLISHED), 2)]
 
 
 def _raw(amc_id: str) -> RawFile:
@@ -146,6 +154,7 @@ def test_the_cross_product_catches_an_unconditionally_greedy_sniff() -> None:
             f"{parser.parser_id} claims {_claims_foreign(parser)}"
         )
 
+
 # --- re-reading a file the archive already holds ------------------------------
 
 
@@ -185,7 +194,8 @@ def test_an_archived_file_cannot_be_routed_by_its_name() -> None:
     """
     on_disk, _ = PUBLISHED["hdfc"]
     archived = RawFile(
-        "x", "S5:hdfc",
+        "x",
+        "S5:hdfc",
         # what the archive actually calls it
         "0ab4fd3000675be362444fd0547afa64b67e61c220b5ff36064dc05e0a36f24a.xlsx",
         (FIXTURES / on_disk).read_bytes(),

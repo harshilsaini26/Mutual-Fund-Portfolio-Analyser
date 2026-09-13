@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 955 tests passing
+**Last updated:** 2026-09-13 · 988 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -21,6 +21,7 @@ re-measured rather than trusted.
 | **ISINs a look-through can answer for** | **991** |
 | Holding rows | 10,300 |
 | AMC formats with a parser | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
+| **Schemes reachable without one** | **1,973**, via the coverage tier |
 
 The gap between 183 schemes and 991 ISINs is V1-37: a disclosure describes a
 *scheme*, and every share class of that scheme — Direct, Regular, Growth, each
@@ -46,6 +47,29 @@ the start of the day.
 
 ## How to add a fund
 
+**Two tiers, and which one you get depends on the fund house.**
+
+### The coverage tier — any fund, one command
+
+```bash
+python -m jobs.fetch_groww --slug <groww-slug> --dry-run   # check first
+python -m jobs.fetch_groww --slug <groww-slug>
+```
+
+Groww's scheme page is server-rendered and carries the whole portfolio, so this
+reaches any of 1,973 funds with no download and no browser. Find the slug in
+`https://groww.in/mf-sitemap.xml` — **it is not derivable from the fund's name**,
+because Groww keeps whatever the fund was called before it was renamed.
+
+It pays for that reach with the ISIN column, which the page does not have:
+**8.96% of HDFC Flexi Cap unresolved against 0.00% from the AMC's own file**,
+and 22.63% of PPFAS, which holds foreign equity and certificates of deposit that
+only an ISIN resolves. Every such disclosure is stamped `source_tier =
+'aggregator'`, and a scheme the AMC tier already covers is skipped rather than
+downgraded.
+
+### The AMC tier — the five houses with a parser
+
 ```bash
 # 1. find your fund house in config/amc_disclosure_index.yaml (all 52 are there)
 # 2. download its monthly portfolio workbook
@@ -58,11 +82,12 @@ and loads all of them. 88 schemes from one Kotak workbook, 91 from one Nippon,
 about 70 seconds each. A sheet it cannot identify with certainty is reported and
 skipped, never guessed at.
 
-**Fetching is the manual step and will stay one for most houses.** AMFI
-publishes a directory of every AMC's disclosure page but hosts none of the
-files, each AMC renders its file list its own way, and Kotak answers a portfolio
-request with a CAPTCHA this project will not solve (V1-32). PPFAS and HDFC fetch
-automatically; the rest are a download.
+Fetching is still a download here, but **not because it has to be**. V1-03 said
+discovery needed a browser since every AMC page is JavaScript-rendered; that was
+the wrong conclusion — a JS front-end implies a JSON backend. Kotak's portfolio
+list comes back from `java17vlbapi.kotakmf.com/.../getsubheaderList` with no
+CAPTCHA at all, and ICICI's monthly ZIP from an unauthenticated POST. Writing
+those adapters is the next slice (V1-44).
 
 ## Modules
 
@@ -111,12 +136,20 @@ Ordered by what they cost.
 5. **`data_only=True` returns None for a workbook Excel never cached.** Would
    reproduce V1-36's silent row-drop. Not observed; worth a loud check when a
    file of that shape appears.
+6. **`latest_as_of` reads no `source_tier`.** It takes `max(as_of_date)`, so a
+   newer aggregator disclosure would outrank an older AMC one. `fetch_groww`
+   guards its own writes (V1-43), but the guard is in the job rather than in
+   the query every reader goes through, and a second aggregator would have to
+   remember it. The check belongs in `m3_lookthrough/weights.py`.
 
 ## Next
 
 The coverage machinery is done. What is left is not machinery:
 
-- **Load the AMCs actually held**, now a download each.
+- **AMC-direct fetchers** for Kotak and ICICI, both endpoints verified live
+  (V1-43). One adapter per house, and the house you hold is the one worth
+  writing.
+- **A staleness command** — which held fund owes a disclosure, with the link.
 - **V2**: M2 fund x-ray, the tax engine, §10 nested look-through.
 
 ## Reading this repository
