@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 1,075 tests passing
+**Last updated:** 2026-09-13 · 1,100 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -112,6 +112,24 @@ member staging is not built, so a human still extracts the member.
 The other 50 AMCs are one adapter each. The house you hold is the one worth
 writing, and everything else has the coverage tier above.
 
+## Keeping the units check honest
+
+```bash
+python -m jobs.fetch_aum --list     # what AMFI has published
+python -m jobs.fetch_aum            # load the newest quarter
+```
+
+§10's V2 reconciles a disclosure's summed market value against an AUM from
+**outside the file being checked**, and quarantines when they disagree — it is
+what catches a 100x unit error. It had never run: `scheme_aum` did not exist.
+
+AMFI's scheme-wise average AUM fills it, joined on `AMFI_Code` with no name
+matching, 8,448 rows covering **99.5% of the schemes that have a disclosure**.
+It is a quarterly average rather than a month-end balance, so it sits a few
+percent from a portfolio through ordinary market movement; `basis` travels with
+the figure and V2 widens its tolerance to match. A 100x error still fails it by
+11,321%.
+
 ## What is stale
 
 ```bash
@@ -172,10 +190,10 @@ Ordered by what they cost.
 4. **A fund inside a fund is not looked through.** ICICI's Gold ETF and PPFAS's
    overseas holdings resolve to `__MFUNIT__` — correctly disclosed, not
    analysed. That is §10's nested look-through, V2 work.
-5. **§10's V2 has never run.** `scheme_aum` is not built, so the units check
-   — the 100x guard — records "not evaluated" on all 205 disclosures rather
-   than reconciling anything. It is a fetch-and-load slice, not a patch: AMFI
-   publishes monthly AAUM per scheme at a templatable URL (surveyed in V1-44).
+5. **204 disclosures predate the AUM witness.** V2 runs now (V1-49) and
+   `scheme_aum` covers 99.5% of schemes with a disclosure, but rows loaded
+   before the table existed keep `aum_reported` NULL and record V2 as "did not
+   run". They pick it up on their next revision; nothing back-fills a fact row.
 6. **Four latent defects in the fetch and status layers.** `extra_headers` can
    override the User-Agent the robots check used; the retry loop replays POSTs;
    `jobs/status.py:standings` picks a parser from an unordered set when a house

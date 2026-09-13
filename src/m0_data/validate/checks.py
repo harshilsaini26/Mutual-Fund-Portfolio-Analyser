@@ -23,6 +23,24 @@ from src.m0_data.resolve.isin import is_valid_isin
 WEIGHT_SUM_MIN = Decimal(95)
 WEIGHT_SUM_MAX = Decimal(105)
 AUM_TOLERANCE_PCT = Decimal(3)
+
+#: The same check against a QUARTERLY AVERAGE rather than a month-end balance.
+#:
+#: §10 gives V2 one tolerance and assumes `scheme_aum` holds a point-in-time
+#: figure. The source that exists holds AMFI's average over a quarter (V1-49),
+#: and measured against the two funds whose portfolios are loaded it sits
+#: -10.4% (HDFC Flexi Cap) and -4.6% (PPFAS Flexi Cap) from their August
+#: portfolios. That is two months of market movement and flows -- real, and
+#: outside 3%, so the spec's number would quarantine two disclosures that are
+#: correct.
+#:
+#: 25% is chosen against what V2 is FOR. Its own comment says §7.2's 100x error
+#: "fails this by two orders of magnitude, which is why it quarantines rather
+#: than warns" -- a 100x error is 9,900% off, so 25% catches it with three
+#: orders of magnitude to spare while leaving room for a quarter of drift. It
+#: is a units check, not a valuation check, and widening it costs nothing it
+#: was ever able to detect.
+AUM_AVERAGE_TOLERANCE_PCT = Decimal(25)
 UNRESOLVED_MAX_PCT = Decimal(2)
 
 QUARANTINE = "quarantine"
@@ -60,6 +78,7 @@ def validate_disclosure(
     as_of: date,
     today: date,
     aum_reported: Decimal | None = None,
+    aum_basis: str = "point_in_time",
 ) -> list[CheckResult]:
     """§10.1's checks that are computable from a single disclosure.
 
@@ -85,10 +104,16 @@ def validate_disclosure(
     # by two orders of magnitude, which is why it quarantines rather than warns.
     if aum_reported and aum_reported > 0:
         drift = abs(total_mv - aum_reported) / aum_reported * 100
+        tolerance = (
+            AUM_AVERAGE_TOLERANCE_PCT
+            if aum_basis == "quarterly_average"
+            else AUM_TOLERANCE_PCT
+        )
         results.append(
             CheckResult(
-                "V2", drift <= AUM_TOLERANCE_PCT, QUARANTINE,
-                f"total market value within {AUM_TOLERANCE_PCT}% of scheme AUM",
+                "V2", drift <= tolerance, QUARANTINE,
+                f"total market value within {tolerance}% of scheme AUM"
+                f" ({aum_basis})",
                 f"{drift:.4f}%",
             )
         )

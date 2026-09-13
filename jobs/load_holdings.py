@@ -373,7 +373,8 @@ def _one(
             "resolution_conf": resolution.confidence,
         })
 
-    aum = _aum_for(conn, scheme_id, parsed.as_of_date)
+    found_aum = _aum_for(conn, scheme_id, parsed.as_of_date)
+    aum, aum_basis = found_aum if found_aum else (None, "point_in_time")
     checks = validate_disclosure(
         [
             HoldingRow(
@@ -385,7 +386,7 @@ def _one(
             )
             for r in rows
         ],
-        parsed.as_of_date, date.today(), aum,
+        parsed.as_of_date, date.today(), aum, aum_basis,
     )
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"

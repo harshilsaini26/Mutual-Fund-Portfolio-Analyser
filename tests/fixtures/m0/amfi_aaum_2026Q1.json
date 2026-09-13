@@ -1,0 +1,176 @@
+{
+ "data": [
+  {
+   "strMFId": "0",
+   "Mfname": "Axis Mutual Fund",
+   "SchemeCat_Desc": "Equity Schemes - Small Cap Fund",
+   "totalAUM": {
+    "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 2753534.8,
+    "FundOfFundsDomestic": 0
+   },
+   "schemes": [
+    {
+     "SchemeNAVName": "Axis Small Cap Fund - Direct Plan - Growth",
+     "AMFI_Code": 125354,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 1579196.03,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Axis Small Cap Fund - Direct Plan - IDCW",
+     "AMFI_Code": 125351,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 5393.09,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Axis Small Cap Fund - Regular Plan - Growth",
+     "AMFI_Code": 125350,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 1161746.93,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Axis Small Cap Fund - Regular Plan - IDCW",
+     "AMFI_Code": 125352,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 7198.75,
+      "FundOfFundsDomestic": 0
+     }
+    }
+   ]
+  },
+  {
+   "strMFId": "0",
+   "Mfname": "HDFC Mutual Fund",
+   "SchemeCat_Desc": "Equity Scheme - Flexi Cap Fund",
+   "totalAUM": {
+    "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 10179298.85,
+    "FundOfFundsDomestic": 0
+   },
+   "schemes": [
+    {
+     "SchemeNAVName": "HDFC Flexi Cap Fund - Growth Option - Direct Plan",
+     "AMFI_Code": 118955,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 3474018.45,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "HDFC Flexi Cap Fund - Growth Plan",
+     "AMFI_Code": 101762,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 6530921.21,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "HDFC Flexi Cap Fund - IDCW Option - Direct Plan",
+     "AMFI_Code": 118954,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 30337.62,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "HDFC Flexi Cap Fund - IDCW Plan",
+     "AMFI_Code": 101763,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 144021.57,
+      "FundOfFundsDomestic": 0
+     }
+    }
+   ]
+  },
+  {
+   "strMFId": "0",
+   "Mfname": "Kotak Mahindra Mutual Fund",
+   "SchemeCat_Desc": "Equity Scheme - Sectoral/ Thematic",
+   "totalAUM": {
+    "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 2441867.3099999996,
+    "FundOfFundsDomestic": 0
+   },
+   "schemes": [
+    {
+     "SchemeNAVName": "Kotak Pioneer Fund- Direct Plan- Growth Option",
+     "AMFI_Code": 147727,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 33504.18,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Kotak Pioneer Fund- Regular Plan- Growth Option",
+     "AMFI_Code": 147724,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 321714.33,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Kotak Pioneer Fund- Regular Plan- Reinvestment of Income Distribution cum capital withdrawal option",
+     "AMFI_Code": 147728,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 2914.19,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Kotak Pioneer Fund-Direct Plan-Reinvestment of Income Distribution cum capital withdrawal option",
+     "AMFI_Code": 147725,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 394.45,
+      "FundOfFundsDomestic": 0
+     }
+    }
+   ]
+  },
+  {
+   "strMFId": "0",
+   "Mfname": "PPFAS Mutual Fund",
+   "SchemeCat_Desc": "Equity Scheme - Flexi Cap Fund",
+   "totalAUM": {
+    "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 14065971.28,
+    "FundOfFundsDomestic": 0
+   },
+   "schemes": [
+    {
+     "SchemeNAVName": "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
+     "AMFI_Code": 122639,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 9377503.7,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Parag Parikh Flexi Cap Fund - Direct Plan - IDCW",
+     "AMFI_Code": 153964,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 2892.71,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Parag Parikh Flexi Cap Fund - Regular Plan - Growth",
+     "AMFI_Code": 122640,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 4683165.77,
+      "FundOfFundsDomestic": 0
+     }
+    },
+    {
+     "SchemeNAVName": "Parag Parikh Flexi Cap Fund - Regular Plan - IDCW",
+     "AMFI_Code": 153965,
+     "AverageAumForTheMonth": {
+      "ExcludingFundOfFundsDomesticButIncludingFundOfFundsOverseas": 2409.1,
+      "FundOfFundsDomestic": 0
+     }
+    }
+   ]
+  }
+ ]
+}

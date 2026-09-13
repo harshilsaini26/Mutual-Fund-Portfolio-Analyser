@@ -414,7 +414,9 @@ def load_holdings(
     return {"holding": len(rows), "revision": revision}
 
 
-def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> Decimal | None:
+def aum_for(
+    conn: sqlite3.Connection, scheme_id: str, as_of: date
+) -> tuple[Decimal, str] | None:
     """The scheme's own AUM on or before `as_of`, for §10's V2.
 
     V2 is THE units check -- §7.2's 100x error fails it by two orders of
@@ -424,17 +426,26 @@ def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> Decimal | 
     passed `None` here for a whole slice and disabled V2 on the very path where
     the market-value unit is ASSERTED rather than read from a header.
 
-    Returns None when `scheme_aum` has not been built, which V2 records as
+    Returns `(amount, basis)` -- the basis travels WITH the figure because it
+    decides which tolerance V2 applies. AMFI's is a quarterly average and sits
+    up to ~10% from a month-end portfolio through ordinary market movement,
+    where a point-in-time balance would sit within 3% (V1-49). Handing back a
+    bare number would leave the caller to guess, and the caller guessing wrong
+    means either a false quarantine or a check that has stopped checking.
+
+    None when `scheme_aum` has not been built, which V2 records as
     "no AUM on record" rather than treating as a pass.
     """
     if not _has_table(conn, "scheme_aum"):
         return None
     row = conn.execute(
-        "SELECT aum_inr FROM scheme_aum WHERE scheme_id=? AND as_of_date<=?"
-        " ORDER BY as_of_date DESC LIMIT 1",
+        "SELECT aum_inr, basis FROM scheme_aum WHERE scheme_id=? AND as_of_date<=?"
+        " AND aum_inr IS NOT NULL ORDER BY as_of_date DESC LIMIT 1",
         (scheme_id, as_of),
     ).fetchone()
-    return row[0] if row else None
+    if not row:
+        return None
+    return row[0], str(row[1])
 
 
 def _has_table(conn: sqlite3.Connection, name: str) -> bool:

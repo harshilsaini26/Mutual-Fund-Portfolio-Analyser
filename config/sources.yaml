@@ -53,6 +53,26 @@ sources:
     # which is why the warehouse holds 3.1M NAV rows to serve 5,924.
     role: mirror
 
+  S3:
+    name: amfi_scheme_aum
+    kind: fixed_url
+    # Three calls: financial years, that year's quarters, then the data.
+    # `src/m0_data/fetch/amfi_aum.py` builds them; none takes a secret.
+    url: "https://www.amfiindia.com/api/average-aum-schemewise"
+    parser: aum.amfi
+    verified_on: 2026-09-13
+    provides: [scheme_aum]
+    # AMFI accepts an honest agent, so §2.3 is followed literally -- the
+    # default user_agent is inherited rather than overridden. robots.txt
+    # disallows only /admin/, /login/ and /search/.
+    respect_robots: true
+    # The witness §10's V2 needs. A disclosure states its own total, so
+    # reconciling one against itself catches nothing; this is the only figure
+    # in the warehouse that comes from outside the file being checked.
+    # QUARTERLY AVERAGE, not a month-end balance -- see V1-49 for what that
+    # costs and why V2 carries a second tolerance because of it.
+    role: witness
+
   S5:
     name: amc_portfolio_disclosure
     kind: per_amc_manifest

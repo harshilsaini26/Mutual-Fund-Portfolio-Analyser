@@ -296,7 +296,8 @@ def _one(
     # rows to the page's `aum`, both in the same unit, so it scales with a unit
     # error and can never catch one. `scheme_aum` is the only witness here that
     # is independent of the page, which is exactly what V2 wants.
-    aum = _aum_for(conn, scheme_id, parsed.as_of_date)
+    found_aum = _aum_for(conn, scheme_id, parsed.as_of_date)
+    aum, aum_basis = found_aum if found_aum else (None, "point_in_time")
 
     checks = validate_disclosure(
         [
@@ -312,6 +313,7 @@ def _one(
         parsed.as_of_date,
         date.today(),
         aum,
+        aum_basis,
     )
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"
