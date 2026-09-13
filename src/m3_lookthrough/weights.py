@@ -29,6 +29,11 @@ from src.common.types import IssuerId, SchemeId
 from src.m0_data.derive.scheme_family import disclosure_scheme_for
 from src.m3_lookthrough.engine import IssuerWeight
 
+#: The tier a disclosure read from the AMC's own statutory file carries, and
+#: migration 011's default -- so a warehouse written before `source_tier`
+#: existed reads as what it is rather than as an unknown.
+SOURCE_OF_RECORD = "amc_direct"
+
 
 def current_holdings(
     conn: sqlite3.Connection, scheme_id: SchemeId, as_of: date
@@ -116,7 +121,11 @@ def materialise_weights(
             " instrument_class, quantity, built_at"
             ") VALUES (?,?,?,?,NULL,?,?,?)",
             (
-                str(scheme_id), as_of, issuer_id, weight, klass[issuer_id],
+                str(scheme_id),
+                as_of,
+                issuer_id,
+                weight,
+                klass[issuer_id],
                 quantity[issuer_id] if issuer_id in has_quantity else None,
                 stamp,
             ),
@@ -138,18 +147,45 @@ def load_issuer_weights(
     return [IssuerWeight(IssuerId(r[0]), r[1], r[2]) for r in rows]
 
 
-def latest_as_of(
+def latest_disclosure(
     conn: sqlite3.Connection, scheme_id: SchemeId, on_or_before: date | None = None
-) -> date | None:
-    """§5.5: a scheme contributes from *its* latest disclosure on or before `as_of`.
+) -> tuple[date, str] | None:
+    """The disclosure a scheme contributes from, and which tier it came from.
 
-    `on_or_before` implements the bound. Without it this returned the newest
+    §5.5 says *its latest disclosure on or before `as_of`*, and that was the
+    whole rule while every disclosure came from an AMC's own file. V1-43 ended
+    that: the coverage tier reads an aggregator's page, which carries no ISIN
+    column, and four of the cascade's rules key on ISIN structure. Same fund,
+    same month, measured — **0.00% unresolved from the workbook against 19-23%
+    from the page.** The range is not vagueness: the page's figure falls as the
+    entity master grows and the workbook's does not, because a name match
+    improves with the master while an ISIN match was never waiting on it.
+
+    So "latest" stopped being sufficient on its own. Taking `max(as_of_date)`
+    moved PPFAS Flexi Cap onto the worse data the moment an August page was
+    loaded beside a July workbook, and nothing downstream could see it happen.
+
+    **The rule: the AMC's own file wins while it is not itself stale.**
+    `STALENESS_WARN_DAYS` is the system's existing definition of too old — the
+    same threshold `confidence_for` uses — so no new number is invented here.
+    Inside it, better resolution beats fresher dates; outside it, the aggregator
+    wins, because at that point age is the larger problem and `confidence_for`
+    is already saying so through `unresolved_pct`. Both costs stay priced; only
+    the choice between them moved here.
+
+    It is here rather than in the job that writes the data because a guard in
+    one writer is a guard the next writer has to remember. Every reader goes
+    through this query.
+
+    `on_or_before` implements §5.5's bound. Without it this returned the newest
     disclosure whatever its date, so a look-through computed for an earlier date
     would use holdings from the future and store a negative `staleness_days`
     that `confidence_for` reads as fresher than fresh.
     """
+    from src.m3_lookthrough.persist import STALENESS_WARN_DAYS
+
     sql = (
-        "SELECT max(as_of_date) FROM holding_disclosure"
+        "SELECT as_of_date, source_tier FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1"
     )
     # Same family resolution as `current_holdings`, and for the same reason:
@@ -164,7 +200,43 @@ def latest_as_of(
     if on_or_before is not None:
         sql += " AND as_of_date <= ?"
         params.append(on_or_before)
-    row = conn.execute(sql, tuple(params)).fetchone()
-    if not row or row[0] is None:
+
+    # Ordered in Python. `as_of_date` is a DATE column so SQL would sort it
+    # correctly, but the tie-break below is not expressible as an ORDER BY and
+    # splitting the decision across two languages is how it gets lost.
+    found = [
+        (
+            r[0] if isinstance(r[0], date) else date.fromisoformat(str(r[0])),
+            str(r[1] or SOURCE_OF_RECORD),
+        )
+        for r in conn.execute(sql, tuple(params)).fetchall()
+    ]
+    if not found:
         return None
-    return row[0] if isinstance(row[0], date) else date.fromisoformat(str(row[0]))
+
+    newest, newest_tier = max(found, key=lambda pair: pair[0])
+    if newest_tier == SOURCE_OF_RECORD:
+        return newest, newest_tier
+
+    of_record = [pair for pair in found if pair[1] == SOURCE_OF_RECORD]
+    if not of_record:
+        return newest, newest_tier
+
+    best, tier = max(of_record, key=lambda pair: pair[0])
+    reference = on_or_before or newest
+    if (reference - best).days <= STALENESS_WARN_DAYS:
+        return best, tier
+    return newest, newest_tier
+
+
+def latest_as_of(
+    conn: sqlite3.Connection, scheme_id: SchemeId, on_or_before: date | None = None
+) -> date | None:
+    """§5.5's date alone, for callers that do not care where it came from.
+
+    Kept as the narrow entry point because every existing caller wants a date
+    and widening them all to a tuple would be churn for nothing. A caller that
+    needs to SAY which tier it is reporting asks `latest_disclosure`.
+    """
+    found = latest_disclosure(conn, scheme_id, on_or_before)
+    return found[0] if found else None

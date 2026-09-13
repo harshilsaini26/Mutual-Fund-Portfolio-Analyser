@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 1,026 tests passing
+**Last updated:** 2026-09-13 · 1,032 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -61,6 +61,11 @@ Groww's scheme page is server-rendered and carries the whole portfolio, so this
 reaches any of 1,973 funds with no download and no browser. Find the slug in
 `https://groww.in/mf-sitemap.xml` — **it is not derivable from the fund's name**,
 because Groww keeps whatever the fund was called before it was renamed.
+
+Where an AMC parser already covers a scheme, its workbook stays the source of
+record: `m3_lookthrough.weights.latest_disclosure` prefers it over a newer page
+while it is inside the 45-day staleness threshold, so the coverage tier fills
+gaps rather than displacing better data (V1-46).
 
 It pays for that reach with the ISIN column, which the page does not have:
 **8.96% of HDFC Flexi Cap unresolved against 0.00% from the AMC's own file**,
@@ -170,11 +175,6 @@ Ordered by what they cost.
 5. **`data_only=True` returns None for a workbook Excel never cached.** Would
    reproduce V1-36's silent row-drop. Not observed; worth a loud check when a
    file of that shape appears.
-6. **`latest_as_of` reads no `source_tier`.** It takes `max(as_of_date)`, so a
-   newer aggregator disclosure would outrank an older AMC one. `fetch_groww`
-   guards its own writes (V1-43), but the guard is in the job rather than in
-   the query every reader goes through, and a second aggregator would have to
-   remember it. The check belongs in `m3_lookthrough/weights.py`.
 
 ## Next
 

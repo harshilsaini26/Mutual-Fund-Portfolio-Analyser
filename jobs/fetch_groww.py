@@ -159,20 +159,19 @@ def _one(
         raise SlugMismatch(f"{slug}: the page states no ISIN; refusing to guess one")
     scheme_id = stated
 
-    # THE GUARD THAT MAKES "never outranks the source of record" TRUE.
+    # Don't fetch what would not be read.
     #
-    # It was a docstring claim before it was a check, and the claim was false:
-    # `m3_lookthrough.weights.latest_as_of` picks `max(as_of_date)` and reads
-    # no tier at all, so loading an August page for a scheme whose July
-    # disclosure came from the AMC's own file silently moved that scheme onto
-    # the worse data. Measured on PPFAS Flexi Cap: 0.00% unresolved from the
-    # workbook, 22.63% from the page -- foreign equities (`Alphabet Inc Forgn.
-    # Eq (GOOGL)`), certificates of deposit and a fund-of-fund holding, every
-    # one of which the ISIN resolves and the name does not.
+    # This began as the guard that kept the coverage tier from outranking an
+    # AMC file, and it was the WRONG PLACE for it: a rule enforced by the job
+    # that writes the data is a rule the next writer has to remember, and
+    # `latest_as_of` was meanwhile taking `max(as_of_date)` and reading no
+    # tier at all. V1-46 moved the decision into
+    # `m3_lookthrough.weights.latest_disclosure`, where every reader passes.
     #
-    # Skipping the scheme entirely rather than the date, because the harm is
-    # not that the two disagree -- it is that a scheme's quality would lurch
-    # between months with nothing on the figure to say why.
+    # What is left here is not correctness, it is restraint: a scheme the AMC
+    # tier already covers would have its page fetched, parsed, resolved and
+    # stored, and then never selected. `--force` is for deliberately putting
+    # the two side by side.
     covered = conn.execute(
         "SELECT as_of_date FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1 AND source_tier = 'amc_direct'"
