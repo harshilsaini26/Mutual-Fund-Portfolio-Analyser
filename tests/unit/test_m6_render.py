@@ -171,7 +171,14 @@ QS = f"?user_id={USER}&as_of={AS_OF.isoformat()}"
 def page(client: TestClient, view_id: str) -> str:
     response = client.get(f"/view/{view_id}{QS}")
     assert response.status_code == 200, view_id
-    return response.text
+    # Named rather than returned straight through. Starlette 1.6 widened
+    # TestClient's response type to `Any` while it carries both httpx and
+    # httpx2, so `response.text` is `str` on an older stack and `Any` on a
+    # newer one — and `--strict`'s warn-return-any fails only on the newer.
+    # The annotation makes this function's contract ours instead of the test
+    # client's, so the check means the same thing whichever version resolves.
+    text: str = response.text
+    return text
 
 
 # --- §16.3 the structural rule ----------------------------------------------
