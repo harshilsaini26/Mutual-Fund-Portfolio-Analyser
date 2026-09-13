@@ -36,8 +36,8 @@ from src.m0_data.fetch.base import (
 from src.m0_data.load import load_holdings
 from src.m0_data.normalise.units import to_inr
 from src.m0_data.normalise.weights import normalise_weights
-from src.m0_data.parse.base import RawFile
-from src.m0_data.parse.holdings.registry import route
+from src.m0_data.parse.base import HoldingsParser, RawFile
+from src.m0_data.parse.holdings.registry import by_parser_id, route
 from src.m0_data.resolve.cascade import (
     load_isin_prefix_index,
     load_issuer_index,
@@ -109,6 +109,7 @@ def run(
     file_path: Path | None = None,
     scheme_id: str | None = None,
     sheet: str | None = None,
+    parser_id: str | None = None,
 ) -> list[dict[str, object]]:
     # S5 carries the browser agent HDFC's CDN requires, with the contact in
     # `From:` — DECISIONS V1-05.
@@ -132,7 +133,7 @@ def run(
     try:
         index = load_issuer_index(conn)
         prefixes = load_isin_prefix_index(conn)
-        for entry in _entries(amc_id, file_path, scheme_id, sheet):
+        for entry in _entries(amc_id, file_path, scheme_id, sheet, parser_id):
             summaries.append(_one(conn, entry, cfg, index, prefixes))
 
         status = "partial" if any(
@@ -163,6 +164,7 @@ def _entries(
     file_path: Path | None,
     scheme_id: str | None,
     sheet: str | None = None,
+    parser_id: str | None = None,
 ) -> list[dict[str, Any]]:
     if file_path:
         # A disclosure names its scheme in prose, and prose is not a key — the
@@ -181,6 +183,7 @@ def _entries(
             "path": str(file_path),
             "scheme_id": scheme_id,
             "sheet": sheet,
+            "parser": parser_id,
         }]
     manifest = load_manifest()
     rows = [
@@ -240,7 +243,7 @@ def _one(
         conn.commit()
 
     raw = RawFile(str(result.file_id), source_id, filename, content)
-    parser = route(raw)
+    parser = _parser_for(conn, str(result.file_id), raw, entry.get("parser"))
     # Nippon publishes 108 schemes as 108 sheets of one workbook, so the
     # manifest entry names the sheet. Absent, the whole workbook is read —
     # which is right for HDFC and ICICI, one scheme per file (V1-15).
@@ -358,6 +361,36 @@ def _one(
     }
 
 
+def _parser_for(
+    conn: Any, file_id: str, raw: RawFile, override: str | None = None,
+) -> HoldingsParser:
+    """An explicit choice, then the parser that read this file before, then sniff.
+
+    The middle rung is the one that matters. `sniff` routes on the filename
+    (§6.1, and deliberately — opening the workbook would cost a parse per
+    candidate), while the archive names a file for its sha256. So a file could
+    be parsed on the way in and never again, which quietly made MODULE_0.md §3's
+    promise false: re-running from the layer to its left raised
+    `NoParserMatched` at 0.10 from everything.
+
+    Preferring the recorded parser over a fresh sniff is also the more
+    reproducible answer, and `CLAUDE.md` invariant 10 wants a rebuild to produce
+    byte-identical output: the same bytes should be read by the same parser
+    whatever the file happens to be called this time. `--parser` is the way out
+    when the recorded one was the wrong one, which is the case a parser fix
+    exists to correct.
+    """
+    if override:
+        return by_parser_id(override)
+    row = conn.execute(
+        "SELECT parser_id FROM raw_file WHERE file_id=? AND parser_id IS NOT NULL",
+        (file_id,),
+    ).fetchone()
+    if row:
+        return by_parser_id(str(row[0]))
+    return route(raw)
+
+
 def _instrument_class(section: str | None, issuer_id: str) -> str:
     """Section first, then the synthetic issuer, then equity. See _CLASS_BY_SECTION."""
     text = (section or "").lower()
@@ -404,8 +437,16 @@ def main() -> None:
              "(Kotak ships 119, Nippon 108). Without it the whole workbook "
              "is read as one portfolio",
     )
+    parser.add_argument(
+        "--parser",
+        help="force a parser_id, overriding both the one raw_file recorded "
+             "for this file and the sniff. The way to re-read a file the "
+             "wrong parser claimed",
+    )
     args = parser.parse_args()
-    for summary in run(args.amc, args.file, args.scheme, args.sheet):
+    for summary in run(
+        args.amc, args.file, args.scheme, args.sheet, args.parser
+    ):
         print(" | ".join(f"{k}={v}" for k, v in summary.items()))
 
 

@@ -35,6 +35,27 @@ class NoParserMatched(ParseFailed):
     """§6.2. Carries every candidate's score, so the failure is diagnosable."""
 
 
+def by_parser_id(parser_id: str) -> HoldingsParser:
+    """The parser named by `raw_file.parser_id`, for re-reading an archived file.
+
+    `route` cannot help there. The archive is content-addressed, so a stored
+    file is named for its sha256 and `sniff` — which reads the filename and the
+    magic bytes by design (§6.1) — scores 0.10 from every candidate. MODULE_0.md
+    §3 says "a bug in any one of them is fixed by re-running from the layer to
+    its left, never by editing data", and for a disclosure that was not true:
+    re-parsing an archived file raised `NoParserMatched`.
+
+    Nothing had to be discovered to fix it. The warehouse recorded which parser
+    read the file at the time it read it, so the question `route` was being
+    asked had already been answered and written down.
+    """
+    for parser in REGISTRY:
+        if parser.parser_id == parser_id:
+            return parser
+    known = ", ".join(sorted(p.parser_id for p in REGISTRY))
+    raise NoParserMatched(f"no parser {parser_id!r} in the registry; have {known}")
+
+
 def route(f: RawFile) -> HoldingsParser:
     """The best-scoring parser, or raise naming what was tried."""
     scores = [(p, p.sniff(f)) for p in REGISTRY]

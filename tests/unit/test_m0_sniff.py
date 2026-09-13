@@ -27,7 +27,13 @@ from pathlib import Path
 
 import pytest
 from src.m0_data.parse.base import HoldingsParser, HoldingsParseResult, RawFile
-from src.m0_data.parse.holdings.registry import MIN_CONFIDENCE, REGISTRY
+from src.m0_data.parse.holdings.registry import (
+    MIN_CONFIDENCE,
+    REGISTRY,
+    NoParserMatched,
+    by_parser_id,
+    route,
+)
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "m0"
 
@@ -135,3 +141,52 @@ def test_the_cross_product_catches_an_unconditionally_greedy_sniff() -> None:
         assert not _claims_foreign(parser), (
             f"{parser.parser_id} claims {_claims_foreign(parser)}"
         )
+
+# --- re-reading a file the archive already holds ------------------------------
+
+
+def test_a_parser_can_be_found_by_the_id_raw_file_recorded() -> None:
+    """`route` cannot help with an archived file and never could.
+
+    The archive is content-addressed, so a stored disclosure is named for its
+    sha256 — and `sniff` reads the filename and the magic bytes by design
+    (§6.1), which on `0ab4fd30...xlsx` scores 0.10 from every candidate.
+    MODULE_0.md §3 promises "a bug in any one of them is fixed by re-running
+    from the layer to its left"; for a disclosure that raised
+    `NoParserMatched` instead.
+    """
+    for parser in REGISTRY:
+        assert by_parser_id(parser.parser_id) is parser
+
+
+def test_an_unregistered_parser_id_fails_with_what_is_available() -> None:
+    """A recorded parser can outlive its module — an AMC's format is dropped,
+    or a parser is renamed. The failure has to say what it looked for and what
+    it had, because the alternative is a stack trace about None.
+    """
+    with pytest.raises(NoParserMatched) as excinfo:
+        by_parser_id("holdings.nosuchamc")
+    message = str(excinfo.value)
+    assert "holdings.nosuchamc" in message
+    assert "holdings.hdfc" in message
+
+
+def test_an_archived_file_cannot_be_routed_by_its_name() -> None:
+    """The defect itself, pinned so the fix cannot quietly regress.
+
+    This asserts `sniff` behaves as §6.1 says it does — routing on the name —
+    rather than asserting the bug is gone. The fix is not to make `sniff`
+    cleverer; opening the workbook would cost a parse per candidate. It is to
+    stop asking `sniff` a question the warehouse had already answered.
+    """
+    on_disk, _ = PUBLISHED["hdfc"]
+    archived = RawFile(
+        "x", "S5:hdfc",
+        # what the archive actually calls it
+        "0ab4fd3000675be362444fd0547afa64b67e61c220b5ff36064dc05e0a36f24a.xlsx",
+        (FIXTURES / on_disk).read_bytes(),
+    )
+    for parser in REGISTRY:
+        assert parser.sniff(archived) < MIN_CONFIDENCE
+    with pytest.raises(NoParserMatched):
+        route(archived)
