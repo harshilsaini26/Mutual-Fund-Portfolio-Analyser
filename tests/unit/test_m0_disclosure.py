@@ -16,7 +16,9 @@ from pathlib import Path
 
 import pytest
 from src.common.decimals import connect
+from src.m0_data.derive.scheme_family import disclosure_scheme_for
 from src.m0_data.load import load_holdings, next_revision
+from src.m0_data.normalise.family import family_key
 from src.m0_data.normalise.weights import NormalisationError, normalise_weights
 from src.m0_data.schema.apply import apply_migrations
 from src.m0_data.validate.checks import (
@@ -318,6 +320,57 @@ def test_next_revision_returns_none_for_an_unchanged_file(
     conn.commit()
     assert next_revision(conn, "INF179K01UT0", AS_OF, "file-a") is None
     assert next_revision(conn, "INF179K01UT0", AS_OF, "file-b") == 2
+
+
+def test_a_sibling_share_class_is_served_the_scheme_s_disclosure(
+    conn: sqlite3.Connection,
+) -> None:
+    """V1-37. The portfolio belongs to the scheme; the ISIN is a share class.
+
+    Before this, `holding.scheme_id` was whichever ISIN a file happened to be
+    loaded against and every sibling resolved to `__NO_DISCLOSURE__` — and the
+    siblings being refused were mostly REGULAR plans, which is what
+    distributors sell.
+    """
+    rows, header = _payload()
+    load_holdings(conn, "INF179K01UT0", AS_OF, rows, header, "file-a")
+    # Both share classes, as AMFI publishes them: one name carrying the plan
+    # and option, one carrying only the option.
+    for scheme_id, name, plan in (
+        ("INF179K01UT0", "HDFC Flexi Cap Fund - Growth Option - Direct Plan", "direct"),
+        ("INF179K01608", "HDFC Flexi Cap Fund - Growth Plan", "regular"),
+    ):
+        conn.execute(
+            "INSERT OR REPLACE INTO scheme (scheme_id, scheme_name, plan, option,"
+            " amc_id, status, scheme_family) VALUES (?,?,?,'growth','hdfc',"
+            " 'active', ?)",
+            (scheme_id, name, plan, family_key(name)),
+        )
+    conn.commit()
+    # The key is derived, not asserted into place — both names must reduce to it.
+    assert family_key("HDFC Flexi Cap Fund - Growth Plan") == "hdfc flexi cap fund"
+
+    # The loaded ISIN answers for itself, unchanged and without a family lookup.
+    assert disclosure_scheme_for(conn, "INF179K01UT0") == "INF179K01UT0"
+    # Its Regular sibling is served the same disclosure.
+    assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01UT0"
+
+
+def test_a_scheme_with_no_family_behaves_exactly_as_before(
+    conn: sqlite3.Connection,
+) -> None:
+    """NULL `scheme_family` is the safe state and the default.
+
+    It means this scheme does not fan out — either its family could not be
+    shown coherent, or the derive step has not run. Both must degrade to the
+    warehouse's pre-V1-37 behaviour rather than to a guess, so that skipping
+    the derivation loses coverage and never invents it.
+    """
+    conn.execute(
+        "UPDATE scheme SET scheme_family=NULL WHERE scheme_id='INF179K01608'"
+    )
+    conn.commit()
+    assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01608"
 
 
 def test_an_improved_resolver_produces_a_new_revision_not_a_skip(

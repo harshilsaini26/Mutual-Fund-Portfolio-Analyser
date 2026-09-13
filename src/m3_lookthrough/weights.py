@@ -26,6 +26,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from src.common.types import IssuerId, SchemeId
+from src.m0_data.derive.scheme_family import disclosure_scheme_for
 from src.m3_lookthrough.engine import IssuerWeight
 
 
@@ -37,7 +38,15 @@ def current_holdings(
     `is_current` is what makes this the *current* revision — `CLAUDE.md`
     invariant 2 appends a new revision rather than updating, so without the
     filter a restated disclosure would be counted twice.
+
+    **The scheme is resolved to its share-class family first** (V1-37). A
+    disclosure describes a scheme, not an ISIN: Direct and Regular, Growth and
+    IDCW hold one pool of assets and differ only in fees and payout. Keying
+    holdings on the single ISIN a file happened to be loaded against told a
+    Regular-plan holder `__NO_DISCLOSURE__` for a portfolio already in the
+    warehouse — and Regular is what distributors sell.
     """
+    source = SchemeId(disclosure_scheme_for(conn, str(scheme_id), as_of.isoformat()))
     rows = conn.execute(
         "SELECT h.issuer_id, h.pct_normalised, h.instrument_class, h.quantity"
         " FROM holding h"
@@ -45,7 +54,7 @@ def current_holdings(
         "   ON d.scheme_id = h.scheme_id AND d.as_of_date = h.as_of_date"
         "  AND d.revision = h.revision"
         " WHERE h.scheme_id = ? AND h.as_of_date = ? AND d.is_current = 1",
-        (str(scheme_id), as_of),
+        (str(source), as_of),
     ).fetchall()
     return [(r[0], r[1], r[2], r[3]) for r in rows]
 
@@ -143,7 +152,15 @@ def latest_as_of(
         "SELECT max(as_of_date) FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1"
     )
-    params: list[object] = [str(scheme_id)]
+    # Same family resolution as `current_holdings`, and for the same reason:
+    # asking whether a scheme has a disclosure has to mean the same thing as
+    # asking for its holdings, or a share class reports a date and then returns
+    # nothing.
+    params: list[object] = [
+        disclosure_scheme_for(
+            conn, str(scheme_id), on_or_before.isoformat() if on_or_before else None
+        )
+    ]
     if on_or_before is not None:
         sql += " AND as_of_date <= ?"
         params.append(on_or_before)

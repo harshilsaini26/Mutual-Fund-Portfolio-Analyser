@@ -23,6 +23,7 @@ import pytest
 from src.common.decimals import connect
 from src.common.types import UNRESOLVED, IssuerId
 from src.m0_data.load import issuer_id_for, load_mcap
+from src.m0_data.normalise.family import family_key
 from src.m0_data.normalise.names import normalise_name
 from src.m0_data.parse.mcap.amfi import (
     LARGE_CAP_MAX_RANK,
@@ -228,6 +229,71 @@ def test_an_unknown_name_is_unresolved_never_guessed(
     assert result.issuer_id == UNRESOLVED
     assert result.method == "unresolved"
     assert result.needs_review
+
+
+# --- V1-37, a disclosure describes a scheme and not an ISIN ------------------
+
+
+def test_a_share_class_suffix_is_dropped_and_a_fund_name_is_not() -> None:
+    """The whole-segment rule, which is the whole safety argument.
+
+    AMFI writes a share class as a suffix after a separator, and the base name
+    never contains a separator AMFI did not put there. So a segment made
+    ENTIRELY of share-class vocabulary is dropped and everything else is kept.
+
+    `growth` is in the vocabulary, and `Nippon India Growth Mid Cap Fund` keeps
+    its `Growth` — that segment also holds `mid`, `cap` and `fund`. Substring
+    removal would have split that family in half, its Growth classes losing a
+    word its IDCW classes keep.
+    """
+    same = [
+        "HDFC Flexi Cap Fund - Growth Option - Direct Plan",
+        "HDFC Flexi Cap Fund - Growth Plan",
+        "HDFC Flexi Cap Fund - IDCW Option - Direct Plan",
+        "HDFC Flexi Cap Fund - IDCW Plan",
+    ]
+    assert len({family_key(n) for n in same}) == 1
+    assert family_key(same[0]) == "hdfc flexi cap fund"
+
+    # A fund whose NAME contains a qualifier word keeps it.
+    assert family_key("Nippon India Growth Mid Cap Fund") == (
+        "nippon india growth mid cap fund"
+    )
+    assert family_key("Kotak Pioneer Fund- Direct Plan- Growth Option") == (
+        "kotak pioneer fund"
+    )
+    assert family_key(
+        "Kotak Pioneer Fund- Regular Plan- Reinvestment of Income"
+        " Distribution cum capital withdrawal option"
+    ) == "kotak pioneer fund"
+
+
+def test_two_funds_whose_names_differ_by_one_qualifier_word_stay_apart() -> None:
+    """Measured, not imagined. Removing the substring `regular` merged
+    `ICICI Prudential Regular Savings Fund` into `ICICI Prudential Savings
+    Fund` — two different funds, one key, and a portfolio that would have been
+    filed against the wrong ISIN.
+
+    The segment rule keeps them apart because `Regular Savings Fund` is not a
+    qualifier-only segment.
+    """
+    a = family_key("ICICI Prudential Regular Savings Fund - Direct Plan - Bonus")
+    b = family_key("ICICI Prudential Savings Fund - Bonus")
+    assert a != b
+    assert "regular" in a
+
+
+def test_capital_is_droppable_in_a_qualifier_segment_and_not_in_a_name() -> None:
+    """`capital` had to join the vocabulary for Kotak's IDCW classes. It is
+    safe precisely because a segment must be qualifiers all the way through:
+    `Capital Protection Oriented` never is."""
+    assert "capital" not in family_key(
+        "Kotak Pioneer Fund- Direct Plan- Reinvestment of Income"
+        " Distribution cum capital withdrawal option"
+    )
+    assert "capital" in family_key(
+        "ICICI Prudential Capital Protection Oriented Fund - Growth"
+    )
 
 
 # --- §8.4, units of another scheme -------------------------------------------

@@ -26,6 +26,7 @@ from pathlib import Path
 from src.common.decimals import connect
 from src.m0_data.config import raw_root, source, warehouse_path
 from src.m0_data.derive.nav_adj import build_all_nav_adj
+from src.m0_data.derive.scheme_family import derive_scheme_families
 from src.m0_data.fetch.base import (
     DomainRateLimiter,
     FetchCandidate,
@@ -131,6 +132,11 @@ def run(dry_run: bool = False) -> dict[str, object]:
         parsed = parse_navall(text.splitlines())
         counts = load_parse_result(conn, parsed, result.file_id, date.today())
         counts["nav_adj"] = build_all_nav_adj(conn)
+        # Share-class families, recomputed from the scheme master this load
+        # just refreshed (V1-37). A newly listed Regular plan joins its
+        # family here rather than waiting for someone to notice it is
+        # missing a portfolio it shares with its Direct sibling.
+        counts["scheme_family"] = derive_scheme_families(conn)["assigned"]
 
         conn.execute(
             "UPDATE raw_file SET parse_status='ok', parser_id=?, parser_version=?,"
