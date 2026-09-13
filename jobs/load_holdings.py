@@ -38,7 +38,11 @@ from src.m0_data.normalise.units import to_inr
 from src.m0_data.normalise.weights import normalise_weights
 from src.m0_data.parse.base import RawFile
 from src.m0_data.parse.holdings.registry import route
-from src.m0_data.resolve.cascade import load_issuer_index, resolve
+from src.m0_data.resolve.cascade import (
+    load_isin_prefix_index,
+    load_issuer_index,
+    resolve,
+)
 from src.m0_data.schema.apply import apply_migrations
 from src.m0_data.validate.checks import (
     HoldingRow,
@@ -126,8 +130,9 @@ def run(
     summaries: list[dict[str, object]] = []
     try:
         index = load_issuer_index(conn)
+        prefixes = load_isin_prefix_index(conn)
         for entry in _entries(amc_id, file_path, scheme_id):
-            summaries.append(_one(conn, entry, cfg, index))
+            summaries.append(_one(conn, entry, cfg, index, prefixes))
 
         status = "partial" if any(
             s.get("validation_status") != "ok" for s in summaries
@@ -179,7 +184,11 @@ def _entries(
 
 
 def _one(
-    conn: Any, entry: dict[str, Any], cfg: dict[str, Any], index: dict[str, str]
+    conn: Any,
+    entry: dict[str, Any],
+    cfg: dict[str, Any],
+    index: dict[str, str],
+    prefixes: dict[str, str],
 ) -> dict[str, object]:
     amc_id = entry["amc_id"]
     source_id = f"{SOURCE_PREFIX}:{amc_id}"
@@ -255,7 +264,8 @@ def _one(
         securities, values, weights.weights, pcts, strict=True
     ):
         resolution = resolve(
-            conn, security.instrument_raw_name, security.isin_raw, None, index
+            conn, security.instrument_raw_name, security.isin_raw, None,
+            index, prefixes,
         )
         rows.append({
             "isin": security.isin_raw,

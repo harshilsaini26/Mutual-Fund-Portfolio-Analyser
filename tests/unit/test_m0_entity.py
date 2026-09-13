@@ -32,13 +32,22 @@ from src.m0_data.parse.mcap.amfi import (
     bucket_for,
     parse_mcap_xlsx,
 )
-from src.m0_data.resolve.cascade import load_issuer_index, resolve
+from src.m0_data.resolve.cascade import (
+    ISSUER_SEGMENT,
+    load_isin_prefix_index,
+    load_issuer_index,
+    resolve,
+)
 from src.m0_data.resolve.fuzzy import (
     AUTO_ACCEPT,
     JACCARD_MIN,
     is_auto_acceptable,
     token_jaccard,
     token_set_ratio,
+)
+from src.m0_data.resolve.isin import (
+    is_valid_isin,
+    isin_check_digit,
 )
 from src.m0_data.resolve.queue import accept, enqueue, pending, queue_id_for
 from src.m0_data.resolve.synthetic import match_synthetic
@@ -219,6 +228,108 @@ def test_an_unknown_name_is_unresolved_never_guessed(
     assert result.issuer_id == UNRESOLVED
     assert result.method == "unresolved"
     assert result.needs_review
+
+
+# --- §8.1's premise, for instruments that are not equity ---------------------
+
+
+def _an_equity_isin(conn: sqlite3.Connection) -> tuple[str, str]:
+    """Any ISIN in the master, with the issuer it belongs to."""
+    row = conn.execute(
+        "SELECT isin, issuer_id FROM instrument ORDER BY isin LIMIT 1"
+    ).fetchone()
+    return str(row[0]), str(row[1])
+
+
+def test_a_bond_resolves_to_the_issuer_its_equity_resolves_to(
+    conn: sqlite3.Connection,
+) -> None:
+    """§8.1: the exposure unit is the ISSUER. Before V1-29 that held only for
+    equity, because a company's bonds and certificates of deposit carry
+    different ISINs from its shares and only the share ISIN is in the master.
+
+    Measured on ICICI Multi-Asset: HDFC Bank appeared six times under six
+    ISINs and resolved once. `INE040A16JC3` (a certificate of deposit, 1,349
+    Cr) and `INE040A08419` (an AT1 bond) sat in `__UNRESOLVED__` while
+    `INE040A01034` resolved cleanly — the same company, split by instrument
+    type, which is exactly what the by-issuer promise says will not happen.
+    """
+    equity_isin, issuer_id = _an_equity_isin(conn)
+    # Same issuer segment, different security type and serial. Built rather
+    # than hard-coded so this does not depend on which fixture row sorts first.
+    body = equity_isin[:ISSUER_SEGMENT] + "16JC"
+    debt_isin = body + str(isin_check_digit(body))
+    assert is_valid_isin(debt_isin)
+    assert debt_isin != equity_isin
+
+    result = resolve(conn, "Some Bank Ltd. ( Tier II Bond )", debt_isin, "debt")
+    assert result.issuer_id == issuer_id
+    assert result.method == "isin_prefix"
+    # Not 1.0: the segment identifies the issuer, but this instrument itself
+    # has never been seen.
+    assert result.confidence == Decimal("0.9")
+
+
+def test_an_unknown_issuer_segment_is_still_only_provisional(
+    conn: sqlite3.Connection,
+) -> None:
+    """The new step must not turn every valid ISIN into a resolution. A segment
+    nobody has seen is exactly the case `provisional` exists for."""
+    result = resolve(conn, "Some Newly Listed Co Ltd", "INE0LRY01011", "equity")
+    assert result.method == "provisional"
+    assert result.issuer_id == UNRESOLVED
+
+
+def test_an_ambiguous_issuer_segment_is_not_guessed(
+    conn: sqlite3.Connection,
+) -> None:
+    """Two issuers behind one segment means the master has split a company's
+    share classes. Picking whichever sorts first would be silently wrong and
+    nothing downstream could tell, so the segment is omitted from the index
+    entirely and the row falls through to `provisional`.
+    """
+    equity_isin, issuer_id = _an_equity_isin(conn)
+    segment = equity_isin[:ISSUER_SEGMENT]
+    # A second issuer sharing the segment, as a share-class pair would.
+    conn.execute(
+        "INSERT INTO issuer (issuer_id, canonical_name, is_synthetic)"
+        " VALUES (?, ?, 0)",
+        (f"TEST:{segment}B", "Other Share Class Ltd"),
+    )
+    twin_body = segment + "01ZZ"
+    twin = twin_body + str(isin_check_digit(twin_body))
+    conn.execute(
+        "INSERT INTO instrument (isin, issuer_id, instrument_type)"
+        " VALUES (?, ?, 'equity')",
+        (twin, f"TEST:{segment}B"),
+    )
+
+    prefixes = load_isin_prefix_index(conn)
+    assert segment not in prefixes, "an ambiguous segment must not be resolvable"
+
+    body = segment + "16JC"
+    debt_isin = body + str(isin_check_digit(body))
+    result = resolve(conn, "Ambiguous Co Ltd Bond", debt_isin, "debt", None, prefixes)
+    assert result.method == "provisional"
+    assert result.issuer_id == UNRESOLVED
+    assert issuer_id  # the original is untouched
+
+
+def test_a_synthetic_rule_still_beats_the_issuer_segment(
+    conn: sqlite3.Connection,
+) -> None:
+    """Step 1b sits AFTER the rules, unlike step 0.
+
+    An exact ISIN earned its precedence over the name rules with a measurement
+    (V1-02 departure 1). A segment match is inferred from how ISINs are
+    allocated, so it does not get to pull a derivative or a cash row into the
+    issuer space on weaker evidence than that.
+    """
+    equity_isin, _ = _an_equity_isin(conn)
+    body = equity_isin[:ISSUER_SEGMENT] + "16JC"
+    debt_isin = body + str(isin_check_digit(body))
+    result = resolve(conn, "Nifty 50 Index Future", debt_isin, "derivative")
+    assert result.method == "rule"
 
 
 def test_resolution_is_deterministic(conn: sqlite3.Connection) -> None:

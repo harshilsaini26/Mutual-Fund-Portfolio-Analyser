@@ -19,6 +19,7 @@ from datetime import UTC, date, datetime
 
 from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
+from src.m0_data.resolve.cascade import RESOLVER_VERSION
 
 
 def normalise_amc_id(amc_name: str) -> str:
@@ -275,7 +276,11 @@ def load_mcap(
 
 
 def next_revision(
-    conn: sqlite3.Connection, scheme_id: str, as_of: date, source_file_id: str
+    conn: sqlite3.Connection,
+    scheme_id: str,
+    as_of: date,
+    source_file_id: str,
+    resolver_version: str = RESOLVER_VERSION,
 ) -> int | None:
     """§4.6. A RESTATED disclosure is a new revision. A re-run is not.
 
@@ -290,13 +295,20 @@ def next_revision(
     content-addressed idempotence the archive and every other loader has.
     Without this, a nightly re-run would stack revisions of an unchanged file
     until the revision number told you only how many times cron fired.
+
+    **`resolver_version` is the other half of that sameness, and it was missing
+    (V1-29).** `issuer_id` is derived, not disclosed, so identical bytes read by
+    an improved cascade are a different disclosure as far as the warehouse is
+    concerned. Skipping on the bytes alone meant a resolver fix could not reach
+    a holding already loaded: the job reported the better figure and wrote
+    nothing. Both must match for a run to be a repeat.
     """
     current = conn.execute(
-        "SELECT revision, source_file_id FROM holding_disclosure"
+        "SELECT revision, source_file_id, resolver_version FROM holding_disclosure"
         " WHERE scheme_id=? AND as_of_date=? AND is_current=1",
         (scheme_id, as_of),
     ).fetchone()
-    if current and current[1] == source_file_id:
+    if current and current[1] == source_file_id and current[2] == resolver_version:
         return None
 
     row = conn.execute(
@@ -313,6 +325,7 @@ def load_holdings(
     rows: list[dict[str, object]],
     header: dict[str, object],
     source_file_id: str,
+    resolver_version: str = RESOLVER_VERSION,
 ) -> dict[str, int]:
     """Write one disclosure and its rows, as a new revision.
 
@@ -321,7 +334,9 @@ def load_holdings(
     loader does no arithmetic: everything it writes was computed by a step that
     can be re-run without re-fetching (§3's layer invariant).
     """
-    revision = next_revision(conn, scheme_id, as_of, source_file_id)
+    revision = next_revision(
+        conn, scheme_id, as_of, source_file_id, resolver_version
+    )
     if revision is None:
         existing = conn.execute(
             "SELECT revision, row_count FROM holding_disclosure"
@@ -367,8 +382,8 @@ def load_holdings(
             scheme_id, as_of_date, revision, source_file_id, row_count,
             pct_sum_raw, weight_residual, unresolved_mv_pct, total_mv,
             aum_reported, mv_vs_aum_pct, reported_unit, validation_status,
-            validation_notes, is_current, ingested_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
+            validation_notes, resolver_version, is_current, ingested_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
         """,
         (
             scheme_id, as_of, revision, source_file_id, len(rows),
@@ -376,7 +391,7 @@ def load_holdings(
             header["unresolved_mv_pct"], header["total_mv"],
             header.get("aum_reported"), header.get("mv_vs_aum_pct"),
             header.get("reported_unit"), header["validation_status"],
-            header.get("validation_notes"), now,
+            header.get("validation_notes"), resolver_version, now,
         ),
     )
     return {"holding": len(rows), "revision": revision}

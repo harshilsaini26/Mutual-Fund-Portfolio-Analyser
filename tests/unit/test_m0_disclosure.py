@@ -318,3 +318,39 @@ def test_next_revision_returns_none_for_an_unchanged_file(
     conn.commit()
     assert next_revision(conn, "INF179K01UT0", AS_OF, "file-a") is None
     assert next_revision(conn, "INF179K01UT0", AS_OF, "file-b") == 2
+
+
+def test_an_improved_resolver_produces_a_new_revision_not_a_skip(
+    conn: sqlite3.Connection,
+) -> None:
+    """V1-29. `issuer_id` is DERIVED, so identical bytes read by a better
+    cascade are a different disclosure as far as the warehouse is concerned.
+
+    Skipping on the bytes alone made MODULE_0.md §3's promise false — "a bug in
+    any one of them is fixed by re-running from the layer to its left". You
+    could re-run all you liked: the job reported the improved figure and wrote
+    nothing, and the stale issuer stayed current. Observed exactly that on
+    ICICI Multi-Asset, which reported 15.98% unresolved over stored rows that
+    were still the 23.25% ones.
+    """
+    rows, header = _payload()
+    load_holdings(conn, "INF179K01UT0", AS_OF, rows, header, "file-a", "1")
+    conn.commit()
+
+    # Same bytes, same cascade -> still a skip. This is the property that keeps
+    # a nightly cron from stacking revisions, and it must survive the change.
+    assert next_revision(conn, "INF179K01UT0", AS_OF, "file-a", "1") is None
+
+    # Same bytes, better cascade -> a new revision.
+    assert next_revision(conn, "INF179K01UT0", AS_OF, "file-a", "2") == 2
+
+    again = load_holdings(conn, "INF179K01UT0", AS_OF, rows, header, "file-a", "2")
+    conn.commit()
+    assert again["revision"] == 2
+    assert again.get("skipped") is None
+
+    # Invariant 2 holds: revision 1 keeps its rows and loses is_current.
+    assert conn.execute(
+        "SELECT revision, is_current, resolver_version FROM holding_disclosure"
+        " ORDER BY revision"
+    ).fetchall() == [(1, 0, "1"), (2, 1, "2")]
