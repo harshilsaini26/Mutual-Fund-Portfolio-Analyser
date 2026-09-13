@@ -218,7 +218,7 @@ imports nothing from `src/`, on purpose.
 the code, one spec per module — plus:
 
 - **`PLAN.md`** — scope, the vertical slices, and the acceptance gate for each.
-- **`DECISIONS.md`** — 52 append-only architecture decision records: every departure from
+- **`DECISIONS.md`** — append-only architecture decision records: every departure from
   the spec, every defect the specs themselves contained, and what was decided instead. The
   most useful file here if you want to know *why* anything is the way it is.
 - **`CLAUDE.md`** — the ten non-negotiable invariants and the working agreement.
