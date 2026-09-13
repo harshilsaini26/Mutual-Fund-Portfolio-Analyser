@@ -1,0 +1,139 @@
+# Where each AMC publishes its monthly portfolio disclosure. DECISIONS V1-32.
+#
+# This is the DISCOVERY layer, and it is deliberately separate from
+# `amc_manifest.yaml`. The manifest names a specific FILE for a specific scheme
+# and month; this names the PAGE an AMC publishes from, which changes far less
+# often. V1-03 recorded that discovery was not automated because every AMC's
+# page is JavaScript-rendered. That was the wrong place to look.
+#
+# SOURCE: one page -- https://www.amfiindia.com/online-center/portfolio-disclosure
+# AMFI is a Next.js app whose RSC payload carries a structured record per AMC
+# (`mf_name`, `amc_website`, `amc_monthly_portfolio_disclosure`,
+# `amc_fortnightly_portfolio_disclosure`). So the entry point for all 52 comes
+# from one fetch of a site this project already treats as S1 and which accepts
+# an honest agent.
+#
+# WHAT AMFI DOES NOT DO IS HOST THE FILES. Checked for all three disclosure
+# types -- fortnightly, monthly and half yearly -- and every one links out to
+# the AMC's own site. The only AMFI-hosted documents on that page are SAI PDFs.
+# So this removes the work of FINDING an AMC's disclosure page; it does not
+# remove the need to fetch from the AMC.
+#
+# Captured 2026-09-13. Re-derive rather than hand-edit.
+
+meta:
+  captured: 2026-09-13
+  source: https://www.amfiindia.com/online-center/portfolio-disclosure
+  count: 52
+  # Kotak's page is behind Radware bot management. Selecting the portfolio
+  # dropdown redirects to validate.perfdrive.com and serves a CAPTCHA, which
+  # this project does not solve (V1-03). The URL is recorded because it is the
+  # correct one, not because it is reachable from here.
+  blocked:
+    - Kotak Mahindra Mutual Fund
+
+disclosures:
+  - amc: "360 ONE Mutual Fund"
+    monthly_portfolio: "https://www.360.one/asset/mutual-funds/downloads/"
+  - amc: "Abakkus Mutual Fund"
+    monthly_portfolio: "https://www.abakkusmf.com/statutory-disclosures.html#"
+  - amc: "Aditya Birla Sun Life Mutual Fund"
+    monthly_portfolio: "https://mutualfund.adityabirlacapital.com/forms-and-downloads/portfolio"
+  - amc: "AlphaGrep Mutual Fund"
+    monthly_portfolio: "https://www.alphagrepmf.ai/disclosures"
+  - amc: "Angel One Mutual Fund"
+    monthly_portfolio: "https://www.angelonemf.com/downloads"
+  - amc: "Axis Mutual Fund"
+    monthly_portfolio: "https://www.axismf.com/statutory-disclosures"
+  - amc: "Bajaj Finserv Mutual Fund"
+    monthly_portfolio: "https://www.bajajamc.com/downloads?statutory-disclosures="
+  - amc: "Bandhan Mutual Fund"
+    monthly_portfolio: "https://bandhanmutual.com/downloads/disclosures"
+  - amc: "Bank of India Mutual Fund"
+    monthly_portfolio: "https://www.boimf.in/investor-corner#t2"
+  - amc: "Baroda BNP Paribas Mutual Fund"
+    monthly_portfolio: "https://www.barodabnpparibasmf.in/downloads/monthly-portfolio-scheme"
+  - amc: "Canara Robeco Mutual Fund"
+    monthly_portfolio: "https://www.canararobeco.com/documents/statutory-disclosures/scheme-dashboard/scheme-monthly-portfolio/"
+  - amc: "Capitalmind Mutual Fund"
+    monthly_portfolio: "https://capitalmindmf.com/statutory-disclosures.html#"
+  - amc: "Choice Mutual Fund"
+    monthly_portfolio: "https://choicemf.com/disclosures/monthly-portfolio"
+  - amc: "DSP Mutual Fund"
+    monthly_portfolio: "https://www.dspim.com/about-us/mandatory-disclosure/portfolio-disclosures"
+  - amc: "Edelweiss Mutual Fund"
+    monthly_portfolio: "https://www.edelweissmf.com/statutory#Portfolio-of-Schemes"
+  - amc: "Franklin Templeton Mutual Fund"
+    monthly_portfolio: "https://www.franklintempletonindia.com/investor/reports?firstFilter-12"
+  - amc: "Groww Mutual Fund"
+    monthly_portfolio: "https://growwmf.in/statutory-disclosure/portfolio"
+  - amc: "HDFC Mutual Fund"
+    monthly_portfolio: "https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio"
+  - amc: "Helios Mutual Fund"
+    monthly_portfolio: "https://www.heliosmf.in/portfolio-disclosure/"
+  - amc: "HSBC Mutual Fund"
+    monthly_portfolio: "https://www.assetmanagement.hsbc.co.in/en/mutual-funds/investor-resources/information-library#&accordion1446811090=2"
+  - amc: "ICICI Prudential Mutual Fund"
+    monthly_portfolio: "https://www.icicipruamc.com/news-and-media/downloads?currentTabFilter=Disclosures&&subCatTabFilter=MonthlyPortfolioDisclosures"
+  - amc: "IL&FS Mutual Fund (IDF)"
+    monthly_portfolio: "http://www.ilfsinfrafund.com/other.php"
+  - amc: "Invesco Mutual Fund"
+    monthly_portfolio: "https://invescomutualfund.com/literature-and-form?tab=Complete"
+  - amc: "ITI Mutual Fund"
+    monthly_portfolio: "https://www.itiamc.com/statuory-disclosure"
+  - amc: "Jio BlackRock Mutual Fund"
+    monthly_portfolio: "https://www.jioblackrockamc.com/statutory-disclosure/disclosures/monthly-portfolio-disclosure"
+  - amc: "JM Financial Mutual Fund"
+    monthly_portfolio: "https://www.jmfinancialmf.com/downloads/Portfolio-Disclosure"
+  - amc: "Kotak Mahindra Mutual Fund"
+    monthly_portfolio: "https://www.kotakmf.com/Information/forms-and-downloads"
+  - amc: "LIC Mutual Fund"
+    monthly_portfolio: "https://www.licmf.com/downloads/monthly-portfolio"
+  - amc: "Mahindra Manulife Mutual Fund"
+    monthly_portfolio: "https://www.mahindramanulife.com/downloads#mandatory-disclosures"
+  - amc: "Mirae Asset Mutual Fund"
+    monthly_portfolio: "https://www.miraeassetmf.co.in/downloads/portfolio"
+  - amc: "Motilal Oswal Mutual Fund"
+    monthly_portfolio: "https://www.motilaloswalmf.com/downloads/scheme-portfolio-details"
+  - amc: "Navi Mutual Fund"
+    monthly_portfolio: "https://navi.com/mutual-fund/downloads/portfolio"
+  - amc: "Nippon India Mutual Fund"
+    monthly_portfolio: "https://mf.nipponindiaim.com/investor-service/downloads/factsheet-portfolio-and-other-disclosures"
+  - amc: "NJ Mutual Fund"
+    monthly_portfolio: "https://downloads.njmutualfund.com/njmf_download.php?nme=127"
+  - amc: "Old Bridge Mutual Fund"
+    monthly_portfolio: "https://oldbridgemf.com/statutory-disclosures.html#v-pills-tabContent2"
+  - amc: "PGIM India Mutual Fund"
+    monthly_portfolio: "https://www.pgimindia.com/mutual-funds/disclosures/Portfolios/Monthly-Portfolio"
+  - amc: "PPFAS Mutual Fund"
+    monthly_portfolio: "https://amc.ppfas.com/downloads/portfolio-disclosure/"
+  - amc: "quant Mutual Fund"
+    monthly_portfolio: "https://quantmutual.com/statutory-disclosures"
+  - amc: "Quantum Mutual Fund"
+    monthly_portfolio: "https://www.quantumamc.com/portfolio/combined/-1/1/0/0"
+  - amc: "Samco Mutual Fund"
+    monthly_portfolio: "https://www.samcomf.com/StatutoryDisclosure"
+  - amc: "SBI Mutual Fund"
+    monthly_portfolio: "https://www.sbimf.com/portfolios"
+  - amc: "Shriram Mutual Fund"
+    monthly_portfolio: "https://www.shriramamc.in/investor-statutory-disclosures"
+  - amc: "Sundaram Mutual Fund"
+    monthly_portfolio: "https://www.sundarammutual.com/Monthly-Fortnightly-Adhoc-Portfolios"
+  - amc: "Tata Mutual Fund"
+    monthly_portfolio: "https://www.tatamutualfund.com/schemes-related"
+  - amc: "Taurus Mutual Fund"
+    monthly_portfolio: "https://taurusmutualfund.com/monthly-portfolio"
+  - amc: "The Wealth Company Mutual Fund"
+    monthly_portfolio: "https://www.wealthcompanyamc.in/literature-forms/portfolio-documents/monthly/"
+  - amc: "Trust Mutual Fund"
+    monthly_portfolio: "https://www.trustmf.com/disclosures?activeTab=portfolio-disclosures"
+  - amc: "Unifi Mutual Fund"
+    monthly_portfolio: "https://unifimf.com/statutorydocuments/#monthly-portfolio-disclosure"
+  - amc: "Union Mutual Fund"
+    monthly_portfolio: "https://www.unionmf.com/about-us/downloads/monthly-portfolio"
+  - amc: "UTI Mutual Fund"
+    monthly_portfolio: "https://www.utimf.com/downloads/consolidate-all-portfolio-disclosure"
+  - amc: "WhiteOak Capital Mutual Fund"
+    monthly_portfolio: "https://mf.whiteoakamc.com/regulatory-disclosures/scheme-portfolios"
+  - amc: "Zerodha Mutual Fund"
+    monthly_portfolio: "https://www.zerodhafundhouse.com/resources/disclosures?source=footer"
