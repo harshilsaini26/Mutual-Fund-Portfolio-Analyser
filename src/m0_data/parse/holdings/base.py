@@ -463,30 +463,68 @@ def _demote_subtotals(staged: list[StagedHolding]) -> None:
     is never at risk of demotion: HDFC's TREPS is considered and kept, because
     no run of the rows beneath it sums to its value.
 
-    Nesting is resolved outermost-first by taking the first run that matches,
-    which is correct for a sheet that prints a section above its contents. A
-    parent whose value equals its only child's matches on that child alone,
-    which costs nothing — the child then labels the rows itself.
+    **Nesting is resolved innermost-first, and a demoted subtotal then counts
+    once.** V1-10 accumulated the raw values of the following rows, which is
+    right only while a section's children are securities. The moment a child is
+    itself a section, its own subtotal row is added alongside the constituents
+    it already stands for, the running sum overshoots, and the parent is never
+    recognised. ICICI's multi-asset sheet is three levels deep and every parent
+    with more than one child failed exactly that way — four of them, carrying
+    Rs 8,138,769.97 onto a stated Rs 8,678,503.80, which is V1-25's +93.8%.
+
+    So the run is accumulated over the *forest*, not the list: a row already
+    demoted contributes its own value and the span it covers is skipped.
+    Innermost-first is what makes that available — a parent always precedes its
+    children on the sheet, so walking backwards settles every child before the
+    parent that needs it.
+
+    Deciding and labelling want opposite orders, so they are separate passes.
+    Demotion must run innermost-first for the arithmetic; `_assign_section`
+    must run outermost-first so that a nested subtotal's label overwrites its
+    parent's rather than the reverse. Doing both in one pass, as this did when
+    nesting was only ever two deep, silently picks the wrong section name.
+
+    A parent whose value equals its only child's still matches on that child
+    alone, which costs nothing — the child then labels the rows itself.
     """
     positions = [i for i, r in enumerate(staged) if r.row_kind == "security"]
 
-    for offset, index in enumerate(positions):
-        row = staged[index]
+    # offset of a demoted subtotal -> offset of the last row its run covers.
+    # Both are offsets into `positions`, which is fixed for the whole function:
+    # demoting a row must not remove it from the accumulation, because a
+    # subtotal still stands for its subtree when its own parent is measured.
+    spans: dict[int, int] = {}
+
+    # Pass one: decide, innermost first.
+    for offset in range(len(positions) - 1, -1, -1):
+        row = staged[positions[offset]]
         if row.isin_raw or row.quantity_raw is not None:
             continue
         target = row.market_value_raw
         if target is None or not target:
             continue
         running = Decimal(0)
-        for position, following in enumerate(positions[offset + 1:], start=offset + 1):
-            value = staged[following].market_value_raw
+        position = offset + 1
+        while position < len(positions):
+            value = staged[positions[position]].market_value_raw
             if value is None:
                 break
             running += value
+            # A row already demoted stands for everything beneath it, so it is
+            # counted once and its span stepped over. An ordinary row covers
+            # only itself.
+            covered = spans.get(position, position)
             if abs(running - target) <= abs(target) * SUBTOTAL_TOLERANCE:
-                staged[index] = replace(row, row_kind="subtotal")
-                _assign_section(staged, positions, offset, position, row)
+                spans[offset] = covered
                 break
+            position = covered + 1
+
+    # Pass two: apply, outermost first, so a nested label wins over its parent's.
+    for offset in sorted(spans):
+        index = positions[offset]
+        row = staged[index]
+        staged[index] = replace(row, row_kind="subtotal")
+        _assign_section(staged, positions, offset, spans[offset], row)
 
 
 def _assign_section(
@@ -501,8 +539,10 @@ def _assign_section(
     ICICI's section labels ARE its subtotal rows, so demoting them without this
     would leave every row beneath them with no section at all — and the section
     heading is the only thing on the sheet that says a row is a derivative
-    rather than a holding (V1-07). Processing outermost first means a nested
-    subtotal's label overwrites its parent's, which is the specific one wanted.
+    rather than a holding (V1-07). Callers must apply demotions outermost first
+    so that a nested subtotal's label overwrites its parent's, which is the
+    specific one wanted; `_demote_subtotals` has a separate pass for exactly
+    that, because it has to *decide* in the opposite order.
     """
     label = header.instrument_raw_name.strip()
     if not label:

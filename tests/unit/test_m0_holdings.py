@@ -13,6 +13,14 @@ real file, and carries the same deliberate edit for the same reason: its
 full file has — name before ISIN, a month-first as-on date, `% to Nav` written
 as a fraction, and each subtotal sitting on the section row itself.
 
+`icici_multi_asset_2026-07-31.xlsx` is that same disclosure **untrimmed and
+unedited** — 450 rows, byte-identical to the archived download, sha256
+`5dc05168…`. It is here because the trimmed fixture did not catch the defect
+the real file did: trimming flattened a three-level tree to two, and two levels
+were all V1-10's arithmetic could resolve. Read with that rule, the file parsed
+94% too large. It is the one fixture in this module that must never be edited
+for convenience — its value is that nobody chose what is in it.
+
 `nippon_holdings_sample.xlsx` is trimmed from Nippon India Growth Mid Cap's
 sheet of a 108-sheet workbook, with the same deliberate edit again. Its traps
 are a leading internal-code column, a units header split across two lines, and
@@ -480,6 +488,141 @@ def test_counting_icicis_subtotals_would_inflate_the_portfolio(
     )
     assert icici.stated_total is not None
     assert counted / icici.stated_total > Decimal("1.7")
+
+
+REAL_ICICI = FIXTURES / "icici_multi_asset_2026-07-31.xlsx"
+
+
+def _demoted_near(result: HoldingsParseResult, value: Decimal) -> bool:
+    """Was a row worth about `value` demoted to a subtotal?
+
+    Compared with a paisa of tolerance rather than exactly, because the sheet
+    stores what it prints as `762548.54` as `762548.5400000003` — a spreadsheet
+    float, not a decimal. Pinning those digits would assert the noise instead of
+    the figure, and would break the day openpyxl rounds differently. A paisa is
+    far tighter than any real position could collide within.
+    """
+    return any(
+        r.market_value_raw is not None
+        and abs(r.market_value_raw - value) < Decimal("0.01")
+        for r in result.rows
+        if r.row_kind == "subtotal"
+    )
+
+
+@pytest.fixture
+def icici_real() -> HoldingsParseResult:
+    """The whole published disclosure, not a trimmed one. See the module
+    docstring for why this file exists alongside the sample."""
+    return IciciHoldingsParser().parse(
+        RawFile("file-real", "S5:icici",
+                "ICICI Prudential Multi-Asset Fund.xlsx",
+                REAL_ICICI.read_bytes()),
+        "MULTI",
+    )
+
+
+def test_the_real_icici_file_reconciles_to_its_own_stated_total(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """The gate this slice exists to pass. Before the demotion rule learned to
+    resolve nesting deeper than two levels this was +93.8% — four section rows
+    carrying Rs 8,138,769.97 onto a stated Rs 8,678,503.80 (V1-25).
+
+    Asserted far tighter than `TOTAL_TOLERANCE_PCT`. The 2% guard is what stops
+    a bad parse loading; this is a golden file whose every subtotal is exact, so
+    anything above float noise means the tree was misread.
+    """
+    error = reconciliation_error(icici_real)
+    assert error is not None
+    assert abs(error) < Decimal("0.000001"), f"reconciles at {error}"
+
+
+def test_every_multi_child_section_in_the_real_file_is_demoted(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """The four V1-25 named, by value. Each one has more than one child, which
+    is precisely what the old rule could not see: it summed the raw rows
+    beneath, so a child that was itself a section got counted alongside the
+    constituents it already stood for.
+
+    Checked by value rather than by name because two of them are called
+    `Listed / Awaiting Listing On Stock Exchanges` — one under equity, one
+    under debt. Vocabulary does not identify a section on this sheet, which is
+    V1-10's whole argument.
+    """
+    for value in (
+        Decimal("6180420.35"),          # Equity & Equity Related Instruments
+        Decimal("762548.54"),           # Debt Instruments
+        Decimal("725279.24"),           # Listed / Awaiting Listing, under debt
+        Decimal("470521.84"),           # Money Market Instruments
+    ):
+        assert _demoted_near(icici_real, value), f"{value} was kept as a holding"
+
+
+def test_the_real_file_nests_three_levels_deep(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """The property that broke the old rule, asserted directly so that a
+    future fixture swap cannot quietly remove it.
+
+    `Debt Instruments` -> `Listed / Awaiting Listing` -> `Government
+    Securities` is three levels, and the middle one is a subtotal whose own
+    children are subtotals. A two-level file would still pass every other test
+    in this module.
+    """
+    assert _demoted_near(icici_real, Decimal("762548.54"))    # parent
+    assert _demoted_near(icici_real, Decimal("725279.24"))    # child, itself a parent
+    assert _demoted_near(icici_real, Decimal("338978.74"))    # grandchild
+    assert _demoted_near(icici_real, Decimal("386300.50"))    # grandchild
+    # And the middle level really is the sum of the two beneath it.
+    assert Decimal("338978.74") + Decimal("386300.50") == Decimal("725279.24")
+
+
+def test_a_demoted_section_labels_its_rows_with_the_innermost_name(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """Deciding and labelling run in opposite orders, and this is why.
+
+    Demotion has to resolve innermost-first to get the arithmetic right, but
+    the section a row belongs to is the NEAREST heading above it, not the
+    outermost. Applying demotions in the order they were decided would label
+    every equity row `Equity & Equity Related Instruments`, losing the
+    distinction V1-07 depends on to tell a derivative from a holding.
+    """
+    hdfc_bank = next(
+        r for r in icici_real.securities if r.isin_raw == "INE040A01034"
+    )
+    assert hdfc_bank.section == "Listed / Awaiting Listing On Stock Exchanges"
+
+
+def test_the_real_file_keeps_the_holdings_it_should(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """Demotion must not take real positions with it. A rule that demotes too
+    eagerly also reconciles — against a smaller portfolio — so the count and a
+    named holding are pinned here.
+    """
+    assert len(icici_real.securities) == 290
+    assert icici_real.as_of_date == date(2026, 7, 31)
+    hdfc_bank = next(
+        r for r in icici_real.securities if r.isin_raw == "INE040A01034"
+    )
+    assert hdfc_bank.market_value_raw == Decimal("517716.37")
+    assert hdfc_bank.quantity_raw == Decimal("69199542")
+
+
+def test_the_real_file_drops_the_notional_swaps_printed_after_the_total(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """§6.3 rule 4. The sheet prints fifteen interest-rate swaps AT NOTIONAL
+    VALUE below `Total Net Assets`. Notional is not market value, and read as
+    holdings they would add Rs 105,000 lakh to the portfolio — inside the 2%
+    guard on a Rs 8.7 lakh-crore book, so the reconciliation gate could not
+    catch them. Position settles it, as it did for Nippon's stock futures.
+    """
+    names = [r.instrument_raw_name.lower() for r in icici_real.securities]
+    assert not any("interest rate swap" in n for n in names)
 
 
 def test_icici_reports_fractions_and_the_scale_is_read_from_the_total(

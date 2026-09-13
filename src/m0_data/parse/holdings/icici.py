@@ -1,7 +1,11 @@
 """ICICI Prudential Mutual Fund. MODULE_0.md §6.1, DECISIONS V1-08.
 
-Verified against ICICI Prudential Multi-Asset Fund's disclosure for
-31-Jul-2026:
+Verified against ICICI Prudential Multi-Asset Fund's real, untrimmed
+disclosure for 31-Jul-2026 — `tests/fixtures/m0/icici_multi_asset_2026-07-31.
+xlsx`, byte-identical to the archived download. Until V1-28 this docstring
+claimed that verification and did not have it: the parser had only ever seen a
+12-row hand-built fixture, and shown the real file it parsed 94% too large
+(V1-25). The header it is written against:
 
     row 3  Portfolio as on Jul 31,2026
     row 4  Company/Issuer/Instrument Name | ISIN | Coupon | Industry/Rating |
@@ -20,18 +24,23 @@ rather than five:
 3. **`% to Nav` is a fraction**, summing to 1.0 rather than 100 — its own total
    row reads `0.9999999999896085`. `detect_pct_scale` reads the convention off
    that total row rather than assuming one.
-4. **The subtotal sits ON the section row**, nested four levels deep, where
-   HDFC puts a bare heading above the numbers. `_demote_subtotals` settles it
-   arithmetically: a row whose value equals the sum of the rows beneath it is
-   their total. Reading these rows as holdings gives 2.887x the true portfolio,
-   and it still normalises to 100% — see V1-08.
+4. **The subtotal sits ON the section row**, where HDFC puts a bare heading
+   above the numbers, and the sections nest **three** levels deep:
+   `Debt Instruments` over `Listed / Awaiting Listing` over
+   `Government Securities`. `_demote_subtotals` settles it arithmetically — a
+   row whose value equals the sum of the rows beneath it is their total —
+   provided it resolves innermost-first, which is what V1-28 fixed. Read as
+   holdings these rows give 1.9378x the true portfolio, and they still
+   normalise to 100%, so nothing downstream could have caught it.
 
-Also on the sheet, and deliberately not special-cased here: interest-rate swaps
-disclosed at NOTIONAL value under their own heading. Notional is not market
-value and must never enter the portfolio total. The Multi-Asset file carries
-none; when a scheme that holds them is added, §10's V2 and the reconciliation
-against the file's own total are what will catch it, and the fix belongs in
-classification rather than in this config.
+Also on the sheet: fifteen interest-rate swaps disclosed at NOTIONAL value
+under their own heading. Notional is not market value and must never enter the
+portfolio total. This docstring previously said the Multi-Asset file carries
+none — it carries Rs 105,000 lakh of them. They are excluded because they are
+printed BELOW `Total Net Assets` and §6.3 rule 4 drops everything after that
+line, which is position rather than classification doing the work. On a sheet
+that printed them above the total, nothing here would catch them: Rs 105,000
+lakh on a Rs 8.7 lakh-crore book is +1.2%, inside the 2% reconciliation guard.
 
 **The ZIP is not handled yet.** ICICI publishes 146 per-scheme workbooks in one
 25 MB archive, and §6.5's treatment — archive the ZIP as one `raw_file`, stage
