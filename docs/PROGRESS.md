@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 988 tests passing
+**Last updated:** 2026-09-13 · 1,008 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -21,6 +21,7 @@ re-measured rather than trusted.
 | **ISINs a look-through can answer for** | **991** |
 | Holding rows | 10,300 |
 | AMC formats with a parser | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
+| **AMCs that fetch themselves** | **2** — Kotak, ICICI |
 | **Schemes reachable without one** | **1,973**, via the coverage tier |
 
 The gap between 183 schemes and 991 ISINs is V1-37: a disclosure describes a
@@ -82,12 +83,29 @@ and loads all of them. 88 schemes from one Kotak workbook, 91 from one Nippon,
 about 70 seconds each. A sheet it cannot identify with certainty is reported and
 skipped, never guessed at.
 
-Fetching is still a download here, but **not because it has to be**. V1-03 said
-discovery needed a browser since every AMC page is JavaScript-rendered; that was
-the wrong conclusion — a JS front-end implies a JSON backend. Kotak's portfolio
-list comes back from `java17vlbapi.kotakmf.com/.../getsubheaderList` with no
-CAPTCHA at all, and ICICI's monthly ZIP from an unauthenticated POST. Writing
-those adapters is the next slice (V1-44).
+**Kotak and ICICI no longer need the download.** V1-03 said discovery needed a
+browser since every AMC page is JavaScript-rendered; that was the wrong
+conclusion — a JS front-end implies a JSON backend, and the backend is neither
+authenticated nor challenged:
+
+```bash
+python -m jobs.fetch_amc --amc kotak --list        # what is published, fetch nothing
+python -m jobs.fetch_amc --amc kotak --period 2026-08 --kind fortnightly
+python -m jobs.ingest_inbox
+```
+
+That is the whole loop, with no hand-download and no CAPTCHA — Kotak's own
+workbook, whose website dropdown answers a portfolio request with a Radware
+challenge this project will not solve (V1-32). The CAPTCHA guards the page, not
+the data. **21 schemes loaded from a file nobody touched.**
+
+Those listings are also archives, which the coverage tier is not: Kotak's runs
+to **April 2013**, 70 monthly disclosures, so a fund loaded this way can be
+backfilled. ICICI still publishes one 25 MB ZIP of ~146 workbooks and §6.5's
+member staging is not built, so a human still extracts the member.
+
+The other 50 AMCs are one adapter each. The house you hold is the one worth
+writing, and everything else has the coverage tier above.
 
 ## Modules
 
@@ -146,10 +164,10 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is not machinery:
 
-- **AMC-direct fetchers** for Kotak and ICICI, both endpoints verified live
-  (V1-43). One adapter per house, and the house you hold is the one worth
-  writing.
 - **A staleness command** — which held fund owes a disclosure, with the link.
+  The two tiers can both answer "what is published"; nothing yet asks them.
+- **More discovery adapters**, one per house, as funds are actually held.
+- **§6.5 member staging**, so ICICI's 25 MB ZIP stops needing a human.
 - **V2**: M2 fund x-ray, the tax engine, §10 nested look-through.
 
 ## Reading this repository

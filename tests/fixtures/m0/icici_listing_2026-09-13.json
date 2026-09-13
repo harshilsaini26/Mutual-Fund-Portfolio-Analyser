@@ -1,0 +1,611 @@
+{
+ "success": {
+  "data": {
+   "files": [
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure August 2026",
+      "text": "Monthly Portfolio Disclosure August 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1788152400000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1788886600215,
+     "applicableMonth": 1788152400000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/Aug/Monthly-Portfolio-Disclosure-August-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure July 2026",
+      "text": "Monthly Portfolio Disclosure July 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1785474000000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1786126938725,
+     "applicableMonth": 1785474000000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/July/Monthly-Portfolio-Disclosure-July-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure June 2026",
+      "text": "Monthly Portfolio Disclosure June 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1782795600000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1783532697355,
+     "applicableMonth": 1782795600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/June/Monthly-Portfolio-Disclosure-June-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure May 2026",
+      "text": "Monthly Portfolio Disclosure May 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1780203600000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1780994633746,
+     "applicableMonth": 1780203600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/May/Monthly-Portfolio-Disclosure-May-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure April 2026",
+      "text": "Monthly Portfolio Disclosure April 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1777525200000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1778307466892,
+     "applicableMonth": 1777525200000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/Apr/Monthly-Portfolio-Disclosure-April-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure March 2026",
+      "text": "Monthly Portfolio Disclosure March 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1774933200000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1775727650026,
+     "applicableMonth": 1774933200000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/Mar/Monthly-Portfolio-Disclosure-March-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure February 2026",
+      "text": "Monthly Portfolio Disclosure February 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1772254800000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1772947787080,
+     "applicableMonth": 1772254800000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/Feb/Monthly-Portfolio-Disclosure-February-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure January 2026",
+      "text": "Monthly Portfolio Disclosure January 2026"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1769835600000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1770534112889,
+     "applicableMonth": 1769835600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2026/Jan/Monthly-Portfolio-Disclosure-January-2026.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure December 2025",
+      "text": "Monthly Portfolio Disclosure December 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1767157200000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1767807589280,
+     "applicableMonth": 1767157200000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Dec/Monthly-Portfolio-Disclosure-December-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure November 2025",
+      "text": "Monthly Portfolio Disclosure November 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1764478800000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1765186739311,
+     "applicableMonth": 1764478800000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Nov/Monthly-Portfolio-Disclosure-November-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure October 2025",
+      "text": "Monthly Portfolio Disclosure October 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1761886800000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1762536417453,
+     "applicableMonth": 1761886800000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Oct/Monthly-Portfolio-Disclosure-October-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure September 2025",
+      "text": "Monthly Portfolio Disclosure September 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1759208400000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1759945839014,
+     "applicableMonth": 1759208400000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Sep/Monthly-Portfolio-Disclosure-September-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure August 2025",
+      "text": "Monthly Portfolio Disclosure August 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1756616400000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1757324399354,
+     "applicableMonth": 1756616400000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Aug/Monthly-Portfolio-Disclosure-August-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure July 2025",
+      "text": "Monthly Portfolio Disclosure July 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1753938000000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1757393404580,
+     "applicableMonth": 1751259600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/July/Monthly-Portfolio-Disclosure-July-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure June 2025",
+      "text": "Monthly Portfolio Disclosure June 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1751259600000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1753763393405,
+     "applicableMonth": 1751259600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/June/Monthly-Portfolio-Disclosure-June-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure May 2025",
+      "text": "Monthly Portfolio Disclosure May 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1748667600000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1753763426938,
+     "applicableMonth": 1748667600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/May/Monthly-Portfolio-Disclosure-May-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure April 2025",
+      "text": "Monthly Portfolio Disclosure April 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1745989200000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1753763217136,
+     "applicableMonth": 1745989200000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Apr/Monthly-Portfolio-Disclosure-April-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2025-2026"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure March 2025",
+      "text": "Monthly Portfolio Disclosure March 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1743397200000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1753763363501,
+     "applicableMonth": 1743397200000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Mar/Monthly-Portfolio-Disclosure-March-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2024-2025"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure February 2025",
+      "text": "Monthly Portfolio Disclosure February 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1740718800000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1753763275547,
+     "applicableMonth": 1740718800000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Feb/Monthly-Portfolio-Disclosure-February-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2024-2025"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    },
+    {
+     "title": {
+      "code": "Monthly Portfolio Disclosure January 2025",
+      "text": "Monthly Portfolio Disclosure January 2025"
+     },
+     "fileType": "Document",
+     "sortOrder": null,
+     "fileDate": 1738299600000,
+     "fileValidity": 4102376400000,
+     "lastModifiedDate": 1753763330239,
+     "applicableMonth": 1738299600000,
+     "url": "/downloads/Files/Monthly Portfolio Disclosures/2025/Jan/Monthly-Portfolio-Disclosure-January-2025.zip",
+     "isNew": false,
+     "isEnabled": true,
+     "schemeCategory": "",
+     "userType": "Both",
+     "FINANCIAL_YEAR": [
+      "2024-2025"
+     ],
+     "AAUM_FREQUENCY": [],
+     "FUND_CATEGORY": [],
+     "PORTFOLIO_FREQUENCY": [],
+     "SCOPE": [],
+     "SHOW": [],
+     "MONTH": [],
+     "category": "MONTHLY_PORTFOLIO_DISCSLO_DWND",
+     "categoryName": "Monthly Portfolio Disclosures",
+     "level1Id": "60f45132-1a30-7412-f061-d71efe3e3653",
+     "level2Id": "26a073d7-08d2-4a95-95fa-f83a4ee51e40"
+    }
+   ],
+   "isNext": true
+  },
+  "successCode": "NMSCC-0001",
+  "responseMessage": "Success"
+ }
+}

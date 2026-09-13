@@ -50,7 +50,7 @@ from src.m0_data.parse.holdings.base import HoldingsFormat, parse_holdings
 FORMAT = HoldingsFormat(
     amc_id="kotak",
     parser_id="holdings.kotak",
-    version="1",
+    version="2",
 )
 
 
@@ -77,7 +77,15 @@ class KotakHoldingsParser:
         score = 0.0
         if "kotak" in name:
             score += 0.6
-        if "consolidatedsebiportfolio" in name.replace(" ", ""):
+        flat = name.replace(" ", "")
+        # BOTH of Kotak's own document names. The docstring above named the
+        # fortnightly file from the start and the scoring did not reach it:
+        # `FortnightlyPortfolioAugust312026.xlsx` scored 0.40 against a 0.50
+        # floor, so `route` raised `NoParserMatched` on a genuine Kotak
+        # workbook. Nothing noticed while the file arrived by hand, because
+        # the hand-downloaded one was always the consolidated SEBI file;
+        # automating the fetch (V1-44) is what fetched the other one.
+        if "consolidatedsebiportfolio" in flat or "fortnightlyportfolio" in flat:
             score += 0.6
         elif "portfolio" in name:
             score += 0.3
