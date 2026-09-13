@@ -230,6 +230,63 @@ def test_an_unknown_name_is_unresolved_never_guessed(
     assert result.needs_review
 
 
+# --- §8.4, units of another scheme -------------------------------------------
+
+
+def test_a_fund_wrapper_is_recognised_however_the_amc_spells_it() -> None:
+    """§8.4's pattern wanted `units of ... fund` or `etf ... units`, and across
+    532 security rows in four real disclosures it never once matched.
+
+    What AMCs actually publish: `ICICI Prudential Gold ETF`,
+    `Ishares Nasdaq 100 UCITS ETF USD`, `Geninnov Global Master Fund`. None
+    says "units", so 9,064 Cr of fund-inside-a-fund counted as a failure to
+    resolve rather than as the thing it plainly is.
+    """
+    for name in (
+        "ICICI Prudential Gold ETF",
+        "Ishares Nasdaq 100 UCITS ETF USD",
+        "Geninnov Global Master Fund",
+        "Nippon India ETF Nifty BeES",
+        "Units of Mutual Fund",
+    ):
+        assert match_synthetic(name, "equity") == "__MFUNIT__", name
+
+
+def test_an_operating_company_is_not_a_fund_because_it_manages_them() -> None:
+    """The one clause that carries risk is `a name ending in Fund`, and this is
+    what it must not catch.
+
+    `SBI Funds Management Limited` is a real equity holding in both HDFC's and
+    ICICI's disclosures. Swept into `__MFUNIT__` it would leave the issuer
+    analysis entirely, because synthetic issuers are excluded from overlap and
+    concentration — so the error would not look like an error, it would look
+    like a company nobody owns.
+
+    The plural defeats the word boundary and the trailing words defeat the
+    anchor. Both spellings are taken verbatim from the two files.
+    """
+    for name in (
+        "SBI Funds Management Limited",
+        "SBI Funds Management Ltd.",
+        "Nippon Life India Asset Management Ltd",
+        "HDFC Asset Management Company Limited",
+    ):
+        assert match_synthetic(name, "equity") is None, name
+
+
+def test_the_loaders_own_classification_settles_a_fund_unit() -> None:
+    """Structure before vocabulary, as V1-30 argued for sovereign paper.
+
+    ICICI's Gold ETF sits under a `Units of Mutual Fund` heading, so the loader
+    had already classed it `mfunit` — and it still resolved to
+    `__UNRESOLVED__`, because `CLASS_FALLBACK` stopped at cash and derivatives.
+    A row whose section says what it is does not need its name to agree.
+    """
+    assert match_synthetic("Something With No Useful Name", "mfunit") == "__MFUNIT__"
+    # REITs and InvITs classify as `other` and keep their real issuers.
+    assert match_synthetic("Embassy Office Parks REIT", "other") is None
+
+
 # --- §8.4, sovereign paper only ----------------------------------------------
 
 

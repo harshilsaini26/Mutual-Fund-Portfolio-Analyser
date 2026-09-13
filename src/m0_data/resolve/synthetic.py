@@ -33,7 +33,29 @@ SYNTHETIC_RULES: tuple[tuple[re.Pattern[str], IssuerId], ...] = tuple(
         (r"cash\s*(&|and)?\s*(bank|equivalent)|bank\s+balance", "__CASH__"),
         (r"margin|deposit\s+with|collateral", "__MARGIN__"),
         (r"\b(future|option|call|put)\b|\bfut\b|\bopt\b", "__DERIV__"),
-        (r"units?\s+of\s+.*(fund|scheme)|\betf\b.*units?", "__MFUNIT__"),
+        # §8.4 writes this as `units of ... fund` or `etf ... units`, and
+        # across 532 security rows in four real disclosures **it has never
+        # once matched**. AMCs do not name a holding the way the spec
+        # imagined: the rows read `ICICI Prudential Gold ETF`, `Ishares
+        # Nasdaq 100 UCITS ETF USD` and `Geninnov Global Master Fund`, and
+        # not one of them says "units". V1-34, and the third outing for
+        # this defect class — V1-04 on `Net Current Assets`, V1-30 on
+        # `Government Securities`.
+        #
+        # An ETF and a UCITS are fund wrappers by definition, and a name
+        # ENDING in `Fund` is a fund rather than a company that mentions
+        # one. That last clause carries the risk, so it is anchored: `SBI
+        # Funds Management Limited` is an operating company held by both
+        # HDFC and ICICI, and this does not touch it — the plural defeats
+        # the word boundary and the trailing words defeat the anchor.
+        # Verified against every row of all four files, not reasoned about.
+        (
+            r"units?\s+of\s+.*(fund|scheme)"
+            r"|\betf\b"
+            r"|\bucits\b"
+            r"|\bfund\b\s*$",
+            "__MFUNIT__",
+        ),
         (
             r"government\s+of\s+india|\bgoi\b|\bg[- ]?sec\b|treasury\s+bill",
             "__GSEC__",
@@ -66,6 +88,16 @@ CENTRAL_GOVERNMENT_ISIN = re.compile(r"^IN0020")
 CLASS_FALLBACK = {
     "cash": IssuerId("__CASH__"),
     "derivative": IssuerId("__DERIV__"),
+    # Units of another scheme are not an issuer, and the loader already
+    # works this out from the section heading — `Units of Mutual Fund` sits
+    # over ICICI's Gold ETF. It was classed `mfunit` and still resolved to
+    # `__UNRESOLVED__`, because this table stopped at cash and derivatives.
+    # `__UNRESOLVED__` means "we could not identify this"; we had.
+    #
+    # REITs and InvITs are deliberately NOT here. They classify as `other`
+    # and have real, identifiable issuers — the same line §8.4 draws for
+    # state loans against sovereign paper (V1-30).
+    "mfunit": IssuerId("__MFUNIT__"),
 }
 
 
