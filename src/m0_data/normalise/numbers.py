@@ -29,7 +29,20 @@ NULL_TOKENS = frozenset({"", "-", "--", "N.A.", "NA", "N/A", "NIL", "NIL.", "NUL
 #: This is "see the note", not a malformed number, so it coerces to None rather
 #: than raising. `12.3.4` still raises: that is a number someone got wrong, and
 #: §7.1 is right that it must surface.
-FOOTNOTE_MARKER = re.compile(r"^[@*#^$~†‡\s]+$")
+#: The characters AMCs hang footnotes on. `$` earns its place here rather
+#: than being read as a currency: these are rupee disclosures, and Kotak
+#: marks a written-off bond `0.00 $` while ICICI marks a covered call
+#: `(Covered call) $$`.
+FOOTNOTE_CHARS = "@*#^$~†‡"
+
+#: A cell holding nothing BUT footnote punctuation.
+FOOTNOTE_MARKER = re.compile(r"^[" + re.escape(FOOTNOTE_CHARS) + r"\s]+$")
+
+#: The same characters clinging to a number, at either end.
+FOOTNOTE_ATTACHED = re.compile(
+    r"^[" + re.escape(FOOTNOTE_CHARS) + r"\s]+|["
+    + re.escape(FOOTNOTE_CHARS) + r"\s]+$"
+)
 
 
 class CoercionError(ValueError):
@@ -52,7 +65,24 @@ def to_decimal(s: str | None) -> Decimal | None:
     try:
         value = Decimal(token)
     except InvalidOperation as exc:
-        raise CoercionError(f"cannot parse number: {s!r}") from exc
+        # A footnote marker attached to a number is a footnote, not a defect.
+        # Kotak writes a written-off bond as `0.00 $` and its weight as
+        # `0.00 #` — YES BANK's AT1s, 428 units held and worth nothing, which
+        # is a REAL holding at zero rather than a row to drop or raise on.
+        #
+        # Stripped only when what remains parses. That is the whole safety
+        # argument: `#N/A` loses its `#` and is still not a number, so it still
+        # raises, and so do `#DIV/0!`, `B.C.` and every other thing AMFI puts
+        # in a numeric column. A marker on a number is the only case that
+        # changes.
+        bare = FOOTNOTE_ATTACHED.sub("", token).strip()
+        if bare and bare != token:
+            try:
+                value = Decimal(bare)
+            except InvalidOperation:
+                raise CoercionError(f"cannot parse number: {s!r}") from exc
+        else:
+            raise CoercionError(f"cannot parse number: {s!r}") from exc
     if not value.is_finite():
         # `Decimal` accepts "Infinity", "-Infinity" and "NaN" happily, and this
         # is the money path. AMFI's NAV column is known to carry `#N/A`,

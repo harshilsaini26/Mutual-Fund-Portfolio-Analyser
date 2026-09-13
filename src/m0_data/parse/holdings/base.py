@@ -156,7 +156,7 @@ HEADER_SCAN_ROWS = 6
 #: nothing. V1-36.
 #:
 #: Bump on any change that would read an already-loaded file differently.
-READER_VERSION = "3"
+READER_VERSION = "4"
 
 SUBTOTAL_TOLERANCE = Decimal("0.0001")
 
@@ -789,10 +789,18 @@ def _name_span(columns: dict[str, int]) -> tuple[int, int]:
 
 
 def _name_at(cells: list[str], columns: dict[str, int]) -> str:
-    """First non-empty cell in the name span — the innermost label present."""
+    """First cell in the name span that could be a name.
+
+    **A number is skipped**, because an instrument is not called `0.1063`.
+    Kotak's debt sheets carry an unlabelled numeric column to the left of the
+    name, so "first non-empty" read YES BANK's AT1 bonds as a security named
+    `0` — which then failed on its market value and took the whole sheet with
+    it. The span exists to find the innermost LABEL; a bare number is not one.
+    """
     start, stop = _name_span(columns)
     for index in range(start, min(stop, len(cells))):
-        if cells[index].strip():
+        text = cells[index].strip()
+        if text and not _looks_numeric(text):
             return cells[index]
     return ""
 

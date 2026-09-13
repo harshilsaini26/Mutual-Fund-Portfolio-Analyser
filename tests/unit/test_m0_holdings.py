@@ -670,6 +670,61 @@ def test_kotak_indents_by_column_and_the_name_is_still_read(
     assert all(r.instrument_raw_name.strip() for r in kotak.securities)
 
 
+def test_a_written_off_bond_is_a_holding_worth_nothing(
+    kotak: HoldingsParseResult,
+) -> None:
+    """`0.00 $` is zero with a footnote, and the row is a real position.
+
+    Kotak's debt sheets carry YES BANK's AT1 bonds — 428 units, written down to
+    nothing, the `$` pointing at the note that explains it. Refusing to parse
+    the value cost eight sheets of the 119-sheet workbook, because §6.3 rule 3
+    turns an unreadable market value into a raise and the raise takes the whole
+    sheet.
+
+    A held instrument worth zero is a fact about the portfolio. Dropping it and
+    raising on it are both wrong, and dropping is worse because it is quiet.
+    """
+    from src.m0_data.normalise.numbers import to_decimal
+
+    assert to_decimal("0.00 $") == Decimal("0.00")
+    assert to_decimal("0.00 #") == Decimal("0.00")
+    assert to_decimal("12.5*") == Decimal("12.5")
+
+
+def test_stripping_a_marker_cannot_rescue_something_that_is_not_a_number(
+) -> None:
+    """The safety argument for the rule above, and the whole of it.
+
+    The marker is removed only when what remains parses. `#N/A` loses its `#`
+    and is still not a number, so it still raises — as do `#DIV/0!` and `B.C.`,
+    which are what AMFI is documented to ship in a NAV column. A marker on a
+    number is the only case whose answer changes.
+    """
+    from src.m0_data.normalise.numbers import CoercionError, to_decimal
+
+    for token in ("#N/A", "#DIV/0!", "B.C.", "B. C.", "$", "@"):
+        result: object
+        try:
+            result = to_decimal(token)
+        except CoercionError:
+            result = "raised"
+        assert result in {"raised", None}, f"{token!r} became {result!r}"
+
+
+def test_an_instrument_is_never_called_a_number(
+    kotak: HoldingsParseResult,
+) -> None:
+    """The name span takes the innermost LABEL, and a bare number is not one.
+
+    Kotak's debt sheets put an unlabelled numeric column to the left of the
+    name, so "first non-empty in the span" read YES BANK's AT1 bonds as a
+    security named `0` — which then failed on its market value and took the
+    sheet with it. Neither half of that was visible from the error.
+    """
+    for row in kotak.securities:
+        assert not row.instrument_raw_name.strip().replace(".", "").isdigit()
+
+
 def test_kotak_labels_its_totals_in_the_industry_column(
     kotak: HoldingsParseResult,
 ) -> None:
@@ -681,7 +736,14 @@ def test_kotak_labels_its_totals_in_the_industry_column(
     against a stated 402,258.02: +97.4%. The reconciliation guard would have
     refused the load without ever saying why.
     """
-    totals = [r for r in kotak.rows if r.row_kind == "total"]
+    # Totals that carry a VALUE — the ones that would be counted as holdings.
+    # A note below the grand total reading `Total value of illiquid equity
+    # shares...` also classifies as a total and carries none, so counting rows
+    # here would be counting the prose.
+    totals = [
+        r for r in kotak.rows
+        if r.row_kind == "total" and r.market_value_raw is not None
+    ]
     assert len(totals) == 3
     values = {r.market_value_raw for r in totals}
     assert Decimal("323957.09") in values      # equity block
