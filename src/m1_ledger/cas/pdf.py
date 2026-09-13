@@ -55,8 +55,12 @@ def decrypt_and_extract(pdf_bytes: bytes, password: str) -> list[str]:
 
     buffer = io.BytesIO()
     writer = pypdf.PdfWriter()
-    for page in reader.pages:
-        writer.add_page(page)
+    # Named apart from the `page` below on purpose: `pypdf.PageObject` and
+    # `pdfplumber.page.Page` are different types from different libraries, and
+    # reusing one name for both is a type error the moment the `cas` extra is
+    # actually installed — which CI never does.
+    for source_page in reader.pages:
+        writer.add_page(source_page)
     writer.write(buffer)
     buffer.seek(0)
 

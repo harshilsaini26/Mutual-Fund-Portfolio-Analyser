@@ -12,23 +12,33 @@ description = "Self-hosted look-through analytics for Indian mutual fund investo
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
+
+# EXACT pins, deliberately, and the same choice as the `dev` group below. This
+# is a self-hosted application, not a library that has to co-resolve inside
+# somebody else's environment, so there is no cost to pinning and a real cost
+# to floating: a lower bound means a fresh clone installs whatever shipped this
+# morning, and the gate then tests a program nobody has run.
+#
+# Pinning here is necessary and not sufficient. It fixes only the packages
+# named below; `requirements.lock` fixes the ones underneath them, which is
+# where the breakage actually came from. See that file.
 dependencies = [
     # Zone B is encrypted at rest (PLAN.md §6.3). This is the project's one
     # runtime dependency and it is load-bearing for that: without it
     # `connect_ledger` refuses to open the ledger at all. DECISIONS V1-16.
-    "sqlcipher3>=0.5",
+    "sqlcipher3==0.6.2",
     # Used throughout and previously undeclared, which V0-19 called out.
-    "pyyaml>=6.0",
-    "openpyxl>=3.1",
-    "httpx>=0.27",
+    "pyyaml==6.0.3",
+    "openpyxl==3.1.5",
+    "httpx==0.28.1",
     # M6's API. Loopback-bound and single-user (MODULE_6 §15.3) — this is a
     # local server for one person, not a deployment.
-    "fastapi>=0.115",
-    "uvicorn>=0.30",
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
     # M6's HTML surface. Server-rendered rather than React — DECISIONS V1-23,
     # which overrides PLAN.md §9.10. d3 is vendored under
     # src/m6_views/static/vendor/, so there is no JS toolchain and no CDN call.
-    "jinja2>=3.1",
+    "jinja2==3.1.6",
 ]
 
 # `cas/pdf.py` imports these INSIDE its functions so the ledger stays
@@ -36,7 +46,7 @@ dependencies = [
 # depending on them, and undeclared meant `pip install -e .` followed by
 # `python -m jobs.import_cas` failed with ImportError.
 [project.optional-dependencies]
-cas = ["pypdf>=4.2", "pdfplumber>=0.11"]
+cas = ["pypdf==6.18.1", "pdfplumber==0.11.10"]
 
 # The gate's own tooling. `pip install -e .` installs runtime dependencies only,
 # so without this group CI ran `python -m ruff` against an interpreter that had

@@ -294,28 +294,62 @@ def test_every_third_party_import_is_declared() -> None:
         assert package in declared, f"{package} is imported but not declared"
 
 
-def test_every_dependency_carries_a_lower_bound() -> None:
-    """No lockfile, so the floor is the only thing standing between a fresh
-    install and a version whose behaviour nobody here has run."""
+def test_every_dependency_is_pinned_exactly() -> None:
+    """A lower bound is not enough. It lets a fresh clone install whatever
+    shipped that morning, so the gate certifies a program nobody has run —
+    which is not a theory: CI resolved a newer FastAPI stack than this machine
+    had and failed the type check on it."""
+    for spec in _declared_dependencies():
+        assert "==" in spec, f"{spec} is not pinned to a single version"
+
+
+def _declared_dependencies() -> list[str]:
+    """Every dependency `pyproject.toml` names, extras included."""
     import tomllib
 
     root = Path(__file__).resolve().parents[2]
     with open(root / "pyproject.toml", "rb") as fh:
         meta = tomllib.load(fh)["project"]
-
     specs = list(meta.get("dependencies", []))
     for group in meta.get("optional-dependencies", {}).values():
         specs.extend(group)
     assert specs
-    for spec in specs:
-        # `==` satisfies this too: an exact pin is a floor as well as a
-        # ceiling. The `dev` tools are pinned that way deliberately — ruff and
-        # mypy gain rules between releases, so a floating version turns a green
-        # `main` red on someone else's release schedule. What is forbidden here
-        # is a dependency with no floor at all.
-        assert re.search(r"(>=|==)\s*\d", spec), (
-            f"{spec} has no lower bound"
-        )
+    return specs
+
+
+def _normalise(name: str) -> str:
+    """PEP 503: `PyYAML`, `pyyaml` and `py_yaml` are one project, and a lock
+    file written by `pip freeze` does not use the spelling `pyproject.toml`
+    happens to use."""
+    return re.sub("[-_.]+", "-", name).lower()
+
+
+def test_the_lock_pins_what_pyproject_cannot() -> None:
+    """`pyproject.toml` can only pin the packages it names, and the one that
+    broke CI was **starlette** — which it never names, because starlette
+    arrives underneath FastAPI. Pinning the direct dependencies and stopping
+    there would have left the actual cause free to move again."""
+    root = Path(__file__).resolve().parents[2]
+    lock = (root / "requirements.lock").read_text(encoding="utf-8")
+
+    pinned: dict[str, str] = {}
+    for raw in lock.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        assert "==" in line, f"lock entry is not an exact pin: {line}"
+        name, _, version = line.partition("==")
+        pinned[_normalise(name)] = version
+
+    declared = _declared_dependencies()
+    for spec in declared:
+        name = _normalise(spec.split("==")[0])
+        assert name in pinned, f"{name} is declared but missing from the lock"
+
+    assert "starlette" in pinned, "the package that caused this is unpinned again"
+    assert len(pinned) > len(declared), (
+        "a lock that covers only the declared dependencies is not a lock"
+    )
 
 
 def test_the_temp_directory_helper_is_not_used_for_secrets() -> None:

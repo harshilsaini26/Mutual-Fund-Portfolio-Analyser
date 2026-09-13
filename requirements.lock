@@ -1,0 +1,74 @@
+# The whole dependency graph, pinned. Used as a pip CONSTRAINTS file, not a
+# requirements file: `pip install -e ".[dev]" -c requirements.lock` still takes
+# what to install from pyproject.toml, and takes which version from here.
+#
+# Why this exists, and why pinning pyproject.toml was not enough: CI failed on
+# starlette 1.6.0 while this machine had 1.0.1, and starlette is not in
+# pyproject.toml at all — it arrives underneath fastapi. Exact pins on the
+# dependencies we name leave every dependency we do not name free to move, and
+# it was one of those that broke. A constraints file is the only form of pin
+# that reaches the whole graph.
+#
+# Entries here that a given platform does not need are simply not installed --
+# a constraint bounds a package, it does not request one. `colorama` is the
+# example: a pytest dependency on Windows and absent on the Linux runner.
+#
+# REGENERATE after any intentional upgrade, from a venv that has just passed
+# the gate, so the pins describe a state that was actually green:
+#
+#     python -m venv .venv-lock
+#     .venv-lock/bin/pip install -e ".[dev,cas]"
+#     .venv-lock/bin/python -m pytest -q          # and ruff, and mypy
+#     .venv-lock/bin/pip freeze --exclude-editable | sort > requirements.lock
+#
+# Covers `[dev]` and `[cas]` as well as the runtime set, so one file serves
+# every install the README describes.
+#
+# No hashes. `--require-hashes` would be stronger against a compromised index,
+# but it demands a hash for every build-time dependency too, and sqlcipher3
+# ships as an sdist that is built on the runner. Version pinning is the part
+# that was actually costing us; hashes are a separate decision.
+
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+PyYAML==6.0.3
+Pygments==2.21.0
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+ast_serialize==0.11.1
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.1
+click==8.5.0
+colorama==0.4.6
+cryptography==50.0.1
+et_xmlfile==2.0.0
+fastapi==0.141.1
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.19
+iniconfig==2.3.0
+librt==0.15.0
+mypy==2.3.1
+mypy_extensions==1.1.0
+openpyxl==3.1.5
+packaging==26.3
+pathspec==1.1.1
+pdfminer.six==20260107
+pdfplumber==0.11.10
+pillow==12.3.0
+pluggy==1.6.0
+pycparser==3.0
+pydantic==2.13.5
+pydantic_core==2.46.5
+pypdf==6.18.1
+pypdfium2==5.13.0
+pytest==9.1.1
+ruff==0.16.6
+sqlcipher3==0.6.2
+starlette==1.6.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.52.4

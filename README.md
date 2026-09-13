@@ -124,8 +124,14 @@ Requires **Python 3.11+**.
 git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
 cd Mutual-Fund-Portfolio-Analyser
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -e .
+pip install -e . -c requirements.lock
 ```
+
+Every dependency is pinned to one version, and `requirements.lock` pins the transitive
+ones too -- the packages nothing here names, which arrive underneath the ones it does.
+Installing without `-c` still works and still gets tested versions; you just lose the
+guarantee for everything one level down. CI installs with it, and fails if anything
+resolves that the lock does not mention.
 
 `sqlcipher3` is a build dependency for the encrypted personal ledger and needs SQLCipher
 present on your system. On Debian/Ubuntu `apt install libsqlcipher-dev`, on macOS
@@ -135,7 +141,7 @@ Importing a CAS statement needs two more, kept optional because the PDF librarie
 large and most of the tool never touches a PDF:
 
 ```bash
-pip install -e ".[cas]"
+pip install -e ".[cas]" -c requirements.lock
 ```
 
 ### Run the test suite
@@ -145,7 +151,7 @@ with the `dev` extra — the versions are pinned there so that your `ruff check`
 mean the same thing:
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev]" -c requirements.lock
 ```
 
 Everything below runs with no network and no data files, and is exactly what

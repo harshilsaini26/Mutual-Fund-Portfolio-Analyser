@@ -37,8 +37,47 @@ jobs:
 
       # `[dev]` is not optional here despite the name: it carries ruff,
       # mypy and pytest, which are the next three steps.
+      #
+      # `-c requirements.lock` is what makes this reproducible. pyproject pins
+      # the packages it names; the lock pins the ones underneath them, and it
+      # was one of those (starlette, under fastapi) that turned this red while
+      # every declared version was satisfied.
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev]" -c requirements.lock
+
+      # A constraints file only binds what pip happens to install. Anything
+      # resolved that the lock does not mention is still floating, and would
+      # go unnoticed until the day it changed -- so fail here instead, while
+      # the diff that introduced it is still on screen.
+      - name: Nothing floated
+        run: |
+          python - <<'EOF'
+          import importlib.metadata as md
+          import re
+
+          def norm(name):
+              return re.sub("[-_.]+", "-", name).lower()
+
+          locked = set()
+          for raw in open("requirements.lock", encoding="utf-8"):
+              line = raw.strip()
+              if line and not line.startswith("#"):
+                  locked.add(norm(line.split("==")[0]))
+
+          # The project itself is installed from this checkout, not the index.
+          installed = {
+              norm(d.metadata["Name"])
+              for d in md.distributions()
+              if d.metadata["Name"]
+          } - {"mf-platform", "pip", "setuptools", "wheel"}
+
+          loose = sorted(installed - locked)
+          if loose:
+              raise SystemExit(
+                  "installed but not in requirements.lock: " + ", ".join(loose)
+              )
+          print(f"all {len(installed)} installed packages are pinned")
+          EOF
 
       - name: Lint
         run: python -m ruff check src/ tests/ scripts/ jobs/
