@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 1,008 tests passing
+**Last updated:** 2026-09-13 · 1,026 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -107,6 +107,22 @@ member staging is not built, so a human still extracts the member.
 The other 50 AMCs are one adapter each. The house you hold is the one worth
 writing, and everything else has the coverage tier above.
 
+## What is stale
+
+```bash
+python -m jobs.status            # offline, instant
+python -m jobs.status --check    # also ask the AMCs that can be asked
+```
+
+Per fund house: how many schemes are behind, by how many months, and the exact
+command that would fix it — `jobs.fetch_amc` where a discovery adapter exists,
+the AMC's own page where one does not. SEBI allows ten days after the month end,
+so nothing is called late before then.
+
+The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
+96 schemes, and a report keyed on the house's newest disclosure called that
+"current" — an error that grows more confident the larger the fund house is.
+
 ## Modules
 
 | | |
@@ -164,8 +180,6 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is not machinery:
 
-- **A staleness command** — which held fund owes a disclosure, with the link.
-  The two tiers can both answer "what is published"; nothing yet asks them.
 - **More discovery adapters**, one per house, as funds are actually held.
 - **§6.5 member staging**, so ICICI's 25 MB ZIP stops needing a human.
 - **V2**: M2 fund x-ray, the tax engine, §10 nested look-through.
