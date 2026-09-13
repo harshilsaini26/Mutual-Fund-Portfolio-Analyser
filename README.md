@@ -140,7 +140,16 @@ pip install -e ".[cas]"
 
 ### Run the test suite
 
-Everything below runs with no network and no data files.
+The checks need ruff, mypy and pytest, which are not runtime dependencies. Install them
+with the `dev` extra — the versions are pinned there so that your `ruff check` and CI's
+mean the same thing:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Everything below runs with no network and no data files, and is exactly what
+[the gate](.github/workflows/ci.yml) runs on every push.
 
 ```bash
 python -m pytest -q                                   # 881 tests

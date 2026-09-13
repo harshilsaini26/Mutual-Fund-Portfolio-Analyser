@@ -308,7 +308,14 @@ def test_every_dependency_carries_a_lower_bound() -> None:
         specs.extend(group)
     assert specs
     for spec in specs:
-        assert re.search(r">=\s*\d", spec), f"{spec} has no lower bound"
+        # `==` satisfies this too: an exact pin is a floor as well as a
+        # ceiling. The `dev` tools are pinned that way deliberately — ruff and
+        # mypy gain rules between releases, so a floating version turns a green
+        # `main` red on someone else's release schedule. What is forbidden here
+        # is a dependency with no floor at all.
+        assert re.search(r"(>=|==)\s*\d", spec), (
+            f"{spec} has no lower bound"
+        )
 
 
 def test_the_temp_directory_helper_is_not_used_for_secrets() -> None:

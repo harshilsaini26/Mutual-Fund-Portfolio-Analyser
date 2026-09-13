@@ -38,6 +38,21 @@ dependencies = [
 [project.optional-dependencies]
 cas = ["pypdf>=4.2", "pdfplumber>=0.11"]
 
+# The gate's own tooling. `pip install -e .` installs runtime dependencies only,
+# so without this group CI ran `python -m ruff` against an interpreter that had
+# no ruff and exited 1 on `No module named ruff` — a failure indistinguishable,
+# from the summary page, from a real lint error.
+#
+# PINNED EXACTLY, unlike everything above. ruff and mypy gain rules between
+# releases, so a floating version turns a green `main` red on someone else's
+# release schedule, with no commit of ours in between. Bumping these is a
+# deliberate change that comes with whatever fixes the new rules demand.
+dev = [
+    "ruff==0.16.6",
+    "mypy==2.3.1",
+    "pytest==9.1.1",
+]
+
 # Explicit, not auto-discovered. This is a flat layout with several importable
 # top-level directories (`src`, `jobs`, `scripts`, `tests`), and setuptools
 # refuses to guess between them on some versions. Only `src` is library code;
