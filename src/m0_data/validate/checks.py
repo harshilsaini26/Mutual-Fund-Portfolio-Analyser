@@ -13,9 +13,11 @@ which checks *passed* narrows the search as much as knowing which failed.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from types import MappingProxyType
 
 from src.m0_data.resolve.isin import is_valid_isin
 
@@ -59,10 +61,10 @@ UNRESOLVED_MAX_PCT = Decimal(2)
 #: `tests/unit/test_m0_aum.py` asserts the fetch layer's `BASIS` is a key here,
 #: which is what keeps the two from drifting apart without an import between
 #: layers that do not otherwise depend on each other.
-TOLERANCE_BY_BASIS: dict[str, Decimal] = {
+TOLERANCE_BY_BASIS: Mapping[str, Decimal] = MappingProxyType({
     "point_in_time": AUM_TOLERANCE_PCT,
     "quarterly_average": AUM_AVERAGE_TOLERANCE_PCT,
-}
+})
 
 
 class UnknownAumBasis(ValueError):

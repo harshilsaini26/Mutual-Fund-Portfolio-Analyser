@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
-from jobs.fetch_aum import load_quarter, published
+from jobs.fetch_aum import AumScaleError, load_quarter, published, run
 from src.common.decimals import connect
 from src.m0_data.fetch.amfi_aum import (
     AAUM_UNIT,
@@ -423,44 +423,13 @@ class TestPublishedWalksYears:
     and mid-July the newest year can hold nothing -- and the first version took
     `years[0]` unconditionally and raised."""
 
-    class _Client:
-        """Serves AMFI's three payloads from memory. No network."""
-
-        def __init__(self, periods: dict[int, list[tuple[int, str]]]) -> None:
-            self.periods = periods
-            self.calls: list[str] = []
-
-        def request(self, method: str, url: str, **kw: object) -> Any:
-            self.calls.append(url)
-            body: dict[str, Any]
-            if "fyId=" in url:
-                fy = int(url.split("fyId=")[1].split("&")[0])
-                body = {
-                    "type": "periods",
-                    "data": {
-                        "financial_year": f"FY{fy}",
-                        "periods": [
-                            {"id": i, "period": label}
-                            for i, label in self.periods.get(fy, [])
-                        ],
-                    },
-                }
-            else:
-                body = {
-                    "data": [
-                        {"id": fy, "financial_year": f"FY{fy}"}
-                        for fy in sorted(self.periods)
-                    ]
-                }
-            return _Response(json.dumps(body).encode())
-
     def test_an_empty_newest_year_falls_through_to_the_next(self) -> None:
-        client = self._Client({1: [], 2: [(1, "January - March 2026")]})
+        client = _Client({1: [], 2: [(1, "January - March 2026")]})
         quarters = published(_CFG, years=1, client=client)
         assert [q.ends for q in quarters] == [date(2026, 3, 31)]
 
     def test_only_as_many_years_as_asked_for_are_walked(self) -> None:
-        client = self._Client(
+        client = _Client(
             {1: [(1, "April - June 2026")], 2: [(1, "January - March 2026")]}
         )
         published(_CFG, years=1, client=client)
@@ -470,12 +439,12 @@ class TestPublishedWalksYears:
 
     def test_no_year_with_any_quarter_raises(self) -> None:
         with pytest.raises(AumPayloadError, match="published quarter"):
-            published(_CFG, years=1, client=self._Client({1: [], 2: []}))
+            published(_CFG, years=1, client=_Client({1: [], 2: []}))
 
     def test_a_quarter_is_addressed_by_its_end_not_by_a_period_id(self) -> None:
         """`period_id` restarts at 1 in every financial year, so `--period 1`
         would mean a different quarter depending on when it ran."""
-        client = self._Client(
+        client = _Client(
             {1: [(1, "April - June 2026")], 2: [(1, "January - March 2026")]}
         )
         quarters = published(_CFG, years=2, client=client)
@@ -496,6 +465,37 @@ class _Response:
 
     def raise_for_status(self) -> None:
         return None
+
+
+class _Client:
+    """Serves AMFI's three payloads from memory. No network."""
+
+    def __init__(self, periods: dict[int, list[tuple[int, str]]]) -> None:
+        self.periods = periods
+        self.calls: list[str] = []
+
+    def request(self, method: str, url: str, **kw: object) -> Any:
+        self.calls.append(url)
+        body: dict[str, Any]
+        if "fyId=" in url:
+            fy = int(url.split("fyId=")[1].split("&")[0])
+            body = {
+                "type": "periods",
+                "data": {
+                    "financial_year": f"FY{fy}",
+                    "periods": [
+                        {"id": i, "period": label}
+                        for i, label in self.periods.get(fy, [])
+                    ],
+                },
+            }
+        else:
+            body = {
+                "data": [
+                    {"id": fy, "financial_year": f"FY{fy}"} for fy in sorted(self.periods)
+                ]
+            }
+        return _Response(json.dumps(body).encode())
 
 
 #: Politeness settings for the in-memory client. No host is contacted.
@@ -580,9 +580,7 @@ class TestABrokenEndpointIsNotAnEmptyOne:
     reported as "AMFI has published nothing"."""
 
     def test_a_year_that_published_nothing_is_skipped(self) -> None:
-        client = TestPublishedWalksYears._Client(
-            {1: [], 2: [(1, "January - March 2026")]}
-        )
+        client = _Client({1: [], 2: [(1, "January - March 2026")]})
         assert [q.ends for q in published(_CFG, years=1, client=client)] == [
             date(2026, 3, 31)
         ]
@@ -612,7 +610,7 @@ class TestTheWalkIsBounded:
 
     def test_a_quarter_that_does_not_exist_stops_at_the_budget(self) -> None:
         years = {i: [(1, f"January - March {2026 - i}")] for i in range(1, 13)}
-        client = TestPublishedWalksYears._Client(years)
+        client = _Client(years)
         published(_CFG, client=client, stop_at=date(1999, 1, 1))
         walked = sum("fyId=" in c for c in client.calls)
         assert walked <= 4, f"walked {walked} financial years looking for a typo"
@@ -622,11 +620,11 @@ class TestTheWalkIsBounded:
         budget caps the search, it does not lengthen it."""
         years = {i: [(1, f"January - March {2026 - i}")] for i in range(1, 13)}
 
-        near = TestPublishedWalksYears._Client(years)
+        near = _Client(years)
         published(_CFG, client=near, stop_at=date(2025, 3, 31))
         assert sum("fyId=" in c for c in near.calls) == 1
 
-        far = TestPublishedWalksYears._Client(years)
+        far = _Client(years)
         published(_CFG, client=far, stop_at=date(2024, 3, 31))
         assert sum("fyId=" in c for c in far.calls) == 2
 
@@ -677,3 +675,162 @@ def test_a_restatement_is_compared_as_a_number_not_as_text(tmp_path: Path) -> No
         conn, [_aaum("100034", "ABC", "1000.0000")], "April - June 2026", "f2"
     )
     assert counts["restated"] == 0
+
+
+class TestACodeWhoseSchemesContradictIsRefused:
+    """V1-52. `_group_key` returned the first non-None family, so a code naming
+    schemes in two DIFFERENT families gave all of them the first family's
+    total -- measured at 20x the real figure for the odd one out. V1-51 had
+    replaced V1-50's silent DROP with a silent WRONG VALUE, which is worse: a
+    missing witness disables V2, a wrong one corrupts it."""
+
+    def test_two_families_under_one_code_writes_nothing_for_that_code(
+        self, tmp_path: Path
+    ) -> None:
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [
+                ("INF1", "100001", "abc", "famA"),
+                ("INF2", "100001", "abc", "famB"),
+                ("INF3", "100002", "abc", "famB"),
+            ],
+        )
+        counts = load_quarter(
+            conn,
+            [_aaum("100001", "A", "1000"), _aaum("100002", "B", "50")],
+            "April - June 2026",
+            "f1",
+        )
+        written = sorted(r[0] for r in conn.execute("SELECT scheme_id FROM scheme_aum"))
+        assert written == ["INF3"], "a contradicting code must write nothing"
+        assert counts["incoherent_families"] == 1
+
+    def test_the_refusal_is_counted_not_silent(self, tmp_path: Path) -> None:
+        """§4.10: a row never disappears without a record."""
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [("INF1", "100001", "abc", "famA"), ("INF2", "100001", "abc", "famB")],
+        )
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
+        )
+        assert counts["incoherent_families"] == 1
+        assert counts["scheme_aum_rows"] == 0
+
+    def test_a_family_beside_a_none_is_not_a_contradiction(self, tmp_path: Path) -> None:
+        """Schemes sharing an AMFI code are one share class by AMFI's own
+        numbering, so a None is V1-37 declining to place one -- missing
+        information, not conflicting information. They group together."""
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [("INF1", "100001", "abc", None), ("INF2", "100001", "abc", "famA")],
+        )
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
+        )
+        written = sorted(r[0] for r in conn.execute("SELECT scheme_id FROM scheme_aum"))
+        assert written == ["INF1", "INF2"]
+        assert counts["incoherent_families"] == 0
+
+
+class TestTheScaleOfTheAaumIsChecked:
+    """V1-52. `AAUM_UNIT = "lakh"` is asserted -- no field states it -- and the
+    argument that it is safe was only ever performed by a test against a frozen
+    fixture. A live switch to crore would load every scheme at a hundredth of
+    its AUM, pass every test, and leave V2 quarantining the whole warehouse
+    while blaming the disclosures."""
+
+    def _warehouse_with_disclosure(self, path: Path, total_mv: str) -> Any:
+        conn = _warehouse(path, [("INF1", "100001", "abc", None)])
+        conn.executescript(
+            "CREATE TABLE holding_disclosure (scheme_id TEXT, total_mv DECIMAL_TEXT,"
+            " is_current INTEGER);"
+        )
+        conn.execute(
+            "INSERT INTO holding_disclosure VALUES ('INF1', ?, 1)", (Decimal(total_mv),)
+        )
+        conn.commit()
+        return conn
+
+    def test_a_hundredfold_unit_change_is_refused(self, tmp_path: Path) -> None:
+        # The fund really holds 1,000 lakh. AMFI starts publishing crore, so
+        # the same fund arrives as 10 -- and `to_inr(.., "lakh")` under-reads
+        # it by 100.
+        conn = self._warehouse_with_disclosure(tmp_path / "w.db", "100000000")
+        with pytest.raises(AumScaleError, match="AAUM_UNIT"):
+            load_quarter(conn, [_aaum("100001", "A", "10")], "April - June 2026", "f1")
+
+    def test_agreement_passes_and_says_what_it_measured(self, tmp_path: Path) -> None:
+        conn = self._warehouse_with_disclosure(tmp_path / "w.db", "100000000")
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
+        )
+        assert "median" in str(counts["scale_check"])
+
+    def test_one_outlier_does_not_abort_a_correct_load(self, tmp_path: Path) -> None:
+        """The check medians rather than taking the worst. A new index fund
+        that grew from Rs 1 Cr to Rs 7 Cr since the quarter being averaged is
+        7.4x out and entirely correct -- the live warehouse has two such, and
+        the first version aborted on them."""
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [(f"INF{i}", f"10000{i}", "abc", None) for i in range(1, 6)],
+        )
+        conn.executescript(
+            "CREATE TABLE holding_disclosure (scheme_id TEXT, total_mv DECIMAL_TEXT,"
+            " is_current INTEGER);"
+        )
+        for i in range(1, 6):
+            # Four agree; the fifth is 8x out.
+            mv = Decimal("100000000") * (8 if i == 5 else 1)
+            conn.execute("INSERT INTO holding_disclosure VALUES (?,?,1)", (f"INF{i}", mv))
+        conn.commit()
+        counts = load_quarter(
+            conn,
+            [_aaum(f"10000{i}", "A", "1000") for i in range(1, 6)],
+            "April - June 2026",
+            "f1",
+        )
+        assert counts["scheme_aum_rows"] == 5
+
+    def test_no_disclosure_to_compare_against_is_not_a_failure(
+        self, tmp_path: Path
+    ) -> None:
+        """A fresh warehouse has nothing to check the scale against, and that
+        is a missing witness rather than a wrong one."""
+        conn = _warehouse(tmp_path / "w.db", [("INF1", "100001", "abc", None)])
+        conn.executescript(
+            "CREATE TABLE holding_disclosure (scheme_id TEXT, total_mv DECIMAL_TEXT,"
+            " is_current INTEGER);"
+        )
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
+        )
+        assert counts["scale_check"] == "no disclosure to compare against"
+
+
+class TestRunEndToEnd:
+    """V1-52. `run` wires fetch, archive, parse and load together and took no
+    `client`, so none of its paths could be exercised offline. Three review
+    rounds in a row found a defect in a function that had no test."""
+
+    def test_list_reports_the_quarters_by_their_end_date(self) -> None:
+        client = _Client({1: [(1, "April - June 2026")]})
+        rows = run(list_only=True, client=client)
+        assert [r["quarter"] for r in rows] == ["2026-06-30"]
+
+    def test_a_quarter_amfi_has_not_published_exits_naming_what_it_found(
+        self,
+    ) -> None:
+        client = _Client({1: [(1, "April - June 2026")]})
+        with pytest.raises(SystemExit) as exc:
+            run(quarter="2026-09-30", client=client)
+        assert "2026-06-30" in str(exc.value), (
+            "the failure must name the quarters that DO exist"
+        )
+
+    def test_a_malformed_quarter_is_rejected_before_any_request(self) -> None:
+        client = _Client({1: [(1, "April - June 2026")]})
+        with pytest.raises(SystemExit, match="YYYY-MM-DD"):
+            run(quarter="Q1 2026", client=client)
+        assert client.calls == [], "a bad date should not reach the network"

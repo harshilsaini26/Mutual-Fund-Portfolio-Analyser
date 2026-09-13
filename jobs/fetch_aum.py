@@ -58,7 +58,19 @@ from src.m0_data.fetch.base import (
     archive,
     conditional_get,
 )
+from src.m0_data.load import has_table
 from src.m0_data.normalise.units import to_inr
+
+
+class AumScaleError(RuntimeError):
+    """The fetched AAUM is not on the scale `AAUM_UNIT` claims.
+
+    `RuntimeError` so `jobs/ingest_inbox.py`'s per-file guard already catches
+    it, and raised rather than warned because a 100x-wrong AUM does not
+    degrade V2 -- it inverts it, quarantining every correct disclosure in the
+    warehouse.
+    """
+
 
 SOURCE_ID = "S3"
 
@@ -175,18 +187,33 @@ _Member = tuple[str, tuple[str, str] | None]
 _GroupKey = tuple[str, str]
 
 
-def _group_key(found: list[_Member]) -> _GroupKey:
+def _group_key(found: list[_Member]) -> _GroupKey | None:
     """One key for a code's schemes, used by BOTH `totals` and `members`.
 
-    Deterministic: the members arrive sorted by scheme_id (`_families` orders
-    its read), so the first family seen is the same on every rebuild. A code
-    whose schemes disagree about their family still lands in one group, which
-    is the conservative answer -- it keeps their AAUM together rather than
-    stranding whichever of them the key did not match.
+    **None means refuse.** A code whose schemes name two DIFFERENT families is
+    a contradiction: AMFI numbers them as one share class and V1-37 placed them
+    in separate funds, and nothing here can say which is wrong. The first
+    version picked the first family and gave its total to every member — so a
+    scheme in family B was written family A's AAUM, measured at **20x** its
+    fund's actual figure on a two-line reproduction. V2 would then reconcile
+    that scheme's disclosure against another fund entirely.
+
+    That is worse than the stranding it replaced. A missing witness disables a
+    check and says so; a wrong one corrupts it silently. V1-37's own derivation
+    refuses a family it cannot show coherent rather than guessing, and this is
+    the same question one level out.
+
+    A family beside a **None** is not a disagreement. Schemes sharing an AMFI
+    code are one share class by AMFI's own numbering, so they belong to one
+    family by construction; a None is V1-37 declining to place a scheme, which
+    is missing information rather than conflicting information. Those group
+    together under the family that IS known.
     """
-    for _, family in found:
-        if family is not None:
-            return family
+    families = {family for _, family in found if family is not None}
+    if len(families) > 1:
+        return None
+    if families:
+        return families.pop()
     return ("scheme", found[0][0])
 
 
@@ -226,6 +253,90 @@ def _families(conn: Any) -> dict[str, list[_Member]]:
     return dict(index)
 
 
+#: How far the TYPICAL family's AAUM may sit from that fund's own disclosed
+#: portfolio before the load is refused.
+#:
+#: On the MEDIAN, not the worst, and that is the whole design. A unit change
+#: moves every scheme by the same factor, so the median moves with it; a fund
+#: that doubled since the quarter being averaged moves only itself. The first
+#: version compared the maximum and aborted a correct load on two small index
+#: funds — one at 7.4x, having grown from Rs 1 Cr to Rs 7 Cr in two months,
+#: which is what a new index fund gathering assets looks like.
+#:
+#: Measured on the live warehouse: median **1.06**, p90 1.23, max 7.42 across
+#: 194 schemes. A switch from lakh to crore would put the median at **106**. A
+#: bound of 10 sits an order of magnitude clear of both.
+_SCALE_TOLERANCE = Decimal(10)
+
+
+def assert_scale(
+    conn: Any, totals: dict[_GroupKey, Decimal], members: dict[_GroupKey, set[str]]
+) -> str:
+    """Refuse a load whose AAUM does not agree in ORDER OF MAGNITUDE.
+
+    `AAUM_UNIT = "lakh"` is asserted — no field on the endpoint states a unit
+    — and `amfi_aum.py`'s docstring argues the assertion is safe because a
+    family's sum lands within a few percent of that fund's own disclosed
+    portfolio. **That comparison was only ever performed by a test against a
+    frozen fixture.** A live switch to crore would have loaded all 8,545
+    schemes at a hundredth of their AUM, every test would still have passed,
+    and V2 would then have quarantined the whole warehouse while blaming the
+    disclosures rather than the witness.
+
+    The comparison the docstring describes is available here, in the data, at
+    load time: any scheme that already has a current disclosure carries a
+    `total_mv` computed from an entirely different source. Doing it is the
+    difference between an argument and a check.
+
+    Not a valuation check. AAUM is a quarterly average against a month-end
+    portfolio and the two legitimately differ by ~10% (V1-49); the only error
+    this has to catch is a factor of 100.
+    """
+    # A warehouse that has loaded no disclosure yet has no table to compare
+    # against -- migration 004 creates it -- and a missing witness is not a
+    # failing one. `has_table` is the check `aum_for` already uses for exactly
+    # this, rather than a second spelling of it here.
+    if not has_table(conn, "holding_disclosure"):
+        return "no disclosure to compare against"
+    known = {
+        str(r[0]): Decimal(r[1])
+        for r in conn.execute(
+            "SELECT scheme_id, total_mv FROM holding_disclosure WHERE is_current = 1"
+        )
+    }
+    if not known:
+        return "no disclosure to compare against"
+
+    ratios: list[Decimal] = []
+    worst = Decimal(0)
+    worst_scheme = ""
+    for key, total in totals.items():
+        for scheme_id in sorted(members[key]):
+            disclosed = known.get(scheme_id)
+            if disclosed is None or total <= 0 or disclosed <= 0:
+                continue
+            ratio = max(total, disclosed) / min(total, disclosed)
+            ratios.append(ratio)
+            if ratio > worst:
+                worst, worst_scheme = ratio, scheme_id
+    if not ratios:
+        return "no disclosure to compare against"
+
+    ratios.sort()
+    median = ratios[len(ratios) // 2]
+    if median > _SCALE_TOLERANCE:
+        raise AumScaleError(
+            f"the typical scheme's AAUM disagrees with its disclosed portfolio"
+            f" by {median:.1f}x across {len(ratios)} schemes."
+            f" `AAUM_UNIT` is asserted as {AAUM_UNIT!r}; a median near 100 means"
+            f" AMFI changed it."
+        )
+    return (
+        f"{len(ratios)} schemes, median {median:.2f}x,"
+        f" worst {worst:.2f}x ({worst_scheme})"
+    )
+
+
 def load_quarter(
     conn: Any, rows: list[SchemeAaum], label: str, file_id: str
 ) -> dict[str, object]:
@@ -239,6 +350,7 @@ def load_quarter(
     totals: dict[_GroupKey, Decimal] = defaultdict(Decimal)
     members: dict[_GroupKey, set[str]] = defaultdict(set)
     unknown = 0
+    incoherent = 0
     for row in rows:
         found = index.get(row.amfi_code)
         if not found:
@@ -260,6 +372,13 @@ def load_quarter(
         # with a scheme missing. That is the same silent loss this function was
         # rewritten to fix, one layer in.
         key = _group_key(found)
+        if key is None:
+            # Counted, not dropped in silence. §4.10's rule is that a row never
+            # disappears without a record, and a code whose schemes contradict
+            # each other about their fund is exactly the case a human has to
+            # see rather than a number the loader invents.
+            incoherent += 1
+            continue
         totals[key] += to_inr(row.aaum_raw, AAUM_UNIT)
         members[key].update(scheme_id for scheme_id, _ in found)
 
@@ -303,12 +422,16 @@ def load_quarter(
                 (scheme_id, as_of, total, BASIS, label, file_id, now),
             )
             written += 1
+    scale = assert_scale(conn, totals, members)
+
     conn.commit()
     return {
         "as_of": str(as_of),
+        "scale_check": scale,
         "families": len(totals),
         "scheme_aum_rows": written,
         "unmatched_amfi_codes": unknown,
+        "incoherent_families": incoherent,
         "restated": restated,
     }
 
@@ -317,7 +440,16 @@ def run(
     quarter: str | None = None,
     list_only: bool = False,
     years: int = 1,
+    client: Any = None,
 ) -> list[dict[str, object]]:
+    """`client` exists so this whole job can be driven without the network.
+
+    Both helpers already took one and `run` did not pass it, so every path
+    through here -- the quarter lookup, the SystemExit on a quarter AMFI has
+    not published, the archive-then-register sequence, the `raw_file` status
+    update -- was verified only by having been run by hand. Three consecutive
+    review rounds found a defect in a function that had no test.
+    """
     cfg = source(SOURCE_ID)
     wanted_end: date | None = None
     if quarter:
@@ -329,7 +461,7 @@ def run(
     # A named quarter may be older than the newest financial year, so the walk
     # continues until it is found rather than stopping at a fixed depth --
     # and stops the moment it IS found, which is usually the first year.
-    quarters = published(cfg, years=years, stop_at=wanted_end)
+    quarters = published(cfg, years=years, client=client, stop_at=wanted_end)
     if list_only:
         return [
             {"quarter": str(q.ends), "label": q.label, "financial_year_id": q.fy_id}
@@ -346,7 +478,7 @@ def run(
 
     conn = connect(str(warehouse_path()))
     url = data_url(fy_id, pid)
-    content = _get(url, cfg)
+    content = _get(url, cfg, client)
 
     result, path = archive(
         content,

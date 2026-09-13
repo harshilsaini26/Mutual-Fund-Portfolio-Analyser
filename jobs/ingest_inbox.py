@@ -37,6 +37,7 @@ from src.m0_data.resolve.scheme_match import (
     detect_amc,
     live_families_by_amc,
 )
+from src.m0_data.validate.checks import UnknownAumBasis
 
 from jobs.load_holdings import _one, _parser_for, discover_sheets
 
@@ -126,7 +127,12 @@ def run(inbox: Path | None = None, amc_id: str | None = None) -> int:
         for entry in entries:
             try:
                 summary = _one(conn, entry, cfg, index, prefixes)
-            except (ParseFailed, RuntimeError) as exc:
+            # `UnknownAumBasis` is a ValueError, not a ParseFailed, and
+            # without it here one corrupt `scheme_aum.basis` aborted the
+            # whole batch -- 119 schemes from one workbook, where this
+            # module's contract is to report a sheet it cannot handle and
+            # carry on.
+            except (ParseFailed, RuntimeError, UnknownAumBasis) as exc:
                 refusals.append((str(entry["sheet"]), "load failed", str(exc)[:70]))
                 continue
             conn.commit()

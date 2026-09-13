@@ -466,7 +466,7 @@ def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> AumWitness
     None when `scheme_aum` has not been built or holds nothing recent enough,
     which V2 records as "no AUM on record" rather than treating as a pass.
     """
-    if not _has_table(conn, "scheme_aum"):
+    if not has_table(conn, "scheme_aum"):
         return None
     row = conn.execute(
         "SELECT aum_inr, basis, as_of_date FROM scheme_aum"
@@ -485,7 +485,7 @@ def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> AumWitness
     return AumWitness(row[0], str(row[1]), witness_as_of)
 
 
-def _has_table(conn: sqlite3.Connection, name: str) -> bool:
+def has_table(conn: sqlite3.Connection, name: str) -> bool:
     return bool(
         conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
