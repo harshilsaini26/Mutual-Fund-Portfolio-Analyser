@@ -241,6 +241,8 @@ the code, one spec per module — plus:
   the spec, every defect the specs themselves contained, and what was decided instead. The
   most useful file here if you want to know *why* anything is the way it is.
 - **`CLAUDE.md`** — the ten non-negotiable invariants and the working agreement.
+- **`PROGRESS.md`** — what is covered, what is not, and the defects that are
+  measured and still unfixed.
 
 ---
 
