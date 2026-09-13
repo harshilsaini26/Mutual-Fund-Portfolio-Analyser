@@ -71,7 +71,6 @@ from src.m0_data.validate.checks import (
 MANIFEST = REPO_ROOT / "config" / "amc_manifest.yaml"
 SOURCE_PREFIX = "S5"
 
-
 def load_manifest(path: Path = MANIFEST) -> dict[str, Any]:
     with path.open(encoding="utf-8") as fh:
         loaded = yaml.safe_load(fh)
@@ -100,18 +99,9 @@ def run(
     conn.execute(
         "INSERT INTO job_run (run_id, job_name, started_at, params_json)"
         " VALUES (?,?,?,?)",
-        (
-            run_id,
-            "load_holdings",
-            datetime.now(UTC),
-            json.dumps(
-                {
-                    "amc": amc_id,
-                    "file": str(file_path) if file_path else None,
-                    "scheme": scheme_id,
-                }
-            ),
-        ),
+        (run_id, "load_holdings", datetime.now(UTC),
+         json.dumps({"amc": amc_id, "file": str(file_path) if file_path else None,
+                     "scheme": scheme_id})),
     )
     conn.commit()
 
@@ -131,35 +121,23 @@ def run(
                 raise RuntimeError("--all-sheets needs --file and --amc")
             found, refused = discover_sheets(conn, file_path, amc_id, parser_id)
             for name, reason, detail in refused:
-                summaries.append(
-                    {
-                        "sheet": name,
-                        "loaded": "no",
-                        "why": reason,
-                        "detail": detail,
-                    }
-                )
+                summaries.append({
+                    "sheet": name, "loaded": "no", "why": reason, "detail": detail,
+                })
             entries_to_load = found
         else:
             entries_to_load = _entries(amc_id, file_path, scheme_id, sheet, parser_id)
         for entry in entries_to_load:
             summaries.append(_one(conn, entry, cfg, index, prefixes))
 
-        status = (
-            "partial"
-            if any(s.get("validation_status") != "ok" for s in summaries)
-            else "ok"
-        )
+        status = "partial" if any(
+            s.get("validation_status") != "ok" for s in summaries
+        ) else "ok"
         conn.execute(
             "UPDATE job_run SET finished_at=?, status=?, files_parsed=?,"
             " rows_written=? WHERE run_id=?",
-            (
-                datetime.now(UTC),
-                status,
-                len(summaries),
-                sum(int(str(s.get("holding", 0))) for s in summaries),
-                run_id,
-            ),
+            (datetime.now(UTC), status, len(summaries),
+             sum(int(str(s.get("holding", 0))) for s in summaries), run_id),
         )
         conn.commit()
         # And again, so what this load added is available to the next one.
@@ -197,18 +175,17 @@ def _entries(
         # one scheme per sheet. Kotak publishes 119 of them and Nippon 108,
         # so a load without it merges every portfolio in the file into one
         # — which does not fail loudly, it fails as a plausible number.
-        return [
-            {
-                "amc_id": amc_id or "unknown",
-                "path": str(file_path),
-                "scheme_id": scheme_id,
-                "sheet": sheet,
-                "parser": parser_id,
-            }
-        ]
+        return [{
+            "amc_id": amc_id or "unknown",
+            "path": str(file_path),
+            "scheme_id": scheme_id,
+            "sheet": sheet,
+            "parser": parser_id,
+        }]
     manifest = load_manifest()
     rows = [
-        e for e in manifest["disclosures"] if amc_id is None or e.get("amc_id") == amc_id
+        e for e in manifest["disclosures"]
+        if amc_id is None or e.get("amc_id") == amc_id
     ]
     if not rows:
         raise RuntimeError(f"no manifest entries for amc {amc_id!r}")
@@ -263,7 +240,9 @@ def discover_sheets(
         as_of = result.as_of_date
         if as_of not in families_by_date:
             families_by_date[as_of] = live_families(conn, amc_id, as_of)
-        matches[name] = identify_scheme(result.header_candidates, families_by_date[as_of])
+        matches[name] = identify_scheme(
+            result.header_candidates, families_by_date[as_of]
+        )
     matches = refuse_contested(matches)
 
     entries: list[dict[str, Any]] = []
@@ -275,17 +254,15 @@ def discover_sheets(
         if scheme_id is None:
             refusals.append((name, "no scheme for family", match.family))
             continue
-        entries.append(
-            {
-                "amc_id": amc_id,
-                "path": str(file_path),
-                "scheme_id": scheme_id,
-                "sheet": name,
-                "parser": parser.parser_id,
-                "matched_by": match.method,
-                "family": match.family,
-            }
-        )
+        entries.append({
+            "amc_id": amc_id,
+            "path": str(file_path),
+            "scheme_id": scheme_id,
+            "sheet": name,
+            "parser": parser.parser_id,
+            "matched_by": match.method,
+            "family": match.family,
+        })
     return entries, refusals
 
 
@@ -323,24 +300,16 @@ def _one(
 
     filename = unquote(filename)
     result, path = archive(
-        content,
-        FetchCandidate(url=url, source_id=source_id),
+        content, FetchCandidate(url=url, source_id=source_id),
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        raw_root(),
-        lambda fid: _archived(conn, fid),
+        raw_root(), lambda fid: _archived(conn, fid),
     )
     if path is not None:
         conn.execute(
             "INSERT INTO raw_file (file_id, source_id, url, fetched_at, byte_size,"
             " storage_path, parse_status) VALUES (?,?,?,?,?,?, 'pending')",
-            (
-                result.file_id,
-                source_id,
-                url,
-                datetime.now(UTC),
-                result.byte_size,
-                str(path),
-            ),
+            (result.file_id, source_id, url, datetime.now(UTC),
+             result.byte_size, str(path)),
         )
         conn.commit()
 
@@ -358,8 +327,7 @@ def _one(
     # Units first — everything after this is in rupees absolute (§7.2).
     values = [
         to_inr(s.market_value_raw, s.market_value_unit)
-        if s.market_value_raw is not None
-        else None
+        if s.market_value_raw is not None else None
         for s in securities
     ]
     # §7.3 and §10's V1 both work in percent. HDFC reports `% to NAV` as one;
@@ -379,37 +347,31 @@ def _one(
         securities, values, weights.weights, pcts, strict=True
     ):
         resolution = resolve(
-            conn,
-            security.instrument_raw_name,
-            security.isin_raw,
-            _class_from_section(security.section),
-            index,
-            prefixes,
+            conn, security.instrument_raw_name, security.isin_raw,
+            _class_from_section(security.section), index, prefixes,
         )
-        rows.append(
-            {
-                "isin": security.isin_raw,
-                "issuer_id": str(resolution.issuer_id),
-                "instrument_raw_name": security.instrument_raw_name,
-                "quantity": security.quantity_raw,
-                # `holding.market_value` is NOT NULL, so an unpriced row has to be
-                # stored as zero. That loses the distinction between "worth
-                # nothing" and "the file did not price it", so the count is carried
-                # to the disclosure header below rather than left silent —
-                # `CLAUDE.md` invariant 4 is that a row is never dropped without a
-                # record, and a row whose exposure is zeroed is dropped in every
-                # way that matters downstream.
-                "market_value": value if value is not None else Decimal(0),
-                "pct_to_nav": pct,
-                "pct_normalised": weight,
-                "instrument_class": _instrument_class(
-                    security.section, str(resolution.issuer_id)
-                ),
-                "reported_sector": security.reported_sector,
-                "resolution_method": resolution.method,
-                "resolution_conf": resolution.confidence,
-            }
-        )
+        rows.append({
+            "isin": security.isin_raw,
+            "issuer_id": str(resolution.issuer_id),
+            "instrument_raw_name": security.instrument_raw_name,
+            "quantity": security.quantity_raw,
+            # `holding.market_value` is NOT NULL, so an unpriced row has to be
+            # stored as zero. That loses the distinction between "worth
+            # nothing" and "the file did not price it", so the count is carried
+            # to the disclosure header below rather than left silent —
+            # `CLAUDE.md` invariant 4 is that a row is never dropped without a
+            # record, and a row whose exposure is zeroed is dropped in every
+            # way that matters downstream.
+            "market_value": value if value is not None else Decimal(0),
+            "pct_to_nav": pct,
+            "pct_normalised": weight,
+            "instrument_class": _instrument_class(
+                security.section, str(resolution.issuer_id)
+            ),
+            "reported_sector": security.reported_sector,
+            "resolution_method": resolution.method,
+            "resolution_conf": resolution.confidence,
+        })
 
     witness = _aum_for(conn, scheme_id, parsed.as_of_date)
     aum = witness.amount if witness else None
@@ -426,11 +388,7 @@ def _one(
             )
             for r in rows
         ],
-        parsed.as_of_date,
-        date.today(),
-        aum,
-        aum_basis,
-        aum_as_of,
+        parsed.as_of_date, date.today(), aum, aum_basis, aum_as_of,
     )
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"
@@ -447,10 +405,7 @@ def _one(
     ]
 
     counts = load_holdings(
-        conn,
-        scheme_id,
-        parsed.as_of_date,
-        rows,
+        conn, scheme_id, parsed.as_of_date, rows,
         {
             "pct_sum_raw": Decimal(100) - weights.residual,
             "weight_residual": weights.residual,
@@ -466,34 +421,22 @@ def _one(
     conn.execute(
         "UPDATE raw_file SET parse_status='ok', parser_id=?, parser_version=?,"
         " parsed_at=?, as_of_date=? WHERE file_id=?",
-        (
-            parser.parser_id,
-            parser.version,
-            datetime.now(UTC),
-            parsed.as_of_date,
-            result.file_id,
-        ),
+        (parser.parser_id, parser.version, datetime.now(UTC), parsed.as_of_date,
+         result.file_id),
     )
     conn.commit()
 
     failed = [c.code for c in checks if c.passed is False]
     return {
-        "scheme_id": scheme_id,
-        "as_of": str(parsed.as_of_date),
-        "parser": parser.parser_id,
-        "fetch": result.status,
-        **counts,
-        "unresolved_mv_pct": unresolved,
-        "validation_status": status,
+        "scheme_id": scheme_id, "as_of": str(parsed.as_of_date),
+        "parser": parser.parser_id, "fetch": result.status, **counts,
+        "unresolved_mv_pct": unresolved, "validation_status": status,
         "failed_checks": ",".join(failed) or "none",
     }
 
 
 def _parser_for(
-    conn: Any,
-    file_id: str,
-    raw: RawFile,
-    override: str | None = None,
+    conn: Any, file_id: str, raw: RawFile, override: str | None = None,
 ) -> HoldingsParser:
     """An explicit choice, then the parser that read this file before, then sniff.
 
@@ -539,29 +482,25 @@ def main() -> None:
     parser.add_argument(
         "--sheet",
         help="sheet name, for a workbook holding one scheme per sheet "
-        "(Kotak ships 119, Nippon 108). Without it the whole workbook "
-        "is read as one portfolio",
+             "(Kotak ships 119, Nippon 108). Without it the whole workbook "
+             "is read as one portfolio",
     )
     parser.add_argument(
         "--all-sheets",
         action="store_true",
         help="load every scheme in a multi-sheet workbook, identifying each "
-        "sheet against the AMFI master. Needs --amc; --scheme is then "
-        "derived per sheet rather than given",
+             "sheet against the AMFI master. Needs --amc; --scheme is then "
+             "derived per sheet rather than given",
     )
     parser.add_argument(
         "--parser",
         help="force a parser_id, overriding both the one raw_file recorded "
-        "for this file and the sniff. The way to re-read a file the "
-        "wrong parser claimed",
+             "for this file and the sniff. The way to re-read a file the "
+             "wrong parser claimed",
     )
     args = parser.parse_args()
     for summary in run(
-        args.amc,
-        args.file,
-        args.scheme,
-        args.sheet,
-        args.parser,
+        args.amc, args.file, args.scheme, args.sheet, args.parser,
         args.all_sheets,
     ):
         print(" | ".join(f"{k}={v}" for k, v in summary.items()))

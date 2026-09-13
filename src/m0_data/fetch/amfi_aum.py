@@ -108,6 +108,19 @@ class AumPayloadError(ValueError):
     """
 
 
+class NothingPublished(AumPayloadError):
+    """A well-formed response that simply lists nothing yet.
+
+    The distinction this class's parent insists on, made reachable. A caller
+    walking financial years wants to SKIP a year AMFI has not published a
+    quarter for and STOP on an endpoint it can no longer read -- and with one
+    class it could only do one of them. `jobs/fetch_aum.py` caught the parent
+    and skipped, so a maintenance page would have been swallowed thirteen times
+    and reported as "AMFI has published nothing", blaming the publisher for a
+    response we could not parse.
+    """
+
+
 @dataclass(frozen=True)
 class SchemeAaum:
     """One share class's average AUM, exactly as published."""
@@ -139,7 +152,7 @@ def parse_years(payload: bytes) -> list[tuple[int, str]]:
     blob = _json(payload)
     rows = blob.get("data") if isinstance(blob, dict) else None
     if not isinstance(rows, list) or not rows:
-        raise AumPayloadError("no financial years in the response")
+        raise NothingPublished("no financial years in the response")
     return [
         (int(r["id"]), str(r["financial_year"]))
         for r in rows
@@ -153,7 +166,7 @@ def parse_periods(payload: bytes) -> list[tuple[int, str]]:
     data = blob.get("data") if isinstance(blob, dict) else None
     rows = data.get("periods") if isinstance(data, dict) else None
     if not isinstance(rows, list) or not rows:
-        raise AumPayloadError("no periods in the response")
+        raise NothingPublished("no periods in the response")
     return [
         (int(r["id"]), str(r["period"]))
         for r in rows

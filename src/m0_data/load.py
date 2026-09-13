@@ -112,18 +112,9 @@ def load_schemes(
                 source_file_id = excluded.source_file_id
             """,
             (
-                s.scheme_id,
-                s.amfi_code,
-                s.isin,
-                normalise_amc_id(s.amc_name),
-                s.scheme_name,
-                s.plan,
-                s.option,
-                s.option_raw,
-                s.sebi_category,
-                seen_on,
-                seen_on,
-                source_file_id,
+                s.scheme_id, s.amfi_code, s.isin, normalise_amc_id(s.amc_name),
+                s.scheme_name, s.plan, s.option, s.option_raw, s.sebi_category,
+                seen_on, seen_on, source_file_id,
             ),
         )
     return len(amcs), len(schemes)
@@ -387,24 +378,12 @@ def load_holdings(
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1)
             """,
             (
-                scheme_id,
-                as_of,
-                revision,
-                position,
-                row.get("isin"),
-                row["issuer_id"],
-                row["instrument_raw_name"],
-                row.get("quantity"),
-                row["market_value"],
-                row.get("pct_to_nav"),
-                row["pct_normalised"],
-                row["instrument_class"],
-                row.get("credit_rating"),
-                row.get("reported_sector"),
-                row["resolution_method"],
-                row.get("resolution_conf"),
-                source_file_id,
-                now,
+                scheme_id, as_of, revision, position, row.get("isin"),
+                row["issuer_id"], row["instrument_raw_name"], row.get("quantity"),
+                row["market_value"], row.get("pct_to_nav"), row["pct_normalised"],
+                row["instrument_class"], row.get("credit_rating"),
+                row.get("reported_sector"), row["resolution_method"],
+                row.get("resolution_conf"), source_file_id, now,
             ),
         )
 
@@ -419,22 +398,12 @@ def load_holdings(
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
         """,
         (
-            scheme_id,
-            as_of,
-            revision,
-            source_file_id,
-            len(rows),
-            header.get("pct_sum_raw"),
-            header.get("weight_residual"),
-            header["unresolved_mv_pct"],
-            header["total_mv"],
-            header.get("aum_reported"),
-            header.get("mv_vs_aum_pct"),
-            header.get("reported_unit"),
-            header["validation_status"],
-            header.get("validation_notes"),
-            resolver_version,
-            parser_version,
+            scheme_id, as_of, revision, source_file_id, len(rows),
+            header.get("pct_sum_raw"), header.get("weight_residual"),
+            header["unresolved_mv_pct"], header["total_mv"],
+            header.get("aum_reported"), header.get("mv_vs_aum_pct"),
+            header.get("reported_unit"), header["validation_status"],
+            header.get("validation_notes"), resolver_version, parser_version,
             # V1-43. Defaulted rather than required: every caller before the
             # coverage tier existed was reading an AMC's own file, and a
             # missing tier meaning `amc_direct` keeps those callers honest
@@ -476,9 +445,6 @@ class AumWitness:
     amount: Decimal
     basis: str
     as_of: date
-
-    def age_days(self, at: date) -> int:
-        return (at - self.as_of).days
 
 
 def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> AumWitness | None:

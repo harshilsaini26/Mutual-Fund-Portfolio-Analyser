@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 from jobs.fetch_aum import load_quarter, published
@@ -29,6 +29,7 @@ from src.m0_data.fetch.amfi_aum import (
     AAUM_UNIT,
     BASIS,
     AumPayloadError,
+    NothingPublished,
     SchemeAaum,
     parse_aaum,
     parse_periods,
@@ -40,7 +41,10 @@ from src.m0_data.normalise.units import to_inr
 from src.m0_data.validate.checks import (
     AUM_AVERAGE_TOLERANCE_PCT,
     AUM_TOLERANCE_PCT,
+    TOLERANCE_BY_BASIS,
     HoldingRow,
+    UnknownAumBasis,
+    age_days,
     promote_or_quarantine,
     validate_disclosure,
 )
@@ -387,7 +391,7 @@ class TestTheWitnessIsBounded:
         assert found is not None
         assert found.basis == "quarterly_average"
         assert found.as_of == date(2026, 6, 30)
-        assert found.age_days(date(2026, 8, 31)) == 62
+        assert age_days(found.as_of, date(2026, 8, 31)) == 62
 
     def test_a_witness_older_than_the_bound_is_refused(self, tmp_path: Path) -> None:
         """Refusing beats passing: V2 records "no AUM on record" and says so,
@@ -504,3 +508,172 @@ _CFG: dict[str, Any] = {
     "burst": 1000,
     "respect_robots": False,
 }
+
+
+class TestAMixedFamilyCodeStrandsNobody:
+    """V1-51. `totals` was keyed on `found[0]`'s family and `members` on each
+    scheme's OWN, so a code naming two schemes with different family keys
+    registered the second under a key `totals` never got -- and the write loop
+    iterates `totals`. The run reported success with a scheme missing."""
+
+    def test_both_schemes_are_written_when_one_has_no_family(
+        self, tmp_path: Path
+    ) -> None:
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [
+                ("INF001", "100034", "abc", None),
+                ("INF002", "100034", "abc", "Fund"),
+            ],
+        )
+        counts = load_quarter(
+            conn, [_aaum("100034", "ABC", "1000")], "April - June 2026", "f1"
+        )
+        got = sorted(r[0] for r in conn.execute("SELECT scheme_id FROM scheme_aum"))
+        assert got == ["INF001", "INF002"], "a scheme was stranded"
+        assert counts["scheme_aum_rows"] == 2
+
+    def test_the_order_the_families_appear_in_does_not_matter(
+        self, tmp_path: Path
+    ) -> None:
+        """`_families` sorts by scheme_id, so which member is first is fixed --
+        but the grouping must not depend on it either way."""
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [
+                ("INF001", "100034", "abc", "Fund"),
+                ("INF002", "100034", "abc", None),
+            ],
+        )
+        load_quarter(conn, [_aaum("100034", "ABC", "1000")], "April - June 2026", "f1")
+        got = sorted(r[0] for r in conn.execute("SELECT scheme_id FROM scheme_aum"))
+        assert got == ["INF001", "INF002"]
+
+    def test_a_family_name_containing_the_old_separator_cannot_merge_funds(
+        self, tmp_path: Path
+    ) -> None:
+        """Keys were `f"{amc}|{family}"`, so ("a", "b|c") and ("a|b", "c")
+        collided into one group. `scheme_family` comes from AMFI's free-text
+        scheme names, so a pipe is not impossible."""
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [
+                ("INF001", "100001", "a", "b|c"),
+                ("INF002", "100002", "a|b", "c"),
+            ],
+        )
+        load_quarter(
+            conn,
+            [_aaum("100001", "One", "1000"), _aaum("100002", "Two", "2000")],
+            "April - June 2026",
+            "f1",
+        )
+        stored = dict(conn.execute("SELECT scheme_id, aum_inr FROM scheme_aum"))
+        assert Decimal(stored["INF001"]) == Decimal(1000) * 100000
+        assert Decimal(stored["INF002"]) == Decimal(2000) * 100000
+
+
+class TestABrokenEndpointIsNotAnEmptyOne:
+    """V1-51. `parse_periods` raises `AumPayloadError` both for "no periods" and
+    for "not JSON", and the year loop caught the parent and skipped -- so a
+    maintenance page would be swallowed once per financial year and then
+    reported as "AMFI has published nothing"."""
+
+    def test_a_year_that_published_nothing_is_skipped(self) -> None:
+        client = TestPublishedWalksYears._Client(
+            {1: [], 2: [(1, "January - March 2026")]}
+        )
+        assert [q.ends for q in published(_CFG, years=1, client=client)] == [
+            date(2026, 3, 31)
+        ]
+
+    def test_an_unreadable_response_propagates(self) -> None:
+        class Broken:
+            def request(self, method: str, url: str, **kw: object) -> Any:
+                if "fyId=" in url:
+                    return _Response(b"<html>maintenance</html>")
+                return _Response(
+                    json.dumps({"data": [{"id": 1, "financial_year": "FY1"}]}).encode()
+                )
+
+        with pytest.raises(AumPayloadError, match="not JSON"):
+            published(_CFG, years=1, client=Broken())
+
+    def test_nothing_published_is_a_kind_of_payload_error(self) -> None:
+        """Subclassing keeps every existing `except AumPayloadError` correct."""
+        assert issubclass(NothingPublished, AumPayloadError)
+
+
+class TestTheWalkIsBounded:
+    """V1-51. `filled >= years` was gated behind `stop_at is None`, so a quarter
+    that does not exist walked every financial year AMFI lists -- 13+ years at
+    two requests each, and at S3's 0.5 req/s a minute of crawling to report a
+    typo."""
+
+    def test_a_quarter_that_does_not_exist_stops_at_the_budget(self) -> None:
+        years = {i: [(1, f"January - March {2026 - i}")] for i in range(1, 13)}
+        client = TestPublishedWalksYears._Client(years)
+        published(_CFG, client=client, stop_at=date(1999, 1, 1))
+        walked = sum("fyId=" in c for c in client.calls)
+        assert walked <= 4, f"walked {walked} financial years looking for a typo"
+
+    def test_a_quarter_that_exists_still_stops_as_soon_as_it_is_found(self) -> None:
+        """One year deep costs one year's walk, two deep costs two -- the
+        budget caps the search, it does not lengthen it."""
+        years = {i: [(1, f"January - March {2026 - i}")] for i in range(1, 13)}
+
+        near = TestPublishedWalksYears._Client(years)
+        published(_CFG, client=near, stop_at=date(2025, 3, 31))
+        assert sum("fyId=" in c for c in near.calls) == 1
+
+        far = TestPublishedWalksYears._Client(years)
+        published(_CFG, client=far, stop_at=date(2024, 3, 31))
+        assert sum("fyId=" in c for c in far.calls) == 2
+
+
+class TestAnUnknownBasisRaises:
+    """V1-51. The tolerance was `AVERAGE if basis == "quarterly_average" else
+    STRICT`, so a typo fell through to 3% in silence -- and V2 quarantines, so
+    that is a correct disclosure refused with only a misspelling to explain it.
+    """
+
+    ROWS: ClassVar[list[HoldingRow]] = [
+        HoldingRow(None, "equity", Decimal("114000000000"), Decimal(100), "I1")
+    ]
+    AUM = Decimal("100000000000")
+
+    def _v2(self, basis: str) -> bool | None:
+        checks = validate_disclosure(
+            self.ROWS, date(2026, 8, 31), date(2026, 9, 13), self.AUM, basis
+        )
+        return next(c for c in checks if c.code == "V2").passed
+
+    def test_the_two_known_bases_behave_as_specified(self) -> None:
+        assert self._v2("quarterly_average") is True
+        assert self._v2("point_in_time") is False
+
+    def test_a_typo_raises_rather_than_quarantining_quietly(self) -> None:
+        with pytest.raises(UnknownAumBasis, match="quaterly_average"):
+            self._v2("quaterly_average")
+
+    def test_the_fetch_layer_and_the_check_agree_on_the_vocabulary(self) -> None:
+        """The two live in modules that do not import each other, so this is
+        what stops them drifting apart: renaming `BASIS` in the fetch layer
+        without wiring it here fails right now rather than silently applying
+        the strict tolerance to every row loaded afterwards."""
+        assert BASIS in TOLERANCE_BY_BASIS
+        assert set(TOLERANCE_BY_BASIS) == {"point_in_time", "quarterly_average"}
+
+
+def test_a_restatement_is_compared_as_a_number_not_as_text(tmp_path: Path) -> None:
+    """V1-51. `str(prior) != str(total)` made `Decimal("1000")` and
+    `Decimal("1000.00")` a restatement, so a change in AMFI's published
+    precision would have reported every scheme in the file as restated while
+    nothing moved."""
+    conn = _warehouse(tmp_path / "w.db", [("INF001", "100034", "abc", None)])
+    load_quarter(conn, [_aaum("100034", "ABC", "1000")], "April - June 2026", "f1")
+    # Same value, more decimal places, as an upstream precision change gives.
+    counts = load_quarter(
+        conn, [_aaum("100034", "ABC", "1000.0000")], "April - June 2026", "f2"
+    )
+    assert counts["restated"] == 0

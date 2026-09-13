@@ -43,6 +43,58 @@ AUM_TOLERANCE_PCT = Decimal(3)
 AUM_AVERAGE_TOLERANCE_PCT = Decimal(25)
 UNRESOLVED_MAX_PCT = Decimal(2)
 
+
+#: Which tolerance V2 applies to which kind of AUM, as a table rather than a
+#: comparison against one literal.
+#:
+#: The first version wrote `AUM_AVERAGE_TOLERANCE_PCT if aum_basis ==
+#: "quarterly_average" else AUM_TOLERANCE_PCT`, so ANY other string -- a typo,
+#: a basis added later and not wired here -- fell through to the strict 3%
+#: silently. Measured: a portfolio 14% from its AUM passes as
+#: `quarterly_average` and QUARANTINES as `quaterly_average`, with nothing but
+#: a misspelling in `validation_notes` to say why a correct disclosure was
+#: refused. V2 quarantines rather than warns, so that is a load nobody gets.
+#:
+#: `migrations/012_scheme_aum.sql` declares the same vocabulary on the column.
+#: `tests/unit/test_m0_aum.py` asserts the fetch layer's `BASIS` is a key here,
+#: which is what keeps the two from drifting apart without an import between
+#: layers that do not otherwise depend on each other.
+TOLERANCE_BY_BASIS: dict[str, Decimal] = {
+    "point_in_time": AUM_TOLERANCE_PCT,
+    "quarterly_average": AUM_AVERAGE_TOLERANCE_PCT,
+}
+
+
+class UnknownAumBasis(ValueError):
+    """§10's V2 was handed a basis it has no tolerance for.
+
+    `CLAUDE.md` invariant 5: raise, do not clamp. Defaulting to either
+    tolerance would be a plausible wrong answer -- the strict one quarantines
+    correct data, the loose one stops checking -- and both are worse than a
+    crash that names the basis.
+    """
+
+
+def age_days(witness_as_of: date, disclosure_as_of: date) -> int:
+    """How stale the AUM witness was when the disclosure was published.
+
+    Here rather than on `AumWitness`, because this is the only caller and the
+    method on that dataclass had none -- `src/m0_data/load.py` defined
+    `age_days` and only its own test used it, while this function recomputed
+    the same subtraction inline.
+    """
+    return (disclosure_as_of - witness_as_of).days
+
+
+def tolerance_for(basis: str) -> Decimal:
+    try:
+        return TOLERANCE_BY_BASIS[basis]
+    except KeyError:
+        known = ", ".join(sorted(TOLERANCE_BY_BASIS))
+        raise UnknownAumBasis(
+            f"no V2 tolerance for aum_basis {basis!r}; known: {known}"
+        ) from None
+
 QUARANTINE = "quarantine"
 WARN = "warn"
 INFO = "info"
@@ -96,11 +148,8 @@ def validate_disclosure(
     reported = sum((r.pct_to_nav or Decimal(0) for r in rows), Decimal(0))
     results.append(
         CheckResult(
-            "V1",
-            WEIGHT_SUM_MIN <= reported <= WEIGHT_SUM_MAX,
-            QUARANTINE,
-            "sum of reported % to NAV is within 95-105",
-            f"{reported}",
+            "V1", WEIGHT_SUM_MIN <= reported <= WEIGHT_SUM_MAX, QUARANTINE,
+            "sum of reported % to NAV is within 95-105", f"{reported}",
         )
     )
 
@@ -108,23 +157,18 @@ def validate_disclosure(
     # by two orders of magnitude, which is why it quarantines rather than warns.
     if aum_reported and aum_reported > 0:
         drift = abs(total_mv - aum_reported) / aum_reported * 100
-        tolerance = (
-            AUM_AVERAGE_TOLERANCE_PCT
-            if aum_basis == "quarterly_average"
-            else AUM_TOLERANCE_PCT
-        )
-        # The witness's own date is in the message, not just its kind. A
-        # figure can be the right KIND of number and two quarters out of date,
-        # and `validation_notes` is the only place a later reader can find out.
+        tolerance = tolerance_for(aum_basis)
+        # The witness's own date is in the message, not just its kind. A figure
+        # can be the right KIND of number and two quarters out of date, and
+        # `validation_notes` is the only place a later reader can find out.
         witness = aum_basis
         if aum_as_of is not None:
-            witness += f" as of {aum_as_of}, {(as_of - aum_as_of).days}d before"
+            witness += f" as of {aum_as_of}, {age_days(aum_as_of, as_of)}d before"
         results.append(
             CheckResult(
-                "V2",
-                drift <= tolerance,
-                QUARANTINE,
-                f"total market value within {tolerance}% of scheme AUM ({witness})",
+                "V2", drift <= tolerance, QUARANTINE,
+                f"total market value within {tolerance}% of scheme AUM"
+                f" ({witness})",
                 f"{drift:.4f}%",
             )
         )
@@ -152,9 +196,7 @@ def validate_disclosure(
     pct_unresolved = (unresolved / abs(total_mv) * 100) if total_mv else Decimal(0)
     results.append(
         CheckResult(
-            "V3",
-            pct_unresolved < UNRESOLVED_MAX_PCT,
-            WARN,
+            "V3", pct_unresolved < UNRESOLVED_MAX_PCT, WARN,
             f"unresolved market value below {UNRESOLVED_MAX_PCT}%",
             f"{pct_unresolved:.4f}%",
         )
@@ -170,10 +212,7 @@ def validate_disclosure(
     duplicates = sorted(k for k, n in seen.items() if n > 1)
     results.append(
         CheckResult(
-            "V7",
-            not duplicates,
-            WARN,
-            "no ISIN appears twice",
+            "V7", not duplicates, WARN, "no ISIN appears twice",
             ", ".join(duplicates) or None,
         )
     )
@@ -186,9 +225,7 @@ def validate_disclosure(
     ]
     results.append(
         CheckResult(
-            "V8",
-            not bad_negatives,
-            WARN,
+            "V8", not bad_negatives, WARN,
             "negative market value only on derivatives",
             ", ".join(sorted({r.instrument_class for r in bad_negatives})) or None,
         )
@@ -198,10 +235,7 @@ def validate_disclosure(
     malformed = sorted({r.isin for r in rows if r.isin and not is_valid_isin(r.isin)})
     results.append(
         CheckResult(
-            "V10",
-            not malformed,
-            WARN,
-            "every ISIN passes its check digit",
+            "V10", not malformed, WARN, "every ISIN passes its check digit",
             ", ".join(malformed) or None,
         )
     )
@@ -211,11 +245,8 @@ def validate_disclosure(
     plausible = as_of <= today and _is_period_end(as_of)
     results.append(
         CheckResult(
-            "V11",
-            plausible,
-            QUARANTINE,
-            "as-of date is a real, past month or fortnight end",
-            as_of.isoformat(),
+            "V11", plausible, QUARANTINE,
+            "as-of date is a real, past month or fortnight end", as_of.isoformat(),
         )
     )
     return results
@@ -260,33 +291,26 @@ def as_json(results: list[CheckResult], unpriced: list[str] | None = None) -> st
     return json.dumps(
         [
             {
-                "code": r.code,
-                "passed": r.passed,
-                "severity": r.severity,
-                "message": r.message,
-                "observed": r.observed,
+                "code": r.code, "passed": r.passed, "severity": r.severity,
+                "message": r.message, "observed": r.observed,
             }
             for r in results
         ]
-        + [
-            {"code": k, "passed": None, "severity": INFO, "message": v}
-            for k, v in sorted(not_evaluated().items())
-        ]
+        + [{"code": k, "passed": None, "severity": INFO, "message": v}
+           for k, v in sorted(not_evaluated().items())]
         + (
-            [
-                {
-                    "code": "UNPRICED",
-                    "passed": False,
-                    "severity": WARN,
-                    "message": (
-                        f"{len(unpriced)} row(s) carry no market value and are "
-                        f"stored at zero, so they contribute no exposure: "
-                        f"{', '.join(unpriced[:5])}"
-                        + (" ..." if len(unpriced) > 5 else "")
-                    ),
-                    "observed": str(len(unpriced)),
-                }
-            ]
+            [{
+                "code": "UNPRICED",
+                "passed": False,
+                "severity": WARN,
+                "message": (
+                    f"{len(unpriced)} row(s) carry no market value and are "
+                    f"stored at zero, so they contribute no exposure: "
+                    f"{', '.join(unpriced[:5])}"
+                    + (" ..." if len(unpriced) > 5 else "")
+                ),
+                "observed": str(len(unpriced)),
+            }]
             if unpriced
             else []
         )

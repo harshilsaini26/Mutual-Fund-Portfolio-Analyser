@@ -41,6 +41,7 @@ from src.m0_data.fetch.amfi_aum import (
     AAUM_UNIT,
     BASIS,
     AumPayloadError,
+    NothingPublished,
     SchemeAaum,
     data_url,
     parse_aaum,
@@ -60,6 +61,12 @@ from src.m0_data.fetch.base import (
 from src.m0_data.normalise.units import to_inr
 
 SOURCE_ID = "S3"
+
+#: How far back a named `--quarter` may look before giving up. Four financial
+#: years is sixteen quarters, past anything `scheme_aum` has a use for, and it
+#: bounds the walk that a mistyped date would otherwise turn into a crawl of
+#: AMFI's whole history.
+_STOP_AT_YEARS = 4
 
 
 def _get(url: str, cfg: dict[str, Any], client: Any = None) -> bytes:
@@ -123,8 +130,11 @@ def published(
     for fy_id, _ in listed:
         try:
             periods = parse_periods(_get(periods_url(fy_id), cfg, client))
-        except AumPayloadError:
+        except NothingPublished:
             # A financial year listed before its first quarter is published.
+            # ONLY this case. A payload that will not parse keeps raising --
+            # catching the parent swallowed a maintenance page thirteen times
+            # and then blamed AMFI for publishing nothing.
             continue
         out.extend(
             Quarter(fy_id, period_id, label, quarter_end(label))
@@ -133,7 +143,12 @@ def published(
         filled += 1
         if stop_at is not None and any(q.ends == stop_at for q in out):
             break
-        if stop_at is None and filled >= years:
+        # The budget caps BOTH walks. Gating it behind `stop_at is None` meant
+        # a quarter that does not exist -- a typo, or one AMFI has not
+        # published -- walked every financial year listed: 13+ years at two
+        # requests each, and at S3's 0.5 req/s a full minute of polite
+        # crawling before reporting a typo.
+        if filled >= max(years, _STOP_AT_YEARS if stop_at is not None else 0):
             break
     if not out:
         raise AumPayloadError(
@@ -149,7 +164,33 @@ def _archived(conn: Any, file_id: str) -> bool:
     )
 
 
-def _families(conn: Any) -> dict[str, list[tuple[str, str | None]]]:
+#: What a scheme code names: a scheme_id, and the family it belongs to (or
+#: None when V1-37's derivation refused to place it in one).
+_Member = tuple[str, tuple[str, str] | None]
+
+#: The grouping key. A tuple so two families cannot collide through string
+#: concatenation, and `("scheme", scheme_id)` for a scheme V1-37 left outside
+#: any family -- its own group of one, which under-reports rather than
+#: inventing a grouping that was never shown coherent.
+_GroupKey = tuple[str, str]
+
+
+def _group_key(found: list[_Member]) -> _GroupKey:
+    """One key for a code's schemes, used by BOTH `totals` and `members`.
+
+    Deterministic: the members arrive sorted by scheme_id (`_families` orders
+    its read), so the first family seen is the same on every rebuild. A code
+    whose schemes disagree about their family still lands in one group, which
+    is the conservative answer -- it keeps their AAUM together rather than
+    stranding whichever of them the key did not match.
+    """
+    for _, family in found:
+        if family is not None:
+            return family
+    return ("scheme", found[0][0])
+
+
+def _families(conn: Any) -> dict[str, list[_Member]]:
     """`amfi_code` -> EVERY (scheme_id, family key) it names.
 
     **A list, because an AMFI scheme code is not one scheme.** 4,592 of them
@@ -171,12 +212,17 @@ def _families(conn: Any) -> dict[str, list[tuple[str, str | None]]]:
     Loaded once. The alternative is a query per share class, and the payload
     carries 8,545 of them.
     """
-    index: dict[str, list[tuple[str, str | None]]] = defaultdict(list)
+    index: dict[str, list[_Member]] = defaultdict(list)
     for code, scheme_id, amc, family in conn.execute(
         "SELECT amfi_code, scheme_id, amc_id, scheme_family FROM scheme"
         " WHERE amfi_code IS NOT NULL ORDER BY amfi_code, scheme_id"
     ):
-        index[str(code)].append((str(scheme_id), f"{amc}|{family}" if family else None))
+        # A TUPLE, not `f"{amc}|{family}"`. Concatenating a composite key lets
+        # `("a", "b|c")` and `("a|b", "c")` collide into one group, and
+        # `scheme_family` is derived from AMFI's free-text scheme names.
+        index[str(code)].append(
+            (str(scheme_id), (str(amc), str(family)) if family else None)
+        )
     return dict(index)
 
 
@@ -190,8 +236,8 @@ def load_quarter(
     # Family total first, then written back to every member. A scheme outside
     # any family is its own group of one, keyed by scheme_id so it cannot
     # collide with a real family.
-    totals: dict[str, Decimal] = defaultdict(Decimal)
-    members: dict[str, set[str]] = defaultdict(set)
+    totals: dict[_GroupKey, Decimal] = defaultdict(Decimal)
+    members: dict[_GroupKey, set[str]] = defaultdict(set)
     unknown = 0
     for row in rows:
         found = index.get(row.amfi_code)
@@ -204,28 +250,51 @@ def load_quarter(
         # `aum_for` is asked about whichever ISIN a disclosure was loaded
         # against. Counting the money once and the members severally is the
         # whole distinction the first version lost.
-        primary_family = found[0][1]
-        key = primary_family or f"scheme:{found[0][0]}"
+        # ONE key for both maps, and that is the whole correction. The first
+        # version keyed `totals` on `found[0]`'s family and `members` on each
+        # scheme's OWN family, so a code naming two schemes with different
+        # family keys registered the second under a key `totals` never got --
+        # and the write loop iterates `totals`. Reproduced: code 100034 naming
+        # INF001 (no family) and INF002 (family `abc|Fund`) wrote INF001 alone
+        # and reported `scheme_aum_rows: 1, unmatched_amfi_codes: 0`. Success,
+        # with a scheme missing. That is the same silent loss this function was
+        # rewritten to fix, one layer in.
+        key = _group_key(found)
         totals[key] += to_inr(row.aaum_raw, AAUM_UNIT)
-        for scheme_id, family in found:
-            members[family or key].add(scheme_id)
+        members[key].update(scheme_id for scheme_id, _ in found)
 
     now = datetime.now(UTC)
+    # Every figure already stored for this quarter, in ONE query. The first
+    # version issued a `SELECT` per scheme inside the write loop -- 12,388
+    # extra round trips on the live data, for a counter that only reports --
+    # where `_families` twenty lines above already prefetches for exactly this
+    # reason.
+    stored: dict[str, Decimal] = {
+        str(r[0]): r[1]
+        for r in conn.execute(
+            "SELECT scheme_id, aum_inr FROM scheme_aum WHERE as_of_date = ?",
+            (as_of,),
+        )
+    }
+
     written = 0
     restated = 0
     for key, total in totals.items():
         # Sorted, so a rebuild writes the same rows in the same order.
-        for scheme_id in sorted(members.get(key, ())):
-            prior = conn.execute(
-                "SELECT aum_inr FROM scheme_aum WHERE scheme_id=? AND as_of_date=?",
-                (scheme_id, as_of),
-            ).fetchone()
+        for scheme_id in sorted(members[key]):
             # `INSERT OR REPLACE` overwrites in place, which every other fact
             # table in this warehouse refuses to do. `scheme_aum` has no
             # revision column in MODULE_0 §4's schema, so the overwrite stands
             # -- but a figure that MOVED is news, and counting it is what stops
             # a restatement being silent.
-            if prior is not None and str(prior[0]) != str(total):
+            #
+            # Compared as DECIMALS. `str(prior) != str(total)` made
+            # `Decimal("1000")` and `Decimal("1000.00")` a restatement, so a
+            # change in AMFI's published precision would have reported every
+            # scheme in the file as restated while nothing moved -- and a
+            # counter that cries wolf at that scale reports nothing at all.
+            prior = stored.get(scheme_id)
+            if prior is not None and Decimal(prior) != total:
                 restated += 1
             conn.execute(
                 "INSERT OR REPLACE INTO scheme_aum (scheme_id, as_of_date, aum_inr,"
