@@ -97,6 +97,20 @@ CENTRAL_GOVERNMENT_ISIN = re.compile(r"^IN0020")
 #: identifier says what a thing is, do not ask what it is called.
 MUTUAL_FUND_ISIN = re.compile(r"^INF")
 
+#: Metal held as metal. Matched ONLY on a row carrying no ISIN, and that
+#: condition is the whole rule rather than a refinement of it.
+#:
+#: These words are all over the names of real companies, and the warehouse
+#: holds the counter-examples: `Multi Commodity Exchange of India Limited`,
+#: `Goldman Sachs India Finance`, `Gold Circuit Electronics Ltd`,
+#: `Liquid Gold Series`. Every one is a security, every one carries an
+#: ISIN, and a pattern on the name alone would have swept all four out of
+#: the issuer space and into a bucket excluded from overlap.
+#:
+#: A bar of gold has no ISIN because nobody issued it. So the absence is
+#: the evidence, and the name only says which metal.
+COMMODITY_NAME = re.compile(r"\b(gold|silver|platinum|palladium|bullion)\b", re.I)
+
 #: §8.4's fallback: a row the parser already classified as cash or a derivative
 #: is one of those even when its name says nothing recognisable.
 CLASS_FALLBACK = {
@@ -145,6 +159,25 @@ def match_synthetic(
     for pattern, issuer_id in SYNTHETIC_RULES:
         if pattern.search(name):
             return issuer_id
+
+    # Metal, and only after every name rule has had its say.
+    #
+    # Order is the rule here. `ICICI Prudential Gold ETF` is a FUND that holds
+    # gold, and on a sheet that omits its ISIN the only thing separating it
+    # from a bar of gold is that `etf` matched first. Checked before the
+    # rules, it was bucketed as bullion.
+    #
+    # `not isin` is the other half: a row with an ISIN is a security and
+    # therefore somebody's, however it is named — which is what keeps
+    # `Goldman Sachs India Finance`, `Gold Circuit Electronics` and
+    # `Multi Commodity Exchange of India` out of here.
+    #
+    # Derivatives are excluded deliberately. `Gold 1 Kg Fineness 0.995-CT2026C`
+    # is a contract on gold rather than gold, it is a SHORT position at -43 Cr,
+    # and the sheet's own section heading already said derivative — V1-07's
+    # rule that the heading is the only reliable signal applies here too.
+    if not isin and instrument_class != "derivative" and COMMODITY_NAME.search(name):
+        return IssuerId("__COMMODITY__")
     if instrument_class in CLASS_FALLBACK:
         return CLASS_FALLBACK[instrument_class]
     return None

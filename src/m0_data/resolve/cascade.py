@@ -77,7 +77,7 @@ from src.m0_data.resolve.synthetic import match_synthetic
 #: `"1"` is every cascade before the ISIN issuer segment existed; rows written
 #: then carry `'0'` from the migration default, which is not equal to this and
 #: is therefore what makes the first run after an upgrade actually rewrite.
-RESOLVER_VERSION = "6"
+RESOLVER_VERSION = "8"
 
 #: How many leading characters of an Indian ISIN identify the ISSUER rather
 #: than the security. `IN` is the country, the next five are the entity NSDL

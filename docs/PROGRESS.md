@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 951 tests passing
+**Last updated:** 2026-09-13 · 955 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -34,13 +34,15 @@ IDCW variant — holds the identical portfolio.
 | Kotak Pioneer | 55 | **0.00%** |
 | ICICI Multi Asset | 290 | 1.79% |
 
-Disclosure quality across all 183: **107 `ok`, 76 `warn`, 0 quarantined.** 51 of
-the warnings are V8 (a negative value on something not classified as a
-derivative — the covered-call defect below) and 26 are V3 (unresolved above
-2%). No parse is being stored that disagrees with the file it came from.
+PPFAS Flexi Cap, the fifth fund with a disclosure, is also at **0.00%**.
 
-Unresolved across the whole warehouse is **6.68%** of value, down from 14% before
-V1-41 taught the disclosures to name their own issuers.
+Disclosure quality across all 183: **111 `ok`, 72 `warn`, 0 quarantined.** Most
+warnings are V8 (a negative value on something not classified as a derivative —
+the covered-call defect below). No parse is being stored that disagrees with
+the file it came from.
+
+Unresolved across the whole warehouse is **1.80%** of value, down from 14% at
+the start of the day.
 
 ## How to add a fund
 
@@ -92,26 +94,21 @@ automatically; the rest are a download.
 
 Ordered by what they cost.
 
-1. **A commodity has no issuer.** Rs 68,104 Cr — 73% of everything still
-   unresolved — is one row shape: `SILVER`, with no ISIN, held by silver ETFs.
-   No entity master can invent an issuer for physical metal. It wants a
-   synthetic bucket alongside `__GSEC__` and `__MFUNIT__`, which is a migration
-   and a decision rather than a derivation.
-2. **State development loans have no issuer.** 1,553 Cr in one fund. §8.4
+1. **State development loans have no issuer.** 1,553 Cr in one fund. §8.4
    forbids bucketing them with sovereign paper because a state is a real
    borrower; giving them real issuers needs either a hardcoded state-code table
    (data this project would be inventing) or a cascade that creates issuers
    (which V1-02 deliberately refused). A decision, not an implementation.
-3. **Covered calls classify as `equity`.** 44 rows in ICICI Multi Asset with
+2. **Covered calls classify as `equity`.** 44 rows in ICICI Multi Asset with
    negative market values. A written option is a derivative; this is why that
    fund reports `warn`.
-4. **`checks.py:96` claims V3 blocks the look-through. Nothing does.** No module
+3. **`checks.py:96` claims V3 blocks the look-through. Nothing does.** No module
    reads `validation_status`. Either the block should exist or the comment
    should not claim it.
-5. **A fund inside a fund is not looked through.** ICICI's Gold ETF and PPFAS's
+4. **A fund inside a fund is not looked through.** ICICI's Gold ETF and PPFAS's
    overseas holdings resolve to `__MFUNIT__` — correctly disclosed, not
    analysed. That is §10's nested look-through, V2 work.
-6. **`data_only=True` returns None for a workbook Excel never cached.** Would
+5. **`data_only=True` returns None for a workbook Excel never cached.** Would
    reproduce V1-36's silent row-drop. Not observed; worth a loud check when a
    file of that shape appears.
 
@@ -119,8 +116,6 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is not machinery:
 
-- **A bucket for commodities**, which is what 73% of the remaining unresolved
-  value is waiting on.
 - **Load the AMCs actually held**, now a download each.
 - **V2**: M2 fund x-ray, the tax engine, §10 nested look-through.
 

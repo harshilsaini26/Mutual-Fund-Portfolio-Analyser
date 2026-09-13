@@ -92,7 +92,10 @@ def test_the_synthetic_seed_includes_no_disclosure(conn: sqlite3.Connection) -> 
     }
     assert "__NO_DISCLOSURE__" in seeded
     assert "__UNRESOLVED__" in seeded
-    assert len(seeded) == 9
+    # A tenth from V1-42: a bar of gold has no issuer, and `__UNRESOLVED__`
+    # means "could not identify" rather than "identified, and not a company".
+    assert "__COMMODITY__" in seeded
+    assert len(seeded) == 10
 
 
 # --- §7.4 name normalisation -------------------------------------------------
@@ -229,6 +232,66 @@ def test_an_unknown_name_is_unresolved_never_guessed(
     assert result.issuer_id == UNRESOLVED
     assert result.method == "unresolved"
     assert result.needs_review
+
+
+# --- V1-42, metal is not a company --------------------------------------------
+
+
+def test_metal_held_as_metal_resolves_to_the_commodity_bucket() -> None:
+    """Rs 55,868 Cr — the largest single line in the warehouse — was
+    `__UNRESOLVED__` because none of the nine seeded synthetics fits a bar of
+    gold. It has no issuer, which is a fact about it rather than a failure to
+    look one up."""
+    for name in ("GOLD 995 1KG BAR", "SILVER",
+                 "GOLD 99.9 FINENESS - GUJ PHYSICAL SETT"):
+        assert match_synthetic(name, "equity", None) == "__COMMODITY__", name
+
+
+def test_a_company_is_not_a_commodity_because_of_its_name() -> None:
+    """The whole rule is the ISIN test, not the word list.
+
+    Every one of these is in the warehouse, is a real security, and resolves
+    correctly today. A pattern on the name alone would have swept all four into
+    a bucket that is excluded from overlap and concentration — so they would
+    not merely be mislabelled, they would leave the analysis.
+    """
+    for name, isin in (
+        ("Multi Commodity Exchange of India Limited", "INE745G01043"),
+        ("Goldman Sachs India Finance Pr", "INE746L07123"),
+        ("Gold Circuit Electronics Ltd", "TW0002368007"),
+        ("Liquid Gold Series**", "INE2R5L07123"),
+    ):
+        assert match_synthetic(name, "equity", isin) != "__COMMODITY__", name
+
+
+def test_a_commodity_future_stays_a_derivative() -> None:
+    """`Gold 1 Kg Fineness 0.995-CT2026C` is a contract on gold, not gold, and
+    the sheet's own section heading says so — V1-07's rule that the heading is
+    the only reliable signal applies here too. It is a SHORT position at
+    -43 Cr, so calling it a commodity would put a negative number in a bucket
+    that holds none.
+    """
+    assert match_synthetic(
+        "Gold 1 Kg Fineness 0.995-CT2026C", "derivative", None
+    ) == "__DERIV__"
+
+
+def test_the_class_fallback_is_reachable_at_all() -> None:
+    """§8.4 routes a row the parser already called cash or a derivative *"even
+    when its name says nothing recognisable"* — and the loader passed `None`
+    for the class, so it had never once fired.
+
+    `TRP_030826` is TREPS written as an internal code and
+    `The Clearing Corporation of India Limited` is the counterparty; both sit
+    under a cash heading and both sat in `__UNRESOLVED__`. Rs 12,046 Cr between
+    them, resolved by a parameter that was already specified.
+    """
+    assert match_synthetic("TRP_030826", "cash", None) == "__CASH__"
+    assert match_synthetic(
+        "The Clearing Corporation of India Limited", "cash", None
+    ) == "__CASH__"
+    # and with no class, the same rows are still unrecognised
+    assert match_synthetic("TRP_030826", None, None) is None
 
 
 # --- V1-37, a disclosure describes a scheme and not an ISIN ------------------

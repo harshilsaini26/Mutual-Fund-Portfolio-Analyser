@@ -102,6 +102,7 @@ _CLASS_BY_ISSUER = {
     "__MARGIN__": "cash",
     "__DERIV__": "derivative",
     "__MFUNIT__": "mfunit",
+    "__COMMODITY__": "other",
     "__GSEC__": "debt",
 }
 
@@ -382,8 +383,8 @@ def _one(
         securities, values, weights.weights, pcts, strict=True
     ):
         resolution = resolve(
-            conn, security.instrument_raw_name, security.isin_raw, None,
-            index, prefixes,
+            conn, security.instrument_raw_name, security.isin_raw,
+            _class_from_section(security.section), index, prefixes,
         )
         rows.append({
             "isin": security.isin_raw,
@@ -497,12 +498,31 @@ def _parser_for(
     return route(raw)
 
 
-def _instrument_class(section: str | None, issuer_id: str) -> str:
-    """Section first, then the synthetic issuer, then equity. See _CLASS_BY_SECTION."""
+def _class_from_section(section: str | None) -> str | None:
+    """What the sheet's own heading says this row is, before anyone resolves it.
+
+    Split out because the cascade needs it and cannot wait: §8.4's
+    `CLASS_FALLBACK` routes a row the parser already called cash or a
+    derivative *"even when its name says nothing recognisable"* — and it was
+    being handed `None`, so it never once fired. `TRP_030826` and
+    `The Clearing Corporation of India Limited` both sit under a cash heading
+    and both sat in `__UNRESOLVED__`; between them Rs 12,046 Cr (V1-42).
+
+    Only the section half. The issuer half of `_instrument_class` cannot run
+    yet — it is the answer resolution is about to produce.
+    """
     text = (section or "").lower()
     for needle, klass in _CLASS_BY_SECTION:
         if needle in text:
             return klass
+    return None
+
+
+def _instrument_class(section: str | None, issuer_id: str) -> str:
+    """Section first, then the synthetic issuer, then equity. See _CLASS_BY_SECTION."""
+    from_section = _class_from_section(section)
+    if from_section is not None:
+        return from_section
     return _CLASS_BY_ISSUER.get(issuer_id, "equity")
 
 
