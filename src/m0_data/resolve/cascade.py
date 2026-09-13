@@ -70,7 +70,7 @@ from src.m0_data.resolve.synthetic import match_synthetic
 #: `"1"` is every cascade before the ISIN issuer segment existed; rows written
 #: then carry `'0'` from the migration default, which is not equal to this and
 #: is therefore what makes the first run after an upgrade actually rewrite.
-RESOLVER_VERSION = "2"
+RESOLVER_VERSION = "3"
 
 #: How many leading characters of an Indian ISIN identify the ISSUER rather
 #: than the security. `IN` is the country, the next five are the entity NSDL
@@ -134,7 +134,7 @@ def resolve(
     # 1. RULE. Synthetic rows never reach the queue (§8.4) — subtotals, cash,
     #    TREPS and derivatives are most of what would otherwise flood it. None
     #    of them carries an ISIN, which is why step 0 does not shadow this.
-    synthetic = match_synthetic(raw_name, instrument_class)
+    synthetic = match_synthetic(raw_name, instrument_class, isin or None)
     if synthetic:
         return Resolution(synthetic, "rule", Decimal("1.0"))
 

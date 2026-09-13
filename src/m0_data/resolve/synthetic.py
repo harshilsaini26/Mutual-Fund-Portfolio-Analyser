@@ -41,6 +41,26 @@ SYNTHETIC_RULES: tuple[tuple[re.Pattern[str], IssuerId], ...] = tuple(
     )
 )
 
+#: Central government paper, by ISIN STRUCTURE rather than by name.
+#:
+#: An Indian government ISIN is `IN` + a two-digit issuing-government code +
+#: `20` + a serial. Code `00` is the Union; every other code is a state. So
+#: `IN0020` is sovereign whatever the row is called, and no state loan can
+#: match it.
+#:
+#: This exists because the vocabulary rule above misses the plainest possible
+#: name. ICICI writes dated sovereign paper as exactly `Government Securities`,
+#: which contains neither `government of india`, nor `goi`, nor a `g-sec`
+#: token, nor `treasury bill` — so 1,837 Cr of it sat in `__UNRESOLVED__` while
+#: the T-bills beside it, named `91 Days Treasury Bills`, resolved fine. That
+#: is V1-04's lesson again: a pattern written against one AMC's wording is a
+#: guess about every other AMC's.
+#:
+#: Verified on the file rather than assumed: all 17 central rows carry `IN0020`
+#: — dated securities and treasury bills alike — and the eleven state segments
+#: present (`IN1020` Andhra Pradesh through `IN4520` Telangana) carry none.
+CENTRAL_GOVERNMENT_ISIN = re.compile(r"^IN0020")
+
 #: §8.4's fallback: a row the parser already classified as cash or a derivative
 #: is one of those even when its name says nothing recognisable.
 CLASS_FALLBACK = {
@@ -49,7 +69,11 @@ CLASS_FALLBACK = {
 }
 
 
-def match_synthetic(name: str, instrument_class: str | None = None) -> IssuerId | None:
+def match_synthetic(
+    name: str,
+    instrument_class: str | None = None,
+    isin: str | None = None,
+) -> IssuerId | None:
     """The synthetic bucket for this row, or None if it is a real security.
 
     §8.4's note is load-bearing and easy to lose: **only sovereign paper maps to
@@ -57,7 +81,17 @@ def match_synthetic(name: str, instrument_class: str | None = None) -> IssuerId 
     issuers and must resolve to real ones — burying `7.26% Maharashtra SDL 2032`
     in a government bucket would hide a real state-government exposure, and
     burying an NCD there would hide corporate credit risk entirely.
+
+    That note is why the ISIN check below is `IN0020` and not `IN` plus two
+    digits. The wider pattern would have swept eleven state governments into
+    the sovereign bucket in this one fund alone — 1,553 Cr across Maharashtra,
+    Rajasthan, Madhya Pradesh and eight more — and each of those is a real
+    exposure to a real borrower that someone might reasonably want to see.
+    `isin` is checked BEFORE the name patterns: structure is harder evidence
+    than wording, and the wording is what was wrong.
     """
+    if isin and CENTRAL_GOVERNMENT_ISIN.match(isin.strip().upper()):
+        return IssuerId("__GSEC__")
     for pattern, issuer_id in SYNTHETIC_RULES:
         if pattern.search(name):
             return issuer_id

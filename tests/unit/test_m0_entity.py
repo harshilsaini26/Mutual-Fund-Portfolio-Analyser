@@ -230,6 +230,52 @@ def test_an_unknown_name_is_unresolved_never_guessed(
     assert result.needs_review
 
 
+# --- §8.4, sovereign paper only ----------------------------------------------
+
+
+def test_central_government_paper_is_recognised_by_its_isin_not_its_name() -> None:
+    """ICICI writes dated sovereign paper as exactly `Government Securities`.
+
+    That string contains no `government of india`, no `goi`, no `g-sec` token
+    and no `treasury bill`, so §8.4's vocabulary rule missed it entirely while
+    the T-bills beside it — named `91 Days Treasury Bills` — resolved fine.
+    1,837 Cr of sovereign debt sat in `__UNRESOLVED__` on one fund because of
+    how it was spelled. Structure does not have that failure mode.
+    """
+    assert match_synthetic("Government Securities", "debt", "IN0020260025") == "__GSEC__"
+    # Even with a name that says nothing at all.
+    assert match_synthetic("", "debt", "IN0020250018") == "__GSEC__"
+    # Treasury bills carry the same segment and keep working.
+    assert match_synthetic("91 Days Treasury Bills", "debt", "IN002026X156") == "__GSEC__"
+
+
+def test_a_state_development_loan_is_never_swept_into_the_sovereign_bucket() -> None:
+    """§8.4's note, as a regression test.
+
+    A state government is a real borrower with a real exposure, and burying
+    `State Government of Maharashtra` in `__GSEC__` would hide it — synthetic
+    issuers are excluded from overlap and concentration, so the exposure would
+    not merely be mislabelled, it would leave the analysis altogether.
+
+    This is why the pattern is `IN0020` and not `IN` plus two digits. The wider
+    form would have taken eleven state governments and 1,553 Cr in one fund.
+    """
+    for isin, name in (
+        ("IN2220240435", "State Government of Maharashtra"),
+        ("IN2920250171", "State Government of Rajasthan"),
+        ("IN2120250138", "State Government of Madhya Pradesh"),
+        ("IN4520250684", "State Government of Telangana"),
+    ):
+        assert match_synthetic(name, "debt", isin) is None, f"{name} was bucketed"
+
+
+def test_a_corporate_isin_is_not_government_however_it_is_spelled() -> None:
+    """`INE` is a company. The rule must key on the segment, not on `IN`."""
+    assert match_synthetic("Some Government Contractor Ltd", "debt", "INE040A08419") != (
+        "__GSEC__"
+    )
+
+
 # --- §8.1's premise, for instruments that are not equity ---------------------
 
 
