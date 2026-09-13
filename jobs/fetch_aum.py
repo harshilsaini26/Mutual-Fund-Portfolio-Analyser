@@ -1,8 +1,8 @@
 """Load AMFI's scheme-wise average AUM. S3, DECISIONS V1-49.
 
-    python -m jobs.fetch_aum --list       # what AMFI has published
-    python -m jobs.fetch_aum              # the newest quarter
-    python -m jobs.fetch_aum --period 2   # a specific one, by the id --list shows
+    python -m jobs.fetch_aum --list --years 4    # what AMFI has published
+    python -m jobs.fetch_aum                     # the newest quarter
+    python -m jobs.fetch_aum --quarter 2026-03-31
 
 **This is what §10's V2 has been waiting for.** V2 is the units check — the one
 that catches §7.2's 100x error and quarantines rather than warns — and it
@@ -30,7 +30,8 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import defaultdict
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -39,6 +40,7 @@ from src.m0_data.config import raw_root, source, warehouse_path
 from src.m0_data.fetch.amfi_aum import (
     AAUM_UNIT,
     BASIS,
+    AumPayloadError,
     SchemeAaum,
     data_url,
     parse_aaum,
@@ -77,19 +79,67 @@ def _get(url: str, cfg: dict[str, Any], client: Any = None) -> bytes:
     return bytes(response.content)
 
 
-def published(cfg: dict[str, Any]) -> list[tuple[int, int, str]]:
-    """Every `(fy_id, period_id, label)` AMFI lists, newest first.
+@dataclass(frozen=True)
+class Quarter:
+    """One published quarter, addressed by the only key that is stable.
 
-    Only the newest financial year's quarters are walked. Older ones are one
-    more request each and nothing needs them yet; `--year` exists for when a
-    backfill does.
+    `period_id` restarts at 1 in EVERY financial year — id 1 is
+    `January - March 2026` in FY2025-26 and `April - June 2026` in FY2026-27 —
+    so a CLI that took it would mean a different quarter depending on when it
+    ran. `ends` is unambiguous, and it is already what `scheme_aum.as_of_date`
+    stores.
     """
-    years = parse_years(_get(years_url(), cfg))
-    fy_id, _ = years[0]
-    return [
-        (fy_id, period_id, label)
-        for period_id, label in parse_periods(_get(periods_url(fy_id), cfg))
-    ]
+
+    fy_id: int
+    period_id: int
+    label: str
+    ends: date
+
+
+def published(
+    cfg: dict[str, Any],
+    years: int = 1,
+    client: Any = None,
+    stop_at: date | None = None,
+) -> list[Quarter]:
+    """The quarters AMFI lists, newest first, from `years` financial years.
+
+    **Years with nothing published are skipped, not fatal.** AAUM arrives about
+    ten days after a quarter ends, so between April and mid-July the newest
+    financial year can be listed with zero periods in it — and the first
+    version took `years[0]` unconditionally, so `parse_periods` raised and the
+    whole job died for roughly a quarter of every year while the previous
+    year's figure sat one request away.
+
+    Walked lazily, and that is the whole reason it takes a budget. One year
+    costs two requests and stops there, which is all the default run needs;
+    `stop_at` stops the moment a named quarter is seen, so asking for
+    `2026-03-31` costs three requests rather than the eight that walking four
+    years to be safe would.
+    """
+    listed = parse_years(_get(years_url(), cfg, client))
+    out: list[Quarter] = []
+    filled = 0
+    for fy_id, _ in listed:
+        try:
+            periods = parse_periods(_get(periods_url(fy_id), cfg, client))
+        except AumPayloadError:
+            # A financial year listed before its first quarter is published.
+            continue
+        out.extend(
+            Quarter(fy_id, period_id, label, quarter_end(label))
+            for period_id, label in periods
+        )
+        filled += 1
+        if stop_at is not None and any(q.ends == stop_at for q in out):
+            break
+        if stop_at is None and filled >= years:
+            break
+    if not out:
+        raise AumPayloadError(
+            "AMFI lists financial years but none of them has a published quarter"
+        )
+    return out
 
 
 def _archived(conn: Any, file_id: str) -> bool:
@@ -99,19 +149,35 @@ def _archived(conn: Any, file_id: str) -> bool:
     )
 
 
-def _families(conn: Any) -> dict[str, tuple[str, str | None]]:
-    """`amfi_code` -> (scheme_id, family key), for every scheme AMFI numbers.
+def _families(conn: Any) -> dict[str, list[tuple[str, str | None]]]:
+    """`amfi_code` -> EVERY (scheme_id, family key) it names.
+
+    **A list, because an AMFI scheme code is not one scheme.** 4,592 of them
+    name two ISINs in this warehouse: `100034` is both `INF209K01157` (Aditya
+    Birla Large & Mid Cap, IDCW payout) and `INF209K01CE5` (the same fund, IDCW
+    reinvest) -- one pool of assets, one code, two ISINs.
+
+    The first version was a dict comprehension keyed on the code, so every
+    duplicate but the last was discarded: the live payload's 8,545 codes reach
+    **12,388** scheme_ids and only 8,448 got a row, losing 3,940 schemes their
+    AUM witness in silence. The run's own summary hid it, reporting 97
+    unmatched codes when 4,037 schemes went without.
+
+    Ordered, because which scheme_id a code yields must not depend on SQLite's
+    whim. `CLAUDE.md` invariant 10 wants a rebuild to reproduce byte-identical
+    output, and an unordered `SELECT` behind a collapsing dict gave neither the
+    same rows nor the same choice between them.
 
     Loaded once. The alternative is a query per share class, and the payload
     carries 8,545 of them.
     """
-    return {
-        str(code): (str(scheme_id), f"{amc}|{family}" if family else None)
-        for code, scheme_id, amc, family in conn.execute(
-            "SELECT amfi_code, scheme_id, amc_id, scheme_family FROM scheme"
-            " WHERE amfi_code IS NOT NULL"
-        )
-    }
+    index: dict[str, list[tuple[str, str | None]]] = defaultdict(list)
+    for code, scheme_id, amc, family in conn.execute(
+        "SELECT amfi_code, scheme_id, amc_id, scheme_family FROM scheme"
+        " WHERE amfi_code IS NOT NULL ORDER BY amfi_code, scheme_id"
+    ):
+        index[str(code)].append((str(scheme_id), f"{amc}|{family}" if family else None))
+    return dict(index)
 
 
 def load_quarter(
@@ -125,22 +191,42 @@ def load_quarter(
     # any family is its own group of one, keyed by scheme_id so it cannot
     # collide with a real family.
     totals: dict[str, Decimal] = defaultdict(Decimal)
-    members: dict[str, list[str]] = defaultdict(list)
+    members: dict[str, set[str]] = defaultdict(set)
     unknown = 0
     for row in rows:
         found = index.get(row.amfi_code)
-        if found is None:
+        if not found:
             unknown += 1
             continue
-        scheme_id, family = found
-        key = family or f"scheme:{scheme_id}"
+        # The AAUM contributes ONCE -- it is one share class's assets, however
+        # many ISINs that share class is listed under -- but every scheme_id
+        # the code names is a member and must get the family's figure, because
+        # `aum_for` is asked about whichever ISIN a disclosure was loaded
+        # against. Counting the money once and the members severally is the
+        # whole distinction the first version lost.
+        primary_family = found[0][1]
+        key = primary_family or f"scheme:{found[0][0]}"
         totals[key] += to_inr(row.aaum_raw, AAUM_UNIT)
-        members[key].append(scheme_id)
+        for scheme_id, family in found:
+            members[family or key].add(scheme_id)
 
     now = datetime.now(UTC)
     written = 0
+    restated = 0
     for key, total in totals.items():
-        for scheme_id in members[key]:
+        # Sorted, so a rebuild writes the same rows in the same order.
+        for scheme_id in sorted(members.get(key, ())):
+            prior = conn.execute(
+                "SELECT aum_inr FROM scheme_aum WHERE scheme_id=? AND as_of_date=?",
+                (scheme_id, as_of),
+            ).fetchone()
+            # `INSERT OR REPLACE` overwrites in place, which every other fact
+            # table in this warehouse refuses to do. `scheme_aum` has no
+            # revision column in MODULE_0 §4's schema, so the overwrite stands
+            # -- but a figure that MOVED is news, and counting it is what stops
+            # a restatement being silent.
+            if prior is not None and str(prior[0]) != str(total):
+                restated += 1
             conn.execute(
                 "INSERT OR REPLACE INTO scheme_aum (scheme_id, as_of_date, aum_inr,"
                 " folio_count, basis, period_label, source_file_id, ingested_at)"
@@ -154,25 +240,40 @@ def load_quarter(
         "families": len(totals),
         "scheme_aum_rows": written,
         "unmatched_amfi_codes": unknown,
+        "restated": restated,
     }
 
 
-def run(period_id: int | None = None, list_only: bool = False) -> list[dict[str, object]]:
+def run(
+    quarter: str | None = None,
+    list_only: bool = False,
+    years: int = 1,
+) -> list[dict[str, object]]:
     cfg = source(SOURCE_ID)
-    quarters = published(cfg)
+    wanted_end: date | None = None
+    if quarter:
+        try:
+            wanted_end = date.fromisoformat(quarter)
+        except ValueError as exc:
+            raise SystemExit(f"--quarter {quarter!r} is not YYYY-MM-DD") from exc
+
+    # A named quarter may be older than the newest financial year, so the walk
+    # continues until it is found rather than stopping at a fixed depth --
+    # and stops the moment it IS found, which is usually the first year.
+    quarters = published(cfg, years=years, stop_at=wanted_end)
     if list_only:
         return [
-            {"period_id": pid, "label": label, "quarter_end": str(quarter_end(label))}
-            for _, pid, label in quarters
+            {"quarter": str(q.ends), "label": q.label, "financial_year_id": q.fy_id}
+            for q in quarters
         ]
 
-    wanted = [q for q in quarters if q[1] == period_id] if period_id else quarters[:1]
+    wanted = [q for q in quarters if q.ends == wanted_end] if wanted_end else quarters[:1]
     if not wanted:
         raise SystemExit(
-            f"no period {period_id} in the newest financial year;"
-            f" `--list` shows {[q[1] for q in quarters]}"
+            f"AMFI has not published a quarter ending {quarter};"
+            f" `--list --years 4` shows {[str(q.ends) for q in quarters][:8]}"
         )
-    fy_id, pid, label = wanted[0]
+    fy_id, pid, label = wanted[0].fy_id, wanted[0].period_id, wanted[0].label
 
     conn = connect(str(warehouse_path()))
     url = data_url(fy_id, pid)
@@ -215,12 +316,22 @@ def run(period_id: int | None = None, list_only: bool = False) -> list[dict[str,
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--period", type=int, help="period id, from --list")
+    parser.add_argument(
+        "--quarter",
+        help="quarter END as YYYY-MM-DD, e.g. 2026-06-30. Stable across years,"
+        " unlike AMFI's period ids, which restart at 1 every financial year.",
+    )
+    parser.add_argument(
+        "--years",
+        type=int,
+        default=1,
+        help="how many financial years back to list (default 1)",
+    )
     parser.add_argument(
         "--list", action="store_true", help="print what AMFI has published"
     )
     args = parser.parse_args(argv)
-    for row in run(args.period, args.list):
+    for row in run(args.quarter, args.list, args.years):
         print("  " + "  ".join(f"{k}={v}" for k, v in row.items()))
     return 0
 

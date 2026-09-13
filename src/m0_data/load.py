@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -111,9 +112,18 @@ def load_schemes(
                 source_file_id = excluded.source_file_id
             """,
             (
-                s.scheme_id, s.amfi_code, s.isin, normalise_amc_id(s.amc_name),
-                s.scheme_name, s.plan, s.option, s.option_raw, s.sebi_category,
-                seen_on, seen_on, source_file_id,
+                s.scheme_id,
+                s.amfi_code,
+                s.isin,
+                normalise_amc_id(s.amc_name),
+                s.scheme_name,
+                s.plan,
+                s.option,
+                s.option_raw,
+                s.sebi_category,
+                seen_on,
+                seen_on,
+                source_file_id,
             ),
         )
     return len(amcs), len(schemes)
@@ -377,12 +387,24 @@ def load_holdings(
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1)
             """,
             (
-                scheme_id, as_of, revision, position, row.get("isin"),
-                row["issuer_id"], row["instrument_raw_name"], row.get("quantity"),
-                row["market_value"], row.get("pct_to_nav"), row["pct_normalised"],
-                row["instrument_class"], row.get("credit_rating"),
-                row.get("reported_sector"), row["resolution_method"],
-                row.get("resolution_conf"), source_file_id, now,
+                scheme_id,
+                as_of,
+                revision,
+                position,
+                row.get("isin"),
+                row["issuer_id"],
+                row["instrument_raw_name"],
+                row.get("quantity"),
+                row["market_value"],
+                row.get("pct_to_nav"),
+                row["pct_normalised"],
+                row["instrument_class"],
+                row.get("credit_rating"),
+                row.get("reported_sector"),
+                row["resolution_method"],
+                row.get("resolution_conf"),
+                source_file_id,
+                now,
             ),
         )
 
@@ -397,12 +419,22 @@ def load_holdings(
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
         """,
         (
-            scheme_id, as_of, revision, source_file_id, len(rows),
-            header.get("pct_sum_raw"), header.get("weight_residual"),
-            header["unresolved_mv_pct"], header["total_mv"],
-            header.get("aum_reported"), header.get("mv_vs_aum_pct"),
-            header.get("reported_unit"), header["validation_status"],
-            header.get("validation_notes"), resolver_version, parser_version,
+            scheme_id,
+            as_of,
+            revision,
+            source_file_id,
+            len(rows),
+            header.get("pct_sum_raw"),
+            header.get("weight_residual"),
+            header["unresolved_mv_pct"],
+            header["total_mv"],
+            header.get("aum_reported"),
+            header.get("mv_vs_aum_pct"),
+            header.get("reported_unit"),
+            header["validation_status"],
+            header.get("validation_notes"),
+            resolver_version,
+            parser_version,
             # V1-43. Defaulted rather than required: every caller before the
             # coverage tier existed was reading an AMC's own file, and a
             # missing tier meaning `amc_direct` keeps those callers honest
@@ -414,9 +446,42 @@ def load_holdings(
     return {"holding": len(rows), "revision": revision}
 
 
-def aum_for(
-    conn: sqlite3.Connection, scheme_id: str, as_of: date
-) -> tuple[Decimal, str] | None:
+#: How old an AUM witness may be before it stops being one.
+#:
+#: AAUM is quarterly and arrives about ten days after a quarter ends, so a
+#: witness is normally 0-100 days old and two quarters is already unusual. A
+#: year means four quarters have been published and none was loaded, at which
+#: point the figure is not describing the fund V2 is checking. Refusing is
+#: better than passing: V2 records "no AUM on record" and says so, where a
+#: stale witness silently widens or narrows a check nobody knows is degraded.
+WITNESS_MAX_AGE_DAYS = 365
+
+
+@dataclass(frozen=True)
+class AumWitness:
+    """A scheme's AUM from OUTSIDE the disclosure being checked. V1-50.
+
+    Three fields, not a bare number, because V2 needs all three and a caller
+    left to infer any of them infers wrong:
+
+    - `amount` is rupees absolute.
+    - `basis` decides the tolerance. AMFI's quarterly average sits ~10% from a
+      month-end portfolio through ordinary market movement where a point-in-time
+      balance sits within 3%, and applying the wrong one gives either a false
+      quarantine or a check that has quietly stopped checking (V1-49).
+    - `as_of` is how old it is, which `basis` alone does not say. A figure can
+      be the right KIND of number and still be two quarters out of date.
+    """
+
+    amount: Decimal
+    basis: str
+    as_of: date
+
+    def age_days(self, at: date) -> int:
+        return (at - self.as_of).days
+
+
+def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> AumWitness | None:
     """The scheme's own AUM on or before `as_of`, for §10's V2.
 
     V2 is THE units check -- §7.2's 100x error fails it by two orders of
@@ -426,26 +491,32 @@ def aum_for(
     passed `None` here for a whole slice and disabled V2 on the very path where
     the market-value unit is ASSERTED rather than read from a header.
 
-    Returns `(amount, basis)` -- the basis travels WITH the figure because it
-    decides which tolerance V2 applies. AMFI's is a quarterly average and sits
-    up to ~10% from a month-end portfolio through ordinary market movement,
-    where a point-in-time balance would sit within 3% (V1-49). Handing back a
-    bare number would leave the caller to guess, and the caller guessing wrong
-    means either a false quarantine or a check that has stopped checking.
+    **Bounded by `WITNESS_MAX_AGE_DAYS`.** The first version took the newest row
+    on or before the date with no floor at all, so a 2027 disclosure would have
+    reconciled against a June 2026 average -- nine months of market movement --
+    at a tolerance chosen for one quarter of drift, and `validation_notes` would
+    have recorded only `(quarterly_average)` with no hint of the age.
 
-    None when `scheme_aum` has not been built, which V2 records as
-    "no AUM on record" rather than treating as a pass.
+    None when `scheme_aum` has not been built or holds nothing recent enough,
+    which V2 records as "no AUM on record" rather than treating as a pass.
     """
     if not _has_table(conn, "scheme_aum"):
         return None
     row = conn.execute(
-        "SELECT aum_inr, basis FROM scheme_aum WHERE scheme_id=? AND as_of_date<=?"
-        " AND aum_inr IS NOT NULL ORDER BY as_of_date DESC LIMIT 1",
+        "SELECT aum_inr, basis, as_of_date FROM scheme_aum"
+        " WHERE scheme_id=? AND as_of_date<=? AND aum_inr IS NOT NULL"
+        " ORDER BY as_of_date DESC LIMIT 1",
         (scheme_id, as_of),
     ).fetchone()
     if not row:
         return None
-    return row[0], str(row[1])
+
+    witness_as_of = (
+        row[2] if isinstance(row[2], date) else date.fromisoformat(str(row[2]))
+    )
+    if (as_of - witness_as_of).days > WITNESS_MAX_AGE_DAYS:
+        return None
+    return AumWitness(row[0], str(row[1]), witness_as_of)
 
 
 def _has_table(conn: sqlite3.Connection, name: str) -> bool:
