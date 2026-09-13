@@ -18,9 +18,14 @@ meta:
     `python -m jobs.load_holdings --amc icici --file <member> --scheme <ISIN>`.
     Nippon is verified (V1-15) and needs a `sheet`: it publishes 108 schemes as
     108 sheets of ONE workbook, so a parse without one merges every portfolio
-    in the file. Kotak could not be fetched — its site is behind Radware bot
-    detection and no file URL is obtainable without solving it, which this
-    project will not do; a hand-downloaded file is the way in. SBI is pending.
+    in the file. Kotak is verified (V1-33) and has no entry here for the same
+    reason it has no URL: its site is behind Radware bot management and
+    selecting the portfolio dropdown serves a CAPTCHA, which this project will
+    not solve (V1-32 records the three routes that were tried). Its workbook is
+    hand-downloaded and loaded by path, and it needs a `--sheet` for the same
+    reason Nippon does — 119 schemes, one per sheet:
+      `python -m jobs.load_holdings --file <workbook> --scheme INF174KA1EZ1 --sheet KPF`
+    SBI is pending; its disclosure page is in config/amc_disclosure_index.yaml.
     Whatever their layouts violate will be recorded in DECISIONS as found.
 
 disclosures:

@@ -270,8 +270,13 @@ def _stage_row(
     after_total: bool,
 ) -> tuple[str | None, bool]:
     """Stage one row; return the section and whether the total has been passed."""
-    name = _at(cells, columns, "name")
+    name = _name_at(cells, columns)
     isin = _at(cells, columns, "isin")
+    if not name:
+        # A row with no name where the header says one should be still has a
+        # label somewhere — Kotak's section totals live in the Industry column.
+        # See `_stray_label`.
+        name = _stray_label(cells, columns)
 
     # Coerce leniently first, classify, THEN decide how much the failures
     # matter. The tail of a disclosure is prose in the same columns the table
@@ -709,6 +714,62 @@ def _unit_for(
 def _at(cells: list[str], columns: dict[str, int], field_name: str) -> str:
     index = columns.get(field_name)
     return cells[index] if index is not None and index < len(cells) else ""
+
+
+def _name_span(columns: dict[str, int]) -> tuple[int, int]:
+    """The columns the instrument name may occupy: its own, up to the next
+    mapped field.
+
+    Kotak indents by COLUMN rather than by whitespace. Its header writes
+    `Name of Instrument` in column 0, then puts `Equity & Equity related` in
+    column 0, `Listed/Awaiting listing` in column 1 and every actual holding in
+    column 2 — the nesting level IS the column. Read as a single column the
+    name comes back empty for all 51 holdings.
+
+    A span rather than a special case, because it changes nothing for the AMCs
+    already parsing: HDFC maps name to 3 with `sector` at 4, ICICI name to 1
+    with `isin` at 2, Nippon name to 2 with `sector` at 3. Each span is one
+    column wide and the behaviour is identical. Verified on all three real
+    files, not reasoned about.
+    """
+    start = columns["name"]
+    after = [i for field, i in columns.items() if field != "name" and i > start]
+    return start, (min(after) if after else start + 1)
+
+
+def _name_at(cells: list[str], columns: dict[str, int]) -> str:
+    """First non-empty cell in the name span — the innermost label present."""
+    start, stop = _name_span(columns)
+    for index in range(start, min(stop, len(cells))):
+        if cells[index].strip():
+            return cells[index]
+    return ""
+
+
+def _stray_label(cells: list[str], columns: dict[str, int]) -> str:
+    """The label of a row that put nothing in the name span.
+
+    Kotak closes each section with a row reading `Total` in the **Industry**
+    column, and its portfolio with `Grand Total` in the same place. `TOTAL_ROW`
+    is matched against the name and the ISIN (§6.4), so neither was seen: the
+    rows carry a market value and no name, `classify_row` called all three
+    securities, and the parse came to 794,038.80 against a stated 402,258.02 —
+    +97.4%, which the reconciliation guard would have refused without ever
+    saying why.
+
+    Deliberately narrow. It only runs when the name span is empty, which for
+    every AMC parsing today never happens on a row that matters, and it ignores
+    the columns already mapped to numbers so that a quantity cannot be mistaken
+    for a label.
+    """
+    start, stop = _name_span(columns)
+    skip = {columns.get(f) for f in ("isin", "quantity", "market_value", "pct")}
+    for index, text in enumerate(cells):
+        if start <= index < stop or index in skip:
+            continue
+        if text.strip():
+            return text
+    return ""
 
 
 def _as_on_date(text: str) -> date | None:

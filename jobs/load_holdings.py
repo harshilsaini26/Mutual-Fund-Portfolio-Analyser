@@ -108,6 +108,7 @@ def run(
     amc_id: str | None,
     file_path: Path | None = None,
     scheme_id: str | None = None,
+    sheet: str | None = None,
 ) -> list[dict[str, object]]:
     # S5 carries the browser agent HDFC's CDN requires, with the contact in
     # `From:` — DECISIONS V1-05.
@@ -131,7 +132,7 @@ def run(
     try:
         index = load_issuer_index(conn)
         prefixes = load_isin_prefix_index(conn)
-        for entry in _entries(amc_id, file_path, scheme_id):
+        for entry in _entries(amc_id, file_path, scheme_id, sheet):
             summaries.append(_one(conn, entry, cfg, index, prefixes))
 
         status = "partial" if any(
@@ -158,7 +159,10 @@ def run(
 
 
 def _entries(
-    amc_id: str | None, file_path: Path | None, scheme_id: str | None
+    amc_id: str | None,
+    file_path: Path | None,
+    scheme_id: str | None,
+    sheet: str | None = None,
 ) -> list[dict[str, Any]]:
     if file_path:
         # A disclosure names its scheme in prose, and prose is not a key — the
@@ -168,10 +172,15 @@ def _entries(
         # plans of one fund is a coin toss.
         if not scheme_id:
             raise RuntimeError("--file needs --scheme: the ISIN this file describes")
+        # `sheet` matters as much as `scheme_id` for a workbook that holds
+        # one scheme per sheet. Kotak publishes 119 of them and Nippon 108,
+        # so a load without it merges every portfolio in the file into one
+        # — which does not fail loudly, it fails as a plausible number.
         return [{
             "amc_id": amc_id or "unknown",
             "path": str(file_path),
             "scheme_id": scheme_id,
+            "sheet": sheet,
         }]
     manifest = load_manifest()
     rows = [
@@ -389,8 +398,14 @@ def main() -> None:
     parser.add_argument(
         "--scheme", help="scheme_id (ISIN) the --file describes; required with --file"
     )
+    parser.add_argument(
+        "--sheet",
+        help="sheet name, for a workbook holding one scheme per sheet "
+             "(Kotak ships 119, Nippon 108). Without it the whole workbook "
+             "is read as one portfolio",
+    )
     args = parser.parse_args()
-    for summary in run(args.amc, args.file, args.scheme):
+    for summary in run(args.amc, args.file, args.scheme, args.sheet):
         print(" | ".join(f"{k}={v}" for k, v in summary.items()))
 
 

@@ -16,12 +16,14 @@ from __future__ import annotations
 from src.m0_data.parse.base import HoldingsParser, ParseFailed, RawFile
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.parse.holdings.icici import IciciHoldingsParser
+from src.m0_data.parse.holdings.kotak import KotakHoldingsParser
 from src.m0_data.parse.holdings.nippon import NipponHoldingsParser
 
 #: Every registered parser. Adding an AMC is one entry.
 REGISTRY: tuple[HoldingsParser, ...] = (
     HdfcHoldingsParser(),
     IciciHoldingsParser(),
+    KotakHoldingsParser(),
     NipponHoldingsParser(),
 )
 

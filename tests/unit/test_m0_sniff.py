@@ -43,6 +43,11 @@ PUBLISHED = {
               "ICICI Prudential Multi-Asset Fund.xlsx"),
     "nippon": ("nippon_holdings_sample.xlsx",
                "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls"),
+    # Kotak's published name says what the document is, not who published it,
+    # which is the case §6.1 said would one day earn a content check. It has
+    # not yet — the cross-product below is what proves that.
+    "kotak": ("kotak_pioneer_2026-07-31.xlsx",
+              "ConsolidatedSEBIPortfolioJuly2026.xlsx"),
 }
 
 PARSERS = {p.amc_id: p for p in REGISTRY}

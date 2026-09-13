@@ -48,7 +48,12 @@ from src.m0_data.normalise.units import (
     to_inr,
     unit_from_header,
 )
-from src.m0_data.parse.base import HoldingsParseResult, ParseFailed, RawFile
+from src.m0_data.parse.base import (
+    HoldingsParseResult,
+    ParseFailed,
+    RawFile,
+    StagedHolding,
+)
 from src.m0_data.parse.holdings.base import (
     TOTAL_TOLERANCE_PCT,
     classify_row,
@@ -56,6 +61,7 @@ from src.m0_data.parse.holdings.base import (
 )
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.parse.holdings.icici import IciciHoldingsParser
+from src.m0_data.parse.holdings.kotak import KotakHoldingsParser
 from src.m0_data.parse.holdings.nippon import NipponHoldingsParser
 from src.m0_data.parse.holdings.registry import route
 from src.m0_data.resolve.synthetic import match_synthetic
@@ -520,6 +526,129 @@ def icici_real() -> HoldingsParseResult:
                 REAL_ICICI.read_bytes()),
         "MULTI",
     )
+
+
+KOTAK = FIXTURES / "kotak_pioneer_2026-07-31.xlsx"
+
+
+@pytest.fixture(scope="module")
+def kotak() -> HoldingsParseResult:
+    """Kotak Pioneer's sheet, lifted unchanged out of the real 119-sheet
+    consolidated workbook (source sha256 `e519d3c8ce2672c3`).
+
+    The other 118 schemes' sheets were dropped and nothing else was: 3.77 MB of
+    workbook for one 158 KB sheet is not a fixture, it is an archive, and the
+    full file lives under its hash in `data/raw/` where archives belong.
+
+    This is NOT the edit V1-28 warned about. That was about trimming ROWS,
+    which flattened ICICI's three-level nesting into two and hid the defect the
+    real file exposed. Dropping a sibling scheme's sheet does not touch this
+    one: the column indentation, the `Total` in the Industry column, every
+    figure and the fine-grained AMFI taxonomy are all exactly as published.
+    Verified by parsing both and comparing.
+    """
+    return KotakHoldingsParser().parse(
+        RawFile("file-kotak", "S5:kotak",
+                "ConsolidatedSEBIPortfolioJuly2026.xlsx", KOTAK.read_bytes()),
+        "KPF",
+    )
+
+
+def test_kotak_reconciles_to_its_own_stated_total(
+    kotak: HoldingsParseResult,
+) -> None:
+    """323,957.09 + 67,823.69 + 10,966.88 - 489.64 = 402,258.02, which is the
+    Grand Total the sheet prints."""
+    error = reconciliation_error(kotak)
+    assert error is not None
+    assert abs(error) < Decimal("0.000001"), f"reconciles at {error}"
+    assert kotak.stated_total == Decimal("402258.02")
+    assert kotak.as_of_date == date(2026, 7, 31)
+
+
+def test_kotak_indents_by_column_and_the_name_is_still_read(
+    kotak: HoldingsParseResult,
+) -> None:
+    """The sheet's nesting level IS the column index.
+
+    `Name of Instrument` heads column 0, but `Equity & Equity related` sits in
+    column 0, `Listed/Awaiting listing` in column 1 and all 51 holdings in
+    column 2. Read as a single column the name is empty for every holding, and
+    a parser that accepted that would stage 51 nameless securities.
+    """
+    eternal = next(
+        r for r in kotak.securities if r.isin_raw == "INE758T01015"
+    )
+    assert eternal.instrument_raw_name.strip().upper() == "ETERNAL LIMITED"
+    assert eternal.market_value_raw == Decimal("22451.84")
+    assert all(r.instrument_raw_name.strip() for r in kotak.securities)
+
+
+def test_kotak_labels_its_totals_in_the_industry_column(
+    kotak: HoldingsParseResult,
+) -> None:
+    """Each block closes with `Total`, and the portfolio with `Grand Total`,
+    in the Industry column — not in the name column and not in the ISIN
+    column, which are the two §6.4 matches `TOTAL_ROW` is applied to.
+
+    Counted as holdings the three of them bring the parse to 794,038.80
+    against a stated 402,258.02: +97.4%. The reconciliation guard would have
+    refused the load without ever saying why.
+    """
+    totals = [r for r in kotak.rows if r.row_kind == "total"]
+    assert len(totals) == 3
+    values = {r.market_value_raw for r in totals}
+    assert Decimal("323957.09") in values      # equity block
+    assert Decimal("67823.69") in values       # overseas fund units
+    assert Decimal("402258.02") in values      # grand total
+
+
+def test_kotak_agrees_with_an_independent_witness(
+    kotak: HoldingsParseResult,
+) -> None:
+    """A third party's arithmetic on the same portfolio, which no other
+    fixture in this module has.
+
+    Taken from a public fund-research page for Kotak Pioneer as of Jul 2026:
+    51 holdings, top 5 = 18.85%, top 10 = 31.72%, largest Eternal at 5.58%.
+    `company` here means an Indian corporate ISIN — the witness counts neither
+    the two overseas fund units, nor Triparty Repo, nor net current assets.
+
+    Its `14 sectors` is deliberately NOT asserted: Kotak publishes the
+    fine-grained AMFI taxonomy (25 industries here) and the witness rolls them
+    into coarse buckets, putting Retailing and Transport Services both under
+    `Services`. Two taxonomies, not a disagreement.
+    """
+    total = kotak.stated_total
+    assert total is not None
+    companies = sorted(
+        (r for r in kotak.securities if (r.isin_raw or "").startswith("INE")),
+        key=lambda r: -(r.market_value_raw or Decimal(0)),
+    )
+    def pct(rows: list[StagedHolding]) -> Decimal:
+        return sum(
+            (r.market_value_raw or Decimal(0) for r in rows), Decimal(0)
+        ) / total * 100
+
+    assert len(companies) == 51
+    assert round(pct(companies[:5]), 2) == Decimal("18.85")
+    assert round(pct(companies[:10]), 2) == Decimal("31.72")
+    assert companies[0].instrument_raw_name.strip().upper() == "ETERNAL LIMITED"
+    assert round(pct(companies[:1]), 2) == Decimal("5.58")
+
+
+def test_kpf_alone_is_55_rows(kotak: HoldingsParseResult) -> None:
+    """The count that says `--sheet` picked one scheme and not the workbook.
+
+    **What this fixture cannot prove**, and the reason is worth stating rather
+    than leaving to a reader: the published workbook holds 119 sheets, and
+    parsed whole it does not fail — it returns one portfolio containing every
+    Kotak scheme, a plausible answer to a question nobody asked. This extract
+    has one sheet, so it cannot demonstrate that. The 119 figure is recorded in
+    V1-33 and was observed on the real file; the guard that matters is that
+    `--sheet` exists and is documented as required for this AMC.
+    """
+    assert len(kotak.securities) == 55
 
 
 def test_the_real_icici_file_reconciles_to_its_own_stated_total(
