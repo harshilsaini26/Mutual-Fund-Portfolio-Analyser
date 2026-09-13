@@ -270,3 +270,85 @@ class TestTheDisclosurePageLookup:
         _disclosure_page("hdfc")
         _disclosure_page("ppfas")
         assert _index.cache_info().misses == 1
+
+
+class TestCheckNeverMakesTheReportWorse:
+    """V1-48. `--check` adds what the AMC has published; it must not subtract
+    what the warehouse already knew."""
+
+    def test_a_listing_failure_does_not_erase_the_local_count(self) -> None:
+        """`verdict()` returned `unknown` whenever `error` was set, throwing
+        away scheme counts computed from a local query with no network
+        involved — so one timed-out listing made `--check` strictly less
+        informative than no `--check`."""
+        offline = Standing(
+            "kotak_mahindra", 96, date(2026, 7, 31), 21, "amc_direct", "kotak"
+        )
+        failed = Standing(
+            "kotak_mahindra",
+            96,
+            date(2026, 7, 31),
+            21,
+            "amc_direct",
+            "kotak",
+            None,
+            "ConnectError: timed out",
+        )
+
+        assert failed.verdict(TODAY) == offline.verdict(TODAY) == "75/96 behind, 1 month"
+        assert _published_label(failed, True) == "unreachable", (
+            "the failure belongs in the published column, not the status one"
+        )
+
+
+class TestAHouseNeverGetsAnotherHousesPage:
+    """V1-48. Two matching rules have been wrong here in turn: a bare substring
+    scan, then `wanted in name or name in wanted`, which fixed one direction and
+    broke the other."""
+
+    def test_bank_of_baroda_does_not_resolve_to_bank_of_india(self) -> None:
+        """The concrete failure. `india` was treated as noise, so `Bank of
+        India Mutual Fund` normalised to the fragment `bank of` — a genuine
+        word-boundary prefix of `bank of baroda`. No tightening of the matcher
+        could fix that; the noise list was the defect."""
+        _index.cache_clear()
+        boi = _disclosure_page("bank_of_india")
+        assert boi and "boimf.in" in boi
+
+        baroda = _disclosure_page("bank_of_baroda")
+        assert baroda is None or "boimf.in" not in baroda, (
+            f"bank_of_baroda resolved to {baroda}"
+        )
+
+    def test_india_still_identifies_the_houses_that_need_it(self) -> None:
+        """Removing it from the noise list must not break the house it was
+        added for."""
+        _index.cache_clear()
+        page = _disclosure_page("nippon_india")
+        assert page and "nipponindiaim.com" in page
+
+    def test_no_index_entry_is_a_word_prefix_of_another(self) -> None:
+        """The property that makes prefix matching safe at all. If this ever
+        fails, two houses can capture each other and the fallback has to go."""
+        _index.cache_clear()
+        names = [n for n, _ in _index()]
+        clashes = [
+            (a, b) for a in names for b in names if a != b and b.startswith(a + " ")
+        ]
+        assert not clashes, f"prefix collisions between fund houses: {clashes}"
+
+    @pytest.mark.parametrize(
+        ("amc_id", "host"),
+        [
+            ("kotak_mahindra", "kotakmf.com"),
+            ("hdfc", "hdfcfund.com"),
+            ("ppfas", "ppfas.com"),
+            ("icici_prudential", "icicipruamc.com"),
+            ("quant", "quantmutual.com"),
+            ("quantum", "quantumamc.com"),
+        ],
+    )
+    def test_each_house_still_finds_its_own(self, amc_id: str, host: str) -> None:
+        _index.cache_clear()
+        page = _disclosure_page(amc_id)
+        assert page and host in page, f"{amc_id} -> {page}"

@@ -40,11 +40,10 @@ def _rows(*specs: tuple[str | None, str, str, str]) -> list[HoldingRow]:
     ]
 
 
-def _check(rows: list[HoldingRow], code: str, aum: Decimal | None = None,
-           as_of: date = AS_OF) -> object:
-    return next(
-        c for c in validate_disclosure(rows, as_of, TODAY, aum) if c.code == code
-    )
+def _check(
+    rows: list[HoldingRow], code: str, aum: Decimal | None = None, as_of: date = AS_OF
+) -> object:
+    return next(c for c in validate_disclosure(rows, as_of, TODAY, aum) if c.code == code)
 
 
 # --- §7.3 weight normalisation -----------------------------------------------
@@ -194,15 +193,24 @@ def test_a_fortnight_end_is_valid_for_debt() -> None:
 
 def test_promotion_distinguishes_quarantine_from_warn() -> None:
     """§10.2. A warn still loads; a quarantine does not."""
-    assert promote_or_quarantine(
-        validate_disclosure(_rows((None, "equity", "100", "100")), AS_OF, TODAY)
-    ) == "ok"
-    assert promote_or_quarantine(
-        validate_disclosure(_rows(("BAD", "equity", "100", "100")), AS_OF, TODAY)
-    ) == "warn"
-    assert promote_or_quarantine(
-        validate_disclosure(_rows((None, "equity", "100", "10")), AS_OF, TODAY)
-    ) == "quarantined"
+    assert (
+        promote_or_quarantine(
+            validate_disclosure(_rows((None, "equity", "100", "100")), AS_OF, TODAY)
+        )
+        == "ok"
+    )
+    assert (
+        promote_or_quarantine(
+            validate_disclosure(_rows(("BAD", "equity", "100", "100")), AS_OF, TODAY)
+        )
+        == "warn"
+    )
+    assert (
+        promote_or_quarantine(
+            validate_disclosure(_rows((None, "equity", "100", "10")), AS_OF, TODAY)
+        )
+        == "quarantined"
+    )
 
 
 def test_every_result_is_persisted_including_the_passes() -> None:
@@ -254,15 +262,23 @@ def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
 
 
 def _payload() -> tuple[list[dict[str, object]], dict[str, object]]:
-    rows: list[dict[str, object]] = [{
-        "isin": "INE002A01018", "issuer_id": "AMFI:X",
-        "instrument_raw_name": "X Ltd", "quantity": Decimal("10"),
-        "market_value": Decimal("100"), "pct_to_nav": Decimal("100"),
-        "pct_normalised": Decimal("100"), "instrument_class": "equity",
-        "resolution_method": "isin", "resolution_conf": Decimal("1.0"),
-    }]
+    rows: list[dict[str, object]] = [
+        {
+            "isin": "INE002A01018",
+            "issuer_id": "AMFI:X",
+            "instrument_raw_name": "X Ltd",
+            "quantity": Decimal("10"),
+            "market_value": Decimal("100"),
+            "pct_to_nav": Decimal("100"),
+            "pct_normalised": Decimal("100"),
+            "instrument_class": "equity",
+            "resolution_method": "isin",
+            "resolution_conf": Decimal("1.0"),
+        }
+    ]
     header: dict[str, object] = {
-        "unresolved_mv_pct": Decimal("0"), "total_mv": Decimal("100"),
+        "unresolved_mv_pct": Decimal("0"),
+        "total_mv": Decimal("100"),
         "validation_status": "ok",
     }
     return rows, header
@@ -306,9 +322,9 @@ def test_a_restated_disclosure_becomes_a_new_revision(
     assert conn.execute(
         "SELECT revision, is_current FROM holding_disclosure ORDER BY revision"
     ).fetchall() == [(1, 0), (2, 1)]
-    assert conn.execute(
-        "SELECT COUNT(*) FROM holding WHERE is_current=1"
-    ).fetchone()[0] == 1
+    assert (
+        conn.execute("SELECT COUNT(*) FROM holding WHERE is_current=1").fetchone()[0] == 1
+    )
     assert conn.execute("SELECT COUNT(*) FROM holding").fetchone()[0] == 2
 
 
@@ -366,9 +382,7 @@ def test_a_scheme_with_no_family_behaves_exactly_as_before(
     warehouse's pre-V1-37 behaviour rather than to a guess, so that skipping
     the derivation loses coverage and never invents it.
     """
-    conn.execute(
-        "UPDATE scheme SET scheme_family=NULL WHERE scheme_id='INF179K01608'"
-    )
+    conn.execute("UPDATE scheme SET scheme_family=NULL WHERE scheme_id='INF179K01608'")
     conn.commit()
     assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01608"
 
@@ -407,3 +421,30 @@ def test_an_improved_resolver_produces_a_new_revision_not_a_skip(
         "SELECT revision, is_current, resolver_version FROM holding_disclosure"
         " ORDER BY revision"
     ).fetchall() == [(1, 0, "1"), (2, 1, "2")]
+
+
+def test_a_check_that_could_not_run_is_not_a_pass() -> None:
+    """V1-48. V2 is the units check, and with no AUM on record it records
+    `passed = None` -- did not run -- rather than `True`.
+
+    It used to say `True`, so `validation_notes` for every disclosure in the
+    warehouse claimed the 100x guard had succeeded. `scheme_aum` is not built,
+    so it has never run on any of them.
+    """
+    from datetime import date
+    from decimal import Decimal
+
+    from src.m0_data.validate.checks import (
+        HoldingRow,
+        promote_or_quarantine,
+        validate_disclosure,
+    )
+
+    rows = [HoldingRow("INE001A01036", "equity", Decimal("100"), Decimal("100"), "I1")]
+    checks = validate_disclosure(rows, date(2026, 7, 31), date(2026, 8, 5), None)
+
+    v2 = next(c for c in checks if c.code == "V2")
+    assert v2.passed is None
+    # An unrun check neither promotes nor fails the disclosure. `not None` is
+    # True, so a naive `not r.passed` here would have failed every one of them.
+    assert promote_or_quarantine(checks) == "ok"

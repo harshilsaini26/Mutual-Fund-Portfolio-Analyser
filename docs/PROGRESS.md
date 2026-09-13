@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · 1,064 tests passing
+**Last updated:** 2026-09-13 · 1,075 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -172,7 +172,16 @@ Ordered by what they cost.
 4. **A fund inside a fund is not looked through.** ICICI's Gold ETF and PPFAS's
    overseas holdings resolve to `__MFUNIT__` — correctly disclosed, not
    analysed. That is §10's nested look-through, V2 work.
-5. **`data_only=True` returns None for a workbook Excel never cached.** Would
+5. **§10's V2 has never run.** `scheme_aum` is not built, so the units check
+   — the 100x guard — records "not evaluated" on all 205 disclosures rather
+   than reconciling anything. It is a fetch-and-load slice, not a patch: AMFI
+   publishes monthly AAUM per scheme at a templatable URL (surveyed in V1-44).
+6. **Four latent defects in the fetch and status layers.** `extra_headers` can
+   override the User-Agent the robots check used; the retry loop replays POSTs;
+   `jobs/status.py:standings` picks a parser from an unordered set when a house
+   has two; `_index`'s cache outlives a config change. None is reachable today
+   (V1-48).
+7. **`data_only=True` returns None for a workbook Excel never cached.** Would
    reproduce V1-36's silent row-drop. Not observed; worth a loud check when a
    file of that shape appears.
 

@@ -49,6 +49,15 @@ DISCLOSURE_GRACE_DAYS = 10
 INDEX_YAML = REPO_ROOT / "config" / "amc_disclosure_index.yaml"
 
 #: Words every fund house shares, so they identify none of them.
+#:
+#: **`india` is deliberately absent**, and the omission is the fix rather than
+#: an oversight. It reads like noise -- `Nippon India`, `ICICI Prudential India`
+#: -- but it is load-bearing in `Bank of India`: stripping it left that house
+#: as the fragment `bank of`, which is a genuine word-boundary prefix of
+#: `bank of baroda`, so `_disclosure_page("bank_of_baroda")` returned Bank of
+#: India's page and no amount of tightening the MATCHER could have stopped it.
+#: A word that identifies one house cannot be stripped because it decorates
+#: another. `nippon_india` still matches `Nippon India Mutual Fund` exactly.
 _HOUSE_NOISE = frozenset(
     {
         "mutual",
@@ -60,7 +69,6 @@ _HOUSE_NOISE = frozenset(
         "amc",
         "limited",
         "ltd",
-        "india",
     }
 )
 
@@ -99,8 +107,17 @@ class Standing:
         return (want.year - self.have.year) * 12 + (want.month - self.have.month)
 
     def verdict(self, today: date) -> str:
-        if self.error:
-            return "unknown"
+        """How far behind this house is, from the warehouse alone.
+
+        **`error` is deliberately not consulted.** It came to mean "unknown"
+        in the first version, which threw away a count that had already been
+        computed from a local query with no network involved: a house reading
+        `75/96 behind, 1 month` without `--check` read `unknown` with it, the
+        moment one listing timed out. A listing failure is news about what the
+        AMC has PUBLISHED, not about what we HOLD, and `--check` making the
+        report less informative than no `--check` is the opposite of the
+        flag's purpose. `_published_label` carries `unreachable` on its own.
+        """
         behind = self.schemes - self.current
         if behind == 0:
             return "current"
@@ -289,21 +306,33 @@ def _disclosure_page(amc_id: str) -> str | None:
     AMFI prints -- two spellings of one thing, and neither is a key the other
     was built from.
 
-    **The longest match wins, not the first.** A bare substring scan over an
-    unordered list hands `uti` to whichever entry happens to contain those
-    three letters first, and a reader who follows that link downloads another
-    fund house's portfolio. An exact normalised match is taken outright; the
-    fallback prefers the longest containment so `kotak mahindra` cannot lose to
-    a shorter accidental hit.
+    **Exact, or a whole-word prefix, and nothing looser.** Two weaker rules
+    have now been wrong here in turn. A bare substring scan handed `uti` to
+    whichever entry happened to contain those three letters first. Replacing it
+    with `wanted in name or name in wanted` fixed that direction and broke the
+    other: `india` is noise, so `Bank of India Mutual Fund` normalises to the
+    two-word fragment `bank of`, which is contained in `bank of baroda` --
+    and `_disclosure_page("bank_of_baroda")` returned **Bank of India's page**,
+    the same failure mirrored. A reader who follows that link downloads another
+    fund house's disclosures.
+
+    So containment is gone. A match is either the whole normalised name or a
+    prefix of it ending on a word boundary, which is what distinguishes
+    `kotak mahindra` matching `Kotak Mahindra Mutual Fund` from `bank of`
+    matching `Bank of Baroda`. Ties go to the longest, and no match returns
+    None -- a missing link is a smaller harm than a confident wrong one.
     """
     wanted = _norm(amc_id.replace("_", " "))
     if not wanted:
         return None
-    entries = _index()
-    for name, page in entries:
+
+    hits: list[tuple[str, str]] = []
+    for name, page in _index():
         if name == wanted:
             return page
-    hits = [(name, page) for name, page in entries if wanted in name or name in wanted]
+        longer, shorter = (name, wanted) if len(name) > len(wanted) else (wanted, name)
+        if longer.startswith(shorter + " "):
+            hits.append((name, page))
     if not hits:
         return None
     return max(hits, key=lambda pair: len(pair[0]))[1]

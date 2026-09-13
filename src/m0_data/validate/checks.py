@@ -35,7 +35,10 @@ class CheckResult:
     """§10.2."""
 
     code: str
-    passed: bool
+    #: `None` means the check COULD NOT RUN, which is neither a pass nor a
+    #: failure. `as_json` already used that spelling for `not_evaluated()`;
+    #: V2 needed it too and was recording `True` instead -- see below.
+    passed: bool | None
     severity: str
     message: str
     observed: str | None = None
@@ -90,8 +93,16 @@ def validate_disclosure(
             )
         )
     else:
+        # NOT a pass. V2 is the units check, and with no AUM on record there is
+        # nothing to reconcile against, so it did not run -- but it recorded
+        # `passed: True`, and `validation_notes` for every disclosure in the
+        # warehouse therefore says the units check succeeded. It has never run:
+        # `scheme_aum` is not built, so all 205 current disclosures carry that
+        # claim. `None` is the spelling `as_json` already uses for a check that
+        # was not evaluated, and `promote_or_quarantine` now reads `is False`
+        # so an unrun check neither promotes nor fails a disclosure.
         results.append(
-            CheckResult("V2", True, INFO, "no AUM on record to reconcile against")
+            CheckResult("V2", None, INFO, "no AUM on record to reconcile against")
         )
 
     # V3 — unresolved share. Warns rather than quarantines, and BLOCKS the
@@ -175,10 +186,15 @@ def not_evaluated() -> dict[str, str]:
 
 
 def promote_or_quarantine(results: list[CheckResult]) -> str:
-    """§10.2. `ok` only when nothing failed at all."""
-    if any(r.severity == QUARANTINE and not r.passed for r in results):
+    """§10.2. `ok` only when nothing failed at all.
+
+    `is False`, not `not r.passed`: a check that could not run carries
+    `passed = None`, and `not None` is True -- which would have turned every
+    unrunnable check into a failure the moment one existed.
+    """
+    if any(r.severity == QUARANTINE and r.passed is False for r in results):
         return "quarantined"
-    return WARN if any(not r.passed for r in results) else "ok"
+    return WARN if any(r.passed is False for r in results) else "ok"
 
 
 def as_json(results: list[CheckResult], unpriced: list[str] | None = None) -> str:

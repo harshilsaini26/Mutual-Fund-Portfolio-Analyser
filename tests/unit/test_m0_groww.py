@@ -529,8 +529,11 @@ class TestTheLoadPathGivesV2AWitness:
         assert not v2.passed, "a 100x discrepancy must fail V2"
 
         without = validate_disclosure(rows, date(2026, 8, 31), date(2026, 9, 13), None)
-        assert next(c for c in without if c.code == "V2").passed, (
-            "with no AUM V2 cannot fail, which is why passing None disabled it"
+        v2_unrun = next(c for c in without if c.code == "V2")
+        assert v2_unrun.passed is None, (
+            "with no AUM V2 cannot run, and `None` is how that is recorded --"
+            " it used to say `True`, so every disclosure in the warehouse"
+            " claimed a units check had succeeded when none had"
         )
 
     def test_unpriced_rows_are_recorded(self) -> None:
