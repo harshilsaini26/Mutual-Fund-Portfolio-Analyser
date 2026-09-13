@@ -17,6 +17,8 @@ browser while fetching one does not, and that fragility is kept out of here.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 import json
 import uuid
 from datetime import UTC, date, datetime
@@ -24,6 +26,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import openpyxl
 import yaml
 from src.common.decimals import connect
 from src.m0_data.config import REPO_ROOT, raw_root, source, warehouse_path
@@ -36,12 +39,18 @@ from src.m0_data.fetch.base import (
 from src.m0_data.load import load_holdings
 from src.m0_data.normalise.units import to_inr
 from src.m0_data.normalise.weights import normalise_weights
-from src.m0_data.parse.base import HoldingsParser, RawFile
+from src.m0_data.parse.base import HoldingsParser, ParseFailed, RawFile
 from src.m0_data.parse.holdings.registry import by_parser_id, route
 from src.m0_data.resolve.cascade import (
     load_isin_prefix_index,
     load_issuer_index,
     resolve,
+)
+from src.m0_data.resolve.scheme_match import (
+    canonical_scheme,
+    identify_scheme,
+    live_families,
+    refuse_contested,
 )
 from src.m0_data.schema.apply import apply_migrations
 from src.m0_data.validate.checks import (
@@ -110,6 +119,7 @@ def run(
     scheme_id: str | None = None,
     sheet: str | None = None,
     parser_id: str | None = None,
+    all_sheets: bool = False,
 ) -> list[dict[str, object]]:
     # S5 carries the browser agent HDFC's CDN requires, with the contact in
     # `From:` — DECISIONS V1-05.
@@ -133,7 +143,18 @@ def run(
     try:
         index = load_issuer_index(conn)
         prefixes = load_isin_prefix_index(conn)
-        for entry in _entries(amc_id, file_path, scheme_id, sheet, parser_id):
+        if all_sheets:
+            if not (file_path and amc_id):
+                raise RuntimeError("--all-sheets needs --file and --amc")
+            found, refused = discover_sheets(conn, file_path, amc_id, parser_id)
+            for name, reason, detail in refused:
+                summaries.append({
+                    "sheet": name, "loaded": "no", "why": reason, "detail": detail,
+                })
+            entries_to_load = found
+        else:
+            entries_to_load = _entries(amc_id, file_path, scheme_id, sheet, parser_id)
+        for entry in entries_to_load:
             summaries.append(_one(conn, entry, cfg, index, prefixes))
 
         status = "partial" if any(
@@ -193,6 +214,80 @@ def _entries(
     if not rows:
         raise RuntimeError(f"no manifest entries for amc {amc_id!r}")
     return rows
+
+
+def discover_sheets(
+    conn: Any, file_path: Path, amc_id: str, parser_id: str | None = None
+) -> tuple[list[dict[str, Any]], list[tuple[str, str, str]]]:
+    """One entry per sheet that names a scheme we can be sure of.
+
+    Returns `(entries, refusals)`. A refusal is `(sheet, reason, detail)` and is
+    an ordinary outcome, not an error: on the two real multi-sheet workbooks
+    roughly one sheet in six refuses, mostly debt and index schemes whose
+    header names them by an internal code alone.
+
+    **Every sheet is parsed before it is identified**, which is what keeps a
+    contents page out of the results: Nippon's `Index` sheet lists every fund
+    in the workbook, and a matcher run on raw cells would have matched it to
+    whichever it listed first. It is not a portfolio, so `parse_holdings`
+    raises on it and it never reaches the matcher.
+    """
+    content = file_path.read_bytes()
+    file_id = hashlib.sha256(content).hexdigest()
+    raw = RawFile(file_id, f"{SOURCE_PREFIX}:{amc_id}", file_path.name, content)
+    # Same three rungs as the loader itself (V1-35): an explicit choice, then
+    # the parser that read this file before, then the sniff. It matters here
+    # because the obvious thing to point `--all-sheets` at is a workbook
+    # already in the archive, whose filename is its sha256.
+    parser = _parser_for(conn, file_id, raw, parser_id)
+
+    workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
+    sheet_names = list(workbook.sheetnames)
+    workbook.close()
+
+    parsed: dict[str, Any] = {}
+    refusals: list[tuple[str, str, str]] = []
+    for name in sheet_names:
+        try:
+            result = parser.parse(raw, name)
+        except ParseFailed as exc:
+            refusals.append((name, "not a portfolio", str(exc)[:70]))
+            continue
+        if result.as_of_date is None:
+            refusals.append((name, "no as-on date", ""))
+            continue
+        parsed[name] = result
+
+    matches = {}
+    families_by_date: dict[date, dict[str, list[str]]] = {}
+    for name, result in parsed.items():
+        as_of = result.as_of_date
+        if as_of not in families_by_date:
+            families_by_date[as_of] = live_families(conn, amc_id, as_of)
+        matches[name] = identify_scheme(
+            result.header_candidates, families_by_date[as_of]
+        )
+    matches = refuse_contested(matches)
+
+    entries: list[dict[str, Any]] = []
+    for name, match in matches.items():
+        if not match.family:
+            refusals.append((name, match.method, ", ".join(match.rivals)[:70]))
+            continue
+        scheme_id = canonical_scheme(conn, match.family, amc_id)
+        if scheme_id is None:
+            refusals.append((name, "no scheme for family", match.family))
+            continue
+        entries.append({
+            "amc_id": amc_id,
+            "path": str(file_path),
+            "scheme_id": scheme_id,
+            "sheet": name,
+            "parser": parser.parser_id,
+            "matched_by": match.method,
+            "family": match.family,
+        })
+    return entries, refusals
 
 
 def _one(
@@ -438,6 +533,13 @@ def main() -> None:
              "is read as one portfolio",
     )
     parser.add_argument(
+        "--all-sheets",
+        action="store_true",
+        help="load every scheme in a multi-sheet workbook, identifying each "
+             "sheet against the AMFI master. Needs --amc; --scheme is then "
+             "derived per sheet rather than given",
+    )
+    parser.add_argument(
         "--parser",
         help="force a parser_id, overriding both the one raw_file recorded "
              "for this file and the sniff. The way to re-read a file the "
@@ -445,7 +547,8 @@ def main() -> None:
     )
     args = parser.parse_args()
     for summary in run(
-        args.amc, args.file, args.scheme, args.sheet, args.parser
+        args.amc, args.file, args.scheme, args.sheet, args.parser,
+        args.all_sheets,
     ):
         print(" | ".join(f"{k}={v}" for k, v in summary.items()))
 

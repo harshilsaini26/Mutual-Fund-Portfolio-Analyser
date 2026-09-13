@@ -87,6 +87,17 @@ class HoldingsParseResult:
     rows: list[StagedHolding] = field(default_factory=list)
     as_of_date: date | None = None
     scheme_raw_name: str | None = None
+    #: Every non-empty string above the table, one per cell. `scheme_raw_name`
+    #: is the first of them and is only right when the AMC happens to lead with
+    #: the scheme: HDFC leads with the fund plus a SEBI description, Nippon with
+    #: an internal code (`RLMF001`), ICICI with the AMC's own name. The scheme
+    #: is on all four sheets, just not always first.
+    #:
+    #: Kept as separate cells rather than joined, because matching a family
+    #: name against the whole blob lets the column titles drown it — ICICI's
+    #: sheet fuzzy-matched `icici prudential psu equity fund` at 93 that way.
+    #: See `resolve/scheme_match.py`.
+    header_candidates: list[str] = field(default_factory=list)
     #: The NAV per unit the disclosure states for itself, by option label. An
     #: independent witness to whether we mapped the file to the right scheme.
     stated_navs: dict[str, Decimal] = field(default_factory=dict)

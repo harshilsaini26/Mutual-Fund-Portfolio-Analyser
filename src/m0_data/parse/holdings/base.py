@@ -139,6 +139,12 @@ PCT_PERCENT_MAX = Decimal(200)
 #: basis point: wide enough for the float noise a spreadsheet cell carries
 #: (`6180420.349999999` for a figure printed as `6180420.35`), far too tight
 #: for a real holding to land on by coincidence.
+#: How far down a sheet the scheme's own name might be. Four AMCs put it on
+#: rows 1-3 and the column titles arrive by row 5; six is slack, and a wrong
+#: extra string costs nothing because identification requires a match, not an
+#: absence of noise.
+HEADER_SCAN_ROWS = 6
+
 #: The shared reader's own version, distinct from any AMC's `HoldingsFormat`.
 #:
 #: Every rule that has ever mattered lives here rather than in an AMC module —
@@ -267,6 +273,8 @@ def _read_sheet(
             found = _as_on_date(text)
             if found:
                 result.as_of_date = found
+        if index <= HEADER_SCAN_ROWS:
+            result.header_candidates.extend(c for c in cells if c)
         if result.scheme_raw_name is None and index <= 3 and cells:
             result.scheme_raw_name = next((c for c in cells if c), None)
 
