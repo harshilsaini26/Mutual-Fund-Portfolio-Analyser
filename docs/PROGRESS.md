@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-13 · **HEAD:** `b9b77be` · 66 ADRs · 945 tests passing
+**Last updated:** 2026-09-13 · 951 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -30,14 +30,17 @@ IDCW variant — holds the identical portfolio.
 
 | | rows | unresolved |
 |---|---|---|
-| HDFC Flexi Cap | 83 | 0.35% |
-| Kotak Pioneer | 55 | 3.28% |
-| ICICI Multi Asset | 290 | 4.20% |
+| HDFC Flexi Cap | 83 | **0.00%** |
+| Kotak Pioneer | 55 | **0.00%** |
+| ICICI Multi Asset | 290 | 1.79% |
 
-Disclosure quality across all 183: **90 `ok`, 93 `warn`, 0 quarantined.** Every
-`warn` is V3 (unresolved above 2%) or V8 (a negative value on something not
-classified as a derivative). No parse is being stored that disagrees with the
-file it came from.
+Disclosure quality across all 183: **107 `ok`, 76 `warn`, 0 quarantined.** 51 of
+the warnings are V8 (a negative value on something not classified as a
+derivative — the covered-call defect below) and 26 are V3 (unresolved above
+2%). No parse is being stored that disagrees with the file it came from.
+
+Unresolved across the whole warehouse is **6.68%** of value, down from 14% before
+V1-41 taught the disclosures to name their own issuers.
 
 ## How to add a fund
 
@@ -89,11 +92,11 @@ automatically; the rest are a download.
 
 Ordered by what they cost.
 
-1. **Entity-master coverage stops at listed equity.** The AMFI market-cap list
-   is the only issuer source, so unlisted companies (Reliance Retail Ventures,
-   SIDBI), foreign listings (Alphabet, Microsoft — 18.4% of PPFAS Flexi Cap) and
-   securitisation trusts stay `__UNRESOLVED__`. This is now the single largest
-   cause of unresolved value.
+1. **A commodity has no issuer.** Rs 68,104 Cr — 73% of everything still
+   unresolved — is one row shape: `SILVER`, with no ISIN, held by silver ETFs.
+   No entity master can invent an issuer for physical metal. It wants a
+   synthetic bucket alongside `__GSEC__` and `__MFUNIT__`, which is a migration
+   and a decision rather than a derivation.
 2. **State development loans have no issuer.** 1,553 Cr in one fund. §8.4
    forbids bucketing them with sovereign paper because a state is a real
    borrower; giving them real issuers needs either a hardcoded state-code table
@@ -116,14 +119,14 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is not machinery:
 
-- **Entity master beyond listed equity** — the highest-value fix, and the one
-  that would take the two `warn` funds under V3's 2% threshold.
+- **A bucket for commodities**, which is what 73% of the remaining unresolved
+  value is waiting on.
 - **Load the AMCs actually held**, now a download each.
 - **V2**: M2 fund x-ray, the tax engine, §10 nested look-through.
 
 ## Reading this repository
 
-`docs/DECISIONS.md` is the useful file. 66 append-only records of every
+`docs/DECISIONS.md` is the useful file — append-only records of every
 departure from the spec, every defect the specs themselves contained, and what
 was decided instead — including the ones that were wrong and were corrected
 later. `PLAN.md` has the slices and their acceptance gates; `CLAUDE.md` has the

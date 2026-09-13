@@ -30,6 +30,7 @@ import openpyxl
 import yaml
 from src.common.decimals import connect
 from src.m0_data.config import REPO_ROOT, raw_root, source, warehouse_path
+from src.m0_data.derive.disclosed_issuers import derive_disclosed_issuers
 from src.m0_data.fetch.base import (
     DomainRateLimiter,
     FetchCandidate,
@@ -141,6 +142,13 @@ def run(
 
     summaries: list[dict[str, object]] = []
     try:
+        # Issuers the disclosures already loaded have named (V1-41). Run
+        # BEFORE building the indexes so this load resolves against what every
+        # previous one discovered, and again at the end so the next load
+        # resolves against what this one adds. Both calls are a couple of
+        # queries; the alternative is telling a person to run the job twice.
+        derive_disclosed_issuers(conn)
+        conn.commit()
         index = load_issuer_index(conn)
         prefixes = load_isin_prefix_index(conn)
         if all_sheets:
@@ -166,6 +174,9 @@ def run(
             (datetime.now(UTC), status, len(summaries),
              sum(int(str(s.get("holding", 0))) for s in summaries), run_id),
         )
+        conn.commit()
+        # And again, so what this load added is available to the next one.
+        derive_disclosed_issuers(conn)
         conn.commit()
         return summaries
     except Exception as exc:

@@ -67,10 +67,17 @@ from src.m0_data.resolve.synthetic import match_synthetic
 #: already-loaded row differently, and compared by `next_revision` so that the
 #: next load re-resolves rather than reporting `skipped=1` over stale issuers.
 #:
+#: **The entity master is an input to this, and the version has to cover it.**
+#: V1-41 lets the disclosures name issuers the market-cap list never had, so
+#: the same cascade over a larger master gives different answers. Growing the
+#: master is therefore a bump, exactly as changing a rule is. What is NOT
+#: automatic is noticing that it grew — a master that gains rows between two
+#: loads will not re-resolve the first one until someone bumps this.
+#:
 #: `"1"` is every cascade before the ISIN issuer segment existed; rows written
 #: then carry `'0'` from the migration default, which is not equal to this and
 #: is therefore what makes the first run after an upgrade actually rewrite.
-RESOLVER_VERSION = "4"
+RESOLVER_VERSION = "6"
 
 #: How many leading characters of an Indian ISIN identify the ISSUER rather
 #: than the security. `IN` is the country, the next five are the entity NSDL

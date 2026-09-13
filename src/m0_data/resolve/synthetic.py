@@ -83,6 +83,20 @@ SYNTHETIC_RULES: tuple[tuple[re.Pattern[str], IssuerId], ...] = tuple(
 #: present (`IN1020` Andhra Pradesh through `IN4520` Telangana) carry none.
 CENTRAL_GOVERNMENT_ISIN = re.compile(r"^IN0020")
 
+#: Units of a mutual fund, by ISIN structure.
+#:
+#: India's numbering agency allocates `INE` to a company and **`INF` to a
+#: mutual fund**. So an INF ISIN is units of a scheme whatever the row is
+#: called, which matters because V1-34's name rule cannot see most of them:
+#: `Kotak Arbitrage Fund Direct Plan Growth` ends in `Growth`, not `Fund`,
+#: and `Nippon India Money Market Fund Dir Pl-Growth` ends in an
+#: abbreviation. 34 ISINs and Rs 17,063 Cr sat in `__UNRESOLVED__` for want
+#: of a naming convention.
+#:
+#: Same argument as `CENTRAL_GOVERNMENT_ISIN` above and V1-30's: where the
+#: identifier says what a thing is, do not ask what it is called.
+MUTUAL_FUND_ISIN = re.compile(r"^INF")
+
 #: §8.4's fallback: a row the parser already classified as cash or a derivative
 #: is one of those even when its name says nothing recognisable.
 CLASS_FALLBACK = {
@@ -122,8 +136,12 @@ def match_synthetic(
     `isin` is checked BEFORE the name patterns: structure is harder evidence
     than wording, and the wording is what was wrong.
     """
-    if isin and CENTRAL_GOVERNMENT_ISIN.match(isin.strip().upper()):
-        return IssuerId("__GSEC__")
+    if isin:
+        code = isin.strip().upper()
+        if CENTRAL_GOVERNMENT_ISIN.match(code):
+            return IssuerId("__GSEC__")
+        if MUTUAL_FUND_ISIN.match(code):
+            return IssuerId("__MFUNIT__")
     for pattern, issuer_id in SYNTHETIC_RULES:
         if pattern.search(name):
             return issuer_id
