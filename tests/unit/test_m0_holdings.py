@@ -63,6 +63,7 @@ from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.parse.holdings.icici import IciciHoldingsParser
 from src.m0_data.parse.holdings.kotak import KotakHoldingsParser
 from src.m0_data.parse.holdings.nippon import NipponHoldingsParser
+from src.m0_data.parse.holdings.ppfas import PpfasHoldingsParser
 from src.m0_data.parse.holdings.registry import route
 from src.m0_data.resolve.synthetic import match_synthetic
 
@@ -526,6 +527,91 @@ def icici_real() -> HoldingsParseResult:
                 REAL_ICICI.read_bytes()),
         "MULTI",
     )
+
+
+PPFAS = FIXTURES / "ppfas_flexi_cap_2026-07-31.xlsx"
+
+
+@pytest.fixture(scope="module")
+def ppfas() -> HoldingsParseResult:
+    """Parag Parikh Flexi Cap, fetched from amc.ppfas.com and archived
+    unedited. One scheme per file, so no sheet is needed."""
+    return PpfasHoldingsParser().parse(
+        RawFile("file-ppfas", "S5:ppfas",
+                "PPFCF_PPFAS_Monthly_Portfolio_Report_July_31_2026.xlsx",
+                PPFAS.read_bytes()),
+        None,
+    )
+
+
+def test_a_header_spelled_across_two_lines_is_still_that_header(
+    ppfas: HoldingsParseResult,
+) -> None:
+    """PPFAS writes `% to Net
+ Assets`, with a newline inside the cell.
+
+    The needle `% to net asset` matches every other AMC and could not match
+    across it, so no percentage column was mapped and every weight in a
+    148,000 Cr portfolio was derived rather than reported. V1 caught it —
+    `pct_sum_raw` of 0 against a 95-105 band — and quarantined the load, which
+    is the gate working. The file was fine; the reader was wrong.
+
+    Whitespace in a header cell is now collapsed before matching. Nippon's
+    `Market/Fair Value
+( Rs. in Lacs)` has the same shape and matched only by
+    luck, on a shorter alternative further down the needle list.
+    """
+    assert ppfas.pct_scale is not None
+    reported = sum(
+        (r.pct_to_nav_raw or Decimal(0)) for r in ppfas.securities
+    ) * ppfas.pct_scale
+    assert Decimal(95) <= reported <= Decimal(105), f"weights sum to {reported}"
+
+
+def test_a_formula_cell_is_read_as_its_value_not_its_text(
+    ppfas: HoldingsParseResult,
+) -> None:
+    """openpyxl returns formula TEXT unless asked for cached values, and a
+    market value that will not parse does not raise — `classify_row` sees a
+    name with no numbers and calls the row a section heading.
+
+    So the row stops being a holding, silently. PPFAS's `Net Receivables /
+    (Payables)` is `=342762.56+E193-105.07` on the sheet, worth Rs 303 Cr, and
+    losing it put the parse 0.2044% under the file's own total — **inside the
+    2% guard**, which is exactly how Nippon's stock futures hid at +0.155%
+    (V1-15). A wrong number that reconciles is the failure mode this project
+    exists to refuse.
+
+    Seven formula cells on this sheet; zero across HDFC, ICICI and Kotak. Four
+    AMCs parsed before one file was written by someone who used a formula.
+    """
+    receivables = [
+        r for r in ppfas.securities
+        if "receivab" in r.instrument_raw_name.lower()
+    ]
+    assert len(receivables) == 1, "the formula row is not a holding"
+    assert receivables[0].market_value_raw == Decimal("30343.649999999972")
+
+
+def test_ppfas_reconciles_and_carries_its_foreign_equity(
+    ppfas: HoldingsParseResult,
+) -> None:
+    """The fund's signature: a large US-listed allocation alongside Indian
+    equity, which is why it is a useful fifth format rather than a fifth file.
+    """
+    error = reconciliation_error(ppfas)
+    assert error is not None
+    # Exact, like the other real files. It was -0.2044% until the reader began
+    # asking openpyxl for cached VALUES rather than formula text: `Net
+    # Receivables / (Payables)` is a formula on this sheet, and reading it as
+    # `'=342762.56+E193-105.07'` turned a Rs 303 Cr row into a section
+    # heading. Inside the 2% guard the whole time.
+    assert abs(error) < Decimal("0.000001"), f"reconciles at {error}"
+    assert ppfas.as_of_date == date(2026, 7, 31)
+    foreign = [r for r in ppfas.securities if (r.isin_raw or "").startswith("US")]
+    assert len(foreign) >= 4
+    names = " ".join(r.instrument_raw_name for r in foreign).lower()
+    assert "alphabet" in names and "microsoft" in names
 
 
 KOTAK = FIXTURES / "kotak_pioneer_2026-07-31.xlsx"

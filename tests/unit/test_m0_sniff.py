@@ -54,6 +54,10 @@ PUBLISHED = {
     # not yet — the cross-product below is what proves that.
     "kotak": ("kotak_pioneer_2026-07-31.xlsx",
               "ConsolidatedSEBIPortfolioJuly2026.xlsx"),
+    # PPFAS is the easy case: its filename says both who published it and
+    # which scheme it is.
+    "ppfas": ("ppfas_flexi_cap_2026-07-31.xlsx",
+              "PPFCF_PPFAS_Monthly_Portfolio_Report_July_31_2026.xlsx"),
 }
 
 PARSERS = {p.amc_id: p for p in REGISTRY}

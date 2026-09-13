@@ -1,0 +1,23 @@
+-- DECISIONS V1-36. V1-29's hole, in the other half of the derivation.
+--
+-- Migration 007 put `resolver_version` in the skip key because `issuer_id` is
+-- derived, so identical bytes read by an improved cascade are a different
+-- disclosure. Every word of that applies to the PARSER, and 007 did not say so.
+--
+-- Observed immediately, on the first AMC added after it. PPFAS writes its
+-- percentage header as `% to Net\n Assets`, with a newline inside the cell, so
+-- the needle that matches every other AMC found nothing, no percentage column
+-- was mapped, and the load quarantined on V1 with `pct_sum_raw` of 0. The
+-- reader was fixed to collapse whitespace in a header — and re-running printed
+-- the corrected figures and wrote `skipped=1`, because the bytes had not
+-- changed and neither had the cascade.
+--
+-- A parser fix that cannot reach the rows it mis-parsed is the same broken
+-- promise V1-29 recorded (MODULE_0.md §3), and it will recur on every AMC
+-- added from here, because adding an AMC is how these rules get found.
+--
+-- DEFAULT '0' for the same reason 007 used it: rows written before this were
+-- parsed by a reader that predates the fix, and saying so is what makes the
+-- first re-run actually re-parse rather than skip.
+
+ALTER TABLE holding_disclosure ADD COLUMN parser_version TEXT NOT NULL DEFAULT '0';

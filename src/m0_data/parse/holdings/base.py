@@ -139,6 +139,19 @@ PCT_PERCENT_MAX = Decimal(200)
 #: basis point: wide enough for the float noise a spreadsheet cell carries
 #: (`6180420.349999999` for a figure printed as `6180420.35`), far too tight
 #: for a real holding to land on by coincidence.
+#: The shared reader's own version, distinct from any AMC's `HoldingsFormat`.
+#:
+#: Every rule that has ever mattered lives here rather than in an AMC module —
+#: arithmetic demotion, the percentage scale, position past the total, the name
+#: span, the stray label, collapsing whitespace in a header — so "which parser
+#: read this file" is answered by this number far more than by `parser_id`.
+#: It is in `holding_disclosure`'s skip key, so fixing a rule re-parses the
+#: disclosures the old rule got wrong instead of reporting the fix and writing
+#: nothing. V1-36.
+#:
+#: Bump on any change that would read an already-loaded file differently.
+READER_VERSION = "3"
+
 SUBTOTAL_TOLERANCE = Decimal("0.0001")
 
 
@@ -159,7 +172,23 @@ def parse_holdings(
     built on it is wrong in a way that still sums to 100.
     """
     try:
-        workbook = openpyxl.load_workbook(io.BytesIO(f.content), read_only=True)
+        # `data_only=True` reads the value Excel cached, not the formula text.
+        # Without it a formula cell comes back as `'=342762.56+E193-105.07'`,
+        # `to_decimal` rightly refuses it, the market value becomes None, and
+        # `classify_row` — seeing a name and no numbers — calls the row a
+        # section heading. The row is not dropped loudly; it stops being a
+        # holding.
+        #
+        # PPFAS found it: `Net Receivables / (Payables)` is a formula on its
+        # sheet, worth Rs 303 Cr, and the parse came to 0.2044% under the
+        # file's own stated total. **Inside the 2% guard**, which is the same
+        # way Nippon's stock futures hid at +0.155% (V1-15) — a wrong number
+        # that reconciles is the failure this project is built to refuse.
+        # Seven formula cells on that sheet; zero across HDFC, ICICI and Kotak,
+        # which is why four AMCs parsed before anyone noticed.
+        workbook = openpyxl.load_workbook(
+            io.BytesIO(f.content), read_only=True, data_only=True
+        )
     except Exception as exc:
         raise ParseFailed(f"{f.filename}: not a readable workbook ({exc})") from exc
 
@@ -682,8 +711,22 @@ def _capture_stated_nav(cells: list[str], result: HoldingsParseResult) -> None:
 
 
 def _header_map(cells: list[str], fmt: HoldingsFormat) -> dict[str, int] | None:
-    """Locate the header row and map its columns. Never positional — V0-23."""
-    lowered = [c.lower() for c in cells]
+    """Locate the header row and map its columns. Never positional — V0-23.
+
+    **Whitespace inside a header cell is collapsed before matching**, because a
+    header spelled across two lines is the same header. PPFAS writes
+    `% to Net
+ Assets`, so the needle `% to net asset` — which matches every
+    other AMC — found nothing, no percentage column was mapped, and 100% of the
+    portfolio's weight was derived rather than reported. V1 caught it
+    (`pct_sum_raw` of 0 against a 95-105 band) and quarantined the load, which
+    is the gate working; but the file was fine and the reader was wrong.
+
+    Nippon's `Market/Fair Value
+( Rs. in Lacs)` had the same shape and matched
+    only by luck, on the shorter `fair value` alternative further down its list.
+    """
+    lowered = [re.sub(r"\s+", " ", c).strip().lower() for c in cells]
     found: dict[str, int] = {}
     for field_name, needles in fmt.columns:
         for needle in needles:

@@ -17,6 +17,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import UTC, date, datetime
 
+from src.m0_data.parse.holdings.base import READER_VERSION
 from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
 from src.m0_data.resolve.cascade import RESOLVER_VERSION
@@ -281,6 +282,7 @@ def next_revision(
     as_of: date,
     source_file_id: str,
     resolver_version: str = RESOLVER_VERSION,
+    parser_version: str = READER_VERSION,
 ) -> int | None:
     """§4.6. A RESTATED disclosure is a new revision. A re-run is not.
 
@@ -304,11 +306,17 @@ def next_revision(
     nothing. Both must match for a run to be a repeat.
     """
     current = conn.execute(
-        "SELECT revision, source_file_id, resolver_version FROM holding_disclosure"
+        "SELECT revision, source_file_id, resolver_version, parser_version"
+        " FROM holding_disclosure"
         " WHERE scheme_id=? AND as_of_date=? AND is_current=1",
         (scheme_id, as_of),
     ).fetchone()
-    if current and current[1] == source_file_id and current[2] == resolver_version:
+    if (
+        current
+        and current[1] == source_file_id
+        and current[2] == resolver_version
+        and current[3] == parser_version
+    ):
         return None
 
     row = conn.execute(
@@ -326,6 +334,7 @@ def load_holdings(
     header: dict[str, object],
     source_file_id: str,
     resolver_version: str = RESOLVER_VERSION,
+    parser_version: str = READER_VERSION,
 ) -> dict[str, int]:
     """Write one disclosure and its rows, as a new revision.
 
@@ -335,7 +344,7 @@ def load_holdings(
     can be re-run without re-fetching (§3's layer invariant).
     """
     revision = next_revision(
-        conn, scheme_id, as_of, source_file_id, resolver_version
+        conn, scheme_id, as_of, source_file_id, resolver_version, parser_version
     )
     if revision is None:
         existing = conn.execute(
@@ -382,8 +391,9 @@ def load_holdings(
             scheme_id, as_of_date, revision, source_file_id, row_count,
             pct_sum_raw, weight_residual, unresolved_mv_pct, total_mv,
             aum_reported, mv_vs_aum_pct, reported_unit, validation_status,
-            validation_notes, resolver_version, is_current, ingested_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
+            validation_notes, resolver_version, parser_version, is_current,
+            ingested_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
         """,
         (
             scheme_id, as_of, revision, source_file_id, len(rows),
@@ -391,7 +401,8 @@ def load_holdings(
             header["unresolved_mv_pct"], header["total_mv"],
             header.get("aum_reported"), header.get("mv_vs_aum_pct"),
             header.get("reported_unit"), header["validation_status"],
-            header.get("validation_notes"), resolver_version, now,
+            header.get("validation_notes"), resolver_version, parser_version,
+            now,
         ),
     )
     return {"holding": len(rows), "revision": revision}

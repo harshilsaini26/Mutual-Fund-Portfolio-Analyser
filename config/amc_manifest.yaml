@@ -47,3 +47,15 @@ disclosures:
     # i.e. really .xlsx. Both the extension and the header lie (V1-15).
     url: "https://mf.nipponindiaim.com/InvestorServices/FactsheetsDocuments/NIMF-MONTHLY-PORTFOLIO-31-July-26.xls"
     filename: "NIMF-MONTHLY-PORTFOLIO-31-July-26.xls"
+
+  - amc_id: ppfas
+    # Parag Parikh Flexi Cap Fund, Direct Growth. PPFAS publishes one file per
+    # scheme at a stable, predictable URL, and a consolidated workbook beside
+    # it. Its site 403s an honest agent and accepts the browser string S5
+    # already sends (V1-05's finding, holding for a second AMC); there is no
+    # bot challenge.
+    scheme_id: INF879O01027
+    scheme_name: Parag Parikh Flexi Cap Fund
+    as_of: 2026-07-31
+    url: "https://amc.ppfas.com/downloads/portfolio-disclosure/2026/PPFCF_PPFAS_Monthly_Portfolio_Report_July_31_2026.xlsx"
+    filename: "PPFCF_PPFAS_Monthly_Portfolio_Report_July_31_2026.xlsx"

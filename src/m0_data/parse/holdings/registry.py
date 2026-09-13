@@ -18,6 +18,7 @@ from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
 from src.m0_data.parse.holdings.icici import IciciHoldingsParser
 from src.m0_data.parse.holdings.kotak import KotakHoldingsParser
 from src.m0_data.parse.holdings.nippon import NipponHoldingsParser
+from src.m0_data.parse.holdings.ppfas import PpfasHoldingsParser
 
 #: Every registered parser. Adding an AMC is one entry.
 REGISTRY: tuple[HoldingsParser, ...] = (
@@ -25,6 +26,7 @@ REGISTRY: tuple[HoldingsParser, ...] = (
     IciciHoldingsParser(),
     KotakHoldingsParser(),
     NipponHoldingsParser(),
+    PpfasHoldingsParser(),
 )
 
 #: §6.2. Below this, no parser is confident enough to be trusted with the file.
