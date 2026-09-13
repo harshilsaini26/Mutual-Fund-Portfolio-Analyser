@@ -222,6 +222,14 @@ def to_decimal(raw: str) -> Decimal | None:
         raise CasParseError(f"unparseable number {raw!r}") from exc
     if value is None:
         return None
+    if not value.is_finite():
+        # `Decimal` parses "Infinity" and "NaN" without complaint, and a folio's
+        # units and rupees run through here. NaN is the dangerous one: every
+        # comparison against it is False, so a redemption for NaN units would
+        # pass `units > held` and corrupt the book silently. M0's `to_decimal`
+        # carries the same guard — the duplication is invariant 3's, not an
+        # oversight.
+        raise CasParseError(f"not a finite number: {raw!r}")
     return -value if negative else value
 
 

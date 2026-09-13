@@ -146,10 +146,16 @@ def parse_mfapi(content: bytes, scheme_id: str, amfi_code: str) -> MfapiParseRes
         except (InvalidOperation, ValueError):
             result.warnings.append((index, f"unparseable nav {raw_nav!r} on {on}"))
             continue
-        if nav <= 0:
+        if not nav.is_finite() or nav <= 0:
             # A zero NAV is not a price. mfapi carries a few for dates before a
             # scheme was priced; storing them would make a return series that
             # starts with a division by zero.
+            #
+            # `is_finite` is checked FIRST because `nav <= 0` cannot catch a
+            # NaN: every comparison against NaN is False, so `Decimal("NaN")`
+            # passed this guard and was stored as a price. The Decimal is built
+            # from the JSON string directly here rather than through
+            # `to_decimal`, so it does not inherit that module's guard.
             result.warnings.append((index, f"non-positive nav {nav} on {on}"))
             continue
         if on in seen:

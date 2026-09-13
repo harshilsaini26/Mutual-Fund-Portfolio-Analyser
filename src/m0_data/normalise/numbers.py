@@ -53,6 +53,19 @@ def to_decimal(s: str | None) -> Decimal | None:
         value = Decimal(token)
     except InvalidOperation as exc:
         raise CoercionError(f"cannot parse number: {s!r}") from exc
+    if not value.is_finite():
+        # `Decimal` accepts "Infinity", "-Infinity" and "NaN" happily, and this
+        # is the money path. AMFI's NAV column is known to carry `#N/A`,
+        # `#DIV/0!` and `B.C.` — all of which raise above — but a spreadsheet
+        # that has already divided by zero can print `Infinity` too, and that
+        # one parsed and propagated.
+        #
+        # NaN is the worse of the two because it is QUIET: every comparison
+        # against it is False, so a `nav <= 0` guard waves it through and a
+        # weight built from it poisons a portfolio without raising anywhere.
+        # Observed defect list: captn3m0/historical-mf-data documents what AMFI
+        # actually ships in this column.
+        raise CoercionError(f"not a finite number: {s!r}")
     return -value if negative else value
 
 

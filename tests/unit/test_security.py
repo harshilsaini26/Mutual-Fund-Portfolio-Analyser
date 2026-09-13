@@ -352,6 +352,41 @@ def test_the_lock_pins_what_pyproject_cannot() -> None:
     )
 
 
+def test_no_money_path_accepts_a_non_finite_number() -> None:
+    """`Decimal` parses "Infinity" and "NaN" without complaint, and both were
+    reaching NAVs, units and weights.
+
+    NaN is the one that matters. Every comparison against it is False, so it
+    does not merely produce a wrong number — it walks through the guards meant
+    to stop wrong numbers. `mfapi.py`'s `nav <= 0` check was exactly that: a
+    NaN NAV passed it and was stored as a price.
+
+    The dirty values below are not invented. They are what AMFI is documented
+    to ship in these columns (captn3m0/historical-mf-data's known-issues list),
+    cross-checked against this codebase.
+    """
+    from src.m0_data.normalise.numbers import CoercionError
+    from src.m0_data.normalise.numbers import to_decimal as m0_to_decimal
+    from src.m1_ledger.cas.parse import CasParseError
+    from src.m1_ledger.cas.parse import to_decimal as m1_to_decimal
+
+    for token in ("Infinity", "-Infinity", "NaN", "sNaN", "  NaN  "):
+        with pytest.raises(CoercionError):
+            m0_to_decimal(token)
+        with pytest.raises(CasParseError):
+            m1_to_decimal(token)
+
+    # And the real numbers either module must still read.
+    assert m0_to_decimal("1,23,456.78") == Decimal("123456.78")
+    assert m1_to_decimal("(500.00)") == Decimal("-500.00")
+    assert m0_to_decimal("814.4409") == Decimal("814.4409")
+    # AMFI's other documented junk keeps behaving as it did.
+    assert m0_to_decimal("N.A.") is None
+    for token in ("#N/A", "#DIV/0!", "B.C.", "B. C."):
+        with pytest.raises(CoercionError):
+            m0_to_decimal(token)
+
+
 def test_the_temp_directory_helper_is_not_used_for_secrets() -> None:
     """A sanity check on the one thing that would undo `import_cas` writing
     nothing: no module that touches a password may also write a temp file."""
