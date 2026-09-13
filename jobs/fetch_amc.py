@@ -28,11 +28,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import httpx
-from src.m0_data.config import contact_email, inbox_root, source
+from src.m0_data.config import inbox_root, source
 from src.m0_data.fetch.amc_direct import DISCOVERY, DiscoveredFile, for_period
 from src.m0_data.fetch.base import (
-    BROWSER_USER_AGENT,
     DomainRateLimiter,
     FetchError,
     RobotsCache,
@@ -48,23 +46,27 @@ def listing(amc_id: str, cfg: dict[str, Any], client: Any = None) -> list[Discov
     """Everything the AMC says it has published, newest first."""
     adapter = DISCOVERY[amc_id]
     spec = adapter.request()
-    getter = client or httpx
-    limiter = DomainRateLimiter(float(cfg["rate_limit_per_sec"]), int(cfg["burst"]))
-    limiter.acquire(str(spec["url"]))
 
-    headers = dict(spec.get("headers") or {})
-    headers.setdefault("User-Agent", BROWSER_USER_AGENT)
-    headers.setdefault("From", contact_email())
-
-    response = getter.request(
-        spec["method"],
-        spec["url"],
-        headers=headers,
-        json=spec.get("json"),
-        timeout=httpx.Timeout(
-            float(cfg["timeout_read"]), connect=float(cfg["timeout_connect"])
-        ),
-        follow_redirects=True,
+    # Through `conditional_get`, not around it. The first version called
+    # `httpx.request` directly and so skipped the robots.txt check, the retry
+    # loop and the jittered backoff on the FIRST request this job makes to an
+    # AMC -- while `download()` twenty lines below honoured all three. A
+    # discovery call is not exempt from §2.3 because it asks for a list rather
+    # than a file, and a transient 500 from one house should not turn
+    # `jobs.status --check` into a traceback for every house.
+    response = conditional_get(
+        str(spec["url"]),
+        user_agent=str(cfg["user_agent"]),
+        method=str(spec.get("method") or "GET"),
+        json_body=spec.get("json"),
+        extra_headers=dict(spec.get("headers") or {}),
+        timeout_connect=float(cfg["timeout_connect"]),
+        timeout_read=float(cfg["timeout_read"]),
+        retries=int(cfg["retries"]),
+        from_email=str(cfg.get("from_email") or "") or None,
+        limiter=DomainRateLimiter(float(cfg["rate_limit_per_sec"]), int(cfg["burst"])),
+        robots=RobotsCache() if cfg.get("respect_robots") else None,
+        client=client,
     )
     response.raise_for_status()
     return adapter.parse_listing(response.content)

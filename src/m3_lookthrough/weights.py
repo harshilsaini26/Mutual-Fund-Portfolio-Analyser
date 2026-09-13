@@ -28,6 +28,7 @@ from decimal import Decimal
 from src.common.types import IssuerId, SchemeId
 from src.m0_data.derive.scheme_family import disclosure_scheme_for
 from src.m3_lookthrough.engine import IssuerWeight
+from src.m3_lookthrough.persist import STALENESS_WARN_DAYS
 
 #: The tier a disclosure read from the AMC's own statutory file carries, and
 #: migration 011's default -- so a warehouse written before `source_tier`
@@ -182,8 +183,6 @@ def latest_disclosure(
     would use holdings from the future and store a negative `staleness_days`
     that `confidence_for` reads as fresher than fresh.
     """
-    from src.m3_lookthrough.persist import STALENESS_WARN_DAYS
-
     sql = (
         "SELECT as_of_date, source_tier FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1"
@@ -223,8 +222,22 @@ def latest_disclosure(
         return newest, newest_tier
 
     best, tier = max(of_record, key=lambda pair: pair[0])
-    reference = on_or_before or newest
-    if (reference - best).days <= STALENESS_WARN_DAYS:
+
+    # Measured against the NEWEST CANDIDATE, never against the caller's bound
+    # or the clock. The first version used `on_or_before or newest`, which made
+    # the answer a fact about when you asked rather than about the data: one
+    # warehouse holding a 2026-07-31 workbook and a 2026-08-31 page returned
+    # the workbook at 0.00% unresolved for `on_or_before=2026-09-13` and the
+    # page at ~19% two days later, with nothing changed underneath. The two
+    # call forms disagreed too, since the unbounded one already used `newest`
+    # -- so `scripts/show_lookthrough.py` and the persisted look-through could
+    # report different portfolios for one scheme on the same day.
+    #
+    # The question this threshold asks is "was the AMC's file still current
+    # when the page was published", and that is a comparison between the two
+    # disclosures. How late someone runs the report is what `staleness_days`
+    # is for, and `confidence_for` already prices it.
+    if (newest - best).days <= STALENESS_WARN_DAYS:
         return best, tier
     return newest, newest_tier
 

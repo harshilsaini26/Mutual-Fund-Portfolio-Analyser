@@ -24,9 +24,11 @@ key. The provenance already knows.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass
 from datetime import date
+from functools import lru_cache
 from typing import Any
 
 import yaml
@@ -45,7 +47,22 @@ from src.m0_data.parse.holdings.registry import REGISTRY
 DISCLOSURE_GRACE_DAYS = 10
 
 INDEX_YAML = REPO_ROOT / "config" / "amc_disclosure_index.yaml"
-SLUGS_YAML = REPO_ROOT / "config" / "groww_slugs.yaml"
+
+#: Words every fund house shares, so they identify none of them.
+_HOUSE_NOISE = frozenset(
+    {
+        "mutual",
+        "fund",
+        "funds",
+        "mf",
+        "asset",
+        "management",
+        "amc",
+        "limited",
+        "ltd",
+        "india",
+    }
+)
 
 #: `holdings.kotak` -> the parser, so its `amc_id` can be asked for.
 BY_PARSER_ID = {p.parser_id: p for p in REGISTRY}
@@ -213,6 +230,57 @@ def next_step(row: Standing, today: date) -> str:
     return f"no discovery adapter and no page on file for {row.amc_id!r}"
 
 
+def _published_label(row: Standing, check: bool) -> str:
+    """What `--check` learned about this house, in four honest states.
+
+    The first version collapsed these into one nested conditional and printed
+    `no adapter` for a house that HAS one whose listing came back empty --
+    flatly the opposite of the truth about the single thing `--check` exists to
+    establish, while the `To catch up` line below still offered that house's
+    fetch command.
+    """
+    if not check:
+        return "-"
+    if row.adapter is None:
+        return "no adapter"
+    if row.error:
+        return "unreachable"
+    if row.available is None:
+        return "none listed"
+    return str(row.available)
+
+
+@lru_cache(maxsize=1)
+def _index() -> list[tuple[str, str]]:
+    """AMFI's disclosure directory as (normalised house name, page), once.
+
+    Cached because `next_step` asks per stale row and the file cannot change
+    during a run -- the first version re-opened and re-parsed all 52 entries
+    for every house in the report.
+    """
+    if not INDEX_YAML.exists():
+        return []
+    with INDEX_YAML.open(encoding="utf-8") as fh:
+        index = yaml.safe_load(fh) or {}
+    out = []
+    for entry in index.get("disclosures") or []:
+        name = _norm(str(entry.get("amc") or ""))
+        page = str(entry.get("monthly_portfolio") or "")
+        if name and page:
+            out.append((name, page))
+    return out
+
+
+def _norm(text: str) -> str:
+    """Down to the words that identify a fund house.
+
+    `Kotak Mahindra Mutual Fund` and `kotak_mahindra` have to meet somewhere,
+    and the words they do not share are the ones every house has.
+    """
+    words = re.split(r"[^a-z0-9]+", text.lower())
+    return " ".join(w for w in words if w and w not in _HOUSE_NOISE)
+
+
 def _disclosure_page(amc_id: str) -> str | None:
     """The AMC's monthly disclosure page, from AMFI's own directory (V1-32).
 
@@ -220,17 +288,25 @@ def _disclosure_page(amc_id: str) -> str | None:
     is keyed by the name AMFI prints and `scheme.amc_id` is a slug of the name
     AMFI prints -- two spellings of one thing, and neither is a key the other
     was built from.
+
+    **The longest match wins, not the first.** A bare substring scan over an
+    unordered list hands `uti` to whichever entry happens to contain those
+    three letters first, and a reader who follows that link downloads another
+    fund house's portfolio. An exact normalised match is taken outright; the
+    fallback prefers the longest containment so `kotak mahindra` cannot lose to
+    a shorter accidental hit.
     """
-    if not INDEX_YAML.exists():
+    wanted = _norm(amc_id.replace("_", " "))
+    if not wanted:
         return None
-    with INDEX_YAML.open(encoding="utf-8") as fh:
-        index = yaml.safe_load(fh) or {}
-    wanted = amc_id.replace("_", " ").strip().lower()
-    for entry in index.get("disclosures") or []:
-        name = str(entry.get("amc") or "").lower()
-        if wanted and wanted in name:
-            return str(entry.get("monthly_portfolio") or "") or None
-    return None
+    entries = _index()
+    for name, page in entries:
+        if name == wanted:
+            return page
+    hits = [(name, page) for name, page in entries if wanted in name or name in wanted]
+    if not hits:
+        return None
+    return max(hits, key=lambda pair: len(pair[0]))[1]
 
 
 def report(check: bool = False, today: date | None = None) -> list[dict[str, object]]:
@@ -246,17 +322,7 @@ def report(check: bool = False, today: date | None = None) -> list[dict[str, obj
             "have": str(r.have),
             "tier": r.tier,
             "expected": str(expected_as_of(today)),
-            # Three distinct states, and conflating them was the first
-            # version's mistake: a house we asked and got an answer from, a
-            # house we asked and could not reach, and a house with no adapter
-            # to ask. Only the middle one is a question mark.
-            "available": (
-                str(r.available)
-                if r.available
-                else ("unreachable" if r.error else "no adapter")
-                if check and r.adapter
-                else "-"
-            ),
+            "available": _published_label(r, check),
             "status": r.verdict(today),
             "next": next_step(r, today),
         }

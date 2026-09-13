@@ -236,3 +236,21 @@ def test_the_registry_and_the_parsers_agree_on_who_exists() -> None:
     parsers = {p.amc_id for p in REGISTRY}
     orphans = sorted(set(DISCOVERY) - parsers)
     assert not orphans, f"discovery adapters with no parser: {orphans}"
+
+
+def test_a_period_yields_one_as_of_not_both_halves_of_the_month() -> None:
+    """V1-47. Kotak publishes a fortnightly on the 15th and again on the month
+    end, and the first version returned both — 4.2 MB fetched for the 2.1 MB
+    wanted, and then `ingest_inbox` loaded the 15th as an ordinary disclosure
+    that `latest_disclosure` and the staleness report would treat as a month's
+    portfolio."""
+    got = for_period(_kotak(), "2026-08", kind="fortnightly")
+    assert [f.as_of for f in got] == [date(2026, 8, 31)]
+
+
+def test_two_kinds_on_one_date_still_come_back_together() -> None:
+    """A monthly and a fortnightly dated the same day are different documents;
+    choosing between them is what `--kind` is for."""
+    july = for_period(_kotak(), "2026-07")
+    assert {f.as_of for f in july} == {date(2026, 7, 31)}
+    assert {f.kind for f in july} == {"monthly", "fortnightly"}

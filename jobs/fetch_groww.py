@@ -40,7 +40,12 @@ from src.m0_data.fetch.base import (
     archive,
     conditional_get,
 )
+from src.m0_data.load import aum_for as _aum_for
 from src.m0_data.load import load_holdings
+from src.m0_data.normalise.instrument_class import (
+    class_from_section,
+    instrument_class,
+)
 from src.m0_data.normalise.units import to_inr
 from src.m0_data.normalise.weights import normalise_weights
 from src.m0_data.parse.base import ParseFailed, RawFile
@@ -130,6 +135,17 @@ def _one(
     force: bool = False,
 ) -> dict[str, object]:
     content, url = fetch_page(slug, cfg)
+
+    # Parsed ONCE. The first draft parsed here for the ISIN check, again for
+    # the dry-run summary and a third time after archiving -- three passes of
+    # the `__NEXT_DATA__` regex and three `json.loads` of a ~500 KB payload for
+    # one page. Nothing the later passes needed came from the parse; the only
+    # thing that changes after archiving is the `file_id`, which is a field on
+    # `RawFile` and not an input to parsing.
+    parsed = GrowwHoldingsParser().parse(
+        RawFile("probe", SOURCE_ID, f"{slug}.html", content)
+    )
+    assert parsed.as_of_date is not None
     stated = page_isin(content)
 
     if scheme_id and stated and stated != scheme_id.upper():
@@ -137,10 +153,6 @@ def _one(
             f"{slug}: the map promised {scheme_id} and the page states {stated}."
             " Refusing to load a portfolio under a scheme_id it does not claim."
         )
-
-    raw = RawFile("probe", SOURCE_ID, f"{slug}.html", content)
-    parsed = GrowwHoldingsParser().parse(raw)
-    assert parsed.as_of_date is not None
 
     if dry_run:
         return {
@@ -158,6 +170,26 @@ def _one(
     if not stated:
         raise SlugMismatch(f"{slug}: the page states no ISIN; refusing to guess one")
     scheme_id = stated
+
+    # The scheme has to exist before a disclosure can be filed against it.
+    #
+    # `holding_disclosure.scheme_id REFERENCES scheme(scheme_id)` is declared
+    # and INERT -- SQLite enforces foreign keys only under
+    # `PRAGMA foreign_keys = ON`, which this project does not set. So with
+    # `--slug`, which bypasses the map and takes whatever ISIN the page states,
+    # an unknown scheme wrote a full disclosure and every holding row under an
+    # id no scheme has. It then vanished from anything that joins `scheme` --
+    # including `jobs/status.py`'s own report -- so the fund read as loaded and
+    # missing at the same time depending which query you asked.
+    known = conn.execute(
+        "SELECT 1 FROM scheme WHERE scheme_id = ?", (scheme_id,)
+    ).fetchone()
+    if not known:
+        raise SlugMismatch(
+            f"{slug}: {scheme_id} is not in the scheme master. Load the AMFI"
+            " universe first (`python -m jobs.fetch_nav`); refusing to file a"
+            " portfolio against a scheme nothing else can see."
+        )
 
     # Don't fetch what would not be read.
     #
@@ -210,9 +242,6 @@ def _one(
         conn.commit()
 
     parser = GrowwHoldingsParser()
-    raw = RawFile(str(result.file_id), SOURCE_ID, f"{slug}.html", content)
-    parsed = parser.parse(raw)
-    assert parsed.as_of_date is not None
     securities = parsed.securities
 
     values = [
@@ -237,7 +266,7 @@ def _one(
             # None, always. The page has no ISIN column and §6.3 rule 1 means
             # the parser did not invent one -- this is where that costs.
             None,
-            _class_from_section(security.section),
+            class_from_section(security.section),
             index,
             prefixes,
         )
@@ -250,12 +279,24 @@ def _one(
                 "market_value": value if value is not None else Decimal(0),
                 "pct_to_nav": pct,
                 "pct_normalised": weight,
-                "instrument_class": _class_from_section(security.section) or "other",
+                "instrument_class": instrument_class(
+                    security.section, str(resolution.issuer_id)
+                ),
                 "reported_sector": security.reported_sector,
                 "resolution_method": resolution.method,
                 "resolution_conf": resolution.confidence,
             }
         )
+
+    # §10's V2 is THE units check, and it was being skipped here: the call
+    # passed `aum_reported=None`, so every Groww disclosure recorded "no AUM on
+    # record to reconcile against". That is the wrong path to disable it on.
+    # `MARKET_VALUE_UNIT` is ASSERTED on this page rather than read off a header
+    # -- no cell states a unit -- and the parser's own `_check_unit` compares
+    # rows to the page's `aum`, both in the same unit, so it scales with a unit
+    # error and can never catch one. `scheme_aum` is the only witness here that
+    # is independent of the page, which is exactly what V2 wants.
+    aum = _aum_for(conn, scheme_id, parsed.as_of_date)
 
     checks = validate_disclosure(
         [
@@ -270,10 +311,22 @@ def _one(
         ],
         parsed.as_of_date,
         date.today(),
-        None,
+        aum,
     )
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"
+
+    # `holding.market_value` is NOT NULL, so a row the page did not price is
+    # stored as zero and `normalise_weights` independently gives it weight zero
+    # -- it contributes nothing to any look-through while every quality figure
+    # is computed against a total that already excludes it. Nothing moves and
+    # nobody is told, which is what `CLAUDE.md` invariant 4 forbids. The AMC
+    # path has carried this list since V1-42; this one was omitting it.
+    unpriced = [
+        securities[i].instrument_raw_name
+        for i, value in enumerate(values)
+        if value is None
+    ]
 
     counts = load_holdings(
         conn,
@@ -285,9 +338,10 @@ def _one(
             "weight_residual": weights.residual,
             "unresolved_mv_pct": Decimal(unresolved.rstrip("%")),
             "total_mv": weights.total_market_value,
+            "aum_reported": aum,
             "reported_unit": securities[0].market_value_unit if securities else None,
             "validation_status": status,
-            "validation_notes": as_json(checks),
+            "validation_notes": as_json(checks, unpriced=unpriced),
             "source_tier": TIER,
         },
         str(result.file_id),
@@ -315,26 +369,6 @@ def _one(
         "validation_status": status,
         "source_tier": TIER,
     }
-
-
-def _class_from_section(section: str | None) -> str | None:
-    """The same mapping `load_holdings` uses, on the section this parser built.
-
-    Imported rather than re-derived would be better; it is duplicated here only
-    because `jobs.load_holdings` does a great deal of unrelated work at import.
-    """
-    if not section:
-        return None
-    upper = section.upper()
-    if "DERIV" in upper:
-        return "derivative"
-    if "CASH" in upper:
-        return "cash"
-    if "DEBT" in upper:
-        return "debt"
-    if "EQUITY" in upper or "REIT" in upper:
-        return "equity"
-    return None
 
 
 def run(

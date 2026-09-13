@@ -76,7 +76,7 @@ from src.m0_data.parse.base import (
 )
 
 PARSER_ID = "holdings.groww"
-VERSION = "2"
+VERSION = "3"
 
 #: A constant, not a lookup: IST has no DST and never has had any, so anything
 #: cleverer would be pretending the offset could move.
@@ -101,6 +101,12 @@ NATURE_SECTION = {
     "DEBT": "DEBT INSTRUMENTS",
     "CASH": "CASH & CASH EQUIVALENT",
     "REALEST": "REITS & INVITS",
+    # PPFAS holds a unit of its own liquid fund and Groww files it under `MF`.
+    # Absent this entry the section fell through as the bare string `MF`, which
+    # matches nothing in `CLASS_BY_SECTION`, so the row stored as `other` where
+    # the AMC path gives `mfunit` -- and §10's nested look-through keys on
+    # `mfunit`, so a fund inside a fund was invisible to it.
+    "MF": "MUTUAL FUND UNITS",
 }
 
 #: `instrument_name` values that name a derivative. The section built from
@@ -122,9 +128,21 @@ DERIVATIVE_INSTRUMENTS = re.compile(r"\b(deriv|future|option|swap|forward)", re.
 #: bucketing one as cash would hide real credit exposure. CBLO does not have
 #: one. It is TREPS by its former name, and the cascade already knows the word
 #: once the row reaches it classed as cash.
+#:
+#: **Whole labels, anchored, not substrings.** The first draft matched a bare
+#: `deposit`, which is inside `Certificate of Deposit` -- and a CD is a bank's
+#: debt with the bank as its issuer, the exact thing the paragraph above says
+#: must not be bucketed as cash. On the live PPFAS page that swept **33 rows,
+#: Rs 6,011 Cr, 4.08% of the fund** into `__CASH__`, taking real Kotak Mahindra
+#: Bank credit exposure out of overlap and concentration entirely.
+#:
+#: So each alternative is a complete instrument name rather than a word that
+#: might appear in one. A label this does not recognise keeps whatever
+#: `nature_name` said, which for a CD is `DEBT` and is right.
 CASH_INSTRUMENTS = re.compile(
-    r"\b(cblo|treps|repo|reverse\s*repo|net\s+(payable|receivable)|"
-    r"cash|margin|deposit)",
+    r"^\s*(cblo|treps|tri[- ]?party\s+repo|(reverse\s+)?repo|"
+    r"net\s+(payable|receivable)s?|net\s+current\s+assets?|"
+    r"cash(\s+(&|and)\s+cash\s+equivalents?|\s+margin)?|margin(\s+money)?)\s*$",
     re.I,
 )
 
@@ -195,11 +213,16 @@ class GrowwHoldingsParser:
         # same reading HDFC's workbook gets and the opposite of ICICI's.
         result.pct_scale = Decimal(1)
 
-        nav = _decimal(data.get("nav"))
-        if nav is not None:
-            # An independent witness that the slug maps to the scheme we think
-            # it does, which is the one thing a URL cannot tell us.
-            result.stated_navs["Groww"] = nav
+        # `stated_navs` is deliberately NOT filled. The page's `nav` is the
+        # LATEST published NAV -- `nav_date: 11-Sep-2026` against a portfolio
+        # dated 31-Aug -- and every consumer of `stated_navs` compares it to
+        # `nav_daily` at the disclosure's own as-of date. Storing a NAV from
+        # two weeks later would be a witness that disagrees by construction,
+        # and calling it "an independent witness that the slug maps to the
+        # right scheme" (as the first draft's comment did) would make it a
+        # false negative the moment scheme matching starts reading the field.
+        # The page's `isin` is the witness this parser actually has, and
+        # `jobs/fetch_groww.py` checks it.
 
         for index, raw in enumerate(rows, start=1):
             if not isinstance(raw, dict):
@@ -207,7 +230,36 @@ class GrowwHoldingsParser:
             result.rows.append(_stage(raw, index, f))
 
         _check_unit(result, f)
+        _warn_unknown_natures(result, rows)
         return result
+
+
+def _warn_unknown_natures(result: HoldingsParseResult, rows: list[Any]) -> None:
+    """Say so when Groww uses a `nature_name` this parser has not seen.
+
+    An unmapped nature falls through as its own bare string, which matches
+    nothing in `CLASS_BY_SECTION`, so the row silently stores as `other`. That
+    is how `MF` -- a fund inside a fund -- was classed for a whole slice
+    without anyone noticing. The rows are still loaded, because §4.10 forbids
+    dropping one; the warning is what stops the NEXT nature repeating it.
+    """
+    unknown = sorted(
+        {
+            nature
+            for r in rows
+            if isinstance(r, dict)
+            and (nature := (_text(r.get("nature_name")) or "").upper())
+            and nature not in NATURE_SECTION
+        }
+    )
+    if unknown:
+        result.warnings.append(
+            ParseWarning(
+                "GROWW_UNKNOWN_NATURE",
+                f"nature_name not mapped to a section: {', '.join(unknown)};"
+                " those rows will classify as `other`",
+            )
+        )
 
 
 def _payload(f: RawFile) -> dict[str, Any]:

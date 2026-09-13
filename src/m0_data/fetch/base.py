@@ -188,8 +188,12 @@ def archive_path(root: Path, source_id: str, file_id: str, ext: str) -> Path:
     """
     now = datetime.now(UTC)
     return (
-        root / path_segment(source_id) / f"{now:%Y}" / f"{now:%m}"
-        / file_id[:2] / f"{file_id}.{ext}"
+        root
+        / path_segment(source_id)
+        / f"{now:%Y}"
+        / f"{now:%m}"
+        / file_id[:2]
+        / f"{file_id}.{ext}"
     )
 
 
@@ -224,6 +228,9 @@ def conditional_get(
     url: str,
     *,
     user_agent: str,
+    method: str = "GET",
+    json_body: Any = None,
+    extra_headers: dict[str, str] | None = None,
     etag: str | None = None,
     last_modified: str | None = None,
     timeout_connect: float = 30,
@@ -237,7 +244,15 @@ def conditional_get(
     client: Any = None,
     sleep: Any = time.sleep,
 ) -> httpx.Response:
-    """One polite GET, with the stored validators. §2.3.
+    """One polite request, with the stored validators. §2.3.
+
+    `method` and `json_body` are here rather than in a second function because
+    everything that makes this polite -- the robots check, the rate limiter,
+    the retry loop, the jittered backoff, the `From:` header -- is orthogonal
+    to the verb. `jobs/fetch_amc.py` needed a POST for ICICI's listing, wrote
+    its own bare `getter.request(...)` instead, and thereby skipped all five on
+    the FIRST request the job makes to an AMC. A discovery call is not exempt
+    from §2.3 because it asks for a list rather than a file.
 
     Conditional headers are the difference between a monthly poll costing a
     round trip and costing a download. Most polls should return 304.
@@ -250,6 +265,8 @@ def conditional_get(
         raise FetchError(f"robots.txt disallows {url}")
 
     headers = {"User-Agent": user_agent}
+    if extra_headers:
+        headers.update(extra_headers)
     if from_email:
         # RFC 7231 §5.5.1. Carries the contact §2.3 asks for, on hosts whose
         # filters reject it in the User-Agent. See BROWSER_USER_AGENT.
@@ -265,9 +282,11 @@ def conditional_get(
         if limiter is not None:
             limiter.acquire(url, sleep=sleep)
         try:
-            response: httpx.Response = getter.get(
+            response: httpx.Response = getter.request(
+                method,
                 url,
                 headers=headers,
+                json=json_body,
                 timeout=httpx.Timeout(timeout_read, connect=timeout_connect),
                 follow_redirects=True,
             )

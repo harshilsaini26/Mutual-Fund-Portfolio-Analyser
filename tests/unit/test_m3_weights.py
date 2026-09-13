@@ -292,3 +292,35 @@ class TestTheSourceOfRecordIsNotOutrankedSilently:
 
         assert latest_as_of(conn, SCHEME, on_or_before=date(2026, 6, 30)) is None
         assert latest_as_of(conn, SCHEME, on_or_before=self.JULY) == self.JULY
+
+
+def test_the_tier_choice_does_not_move_with_the_report_date(
+    conn: sqlite3.Connection,
+) -> None:
+    """V1-47. The first version measured the AMC file's staleness from the
+    CALLER'S BOUND, so the same warehouse answered differently depending on
+    when you asked: the workbook at 0.00% unresolved on 2026-09-13 and the page
+    at ~19% two days later, with nothing changed underneath.
+
+    Worse, the two call forms disagreed — the unbounded one already used the
+    newest candidate as its reference — so `scripts/show_lookthrough.py` and
+    the persisted look-through could report different portfolios for one scheme
+    on one day. How late someone runs a report is what `staleness_days` is for.
+    """
+    july, august = date(2026, 7, 31), date(2026, 8, 31)
+    _disclose_at(conn, july, "amc_direct")
+    _disclose_at(conn, august, "aggregator")
+
+    answers = {
+        latest_disclosure(conn, SCHEME, bound)
+        for bound in (
+            None,
+            august,
+            date(2026, 9, 13),
+            date(2026, 9, 15),
+            date(2026, 12, 31),
+        )
+    }
+    assert answers == {(july, "amc_direct")}, (
+        f"the tier choice moved with the report date: {sorted(map(str, answers))}"
+    )

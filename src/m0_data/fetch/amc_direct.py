@@ -333,11 +333,23 @@ DISCOVERY: dict[str, AmcDiscovery] = {
 def for_period(
     files: list[DiscoveredFile], period: str | None, kind: str | None = None
 ) -> list[DiscoveredFile]:
-    """The disclosures for `YYYY-MM`, newest first. No period means the latest.
+    """The month-end disclosures for `YYYY-MM`. No period means the latest.
 
     Sorted in Python rather than trusting the publisher's order: Kotak's
     listing is roughly newest-first and ICICI's is exactly so, and "roughly" is
     not a property to build a monthly job on.
+
+    **One as-of date, whether or not a period was named.** Kotak publishes a
+    fortnightly on the 15th and again on the month end, so the first version
+    answered `--period 2026-08 --kind fortnightly` with BOTH -- 4.2 MB for the
+    2.1 MB wanted, and then `ingest_inbox` loaded the 15th as an ordinary
+    disclosure that `latest_disclosure` and the staleness report would both
+    treat as a month's portfolio. A caller naming a month for a monthly
+    disclosure means its month end.
+
+    Two `kind`s can still come back together, because a monthly and a
+    fortnightly dated the same day are different documents and choosing
+    between them is the caller's business -- `--kind` is how it says.
     """
     chosen = [f for f in files if kind is None or f.kind == kind]
     if period:
@@ -346,8 +358,8 @@ def for_period(
         except ValueError as exc:
             raise ValueError(f"period {period!r} is not YYYY-MM") from exc
         chosen = [f for f in chosen if (f.as_of.year, f.as_of.month) == (year, month)]
+    if not chosen:
+        return []
     chosen.sort(key=lambda f: (f.as_of, f.filename), reverse=True)
-    if period or not chosen:
-        return chosen
     newest = chosen[0].as_of
     return [f for f in chosen if f.as_of == newest]

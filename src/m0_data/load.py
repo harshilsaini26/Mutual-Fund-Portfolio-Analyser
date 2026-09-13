@@ -16,6 +16,7 @@ import re
 import sqlite3
 from collections import defaultdict
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from src.m0_data.parse.holdings.base import READER_VERSION
 from src.m0_data.parse.mcap.amfi import McapParseResult
@@ -110,9 +111,18 @@ def load_schemes(
                 source_file_id = excluded.source_file_id
             """,
             (
-                s.scheme_id, s.amfi_code, s.isin, normalise_amc_id(s.amc_name),
-                s.scheme_name, s.plan, s.option, s.option_raw, s.sebi_category,
-                seen_on, seen_on, source_file_id,
+                s.scheme_id,
+                s.amfi_code,
+                s.isin,
+                normalise_amc_id(s.amc_name),
+                s.scheme_name,
+                s.plan,
+                s.option,
+                s.option_raw,
+                s.sebi_category,
+                seen_on,
+                seen_on,
+                source_file_id,
             ),
         )
     return len(amcs), len(schemes)
@@ -376,12 +386,24 @@ def load_holdings(
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1)
             """,
             (
-                scheme_id, as_of, revision, position, row.get("isin"),
-                row["issuer_id"], row["instrument_raw_name"], row.get("quantity"),
-                row["market_value"], row.get("pct_to_nav"), row["pct_normalised"],
-                row["instrument_class"], row.get("credit_rating"),
-                row.get("reported_sector"), row["resolution_method"],
-                row.get("resolution_conf"), source_file_id, now,
+                scheme_id,
+                as_of,
+                revision,
+                position,
+                row.get("isin"),
+                row["issuer_id"],
+                row["instrument_raw_name"],
+                row.get("quantity"),
+                row["market_value"],
+                row.get("pct_to_nav"),
+                row["pct_normalised"],
+                row["instrument_class"],
+                row.get("credit_rating"),
+                row.get("reported_sector"),
+                row["resolution_method"],
+                row.get("resolution_conf"),
+                source_file_id,
+                now,
             ),
         )
 
@@ -396,12 +418,22 @@ def load_holdings(
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)
         """,
         (
-            scheme_id, as_of, revision, source_file_id, len(rows),
-            header.get("pct_sum_raw"), header.get("weight_residual"),
-            header["unresolved_mv_pct"], header["total_mv"],
-            header.get("aum_reported"), header.get("mv_vs_aum_pct"),
-            header.get("reported_unit"), header["validation_status"],
-            header.get("validation_notes"), resolver_version, parser_version,
+            scheme_id,
+            as_of,
+            revision,
+            source_file_id,
+            len(rows),
+            header.get("pct_sum_raw"),
+            header.get("weight_residual"),
+            header["unresolved_mv_pct"],
+            header["total_mv"],
+            header.get("aum_reported"),
+            header.get("mv_vs_aum_pct"),
+            header.get("reported_unit"),
+            header["validation_status"],
+            header.get("validation_notes"),
+            resolver_version,
+            parser_version,
             # V1-43. Defaulted rather than required: every caller before the
             # coverage tier existed was reading an AMC's own file, and a
             # missing tier meaning `amc_direct` keeps those callers honest
@@ -411,3 +443,34 @@ def load_holdings(
         ),
     )
     return {"holding": len(rows), "revision": revision}
+
+
+def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> Decimal | None:
+    """The scheme's own AUM on or before `as_of`, for §10's V2.
+
+    V2 is THE units check -- §7.2's 100x error fails it by two orders of
+    magnitude -- and it only runs when there is an AUM to reconcile against.
+    That makes this the one witness independent of the disclosure itself, so it
+    lives beside the loader rather than inside one job: `jobs/fetch_groww.py`
+    passed `None` here for a whole slice and disabled V2 on the very path where
+    the market-value unit is ASSERTED rather than read from a header.
+
+    Returns None when `scheme_aum` has not been built, which V2 records as
+    "no AUM on record" rather than treating as a pass.
+    """
+    if not _has_table(conn, "scheme_aum"):
+        return None
+    row = conn.execute(
+        "SELECT aum_inr FROM scheme_aum WHERE scheme_id=? AND as_of_date<=?"
+        " ORDER BY as_of_date DESC LIMIT 1",
+        (scheme_id, as_of),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def _has_table(conn: sqlite3.Connection, name: str) -> bool:
+    return bool(
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+        ).fetchone()
+    )

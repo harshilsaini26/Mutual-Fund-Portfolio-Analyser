@@ -12,7 +12,15 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from jobs.status import Standing, expected_as_of, next_step, standings
+from jobs.status import (
+    Standing,
+    _disclosure_page,
+    _index,
+    _published_label,
+    expected_as_of,
+    next_step,
+    standings,
+)
 
 #: Stated, not read from the clock. After the 10th, so August 2026 is due.
 TODAY = date(2026, 9, 13)
@@ -205,3 +213,60 @@ class TestNextStep:
 
     def test_a_current_house_gets_no_step(self) -> None:
         assert next_step(self._row(current=2), TODAY) == ""
+
+
+class TestThePublishedLabel:
+    """V1-47. The first version collapsed four states into one nested
+    conditional and printed `no adapter` for a house that HAS one whose listing
+    came back empty — the opposite of the truth about the single thing
+    `--check` exists to establish."""
+
+    def _row(
+        self, adapter: str | None, available: date | None, error: str | None
+    ) -> Standing:
+        return Standing(
+            "x", 1, date(2026, 7, 31), 0, "amc_direct", adapter, available, error
+        )
+
+    def test_a_house_with_no_adapter_says_so(self) -> None:
+        assert _published_label(self._row(None, None, None), True) == "no adapter"
+
+    def test_a_house_whose_listing_was_empty_is_not_called_adapterless(self) -> None:
+        assert _published_label(self._row("kotak", None, None), True) == "none listed"
+
+    def test_a_house_that_could_not_be_reached_says_so(self) -> None:
+        assert _published_label(self._row("kotak", None, "boom"), True) == "unreachable"
+
+    def test_an_answer_is_the_date(self) -> None:
+        label = _published_label(self._row("kotak", date(2026, 8, 31), None), True)
+        assert label == "2026-08-31"
+
+    def test_nothing_is_claimed_when_nobody_was_asked(self) -> None:
+        assert _published_label(self._row("kotak", None, None), False) == "-"
+
+
+class TestTheDisclosurePageLookup:
+    """A bare substring scan over an unordered list hands a short `amc_id` to
+    whichever entry happens to contain those letters first, and a reader who
+    follows that link downloads another fund house's portfolio."""
+
+    def test_each_held_house_finds_its_own_page(self) -> None:
+        for amc_id, host in (
+            ("kotak_mahindra", "kotakmf.com"),
+            ("nippon_india", "nipponindiaim.com"),
+            ("hdfc", "hdfcfund.com"),
+            ("ppfas", "ppfas.com"),
+            ("icici_prudential", "icicipruamc.com"),
+        ):
+            page = _disclosure_page(amc_id)
+            assert page and host in page, f"{amc_id} -> {page}"
+
+    def test_an_unknown_house_gets_nothing_rather_than_a_near_miss(self) -> None:
+        assert _disclosure_page("not_a_real_fund_house") is None
+
+    def test_the_index_is_read_once(self) -> None:
+        """`next_step` asks per stale row and the file cannot change mid-run."""
+        _index.cache_clear()
+        _disclosure_page("hdfc")
+        _disclosure_page("ppfas")
+        assert _index.cache_info().misses == 1

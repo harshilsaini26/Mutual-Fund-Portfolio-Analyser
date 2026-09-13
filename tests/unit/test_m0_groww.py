@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -355,3 +356,192 @@ class TestTheSlugMap:
             slugs["INF879O01027"]["slug"]
             == "parag-parikh-long-term-value-fund-direct-growth"
         )
+
+
+class TestTheCashRuleDoesNotSwallowDebt:
+    """V1-47. §8.4 keeps `debt` out of `CLASS_FALLBACK` because a bond HAS an
+    issuer and bucketing one as cash would hide real credit exposure.
+
+    The first `CASH_INSTRUMENTS` matched a bare `deposit`, which is inside
+    `Certificate of Deposit`. On the live PPFAS page that swept 33 rows,
+    Rs 6,011 Cr and 4.08% of the fund into `__CASH__`, taking Kotak Mahindra
+    Bank credit exposure out of overlap and concentration entirely.
+    """
+
+    def _section(self, nature: str, instrument: str) -> str | None:
+        page = _page(
+            {
+                "scheme_name": "A Fund",
+                "aum": 100.0,
+                "holdings": [
+                    {
+                        **HOLDING,
+                        "nature_name": nature,
+                        "instrument_name": instrument,
+                        "market_value": 100.0,
+                        "corpus_per": 100.0,
+                    }
+                ],
+            }
+        )
+        result = GrowwHoldingsParser().parse(RawFile("x", "S7", "a.html", page))
+        return result.securities[0].section
+
+    @pytest.mark.parametrize(
+        "instrument",
+        [
+            "Certificate of Deposit",
+            "Commercial Paper",
+            "Treasury Bills",
+            "Corporate Bond",
+            "Fixed Deposit",
+        ],
+    )
+    def test_a_debt_instrument_keeps_its_debt_section(self, instrument: str) -> None:
+        assert self._section("DEBT", instrument) == "DEBT INSTRUMENTS"
+
+    @pytest.mark.parametrize(
+        "instrument",
+        [
+            "CBLO",
+            "TREPS",
+            "Repo",
+            "Reverse Repo",
+            "Net Payables",
+            "Net Receivables",
+            "Cash",
+            "Margin",
+            "Net Current Assets",
+        ],
+    )
+    def test_a_money_market_label_is_still_cash(self, instrument: str) -> None:
+        assert self._section("DEBT", instrument) == "CASH & CASH EQUIVALENT"
+
+
+def test_a_fund_inside_a_fund_is_a_fund_unit() -> None:
+    """Groww files a fund-of-fund holding under `nature_name: MF`, which had no
+    NATURE_SECTION entry — so the section fell through as the bare string `MF`,
+    matched nothing in `CLASS_BY_SECTION`, and stored as `other`. §10's nested
+    look-through keys on `mfunit`, so the holding was invisible to it."""
+    from src.m0_data.normalise.instrument_class import class_from_section
+
+    page = _page(
+        {
+            "scheme_name": "A Fund",
+            "aum": 100.0,
+            "holdings": [
+                {
+                    **HOLDING,
+                    "nature_name": "MF",
+                    "instrument_name": "Mutual Fund",
+                    "market_value": 100.0,
+                    "corpus_per": 100.0,
+                }
+            ],
+        }
+    )
+    result = GrowwHoldingsParser().parse(RawFile("x", "S7", "a.html", page))
+    assert class_from_section(result.securities[0].section) == "mfunit"
+
+
+def test_an_unmapped_nature_is_reported_rather_than_quietly_other() -> None:
+    """The rows still load — §4.10 forbids dropping one — but a nature nobody
+    has mapped classifies as `other`, which is how `MF` went unnoticed for a
+    whole slice. The warning is what stops the next one repeating it."""
+    page = _page(
+        {
+            "scheme_name": "A Fund",
+            "aum": 100.0,
+            "holdings": [
+                {
+                    **HOLDING,
+                    "nature_name": "CRYPTO",
+                    "market_value": 100.0,
+                    "corpus_per": 100.0,
+                }
+            ],
+        }
+    )
+    result = GrowwHoldingsParser().parse(RawFile("x", "S7", "a.html", page))
+    assert [w.code for w in result.warnings] == ["GROWW_UNKNOWN_NATURE"]
+    assert "CRYPTO" in result.warnings[0].message
+
+
+def test_the_pages_nav_is_not_stored_as_the_disclosures_nav() -> None:
+    """`nav` is the LATEST published NAV (`nav_date: 11-Sep-2026`) against a
+    portfolio dated 31-Aug. Every consumer of `stated_navs` compares it to
+    `nav_daily` at the disclosure's own as-of date, so storing it would be a
+    witness that disagrees by construction."""
+    result = GrowwHoldingsParser().parse(_raw())
+    assert result.stated_navs == {}
+
+
+def test_both_load_paths_classify_the_fixture_identically() -> None:
+    """V1-47. The Groww job had its own four-branch copy of the section table
+    and the copy disagreed — REIT as `equity` where the canonical table says
+    `other`. The same fund through two tiers reported different classes for
+    identical holdings, and nothing downstream could tell which tier a stored
+    class came from."""
+    from src.m0_data.normalise.instrument_class import class_from_section
+
+    result = GrowwHoldingsParser().parse(_raw())
+    classes = {r.section: class_from_section(r.section) for r in result.securities}
+    assert classes["REITS & INVITS"] == "other", "REIT must not classify as equity"
+    assert classes["EQUITY & EQUITY RELATED"] == "equity"
+    assert classes["DERIVATIVES"] == "derivative"
+    assert classes["CASH & CASH EQUIVALENT"] == "cash"
+    assert classes["DEBT INSTRUMENTS"] == "debt"
+
+
+class TestTheLoadPathGivesV2AWitness:
+    """V1-47. `validate_disclosure` was called with `aum_reported=None`, so
+    §10's V2 — THE units check — was disabled on the one path where the market
+    value unit is ASSERTED rather than read from a header.
+
+    `MARKET_VALUE_UNIT` is hardcoded because no cell on the page states a unit,
+    and `_check_unit` compares rows to the page's own `aum` — both in the same
+    unit, so it scales with a unit error and can never catch one. `scheme_aum`
+    is the only witness independent of the page.
+    """
+
+    def test_the_job_reads_scheme_aum(self) -> None:
+        import inspect
+
+        import jobs.fetch_groww as job
+
+        body = inspect.getsource(job._one)
+        assert "_aum_for(conn, scheme_id, parsed.as_of_date)" in body
+        assert "date.today(),\n        None,\n    )" not in body, (
+            "validate_disclosure is still being handed a None AUM"
+        )
+
+    def test_v2_fires_when_an_aum_is_on_record(self) -> None:
+        """The check itself, so this test fails if V2 stops reconciling."""
+        from decimal import Decimal as D
+
+        from src.m0_data.validate.checks import HoldingRow, validate_disclosure
+
+        rows = [HoldingRow(None, "equity", D("1000"), D("100"), "I1")]
+        with_aum = validate_disclosure(
+            rows, date(2026, 8, 31), date(2026, 9, 13), D("100000")
+        )
+        v2 = next(c for c in with_aum if c.code == "V2")
+        assert not v2.passed, "a 100x discrepancy must fail V2"
+
+        without = validate_disclosure(rows, date(2026, 8, 31), date(2026, 9, 13), None)
+        assert next(c for c in without if c.code == "V2").passed, (
+            "with no AUM V2 cannot fail, which is why passing None disabled it"
+        )
+
+    def test_unpriced_rows_are_recorded(self) -> None:
+        """`holding.market_value` is NOT NULL, so a row the page did not price
+        is stored as zero and weighted zero — it contributes nothing while every
+        quality figure is computed against a total that already excludes it.
+        CLAUDE.md invariant 4: never silently drop rows."""
+        import inspect
+
+        import jobs.fetch_groww as job
+
+        body = inspect.getsource(job._one)
+        assert "unpriced" in body
+        assert "as_json(checks, unpriced=unpriced)" in body
