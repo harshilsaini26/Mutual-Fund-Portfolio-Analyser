@@ -9,6 +9,17 @@ the write succeeds and the value is quietly wrong.
 
 Migrations are forward-only and never edited once applied. To change a table,
 add the next numbered file.
+
+**A migration that REBUILDS a table must wrap itself in `BEGIN`/`COMMIT`.**
+Most files here are a single `CREATE TABLE IF NOT EXISTS` or `ALTER TABLE ADD
+COLUMN`, which SQLite applies atomically on its own, so nothing below needs a
+transaction and the pattern to copy looks safe. A rebuild is not one statement:
+SQLite cannot `ALTER` a CHECK onto a column, so the shape is copy-to-scratch,
+drop, rename, and a process killed between any two of those leaves the table
+half swapped. Statement order cannot fix it -- guarding one window widens the
+next -- and SQLite has transactional DDL, so `BEGIN`/`COMMIT` around the whole
+rebuild is the answer. `013_scheme_aum_basis.sql` is the worked example, and
+DECISIONS V1-55 is what it cost to learn.
 """
 
 from __future__ import annotations
@@ -68,8 +79,26 @@ def apply_migrations(db_path: str, directory: Path = MIGRATIONS) -> list[str]:
         for path in migration_files(directory):
             if path.name in done:
                 continue
-            conn.executescript(path.read_text(encoding="utf-8"))
+            try:
+                conn.executescript(path.read_text(encoding="utf-8"))
+            except sqlite3.Error as exc:
+                # NAMED. Without this the raw sqlite error propagates with no
+                # reference to the file, and since every job calls this at
+                # startup, one row a migration cannot accept stops the whole
+                # system with a message that mentions neither the migration nor
+                # the table it was reading -- measured with a single bad
+                # `scheme_aum.basis`: `CHECK constraint failed`, from a NAV
+                # backfill, naming a scratch table that no longer exists.
+                raise MigrationError(f"{path.name} failed: {exc}") from exc
             conn.execute("INSERT INTO schema_migration(name) VALUES (?)", (path.name,))
+            # Committed WITH its migration, not at the end of the loop. Deferred,
+            # a later migration failing rolled back the marker for every one
+            # before it while their DDL stood -- so the next run re-applied an
+            # already-applied file. Harmless for a `CREATE TABLE IF NOT EXISTS`,
+            # not harmless for a rebuild: re-running one against a table a later
+            # migration had widened would copy the columns it knew about and
+            # silently drop the rest.
+            conn.commit()
             applied.append(path.name)
         conn.commit()
         return applied

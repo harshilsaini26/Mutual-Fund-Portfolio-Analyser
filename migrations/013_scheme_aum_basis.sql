@@ -42,6 +42,26 @@
 -- This file has not been applied to any warehouse yet (the live one is at
 -- 012), so it is corrected here rather than superseded. `apply.py`'s rule is
 -- that a migration is never edited ONCE APPLIED.
+--
+-- IF THIS MIGRATION FAILS, it is because a row already in `scheme_aum` holds a
+-- `basis` the constraint will not take, and the whole rebuild rolls back with
+-- the table untouched. `apply.py` names this file in the error; find the row
+-- with
+--
+--     SELECT scheme_id, as_of_date, basis FROM scheme_aum
+--      WHERE basis NOT IN ('point_in_time', 'quarterly_average');
+--
+-- and delete it, or drop the table and reload it from scratch --
+-- `python -m jobs.fetch_aum` rebuilds every row of it (invariant 10). What it
+-- must NOT do is widen the vocabulary to admit the bad value: §10's V2 picks
+-- its tolerance from this column, and a basis no reader knows is a check that
+-- does not run.
+--
+-- The column list below is 012's. Re-running this file against a table that a
+-- LATER migration has widened would copy the columns named here and silently
+-- drop the rest -- which is why `apply.py` commits each `schema_migration` row
+-- with its own migration rather than at the end of the loop, so an applied
+-- rebuild is never a candidate for re-running.
 
 BEGIN;
 
@@ -65,7 +85,12 @@ INSERT INTO scheme_aum_next
          source_file_id, ingested_at
   FROM scheme_aum;
 
+-- CRASH WINDOW 1 -- killed here, the scratch table is populated and the
+-- source is still whole. The transaction rolls both away.
 DROP TABLE scheme_aum;
+-- CRASH WINDOW 2 -- killed here, the scratch table is the ONLY copy of the
+-- data, and a leading `DROP TABLE IF EXISTS` on the next run would destroy it.
+-- This is the window statement order cannot close. The transaction can.
 ALTER TABLE scheme_aum_next RENAME TO scheme_aum;
 
 -- Dropped with the old table, so it is recreated rather than left behind.
