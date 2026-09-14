@@ -91,8 +91,9 @@ A working system, not a finished product.
 
 | | |
 |---|---|
-| AMC formats parsing **real** files | 2 of 5 (HDFC, Nippon) |
-| Held schemes with a loaded disclosure | 1 of 3 |
+| AMC readers, each verified against a real published file | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
+| Plus a coverage tier | any fund Groww lists, at ~9% unresolved against 0.00% from an AMC's own file |
+| Schemes with a loaded disclosure | 192, across 6 fund houses |
 | Modules built | M0 data, M1 ledger, M3 look-through, M6 views |
 | Not built | M2 fund analytics, M4 risk, M5 market, tax engine |
 | Has anyone actually used it | **no** |
@@ -122,9 +123,9 @@ it and fails if anything resolves that the lock does not mention. The extras are
 ### The gate
 
 ```bash
-python -m pytest -q                                   # 882 tests, hermetic
+python -m pytest -q                                   # 1,178 tests, ~80s, hermetic
 python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 164 files
+python -m mypy                                        # strict, 187 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
 
@@ -137,17 +138,37 @@ export MF_CONTACT_EMAIL=you@example.com               # sent in From:, per RFC 7
 
 python -m jobs.fetch_nav                              # today's NAVs, all schemes
 python -m jobs.build_entity_master                    # AMFI market-cap list -> issuers
+python -m jobs.fetch_aum                              # scheme AUM, which arms the units check
 python -m jobs.load_holdings --amc hdfc               # a disclosure, end to end
 
 python -m jobs.import_cas --file statement.pdf --user USER-01
 python -m jobs.serve                                  # browser UI on 127.0.0.1:8765
+
+python -m jobs.status                                 # what is stale, and the command to fix it
 ```
+
+`jobs.status` is the one to run first on any day you are not sure what is out of
+date. Offline and instant: SEBI requires a monthly portfolio within ten days of
+month end, so it compares that date against what is loaded and prints the
+command that would close each gap. `--check` also asks the AMCs that can be
+asked.
 
 ### Cover the funds you actually hold
 
-Most AMCs publish their monthly portfolio behind a page that needs a browser, and one
-answers a portfolio request with a CAPTCHA. So the fetch is yours; everything after it is
-not. Download your fund house's monthly portfolio workbook, drop it in `data/inbox/`, and:
+Some fund houses can be asked directly. A disclosure page that renders its file
+list in JavaScript is a page whose file list arrives as JSON, and those
+endpoints are neither authenticated nor challenged — so for those houses the
+download is a command:
+
+```bash
+python -m jobs.fetch_amc --amc kotak --list           # what is published, no download
+python -m jobs.fetch_amc --amc kotak --period 2026-08 # into data/inbox/
+```
+
+Nothing here defeats a bot check; it declines to visit the page that has one.
+
+For the rest, the fetch is still yours. Download your fund house's monthly
+portfolio workbook, drop it in `data/inbox/`, and:
 
 ```bash
 python -m jobs.ingest_inbox
@@ -161,6 +182,18 @@ never guessed at.
 
 `config/amc_disclosure_index.yaml` has the disclosure page for all 52 AMCs, so finding the
 download is a link away.
+
+Holding a fund from an AMC nobody has written a reader for, there is a coverage
+tier that reads an aggregator's scheme page instead:
+
+```bash
+python -m jobs.fetch_groww --scheme INF179K01UT0
+```
+
+It reaches any fund Groww lists, and it is deliberately not a replacement: the
+page carries no ISIN column, which costs ~9% of rows unresolved against 0.00%
+from the same fund's own workbook. A reader always prefers the AMC's file while
+that file is not itself stale.
 
 Passwords are always prompted, never read from the environment. Every fetch is
 rate-limited per domain, respects `robots.txt`, uses conditional GET, and archives the raw
@@ -229,11 +262,18 @@ they carry the correctness gates, and a suite never shown to catch a deliberate 
 not been shown to catch anything. A separate verifier recomputes the golden portfolio and
 imports nothing from `src/`, on purpose.
 
+The same treatment found something the tests could not: deleting any one of the
+thirteen `conn.commit()` calls in `src/` used to leave the suite green, because
+a test that reads back on the connection that wrote sees uncommitted rows
+either way. Ten are now held by tests that assert through a second connection;
+the other three are `DROP`-only and their commits are measurably no-ops, which
+is said at the line rather than papered over with a test that cannot fail.
+
 ---
 
 ## Documentation
 
-`docs/` holds the roughly 10,000-line specification this was built from — written before
+`docs/` holds the roughly 12,600-line specification this was built from — written before
 the code, one spec per module — plus:
 
 - **`PLAN.md`** — scope, the vertical slices, and the acceptance gate for each.

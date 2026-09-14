@@ -187,10 +187,6 @@ Ordered by what they cost.
    them is a behaviour change: a scheme whose holdings vanish currently keeps
    surfacing its stale rows, because `materialise_weights` returns 0 without
    deleting.
-0. **The unit suite spends 36% of its time re-running migrations.**
-   `apply_migrations` is called 228 times for 94s of a 261s run, across 78 call
-   sites in 35 files. Migrating once per session and copying the 244 KiB file
-   is ~200x cheaper (1.0ms against 209.5ms).
 
 0. **`scheme_aum` retracts by DELETE, because it has no revision.** V1-54 scoped the
    delete to one quarter, but invariant 2 forbids even an `UPDATE` of a fact row and
