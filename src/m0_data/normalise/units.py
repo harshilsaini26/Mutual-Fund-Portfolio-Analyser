@@ -1,18 +1,16 @@
 """Market value -> rupees absolute. MODULE_0.md §7.2.
 
-**This is the 100x-error path.** Most AMCs report market value in lakhs, some
-in crores, a few absolute. The header text is the only signal, and it is free
-text: `Market/ Fair Value (Rs. in Lacs.)`, `Market Value (Rs. in Crores)`,
-`Amount (Rs.)`. Getting it wrong scales an entire portfolio by 100 and nothing
-downstream notices, because the weights still sum to 100 — only the absolute
-values are wrong, and they are wrong consistently.
+**This is the 100x-error path.** Most AMCs report in lakhs, some in crores, a
+few absolute, and the free-text header is the only signal. Getting it wrong
+scales an entire portfolio by 100 with nothing downstream noticing, because the
+weights still sum to 100 — only the absolute values are wrong, and consistently
+so.
 
-So: **the unit is read from the header, and an unreadable header raises.**
-§7.2 says so and it is the one place in this module where guessing is worst.
+So **the unit is read from the header, and an unreadable header raises** (§7.2).
 
-The sanity net is §10's V2 — `sum(market_value)` against the scheme's AUM
-within 3%. A units error fails that by two orders of magnitude, which is why V2
-quarantines rather than warns.
+The sanity net is §10's V2: `sum(market_value)` against the scheme's AUM. A
+units error fails it by two orders of magnitude, which is why V2 quarantines
+rather than warns.
 """
 
 from __future__ import annotations

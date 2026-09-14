@@ -1,22 +1,19 @@
 """Caveat assembly. MODULE_6.md §6.
 
-**One function, because the text must be identical across the product.** The same
-staleness in the Sankey and in the treemap has to read the same way; two
+**One function, because the text must be identical across the product.** Two
 paraphrases of one fact make a reader wonder which is right.
 
-Caveats are **sentences**, not codes or flags. They render directly, exactly as
-written here, and they are never truncated — if there are six, six appear. M6 may
-collapse them behind a "6 notes" affordance, but the count stays visible.
+Caveats are SENTENCES, not codes. They render exactly as written and are never
+truncated — if there are six, six appear; M6 may collapse them behind a "6 notes"
+affordance, but the count stays visible.
 
-Every string here is **descriptive** (`PLAN.md` §3.3): it states what is true
-about the data, never what to do about it. "43 days old" is a fact; "consider
-refreshing" is advice this product does not give. `tests/unit/test_m6_language.py`
-lints it.
+Every string is **descriptive** (`PLAN.md` §3.3): "43 days old" is a fact,
+"consider refreshing" is advice this product does not give.
+`tests/unit/test_m6_language.py` lints it.
 
-This is where the honesty commitments made in M0 through M5 either become visible
-or quietly evaporate — §19.2 calls it the honesty test. Staleness, coverage and
-the unresolved share are all computed upstream; if they do not reach this list,
-computing them bought nothing.
+Where the honesty commitments made upstream become visible or quietly evaporate
+(§19.2). Staleness, coverage and the unresolved share are computed upstream; if
+they do not reach this list, computing them bought nothing.
 """
 
 from __future__ import annotations

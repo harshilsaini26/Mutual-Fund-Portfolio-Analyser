@@ -1,23 +1,17 @@
 """`upstream_hash`. MODULE_6.md §14.1.
 
-The hash is what a cache would key on, and **the hash is the truth**: no TTLs, no
-manual invalidation. A daily NAV changes `portfolio_summary.computed_at`, which
-changes the m3 probe, which changes every look-through view's hash. Nothing else
-recomputes.
+**The hash is the truth**: no TTLs, no manual invalidation. A daily NAV changes
+`portfolio_summary.computed_at`, which changes the m3 probe, which changes every
+look-through view's hash. Nothing else recomputes.
 
-**There is no cache table yet**, deliberately — `MODULE_6.md`'s own build
-sequence puts caching at step 12, after the views, and a cache with nothing in it
-is configurability nobody asked for. The hash is computed anyway because
-`upstream_hash` is a required field on the frozen `ViewEnvelope`, and because a
-field that exists but is empty is the kind of thing that gets wired up wrong
-later. It is correct now; the table that would use it can land whenever it earns
-its place.
+**There is no cache table yet**, deliberately — a cache with nothing in it is
+configurability nobody asked for. The hash is computed anyway because
+`upstream_hash` is a required field on the frozen `ViewEnvelope`, and a field
+that exists but is empty gets wired up wrong later.
 
-A builder declares what it reads through `required_sources()` rather than having
-it inferred. §5.1: *"declared rather than inferred, so a cache key cannot
-silently go stale when a builder starts reading a new source."* Inference would
-have to trace calls through a provider protocol, which is exactly the kind of
-cleverness that fails quietly.
+A builder DECLARES what it reads through `required_sources()` (§5.1), *"so a
+cache key cannot silently go stale when a builder starts reading a new source."*
+Inference would have to trace calls through a provider protocol.
 """
 
 from __future__ import annotations

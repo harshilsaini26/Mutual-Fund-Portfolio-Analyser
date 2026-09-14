@@ -1,20 +1,19 @@
 """§4.6's `instrument_class`, in one place. DECISIONS V1-47.
 
 This lived in `jobs/load_holdings.py` while there was one load path. V1-43 added
-a second, and because `jobs.load_holdings` does a great deal of unrelated work
-at import, `jobs/fetch_groww.py` wrote its own four-branch copy instead of
-importing this one. **The copy disagreed**: it mapped a REIT to `equity` where
-the table below maps it to `other`, and it had no `mutual fund` branch at all,
-so a fund-of-fund unit came out `other` instead of `mfunit` and §10's nested
+a second, and `jobs/fetch_groww.py` wrote its own copy rather than import a
+module that does unrelated work at import time. **The copy disagreed**: a REIT
+mapped to `equity` instead of `other`, and with no `mutual fund` branch a
+fund-of-fund unit came out `other` instead of `mfunit`, so §10's nested
 look-through could never find it.
 
 The same fund loaded through the two tiers therefore reported different
-`instrument_class` values for identical holdings. That is a worse failure than
-the duplication it came from, because nothing downstream can tell which tier a
-figure came from once the class is stored.
+`instrument_class` values for identical holdings — worse than the duplication it
+came from, because nothing downstream can tell which tier a stored class came
+from.
 
-So the table moved down here, where both jobs can import it without importing
-each other. Nothing about the rules changed in the move.
+Moved here so both jobs can import it without importing each other. Nothing
+about the rules changed in the move.
 """
 
 from __future__ import annotations

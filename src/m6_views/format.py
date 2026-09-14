@@ -1,19 +1,15 @@
 """Number, percentage and date formatting. MODULE_6.md §9.
 
-Indian conventions are not obvious and getting them wrong makes the product feel
-foreign: grouping is **last three digits, then pairs** — 1234567.89 becomes
+Indian grouping is **last three digits, then pairs**: 1234567.89 becomes
 12,34,567.89, not 1,234,567.89.
 
-**`None` renders as an em dash.** Never `0`, never blank, never `N/A` (§9.3). The
-distinction is load-bearing across this codebase: a NULL means nobody computed
-it, and a zero means somebody computed it and the answer was nothing. M1's XIRR
-is NULL because the returns engine has not fed `portfolio_summary`; rendering it
-as 0.0% would be a lie with a number on it.
+**`None` renders as an em dash** — never `0`, never blank, never `N/A` (§9.3).
+The distinction is load-bearing: a NULL means nobody computed it, a zero means
+somebody did and the answer was nothing. Rendering a NULL XIRR as 0.0% would be
+a lie with a number on it.
 
-Formatting is the one thing M6 does to a figure. §2.1 forbids deriving one —
-`format_return` multiplying a fraction by 100 is the boundary of what counts as
-presentation, and it is here rather than in a builder so there is exactly one
-place to check.
+Formatting is the one thing M6 does to a figure (§2.1 forbids deriving one), and
+it lives here rather than in a builder so there is exactly one place to check.
 """
 
 from __future__ import annotations

@@ -1,22 +1,21 @@
 """Render states and suppression. MODULE_6.md §7 and §3.3.
 
-**A blank chart teaches the user the tool is broken. An explained absence teaches
-them how the tool works.** That sentence is the whole design: every non-`ok`
-envelope carries a `state_reason` that names what is missing and what produces
-it. `"No data"` is not acceptable — §7.3's own examples all name the fix.
+**A blank chart teaches the user the tool is broken. An explained absence
+teaches them how the tool works.** Every non-`ok` envelope carries a
+`state_reason` naming what is missing and what produces it; `"No data"` is not
+acceptable.
 
-Four states, and they are genuinely different facts:
+Four states, genuinely different facts:
 
   ok          data present and above the confidence floor
   empty       nothing computed yet, or the user holds nothing
   suppressed  computed, but below `min_confidence` — a number that would mislead
   error       the builder raised
 
-`suppressed` is reserved for views where a low-confidence figure is *actively*
-misleading, not merely uncertain. Everything else renders with caveats
-(§7.2) — there is no `hide_low_confidence` preference and §4.4 locks that in,
-because a toggle that hides weak data makes a cleaner product that is quietly
-less truthful.
+`suppressed` is for figures that are ACTIVELY misleading, not merely uncertain;
+everything else renders with caveats. There is no `hide_low_confidence`
+preference (§4.4): a toggle that hides weak data makes a cleaner product that is
+quietly less truthful.
 """
 
 from __future__ import annotations
