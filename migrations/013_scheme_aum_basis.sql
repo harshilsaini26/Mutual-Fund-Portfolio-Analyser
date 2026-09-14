@@ -14,10 +14,21 @@
 -- constraint belongs on this table, not in every reader's batch loop.
 --
 -- SQLite cannot ALTER a CHECK onto an existing column, so this is the standard
--- rebuild. Re-running it is safe: `scheme_aum_next` is gone again after the
--- rename, and the copy takes whatever `scheme_aum` holds at the time. The
--- table is derived and regenerable in full from `jobs/fetch_aum.py`
--- (invariant 10), which is what makes a rebuild the cheap option here.
+-- rebuild. The table is derived and regenerable in full from
+-- `jobs/fetch_aum.py` (invariant 10), which is what makes a rebuild the cheap
+-- option here.
+--
+-- The leading DROP is the whole difference between safe to re-run and not.
+-- `apply_migrations` runs this through `executescript`, which is autocommit:
+-- a process killed between the INSERT and the DROP below leaves
+-- `scheme_aum_next` fully populated with no `schema_migration` row, so the
+-- next run inserts the same rows into it again. Reproduced without it --
+-- `UNIQUE constraint failed`, on that run and on every run after it, blocking
+-- 014 and everything past it behind a table only manual surgery could clear.
+-- This file has not been applied to any warehouse yet, so it is corrected
+-- here rather than superseded.
+
+DROP TABLE IF EXISTS scheme_aum_next;
 
 CREATE TABLE IF NOT EXISTS scheme_aum_next (
   scheme_id      TEXT NOT NULL REFERENCES scheme(scheme_id),

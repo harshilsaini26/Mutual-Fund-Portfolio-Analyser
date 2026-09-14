@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-14 · 1,143 tests passing
+**Last updated:** 2026-09-14 · 1,154 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -176,6 +176,12 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 ## Known defects, measured and unfixed
 
 Ordered by what they cost.
+
+0. **`scheme_aum` retracts by DELETE, because it has no revision.** V1-54 scoped the
+   delete to one quarter, but invariant 2 forbids even an `UPDATE` of a fact row and
+   this table deletes them. The fix is `revision`/`is_current` as every other fact
+   table has, which moves the primary key and touches `aum_for`, the
+   `INSERT OR REPLACE` and the restatement counter. A slice, not a patch.
 
 1. **State development loans have no issuer.** 1,553 Cr in one fund. §8.4
    forbids bucketing them with sovereign paper because a state is a real

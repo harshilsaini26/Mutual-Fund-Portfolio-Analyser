@@ -59,7 +59,7 @@ from src.m0_data.fetch.base import (
     archive,
     conditional_get,
 )
-from src.m0_data.load import has_table
+from src.m0_data.load import WITNESS_MAX_AGE_DAYS, has_table
 from src.m0_data.normalise.units import to_inr
 
 
@@ -87,7 +87,41 @@ SOURCE_ID = "S3"
 _STOP_AT_YEARS = 4
 
 
-def _get(url: str, cfg: dict[str, Any], client: Any = None) -> bytes:
+@dataclass(frozen=True)
+class _Polite:
+    """One rate limiter and one robots cache, for a whole run.
+
+    `DomainRateLimiter` keeps its token bucket in instance state and its own
+    docstring says it is "shared across every fetcher in a process" -- so
+    building one INSIDE `_get`, which this module did, handed every request a
+    full bucket and enforced nothing at all. Measured against S3's own config
+    (0.5 req/s, burst 2): a nine-request walk should wait **56 seconds** and
+    waited **zero**. V1-51 priced the `_STOP_AT_YEARS` budget at "a minute of
+    polite crawling at 0.5 req/s"; that minute never existed.
+
+    `RobotsCache` was rebuilt the same way, so robots.txt was re-fetched before
+    every single request -- doubling the traffic to the host the limiter exists
+    to be gentle with, and doing it outside the limiter, since `allows` calls
+    the client directly.
+
+    `jobs/backfill_nav.py` builds both once outside its loop. This is that
+    shape, threaded through `published` so one walk shares one budget.
+    """
+
+    limiter: DomainRateLimiter
+    robots: RobotsCache | None
+    client: Any = None
+
+
+def _polite(cfg: dict[str, Any], client: Any = None) -> _Polite:
+    return _Polite(
+        DomainRateLimiter(float(cfg["rate_limit_per_sec"]), int(cfg["burst"])),
+        RobotsCache() if cfg.get("respect_robots") else None,
+        client,
+    )
+
+
+def _get(url: str, cfg: dict[str, Any], polite: _Polite) -> bytes:
     response = conditional_get(
         url,
         user_agent=str(cfg["user_agent"]),
@@ -96,9 +130,9 @@ def _get(url: str, cfg: dict[str, Any], client: Any = None) -> bytes:
         timeout_read=float(cfg["timeout_read"]),
         retries=int(cfg["retries"]),
         from_email=str(cfg.get("from_email") or "") or None,
-        limiter=DomainRateLimiter(float(cfg["rate_limit_per_sec"]), int(cfg["burst"])),
-        robots=RobotsCache() if cfg.get("respect_robots") else None,
-        client=client,
+        limiter=polite.limiter,
+        robots=polite.robots,
+        client=polite.client,
     )
     response.raise_for_status()
     return bytes(response.content)
@@ -126,6 +160,7 @@ def published(
     years: int = 1,
     client: Any = None,
     stop_at: date | None = None,
+    polite: _Polite | None = None,
 ) -> list[Quarter]:
     """The quarters AMFI lists, newest first, from `years` financial years.
 
@@ -141,13 +176,19 @@ def published(
     `stop_at` stops the moment a named quarter is seen, so asking for
     `2026-03-31` costs three requests rather than the eight that walking four
     years to be safe would.
+
+    `polite` is how `run` gives the whole job ONE rate budget across this walk
+    and the data request that follows it. `client` is the offline seam and
+    builds a private budget from `cfg`; passing both says the same thing twice,
+    and `polite` wins.
     """
-    listed = parse_years(_get(years_url(), cfg, client))
+    polite = polite or _polite(cfg, client)
+    listed = parse_years(_get(years_url(), cfg, polite))
     out: list[Quarter] = []
     filled = 0
     for fy_id, _ in listed:
         try:
-            periods = parse_periods(_get(periods_url(fy_id), cfg, client))
+            periods = parse_periods(_get(periods_url(fy_id), cfg, polite))
         except NothingPublished:
             # A financial year listed before its first quarter is published.
             # ONLY this case. A payload that will not parse keeps raising --
@@ -275,20 +316,34 @@ def _families(conn: Any) -> dict[str, list[_Member]]:
 #: magnitude clear of both.
 _SCALE_TOLERANCE = Decimal(10)
 
-#: Below this many comparable schemes there is no median to speak of, and the
-#: check cannot tell a unit change from one fund that grew. Two schemes -- one
-#: of them a new index fund up 12x since the quarter being averaged -- was
-#: enough to refuse an entirely correct load, which is the same false refusal
-#: the median was introduced to prevent, reappearing at small n. Too few is a
+#: The smallest sample in which ONE scheme cannot decide the median. At n=1 the
+#: single ratio *is* the median, so one new index fund up 12x refuses a correct
+#: load -- the false refusal the median was introduced to prevent, reappearing
+#: at small n. At n=2 an outlier drags it halfway. At n=3 the middle value
+#: survives one outlier, and only a second can move it.
+#:
+#: Measured on the live warehouse, 182 comparable schemes: 7 sit above 1.5x
+#: (3.8%), 5 above 2x, 1 above 5x, none above 10x. At that rate two independent
+#: outliers in a sample of three is under half a percent, so three is not
+#: merely the structural minimum but a comfortable one. Below it the check is a
 #: missing witness: reported, and carried on from.
-_SCALE_MIN_SAMPLE = 5
+_SCALE_MIN_SAMPLE = 3
+
+#: How far a disclosure may sit from the quarter being loaded and still say
+#: anything about its scale. `WITNESS_MAX_AGE_DAYS` is this system's existing
+#: answer to "how old may an AUM witness be" (`src/m0_data/load.py`), reused
+#: rather than invented: it is the same question from the other end.
+_SCALE_MAX_GAP_DAYS = WITNESS_MAX_AGE_DAYS
 
 #: One spelling. `main` prints it and the tests assert it.
 _NO_COMPARISON = "no disclosure to compare against"
 
 
 def assert_scale(
-    conn: Any, totals: dict[_GroupKey, Decimal], members: dict[_GroupKey, set[str]]
+    conn: Any,
+    as_of: date,
+    totals: dict[_GroupKey, Decimal],
+    members: dict[_GroupKey, set[str]],
 ) -> str:
     """Refuse a load whose AAUM does not agree in ORDER OF MAGNITUDE.
 
@@ -316,20 +371,42 @@ def assert_scale(
     # this, rather than a second spelling of it here.
     if not has_table(conn, "holding_disclosure"):
         return _NO_COMPARISON
-    # ORDERED, and the newest row wins the comprehension. `is_current` is
-    # flipped per (scheme_id, as_of_date) -- `load.py`'s `UPDATE
-    # holding_disclosure SET is_current = 0 WHERE scheme_id=? AND as_of_date=?`
-    # -- so a scheme disclosed at several dates has several CURRENT rows: 13 of
-    # the 192 here. Unordered, this kept whichever row SQLite returned last,
-    # which is neither the newest nor the same one on the next rebuild
-    # (invariant 10). `_families` above orders its own read for this reason.
-    known = {
-        str(r[0]): Decimal(r[1])
-        for r in conn.execute(
-            "SELECT scheme_id, total_mv FROM holding_disclosure"
-            " WHERE is_current = 1 ORDER BY scheme_id, as_of_date"
+    # The disclosure NEAREST this quarter's end, per scheme, and only if it is
+    # near at all. `is_current` is flipped per (scheme_id, as_of_date) --
+    # `load.py`'s `UPDATE holding_disclosure SET is_current = 0 WHERE
+    # scheme_id=? AND as_of_date=?` -- so a scheme disclosed at several dates
+    # has several CURRENT rows: 13 of the 192 here.
+    #
+    # Taking the NEWEST of them, as the first version did, answers a different
+    # question from the one being asked. `--quarter 2025-03-31` against a
+    # warehouse whose disclosures are all from 2026 compared a 2025 average
+    # with 2026 portfolios and refused a correct backfill at 12x. Reproduced.
+    #
+    # Nearest in EITHER direction, not `on_or_before`. AAUM lands about ten
+    # days after a quarter closes and disclosures are monthly, so the portfolio
+    # closest to the June average is usually August's -- V1-49 measured that
+    # pair at -10.4% and -4.6%. A backward-only bound would have excluded every
+    # disclosure in this warehouse and switched the check off entirely.
+    #
+    # Ties go to the earlier date and the walk is ordered, so a rebuild makes
+    # the same choice (invariant 10).
+    nearest: dict[str, tuple[int, Decimal]] = {}
+    for scheme_id, total_mv, disclosed_raw in conn.execute(
+        "SELECT scheme_id, total_mv, as_of_date FROM holding_disclosure"
+        " WHERE is_current = 1 ORDER BY scheme_id, as_of_date"
+    ):
+        disclosed_on = (
+            disclosed_raw
+            if isinstance(disclosed_raw, date)
+            else date.fromisoformat(str(disclosed_raw))
         )
-    }
+        gap = abs((disclosed_on - as_of).days)
+        if gap > _SCALE_MAX_GAP_DAYS:
+            continue
+        best = nearest.get(str(scheme_id))
+        if best is None or gap < best[0]:
+            nearest[str(scheme_id)] = (gap, Decimal(total_mv))
+    known = {scheme_id: mv for scheme_id, (_, mv) in nearest.items()}
     if not known:
         return _NO_COMPARISON
 
@@ -348,10 +425,9 @@ def assert_scale(
     if not ratios:
         return _NO_COMPARISON
     if len(ratios) < _SCALE_MIN_SAMPLE:
-        return (
-            f"only {len(ratios)} schemes to compare against;"
-            f" fewer than {_SCALE_MIN_SAMPLE} is too few for a median"
-        )
+        # The same prefix as the other two, so one grep finds every state in
+        # which this check did not run.
+        return f"{_NO_COMPARISON} ({len(ratios)} of {_SCALE_MIN_SAMPLE} needed)"
 
     # `statistics.median`, not `ratios[len(ratios) // 2]`. That is the UPPER
     # median on an even-length list, and at n=2 it is simply the maximum --
@@ -386,6 +462,7 @@ def load_quarter(
     unknown = 0
     incoherent = 0
     refused: set[str] = set()
+    refused_codes: set[str] = set()
     for row in rows:
         found = index.get(row.amfi_code)
         if not found:
@@ -418,6 +495,7 @@ def load_quarter(
             # refused code has no coherent answer for.
             incoherent += 1
             refused.update(scheme_id for scheme_id, _ in found)
+            refused_codes.add(row.amfi_code)
             continue
         totals[key] += to_inr(row.aaum_raw, AAUM_UNIT)
         members[key].update(scheme_id for scheme_id, _ in found)
@@ -428,7 +506,7 @@ def load_quarter(
     # `commit()` -- which is what any batch loop that caught this would reach
     # -- persisted the 100x-wrong figure the check had just rejected.
     # Reproduced. Both maps are complete here, so this is where it belongs.
-    scale = assert_scale(conn, totals, members)
+    scale = assert_scale(conn, as_of, totals, members)
 
     now = datetime.now(UTC)
     # Every figure already stored for this quarter, in ONE query. The first
@@ -478,11 +556,32 @@ def load_quarter(
     # stand behind. `scheme_aum` is derived and regenerable (invariant 10), and
     # a missing witness is the documented safe state: V2 records "no AUM on
     # record" and says so.
+    # Scoped to THIS quarter. A row already stored for this `as_of` came from
+    # this same loader under the grouping now judged incoherent, so it is
+    # directly superseded and goes. Earlier quarters do NOT: they were written
+    # while the derivation still placed these schemes coherently, and deleting
+    # them destroyed two correct quarters over a contradiction observed in a
+    # third (reproduced, 4 rows). AMFI serves one period per request, so they
+    # could only be rebuilt one quarter at a time. They are counted and the
+    # codes named instead, which is what §4.10 asks for.
+    #
+    # `executemany` and `total_changes`: one call rather than a statement per
+    # scheme, and no chunking around SQLite's bound-variable cap, which an
+    # `IN` list would need since `refused` has no bound.
     retracted = 0
-    for scheme_id in sorted(refused):
-        retracted += conn.execute(
-            "DELETE FROM scheme_aum WHERE scheme_id = ?", (scheme_id,)
-        ).rowcount
+    stale = 0
+    if refused:
+        before = conn.total_changes
+        conn.executemany(
+            "DELETE FROM scheme_aum WHERE scheme_id = ? AND as_of_date = ?",
+            [(scheme_id, as_of) for scheme_id in sorted(refused)],
+        )
+        retracted = conn.total_changes - before
+        stale = sum(
+            1
+            for (scheme_id,) in conn.execute("SELECT scheme_id FROM scheme_aum")
+            if scheme_id in refused
+        )
 
     conn.commit()
     return {
@@ -492,7 +591,14 @@ def load_quarter(
         "scheme_aum_rows": written,
         "unmatched_amfi_codes": unknown,
         "incoherent_codes": incoherent,
+        # Named, not just counted. A count tells a human that something was
+        # refused and nothing about what to look at; the codes are in hand
+        # here, and `assert_scale` already names its worst scheme for the same
+        # reason. Comma-joined without spaces, because `main` prints these as
+        # space-separated `k=v` pairs.
+        "incoherent_examples": ",".join(sorted(refused_codes)[:5]) or "none",
         "retracted": retracted,
+        "stale_witnesses": stale,
         "restated": restated,
     }
 
@@ -522,7 +628,8 @@ def run(
     # A named quarter may be older than the newest financial year, so the walk
     # continues until it is found rather than stopping at a fixed depth --
     # and stops the moment it IS found, which is usually the first year.
-    quarters = published(cfg, years=years, client=client, stop_at=wanted_end)
+    polite = _polite(cfg, client)
+    quarters = published(cfg, years=years, stop_at=wanted_end, polite=polite)
     if list_only:
         return [
             {"quarter": str(q.ends), "label": q.label, "financial_year_id": q.fy_id}
@@ -537,43 +644,57 @@ def run(
         )
     fy_id, pid, label = wanted[0].fy_id, wanted[0].period_id, wanted[0].label
 
+    # `finally`, because every exit from here used to leak the handle: the
+    # SystemExit paths above, `AumScaleError` from `load_quarter`, and the
+    # ordinary return. On Windows an open SQLite file cannot be unlinked, which
+    # is how a leaked connection turns into a test-directory cleanup failure
+    # three runs later, in a session with nothing to do with this one.
     conn = connect(str(warehouse_path()))
-    url = data_url(fy_id, pid)
-    content = _get(url, cfg, client)
+    try:
+        url = data_url(fy_id, pid)
+        content = _get(url, cfg, polite)
 
-    result, path = archive(
-        content,
-        FetchCandidate(url=url, source_id=SOURCE_ID),
-        "application/json",
-        raw_root(),
-        lambda fid: _archived(conn, fid),
-    )
-    if path is not None:
+        result, path = archive(
+            content,
+            FetchCandidate(url=url, source_id=SOURCE_ID),
+            "application/json",
+            raw_root(),
+            lambda fid: _archived(conn, fid),
+        )
+        if path is not None:
+            conn.execute(
+                "INSERT INTO raw_file (file_id, source_id, url, fetched_at,"
+                " byte_size, storage_path, parse_status)"
+                " VALUES (?,?,?,?,?,?, 'pending')",
+                (
+                    result.file_id,
+                    SOURCE_ID,
+                    url,
+                    datetime.now(UTC),
+                    result.byte_size,
+                    str(path),
+                ),
+            )
+            conn.commit()
+
+        rows = parse_aaum(content)
+        counts = load_quarter(conn, rows, label, str(result.file_id))
         conn.execute(
-            "INSERT INTO raw_file (file_id, source_id, url, fetched_at, byte_size,"
-            " storage_path, parse_status) VALUES (?,?,?,?,?,?, 'pending')",
-            (
-                result.file_id,
-                SOURCE_ID,
-                url,
-                datetime.now(UTC),
-                result.byte_size,
-                str(path),
-            ),
+            "UPDATE raw_file SET parse_status='ok', parser_id='aum.amfi',"
+            " parser_version='1', parsed_at=?, as_of_date=? WHERE file_id=?",
+            (datetime.now(UTC), counts["as_of"], result.file_id),
         )
         conn.commit()
-
-    rows = parse_aaum(content)
-    counts = load_quarter(conn, rows, label, str(result.file_id))
-    conn.execute(
-        "UPDATE raw_file SET parse_status='ok', parser_id='aum.amfi',"
-        " parser_version='1', parsed_at=?, as_of_date=? WHERE file_id=?",
-        (datetime.now(UTC), counts["as_of"], result.file_id),
-    )
-    conn.commit()
-    return [
-        {"period": label, "share_classes": len(rows), "fetch": result.status, **counts}
-    ]
+        return [
+            {
+                "period": label,
+                "share_classes": len(rows),
+                "fetch": result.status,
+                **counts,
+            }
+        ]
+    finally:
+        conn.close()
 
 
 def main(argv: list[str] | None = None) -> int:

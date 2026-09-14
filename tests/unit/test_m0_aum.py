@@ -26,6 +26,7 @@ import pytest
 from jobs.fetch_aum import (
     _NO_COMPARISON,
     AumScaleError,
+    _polite,
     load_quarter,
     published,
     run,
@@ -42,6 +43,7 @@ from src.m0_data.fetch.amfi_aum import (
     parse_periods,
     parse_years,
     quarter_end,
+    years_url,
 )
 from src.m0_data.load import WITNESS_MAX_AGE_DAYS, aum_for
 from src.m0_data.normalise.units import to_inr
@@ -803,30 +805,60 @@ class TestACodeWhoseSchemesContradictIsRefused:
         assert written == ["INF1", "INF2"]
         assert counts["incoherent_codes"] == 0
 
-    def test_a_refusal_retracts_what_an_earlier_load_wrote(
-        self, tmp_path: Path
-    ) -> None:
-        """Abstaining is not enough. These schemes already carry whatever an
-        earlier load wrote them under a grouping now judged incoherent, and
-        `aum_for` serves it for up to a year -- so V2 would reconcile a
-        disclosure against the very figure this run declined to stand behind."""
+    def _contradicting(self, tmp_path: Path) -> Any:
+        """Two share classes under one code, loaded cleanly for two quarters,
+        then split across two families by a later `scheme_family` derivation --
+        which is what turns their shared code into a contradiction."""
         conn = _warehouse(
             tmp_path / "w.db",
             [("INF1", "100001", "abc", None), ("INF2", "100001", "abc", None)],
         )
-        load_quarter(conn, [_aaum("100001", "A", "1000")], "January - March 2026", "f1")
-        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 2
-
-        # V1-37 re-derives and places the two share classes in different
-        # families. The code is a contradiction from here on.
+        for label in ("January - March 2025", "April - June 2025"):
+            load_quarter(conn, [_aaum("100001", "A", "1000")], label, "f0")
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 4
         conn.execute("UPDATE scheme SET scheme_family='famA' WHERE scheme_id='INF1'")
         conn.execute("UPDATE scheme SET scheme_family='famB' WHERE scheme_id='INF2'")
+        return conn
+
+    def test_a_refusal_supersedes_this_quarter_and_only_this_quarter(
+        self, tmp_path: Path
+    ) -> None:
+        """The first version deleted every row these schemes had, so one
+        contradicting payload destroyed two correct quarters loaded before the
+        derivation changed -- and AMFI serves one period per request, so they
+        could only be rebuilt one at a time."""
+        conn = self._contradicting(tmp_path)
         counts = load_quarter(
             conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f2"
         )
         assert counts["incoherent_codes"] == 1
-        assert counts["retracted"] == 2
-        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 0
+        assert counts["retracted"] == 0, "there was no row for 2026-06-30 to supersede"
+        assert counts["stale_witnesses"] == 4
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 4
+
+    def test_this_quarters_own_row_is_superseded(self, tmp_path: Path) -> None:
+        """A row already stored for this `as_of` came from this same loader
+        under the grouping now judged incoherent, so it IS directly
+        superseded."""
+        conn = self._contradicting(tmp_path)
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2025", "f2"
+        )
+        assert counts["retracted"] == 2, "the 2025-06-30 rows are the superseded ones"
+        assert counts["stale_witnesses"] == 2, "January - March 2025 is untouched"
+        left = sorted(
+            str(r[0]) for r in conn.execute("SELECT as_of_date FROM scheme_aum")
+        )
+        assert left == ["2025-03-31", "2025-03-31"]
+
+    def test_the_refusal_names_the_codes_not_only_a_count(self, tmp_path: Path) -> None:
+        """§4.10: a count says something was refused and nothing about what to
+        look at, and the code is in hand at the point of refusal."""
+        conn = self._contradicting(tmp_path)
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f2"
+        )
+        assert counts["incoherent_examples"] == "100001"
 
 
 def _disclosed(conn: Any, rows: list[tuple[str, str, str]]) -> None:
@@ -953,9 +985,11 @@ class TestTheScaleOfTheAaumIsChecked:
         )
         counts = self._load(conn, 2)
         assert counts["scheme_aum_rows"] == 2
-        assert "too few" in str(counts["scale_check"])
+        assert str(counts["scale_check"]).startswith(_NO_COMPARISON), (
+            "every state in which the check did not run shares one prefix"
+        )
 
-    def test_the_newest_of_several_current_disclosures_is_used(
+    def test_the_disclosure_nearest_the_quarter_is_used(
         self, tmp_path: Path
     ) -> None:
         """`is_current` is flipped per (scheme_id, as_of_date), so a scheme
@@ -973,6 +1007,44 @@ class TestTheScaleOfTheAaumIsChecked:
             + [(f"INF{i}", "2026-06-30", self.AGREES) for i in range(1, 6)],
         )
         assert "median 1.00x" in str(self._load(conn, 5)["scale_check"])
+
+    def test_nearest_is_not_the_same_question_as_newest(self, tmp_path: Path) -> None:
+        """Taking the NEWEST row answers a different question. Here the newest
+        disclosure sits a year past the quarter and the fund has grown a
+        hundredfold since, while the one a month before it agrees exactly.
+        Newest refuses a correct load; nearest does not."""
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(
+            conn,
+            [(f"INF{i}", "2026-05-31", self.AGREES) for i in range(1, 6)]
+            + [
+                (f"INF{i}", "2027-06-30", str(int(self.AGREES) * 100))
+                for i in range(1, 6)
+            ],
+        )
+        assert "median 1.00x" in str(self._load(conn, 5)["scale_check"])
+
+    def test_a_quarter_nothing_was_disclosed_near_is_not_judged(
+        self, tmp_path: Path
+    ) -> None:
+        """Backfilling `January - March 2025` into a warehouse whose
+        disclosures are all from 2026 compared a 2025 average against 2026
+        portfolios and refused a correct load at 12x. A portfolio that far from
+        the quarter says nothing about its scale: a missing witness, not a
+        failing one."""
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(
+            conn,
+            [(f"INF{i}", "2026-06-30", str(int(self.AGREES) * 12)) for i in range(1, 6)],
+        )
+        counts = load_quarter(
+            conn,
+            [_aaum(f"10000{i}", "A", "1000") for i in range(1, 6)],
+            "January - March 2025",
+            "f1",
+        )
+        assert str(counts["scale_check"]).startswith(_NO_COMPARISON)
+        assert counts["scheme_aum_rows"] == 5
 
     def test_an_empty_table_is_not_a_failure(self, tmp_path: Path) -> None:
         """A fresh warehouse has nothing to check the scale against, and that
@@ -1018,6 +1090,25 @@ class TestRunEndToEnd:
             run(quarter="Q1 2026", client=client)
         assert client.calls == [], "a bad date should not reach the network"
 
+    def test_one_token_bucket_is_shared_across_the_walk(self) -> None:
+        """`DomainRateLimiter` keeps its bucket in instance state, and its own
+        docstring says it is shared across every fetcher in a process. Built
+        inside `_get`, every request started with a full bucket: measured
+        against S3's own config, a nine-request walk should have waited 56
+        seconds and waited zero.
+
+        Two requests at burst 2 spend the burst, so a third has to wait. The
+        sleep is stubbed out -- `acquire` returns the seconds it WOULD have
+        waited, which is the observable the old code drove to zero."""
+        slow = dict(_CFG, rate_limit_per_sec=0.5, burst=2)
+        client = _Client({1: [(1, "April - June 2026")]})
+        polite = _polite(slow, client)
+
+        published(slow, years=1, polite=polite)
+        assert sum("fyId=" in c for c in client.calls) == 1
+        waited = polite.limiter.acquire(years_url(), lambda _s: None)
+        assert waited > 1, f"the burst was not spent; a third request waits {waited}s"
+
     def test_a_quarter_is_fetched_archived_parsed_and_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1049,3 +1140,11 @@ class TestRunEndToEnd:
         ).fetchone()
         assert status == "ok"
         assert Path(storage).is_file(), "the payload must be on disk, not just recorded"
+        conn.close()
+
+        # ONE robots.txt for three requests. `_get` built a fresh `RobotsCache`
+        # per call, so the cache cached nothing and the host was asked for its
+        # policy before every single request.
+        assert sum("robots.txt" in c for c in client.calls) == 1, (
+            "one robots cache for the run, not one per request"
+        )
