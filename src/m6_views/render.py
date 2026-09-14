@@ -1,25 +1,21 @@
 """Turning an envelope into what a template needs. MODULE_6.md §16.
 
-Three jobs, and a line that matters between two of them.
+Three jobs:
 
 **Formatting** (§9) — every figure a reader sees becomes a string here, in
-Python, using `format.py`. §16.4: the frontend may sort a table and toggle a
-series; it may not compute a percentage. Formatting server-side is how that stops
-being a rule people have to remember.
+Python. §16.4: the frontend may sort a table and toggle a series; it may not
+compute a percentage.
 
-**Geometry** — the heatmap's grid and the Lorenz path are pixel coordinates. They
-are *not* figures: nobody reads an x-position, and getting one wrong makes a
-chart look wrong rather than makes a number wrong. §2.1's ban is on deriving a
-reported figure, and scaling one that M3 already computed into a viewBox is the
-presentation-only arithmetic it explicitly permits.
+**Geometry** — the heatmap grid and Lorenz path are pixel coordinates, not
+figures. §2.1 bans deriving a reported figure; scaling one M3 already computed
+into a viewBox is the presentation-only arithmetic it permits.
 
-**Chart selection** — one template per `chart_type`, from the view definition.
+**Chart selection** — one template per `chart_type`.
 
-The Sankey is the exception to the formatting rule and the exception is narrow:
-`d3-sankey` needs numbers to compute widths, so the payload crosses as JSON with
-Decimals still as strings (§15.2) and `sankey.js` parses them at the point a
-pixel is produced. Every number the *user* sees in that view is formatted here
-and shipped as text, including the accessible table beneath the diagram.
+The Sankey is the narrow exception: `d3-sankey` needs numbers to compute widths,
+so the payload crosses as JSON with Decimals still as strings (§15.2). Every
+number the USER sees in that view is still formatted here, including the
+accessible table beneath the diagram.
 """
 
 from __future__ import annotations
@@ -284,20 +280,16 @@ def embeddable_json(payload: dict[str, Any]) -> str:
     """JSON that is safe to place inside a `<script>` element.
 
     **`json.dumps` escapes quotes and backslashes. It does not escape `<` or
-    `/`.** So an issuer name containing `</script>` closed the element and
-    everything after it parsed as HTML — demonstrated with
-    `</script><img src=x onerror=...>`, which reached the page live, same-origin
-    with `/api/*`, and could therefore read the whole portfolio and post it
-    anywhere.
+    `/`.** An issuer name containing `</script>` closes the element and
+    everything after it parses as HTML — demonstrated live, same-origin with
+    `/api/*`, so it could read the whole portfolio and post it anywhere.
 
-    That input is remote. Issuer names come from AMC disclosure files fetched
-    over the internet: `instrument_raw_name` -> resolution -> `canonical_name`
-    -> this payload. A hostile or compromised disclosure is the attack.
+    The input is REMOTE: issuer names come from AMC disclosure files fetched
+    over the internet, so a hostile or compromised disclosure is the attack.
 
-    `<` and friends are the SAME characters to a JSON parser, so the
-    browser reads the original string — this changes the encoding, not the data.
-    U+2028 and U+2029 are included because they are literal line terminators in
-    JavaScript source and JSON does not escape them either.
+    The escapes are the same characters to a JSON parser, so this changes the
+    encoding and not the data. U+2028 and U+2029 are included because they are
+    literal line terminators in JavaScript source.
     """
     return (
         json.dumps(jsonable(payload))

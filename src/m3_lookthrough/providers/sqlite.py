@@ -1,36 +1,29 @@
 """`LookThroughProvider` over the stored tables. MODULE_3.md §15.1.
 
-This is the boundary M4, M5 and M6 read M3 through. `MODULE_6.md` §1.3 rule 2 is
-categorical about it: *"M6 reads only through upstream provider interfaces. No
-direct SQL against analytics tables."* Until this file existed the protocol was a
-Slice Zero stub, so no view could be built without breaking that rule.
+The boundary M4, M5 and M6 read M3 through. `MODULE_6.md` §1.3 rule 2: *"M6
+reads only through upstream provider interfaces. No direct SQL against analytics
+tables."*
 
 **It holds a Zone A connection and a Zone B one, deliberately.** The exposures
-are Zone B — they are this user's — and `issuer_name` is Zone A's entity master,
-which is user-independent. Something has to cross that seam, and this is the
-right place: M6 must not, and `PLAN.md` §6.3 keeps the two databases apart
-precisely so the crossing is explicit and reviewable rather than incidental.
+are Zone B, this user's; `issuer_name` is Zone A's user-independent entity
+master. Something must cross that seam and this is the right place, so the
+crossing is explicit rather than incidental (`PLAN.md` §6.3).
 
-**Nothing here computes.** Every figure is read back from what
-`save_lookthrough` and `persist_metrics` wrote. That is not laziness, it is
-`MODULE_6.md` §2.1's rule pushed one layer down: a number derived in the read
-path is a second source of truth that nobody can reconcile against the first.
+**Nothing here computes** — every figure is read back from what
+`save_lookthrough` and `persist_metrics` wrote. §2.1 one layer down: a number
+derived in the read path is a second source of truth nobody can reconcile
+against the first.
 
-Two traps this adapter exists to absorb:
+Two traps this adapter absorbs:
 
-1. **There are two `Exposure` dataclasses.** `engine.Exposure` is what the
-   computation produces (`pct_of_portfolio`, `fund_count`); the one returned
-   here is `providers.lookthrough.Exposure` (`exposure_pct`, `via_funds`, plus
-   `issuer_name`, `fund_inr`, `direct_inr`, `holdings_as_of`, `staleness_days`).
-   `BUILD_ORDER.md` R3 freezes the second because M4 depends on its shape. This
-   module is the only place the two meet, and it reads the stored columns
-   directly rather than reusing `persist.load_exposures` and back-filling the
-   difference — a back-fill would have to invent `holdings_as_of`, which is
-   stored precisely because it cannot be re-derived.
-
+1. **There are two `Exposure` dataclasses** — `engine.Exposure` and the frozen
+   `providers.lookthrough.Exposure` (`BUILD_ORDER.md` R3). This is the only
+   place they meet, and it reads the stored columns directly rather than
+   back-filling from `persist.load_exposures`, which would have to invent
+   `holdings_as_of`.
 2. **`ORDER BY` on a `DECIMAL_TEXT` column sorts as text.** §15.3 requires
-   descending `exposure_inr`, *"Always"*, because M6 caches on payload hashes.
-   Every ordering here is done in Python.
+   descending `exposure_inr` *"Always"*, because M6 caches on payload hashes,
+   so every ordering here is done in Python.
 """
 
 from __future__ import annotations
