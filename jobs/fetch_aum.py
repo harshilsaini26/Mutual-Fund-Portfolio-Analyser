@@ -4,25 +4,18 @@
     python -m jobs.fetch_aum                     # the newest quarter
     python -m jobs.fetch_aum --quarter 2026-03-31
 
-**This is what §10's V2 has been waiting for.** V2 is the units check — the one
-that catches §7.2's 100x error and quarantines rather than warns — and it
-reconciles a disclosure's summed market value against `scheme_aum`. That table
-did not exist, so V2 has never run on a single disclosure here: 0 of 205 carried
-an `aum_reported`, and a portfolio a hundred times too large would have loaded
-clean on either tier.
+This is what §10's V2 needs: V2 reconciles a disclosure's summed market value
+against `scheme_aum`, and without the table it never ran on a single disclosure.
 
 **The scheme is the sum of its plans.** AMFI publishes one row per share class,
-so `HDFC Flexi Cap Fund - Growth Option - Direct Plan` reports Rs 34,740 Cr
-against a Rs 113,606 Cr portfolio. V1-37 settled that a disclosure describes the
-SCHEME, every plan of which holds one pool of assets, so the figure stored for a
-scheme is its family's total — and it is stored against EVERY member, because
-`aum_for` is asked about whichever ISIN a disclosure happened to be loaded
-against.
+so HDFC Flexi Cap's Direct-Growth plan reports Rs 34,740 Cr against a Rs 113,606
+Cr portfolio. A disclosure describes the SCHEME (V1-37), so the figure stored is
+its family's total, written against EVERY member — `aum_for` is asked about
+whichever ISIN a disclosure happened to be loaded against.
 
-A scheme with no `scheme_family` gets its own plan's figure and nothing else.
-That is the same conservative behaviour V1-37's migration describes for a NULL
-family: it under-reports rather than guessing at a grouping that was never shown
-coherent, and an under-reported AUM makes V2 stricter rather than blinder.
+A scheme with no `scheme_family` gets its own plan's figure and nothing else: it
+under-reports rather than guessing at a grouping never shown coherent, and an
+under-reported AUM makes V2 stricter rather than blinder.
 """
 
 from __future__ import annotations
@@ -66,15 +59,9 @@ from src.m0_data.normalise.units import to_inr
 class AumScaleError(RuntimeError):
     """The fetched AAUM is not on the scale `AAUM_UNIT` claims.
 
-    Raised BEFORE a single row is written, and nothing catches it: the load is
-    abandoned and the CLI reports it. The first version justified the base
-    class as `RuntimeError` "so `jobs/ingest_inbox.py`'s per-file guard already
-    catches it", which was false twice over -- `ingest_inbox` never calls this
-    module, and that guard is a catch-and-continue whose next `conn.commit()`
-    would have persisted exactly the rows this refuses.
-
-    Refused rather than warned because a 100x-wrong AUM does not degrade V2 --
-    it inverts it, quarantining every correct disclosure in the warehouse.
+    Raised BEFORE a single row is written, and nothing catches it. Refused
+    rather than warned because a 100x-wrong AUM does not degrade V2 — it
+    inverts it, quarantining every correct disclosure in the warehouse.
     """
 
 
@@ -91,20 +78,14 @@ _STOP_AT_YEARS = 4
 class _Polite:
     """One rate limiter and one robots cache, for a whole run.
 
-    `DomainRateLimiter` keeps its token bucket in instance state and its own
-    docstring says it is "shared across every fetcher in a process" -- so
-    building one INSIDE `_get`, which this module did, handed every request a
-    full bucket and enforced nothing at all. Measured against S3's own config
-    (0.5 req/s, burst 2): a nine-request walk should wait **56 seconds** and
-    waited **zero**. V1-51 priced the `_STOP_AT_YEARS` budget at "a minute of
-    polite crawling at 0.5 req/s"; that minute never existed.
+    `DomainRateLimiter` keeps its token bucket in instance state, so building
+    one inside `_get` handed every request a full bucket and enforced nothing.
+    Measured against S3's config (0.5 req/s, burst 2): a nine-request walk
+    should wait 56 seconds and waited zero. `RobotsCache` was rebuilt the same
+    way, re-fetching robots.txt before every request — outside the limiter,
+    since `allows` calls the client directly (V1-55).
 
-    `RobotsCache` was rebuilt the same way, so robots.txt was re-fetched before
-    every single request -- doubling the traffic to the host the limiter exists
-    to be gentle with, and doing it outside the limiter, since `allows` calls
-    the client directly.
-
-    `jobs/backfill_nav.py` builds both once outside its loop. This is that
+    `jobs/backfill_nav.py` builds both once outside its loop; this is that
     shape, threaded through `published` so one walk shares one budget.
     """
 
@@ -142,11 +123,9 @@ def _get(url: str, cfg: dict[str, Any], polite: _Polite) -> bytes:
 class Quarter:
     """One published quarter, addressed by the only key that is stable.
 
-    `period_id` restarts at 1 in EVERY financial year — id 1 is
-    `January - March 2026` in FY2025-26 and `April - June 2026` in FY2026-27 —
-    so a CLI that took it would mean a different quarter depending on when it
-    ran. `ends` is unambiguous, and it is already what `scheme_aum.as_of_date`
-    stores.
+    `period_id` restarts at 1 in every financial year, so a CLI taking it would
+    mean a different quarter depending on when it ran. `ends` is unambiguous and
+    is already what `scheme_aum.as_of_date` stores.
     """
 
     fy_id: int
@@ -166,21 +145,14 @@ def published(
 
     **Years with nothing published are skipped, not fatal.** AAUM arrives about
     ten days after a quarter ends, so between April and mid-July the newest
-    financial year can be listed with zero periods in it — and the first
-    version took `years[0]` unconditionally, so `parse_periods` raised and the
-    whole job died for roughly a quarter of every year while the previous
-    year's figure sat one request away.
+    financial year can be listed with zero periods — and taking `years[0]`
+    unconditionally killed the job for a quarter of every year.
 
-    Walked lazily, and that is the whole reason it takes a budget. One year
-    costs two requests and stops there, which is all the default run needs;
-    `stop_at` stops the moment a named quarter is seen, so asking for
-    `2026-03-31` costs three requests rather than the eight that walking four
-    years to be safe would.
+    Walked lazily, which is why it takes a budget: one year costs two requests,
+    and `stop_at` halts the moment a named quarter is seen.
 
-    `polite` is how `run` gives the whole job ONE rate budget across this walk
-    and the data request that follows it. `client` is the offline seam and
-    builds a private budget from `cfg`; passing both says the same thing twice,
-    and `polite` wins.
+    `polite` gives the whole job ONE rate budget across this walk and the data
+    request after it; `client` is the offline seam and builds a private one.
     """
     polite = polite or _polite(cfg, client)
     listed = parse_years(_get(years_url(), cfg, polite))
@@ -237,24 +209,15 @@ _GroupKey = tuple[str, str]
 def _group_key(found: list[_Member]) -> _GroupKey | None:
     """One key for a code's schemes, used by BOTH `totals` and `members`.
 
-    **None means refuse.** A code whose schemes name two DIFFERENT families is
-    a contradiction: AMFI numbers them as one share class and V1-37 placed them
-    in separate funds, and nothing here can say which is wrong. The first
-    version picked the first family and gave its total to every member — so a
-    scheme in family B was written family A's AAUM, measured at **20x** its
-    fund's actual figure on a two-line reproduction. V2 would then reconcile
-    that scheme's disclosure against another fund entirely.
+    **None means refuse.** A code whose schemes name two DIFFERENT families is a
+    contradiction and nothing here can say which is wrong. Picking the first
+    family gave its total to every member, measured at 20x the real figure for
+    the odd one out — and a missing witness disables V2 where a wrong one
+    corrupts it (V1-52).
 
-    That is worse than the stranding it replaced. A missing witness disables a
-    check and says so; a wrong one corrupts it silently. V1-37's own derivation
-    refuses a family it cannot show coherent rather than guessing, and this is
-    the same question one level out.
-
-    A family beside a **None** is not a disagreement. Schemes sharing an AMFI
-    code are one share class by AMFI's own numbering, so they belong to one
-    family by construction; a None is V1-37 declining to place a scheme, which
-    is missing information rather than conflicting information. Those group
-    together under the family that IS known.
+    A family beside a **None** is not a disagreement: schemes sharing an AMFI
+    code are one share class by AMFI's numbering, so a None is V1-37 declining
+    to place a scheme. Those still group under the family that IS known.
     """
     families = {family for _, family in found if family is not None}
     if len(families) > 1:
@@ -268,23 +231,13 @@ def _families(conn: Any) -> dict[str, list[_Member]]:
     """`amfi_code` -> EVERY (scheme_id, family key) it names.
 
     **A list, because an AMFI scheme code is not one scheme.** 4,592 of them
-    name two ISINs in this warehouse: `100034` is both `INF209K01157` (Aditya
-    Birla Large & Mid Cap, IDCW payout) and `INF209K01CE5` (the same fund, IDCW
-    reinvest) -- one pool of assets, one code, two ISINs.
+    name two ISINs here — an IDCW payout and an IDCW reinvest sharing one pool
+    of assets. Keyed on the code as a dict comprehension, every duplicate but
+    the last was discarded: 8,545 codes reach 12,388 scheme_ids and only 8,448
+    got a row, losing 3,940 schemes their witness in silence (V1-50).
 
-    The first version was a dict comprehension keyed on the code, so every
-    duplicate but the last was discarded: the live payload's 8,545 codes reach
-    **12,388** scheme_ids and only 8,448 got a row, losing 3,940 schemes their
-    AUM witness in silence. The run's own summary hid it, reporting 97
-    unmatched codes when 4,037 schemes went without.
-
-    Ordered, because which scheme_id a code yields must not depend on SQLite's
-    whim. `CLAUDE.md` invariant 10 wants a rebuild to reproduce byte-identical
-    output, and an unordered `SELECT` behind a collapsing dict gave neither the
-    same rows nor the same choice between them.
-
-    Loaded once. The alternative is a query per share class, and the payload
-    carries 8,545 of them.
+    Ordered, so which scheme_id a code yields does not depend on SQLite's whim
+    (invariant 10). Loaded once: the alternative is 8,545 queries.
     """
     index: dict[str, list[_Member]] = defaultdict(list)
     for code, scheme_id, amc, family in conn.execute(
@@ -303,30 +256,22 @@ def _families(conn: Any) -> dict[str, list[_Member]]:
 #: How far the TYPICAL family's AAUM may sit from that fund's own disclosed
 #: portfolio before the load is refused.
 #:
-#: On the MEDIAN, not the worst, and that is the whole design. A unit change
-#: moves every scheme by the same factor, so the median moves with it; a fund
-#: that doubled since the quarter being averaged moves only itself. The first
-#: version compared the maximum and aborted a correct load on two small index
-#: funds — one at 7.4x, having grown from Rs 1 Cr to Rs 7 Cr in two months,
-#: which is what a new index fund gathering assets looks like.
+#: On the MEDIAN, not the worst, and that is the design: a unit change moves
+#: every scheme by the same factor, where a fund that grew moves only itself.
+#: Comparing the maximum aborted a correct load on an index fund up 7.4x.
 #:
-#: Measured on the live warehouse: median **1.06**, p90 1.23, max 7.42 across
-#: the **182** schemes that had a disclosure to compare against. A switch from
-#: lakh to crore would put the median at **106**. A bound of 10 sits an order of
-#: magnitude clear of both.
+#: Measured live across the 182 schemes with a disclosure to compare against:
+#: median 1.06, p90 1.23, max 7.42. Lakh-to-crore would put the median at 106,
+#: so a bound of 10 sits an order of magnitude clear of both.
 _SCALE_TOLERANCE = Decimal(10)
 
 #: The smallest sample in which ONE scheme cannot decide the median. At n=1 the
-#: single ratio *is* the median, so one new index fund up 12x refuses a correct
-#: load -- the false refusal the median was introduced to prevent, reappearing
-#: at small n. At n=2 an outlier drags it halfway. At n=3 the middle value
-#: survives one outlier, and only a second can move it.
+#: single ratio IS the median; at n=2 an outlier drags it halfway; at n=3 the
+#: middle value survives one outlier.
 #:
-#: Measured on the live warehouse, 182 comparable schemes: 7 sit above 1.5x
-#: (3.8%), 5 above 2x, 1 above 5x, none above 10x. At that rate two independent
-#: outliers in a sample of three is under half a percent, so three is not
-#: merely the structural minimum but a comfortable one. Below it the check is a
-#: missing witness: reported, and carried on from.
+#: Measured live over 182 comparable schemes: 7 above 1.5x (3.8%), 5 above 2x,
+#: 1 above 5x, none above 10x — so two independent outliers in a sample of
+#: three is under half a percent. Below it the check reports a missing witness.
 _SCALE_MIN_SAMPLE = 3
 
 #: How far a disclosure may sit from the quarter being loaded and still say
@@ -347,19 +292,14 @@ def assert_scale(
 ) -> str:
     """Refuse a load whose AAUM does not agree in ORDER OF MAGNITUDE.
 
-    `AAUM_UNIT = "lakh"` is asserted — no field on the endpoint states a unit
-    — and `amfi_aum.py`'s docstring argues the assertion is safe because a
-    family's sum lands within a few percent of that fund's own disclosed
-    portfolio. **That comparison was only ever performed by a test against a
-    frozen fixture.** A live switch to crore would have loaded all 8,545
-    schemes at a hundredth of their AUM, every test would still have passed,
-    and V2 would then have quarantined the whole warehouse while blaming the
-    disclosures rather than the witness.
+    `AAUM_UNIT = "lakh"` is asserted — no field on the endpoint states a unit —
+    and the argument that the assertion is safe was only ever performed by a
+    test against a frozen fixture. A live switch to crore would have loaded all
+    8,545 schemes at a hundredth of their AUM with every test still passing
+    (V1-52).
 
-    The comparison the docstring describes is available here, in the data, at
-    load time: any scheme that already has a current disclosure carries a
-    `total_mv` computed from an entirely different source. Doing it is the
-    difference between an argument and a check.
+    The witness is here in the data: any scheme with a current disclosure
+    carries a `total_mv` computed from an entirely different source.
 
     Not a valuation check. AAUM is a quarterly average against a month-end
     portfolio and the two legitimately differ by ~10% (V1-49); the only error
@@ -371,25 +311,19 @@ def assert_scale(
     # this, rather than a second spelling of it here.
     if not has_table(conn, "holding_disclosure"):
         return _NO_COMPARISON
-    # The disclosure NEAREST this quarter's end, per scheme, and only if it is
-    # near at all. `is_current` is flipped per (scheme_id, as_of_date) --
-    # `load.py`'s `UPDATE holding_disclosure SET is_current = 0 WHERE
-    # scheme_id=? AND as_of_date=?` -- so a scheme disclosed at several dates
-    # has several CURRENT rows: 13 of the 192 here.
+    # The disclosure NEAREST this quarter's end, per scheme, and only if near at
+    # all. `is_current` is flipped per (scheme_id, as_of_date), so a scheme
+    # disclosed at several dates has several CURRENT rows: 13 of the 192 here.
     #
-    # Taking the NEWEST of them, as the first version did, answers a different
-    # question from the one being asked. `--quarter 2025-03-31` against a
-    # warehouse whose disclosures are all from 2026 compared a 2025 average
-    # with 2026 portfolios and refused a correct backfill at 12x. Reproduced.
+    # Taking the NEWEST answers a different question: `--quarter 2025-03-31`
+    # against a 2026-only warehouse refused a correct backfill at 12x (V1-57).
     #
-    # Nearest in EITHER direction, not `on_or_before`. AAUM lands about ten
-    # days after a quarter closes and disclosures are monthly, so the portfolio
-    # closest to the June average is usually August's -- V1-49 measured that
-    # pair at -10.4% and -4.6%. A backward-only bound would have excluded every
-    # disclosure in this warehouse and switched the check off entirely.
+    # Nearest in EITHER direction, not `on_or_before` — AAUM lands ten days
+    # after a quarter closes and disclosures are monthly, so the portfolio
+    # closest to a June average is usually August's, and a backward-only bound
+    # would have excluded every disclosure here.
     #
-    # Ties go to the earlier date and the walk is ordered, so a rebuild makes
-    # the same choice (invariant 10).
+    # Ties go to the earlier date and the walk is ordered (invariant 10).
     nearest: dict[str, tuple[int, Decimal]] = {}
     for scheme_id, total_mv, disclosed_raw in conn.execute(
         "SELECT scheme_id, total_mv, as_of_date FROM holding_disclosure"
@@ -474,25 +408,16 @@ def load_quarter(
         # `aum_for` is asked about whichever ISIN a disclosure was loaded
         # against. Counting the money once and the members severally is the
         # whole distinction the first version lost.
-        # ONE key for both maps, and that is the whole correction. The first
-        # version keyed `totals` on `found[0]`'s family and `members` on each
-        # scheme's OWN family, so a code naming two schemes with different
-        # family keys registered the second under a key `totals` never got --
-        # and the write loop iterates `totals`. Reproduced: code 100034 naming
-        # INF001 (no family) and INF002 (family `abc|Fund`) wrote INF001 alone
-        # and reported `scheme_aum_rows: 1, unmatched_amfi_codes: 0`. Success,
-        # with a scheme missing. That is the same silent loss this function was
-        # rewritten to fix, one layer in.
+        # ONE key for both maps. Keying `totals` on `found[0]`'s family and
+        # `members` on each scheme's own registered the second under a key
+        # `totals` never got, and the write loop iterates `totals` — success,
+        # with a scheme missing (V1-51).
         key = _group_key(found)
         if key is None:
-            # Counted, not dropped in silence. §4.10's rule is that a row never
-            # disappears without a record, and a code whose schemes contradict
-            # each other about their fund is exactly the case a human has to
-            # see rather than a number the loader invents.
-            #
-            # `incoherent_codes`, not `..._families`: this counts AMFI scheme
-            # codes, one per payload row, and a family is the one thing a
-            # refused code has no coherent answer for.
+            # Counted, not dropped in silence (§4.10). `incoherent_codes`, not
+            # `..._families`: this counts AMFI scheme codes, one per payload
+            # row, and a family is the one thing a refused code has no coherent
+            # answer for.
             incoherent += 1
             refused.update(scheme_id for scheme_id, _ in found)
             refused_codes.add(row.amfi_code)
@@ -528,16 +453,13 @@ def load_quarter(
         # Sorted, so a rebuild writes the same rows in the same order.
         for scheme_id in sorted(members[key]):
             # `INSERT OR REPLACE` overwrites in place, which every other fact
-            # table in this warehouse refuses to do. `scheme_aum` has no
-            # revision column in MODULE_0 §4's schema, so the overwrite stands
-            # -- but a figure that MOVED is news, and counting it is what stops
-            # a restatement being silent.
+            # table here refuses to do: `scheme_aum` has no revision column, so
+            # the overwrite stands and counting the moves is what stops a
+            # restatement being silent.
             #
-            # Compared as DECIMALS. `str(prior) != str(total)` made
-            # `Decimal("1000")` and `Decimal("1000.00")` a restatement, so a
-            # change in AMFI's published precision would have reported every
-            # scheme in the file as restated while nothing moved -- and a
-            # counter that cries wolf at that scale reports nothing at all.
+            # Compared as DECIMALS. `str(prior) != str(total)` made `1000` and
+            # `1000.00` a restatement, so a precision change upstream would
+            # report every scheme as restated while nothing moved.
             prior = stored.get(scheme_id)
             if prior is not None and Decimal(prior) != total:
                 restated += 1
@@ -549,25 +471,15 @@ def load_quarter(
             )
             written += 1
 
-    # A refusal has to RETRACT, not merely abstain. These schemes already carry
-    # whatever an earlier load wrote them under a grouping now judged
-    # incoherent, and `aum_for` goes on serving it for up to a year -- so V2
-    # would reconcile a disclosure against the very figure this run declined to
-    # stand behind. `scheme_aum` is derived and regenerable (invariant 10), and
-    # a missing witness is the documented safe state: V2 records "no AUM on
-    # record" and says so.
-    # Scoped to THIS quarter. A row already stored for this `as_of` came from
-    # this same loader under the grouping now judged incoherent, so it is
-    # directly superseded and goes. Earlier quarters do NOT: they were written
-    # while the derivation still placed these schemes coherently, and deleting
-    # them destroyed two correct quarters over a contradiction observed in a
-    # third (reproduced, 4 rows). AMFI serves one period per request, so they
-    # could only be rebuilt one quarter at a time. They are counted and the
-    # codes named instead, which is what §4.10 asks for.
+    # A refusal RETRACTS this quarter's row, because one already stored for this
+    # `as_of` came from this same loader under the grouping now judged
+    # incoherent. Earlier quarters do NOT: they were written while the
+    # derivation still placed these schemes coherently, and deleting them
+    # destroyed two correct quarters over a contradiction seen in a third
+    # (V1-57). Those are counted and their codes named instead (§4.10).
     #
-    # `executemany` and `total_changes`: one call rather than a statement per
-    # scheme, and no chunking around SQLite's bound-variable cap, which an
-    # `IN` list would need since `refused` has no bound.
+    # `executemany` and `total_changes`: one call, and no chunking around
+    # SQLite's bound-variable cap, which an `IN` list would need.
     retracted = 0
     stale = 0
     if refused:
@@ -611,11 +523,9 @@ def run(
 ) -> list[dict[str, object]]:
     """`client` exists so this whole job can be driven without the network.
 
-    Both helpers already took one and `run` did not pass it, so every path
-    through here -- the quarter lookup, the SystemExit on a quarter AMFI has
-    not published, the archive-then-register sequence, the `raw_file` status
-    update -- was verified only by having been run by hand. Three consecutive
-    review rounds found a defect in a function that had no test.
+    Both helpers took one and `run` did not pass it, so every path through here
+    was verified only by having been run by hand — and three consecutive review
+    rounds found a defect in a function that had no test.
     """
     cfg = source(SOURCE_ID)
     wanted_end: date | None = None

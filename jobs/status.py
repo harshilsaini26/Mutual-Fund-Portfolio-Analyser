@@ -3,22 +3,15 @@
     python -m jobs.status            # offline, instant
     python -m jobs.status --check    # also ask the AMCs that can be asked
 
-Both tiers can already answer "what is published"; nothing was asking them. The
-gap this closes is not machinery, it is the moment a person has to remember it
-is the 13th and wonder whether August's portfolios are out.
+**Offline by default**, because staleness is arithmetic on dates the warehouse
+already holds: SEBI requires a monthly portfolio within ten days of the month
+end, so comparing that month-end to `max(as_of_date)` needs no network.
+`--check` adds what the AMC says it has, for the houses with a discovery
+adapter.
 
-**Offline by default, and that is the important half.** Staleness is arithmetic
-on dates the warehouse already holds: SEBI requires a monthly portfolio within
-ten days of the month end, so on any given day there is a most recent month-end
-whose disclosure ought to exist, and comparing it to `max(as_of_date)` needs no
-network at all. `--check` adds what the AMC says it actually has, which is worth
-a request only for the houses with a discovery adapter.
-
-**Nothing here maps an AMC to an adapter.** `ingest_inbox` refused to keep such
-a table -- "a second place to be wrong about something the file already says"
--- and the same answer works in reverse: `raw_file.parser_id` records which
-parser read each disclosure, and that parser's own `amc_id` is the discovery
-key. The provenance already knows.
+**Nothing here maps an AMC to an adapter.** `raw_file.parser_id` records which
+parser read each disclosure and that parser's own `amc_id` is the discovery
+key — the provenance already knows.
 """
 
 from __future__ import annotations
@@ -50,14 +43,11 @@ INDEX_YAML = REPO_ROOT / "config" / "amc_disclosure_index.yaml"
 
 #: Words every fund house shares, so they identify none of them.
 #:
-#: **`india` is deliberately absent**, and the omission is the fix rather than
-#: an oversight. It reads like noise -- `Nippon India`, `ICICI Prudential India`
-#: -- but it is load-bearing in `Bank of India`: stripping it left that house
-#: as the fragment `bank of`, which is a genuine word-boundary prefix of
-#: `bank of baroda`, so `_disclosure_page("bank_of_baroda")` returned Bank of
-#: India's page and no amount of tightening the MATCHER could have stopped it.
-#: A word that identifies one house cannot be stripped because it decorates
-#: another. `nippon_india` still matches `Nippon India Mutual Fund` exactly.
+#: **`india` is deliberately absent.** It reads like noise, but it is
+#: load-bearing in `Bank of India`: stripping it left that house as `bank of`,
+#: a genuine word-boundary prefix of `bank of baroda`, so a lookup for Baroda
+#: returned Bank of India's page. A word that identifies one house cannot be
+#: stripped because it decorates another.
 _HOUSE_NOISE = frozenset(
     {
         "mutual",
@@ -109,14 +99,11 @@ class Standing:
     def verdict(self, today: date) -> str:
         """How far behind this house is, from the warehouse alone.
 
-        **`error` is deliberately not consulted.** It came to mean "unknown"
-        in the first version, which threw away a count that had already been
-        computed from a local query with no network involved: a house reading
-        `75/96 behind, 1 month` without `--check` read `unknown` with it, the
-        moment one listing timed out. A listing failure is news about what the
-        AMC has PUBLISHED, not about what we HOLD, and `--check` making the
-        report less informative than no `--check` is the opposite of the
-        flag's purpose. `_published_label` carries `unreachable` on its own.
+        **`error` is deliberately not consulted.** A listing failure is news
+        about what the AMC has PUBLISHED, not about what we HOLD — consulting
+        it made `75/96 behind, 1 month` read `unknown` the moment a listing
+        timed out, so `--check` was less informative than no `--check`.
+        `_published_label` carries `unreachable` on its own.
         """
         behind = self.schemes - self.current
         if behind == 0:
@@ -144,15 +131,13 @@ def expected_as_of(today: date) -> date:
 def standings(conn: Any, today: date | None = None) -> list[Standing]:
     """One row per fund house, from what is actually loaded.
 
-    `today` is an argument rather than a call to `date.today()` inside the
-    loop, so a test can state the date it means. It mattered here: the first
-    version read the clock, and its tests passed only on days after the
-    tenth -- green on the day they were written and red for a third of every
-    month afterwards.
+    `today` is an argument rather than a call to `date.today()`, so a test can
+    state the date it means: reading the clock made these tests pass only on
+    days after the tenth.
 
-    Grouped by AMC rather than by scheme because the AMC is the actionable
-    unit: one Kotak workbook carries 109 schemes, and a list that repeated
-    the same download 109 times would bury the four houses that need one.
+    Grouped by AMC because the AMC is the actionable unit — one Kotak workbook
+    carries 109 schemes, and repeating that download 109 times would bury the
+    four houses that need one.
     """
     rows = conn.execute(
         """
@@ -301,26 +286,19 @@ def _norm(text: str) -> str:
 def _disclosure_page(amc_id: str) -> str | None:
     """The AMC's monthly disclosure page, from AMFI's own directory (V1-32).
 
-    Matched on the normalised house name rather than an id, because the index
-    is keyed by the name AMFI prints and `scheme.amc_id` is a slug of the name
-    AMFI prints -- two spellings of one thing, and neither is a key the other
-    was built from.
+    Matched on the normalised house name rather than an id: the index is keyed
+    by the name AMFI prints and `amc_id` is a slug of that name, two spellings
+    of one thing.
 
-    **Exact, or a whole-word prefix, and nothing looser.** Two weaker rules
-    have now been wrong here in turn. A bare substring scan handed `uti` to
-    whichever entry happened to contain those three letters first. Replacing it
-    with `wanted in name or name in wanted` fixed that direction and broke the
-    other: `india` is noise, so `Bank of India Mutual Fund` normalises to the
-    two-word fragment `bank of`, which is contained in `bank of baroda` --
-    and `_disclosure_page("bank_of_baroda")` returned **Bank of India's page**,
-    the same failure mirrored. A reader who follows that link downloads another
-    fund house's disclosures.
+    **Exact, or a whole-word prefix, and nothing looser.** Two weaker rules were
+    wrong here in turn — a bare substring scan handed `uti` to whichever entry
+    contained those letters first, and containment then returned Bank of India's
+    page for a Bank of Baroda lookup, since `bank of` is contained in `bank of
+    baroda`. A reader following that link downloads another house's
+    disclosures.
 
-    So containment is gone. A match is either the whole normalised name or a
-    prefix of it ending on a word boundary, which is what distinguishes
-    `kotak mahindra` matching `Kotak Mahindra Mutual Fund` from `bank of`
-    matching `Bank of Baroda`. Ties go to the longest, and no match returns
-    None -- a missing link is a smaller harm than a confident wrong one.
+    Ties go to the longest, and no match returns None: a missing link is a
+    smaller harm than a confident wrong one.
     """
     wanted = _norm(amc_id.replace("_", " "))
     if not wanted:
