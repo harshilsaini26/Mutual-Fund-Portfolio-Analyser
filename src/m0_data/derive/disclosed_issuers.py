@@ -1,58 +1,29 @@
 """Issuers the disclosures name but the market-cap list does not. V1-41.
 
 §8.1's exposure unit is the issuer, and the only issuer source was AMFI's
-market-cap list — **listed Indian equity**. Everything else a fund holds had
-nowhere to resolve to: a company's commercial paper, an unlisted subsidiary, a
-foreign listing. Measured across 183 disclosures, that was 1,394 rows and
-Rs 198,510 Cr in `__UNRESOLVED__`, which is not a gap in coverage so much as a
-hole in the analysis — `__UNRESOLVED__` is synthetic, so it is excluded from
-overlap and concentration and the exposure leaves the look-through entirely.
+market-cap list — LISTED INDIAN EQUITY. Commercial paper, unlisted subsidiaries
+and foreign listings had nowhere to resolve to: 1,394 rows and Rs 198,510 Cr in
+`__UNRESOLVED__` across 183 disclosures, which is a hole in the analysis rather
+than a coverage gap, since `__UNRESOLVED__` is excluded from overlap and
+concentration entirely.
 
-**The disclosures already name these issuers.** 183 files from five fund houses
-are in the warehouse, and between them they say what `INE261F` is (National
-Bank For Agriculture and Rural Development) and what `US02079K` is (Alphabet).
-No new source, no new fetch.
+**The disclosures already name these issuers.** No new source, no new fetch.
 
-### The key is the ISIN, the name is a vote
+**The key is the ISIN, the name is a vote.** Grouping is by issuer segment
+(V1-29's key), so identity comes from the identifier and the disclosed name only
+labels something already identified — a wrong name is cosmetic where a wrong
+grouping would not be. The most informative name across the files wins: 281 of
+297 segments yield a usable one, and the 16 that do not are `CP` and `CD` all
+the way down (Rs 2,275 Cr), which stay unresolved because an issuer called `CP`
+is worse than no issuer.
 
-Grouping is by **issuer segment** — V1-29's key, characters 1-7 of an Indian
-ISIN. That is what makes this safe: the identity comes from the identifier, and
-the disclosed name only has to supply a label for something already identified.
-A wrong name is a cosmetic error; a wrong grouping would be a real one, and the
-grouping is not a judgement.
+Deliberately excluded: government paper, since segments are `None` for `IN` +
+digits and naming a state borrower needs a decision this module should not make
+(V1-30); and mutual fund units, which resolve to `__MFUNIT__` first (V1-41).
 
-Naming is where the 183 files pay off. One publisher writes `CP` for a piece of
-commercial paper and another names the issuer in full on a different row, so the
-most informative name in a segment is taken:
-
-    INE556F  ->  SMALL INDUSTRIES DEVELOPMENT BANK OF INDIA   (4 houses, 83 rows)
-    INE261F  ->  National Bank For Agriculture and Rural ...   (4 houses, 81 rows)
-    US02079K ->  Alphabet Inc A                                (2 houses, 2 rows)
-
-281 of 297 segments yield a usable name. The 16 that do not are `CP` and `CD`
-all the way down — Rs 2,275 Cr — and they stay unresolved, because an issuer
-called `CP` is worse than no issuer at all.
-
-### What is deliberately left out
-
-**Government paper.** Segments are `None` for `IN` + digits, so state
-development loans and sovereign securities never reach here. V1-30 decided that
-and the reasoning has not changed: a state is a real borrower and bucketing it
-is a loss of information, but naming it needs a decision this module should not
-make on its own.
-
-**Mutual fund units.** An `INF` ISIN resolves to `__MFUNIT__` before the
-cascade gets this far (V1-41's companion rule), so a fund held inside a fund
-does not become an issuer.
-
-### Visibility, which §8.2 asked for
-
-V1-02 departure 3 refused to create a provisional issuer silently, because *"a
-human sees that a new issuer appeared rather than finding it later"*. These are
-not silent: the `issuer_id` carries a `DISC:` prefix, `is_listed` is 0, and
-`source_file_id` points at the disclosure that supplied the name. `SELECT * FROM
-issuer WHERE issuer_id LIKE 'DISC:%'` is the review, and it does not flood the
-queue §8.4 exists to protect.
+Not silent, which is V1-02 departure 3's requirement: the `issuer_id` carries a
+`DISC:` prefix, `is_listed` is 0, and `source_file_id` points at the disclosure
+that supplied the name.
 """
 
 from __future__ import annotations
