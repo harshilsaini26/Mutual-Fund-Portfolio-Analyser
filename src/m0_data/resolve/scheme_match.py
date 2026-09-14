@@ -1,44 +1,30 @@
 """Which scheme does this sheet describe? DECISIONS V1-38.
 
 A workbook holding one scheme per sheet is the common packaging — Kotak ships
-119, Nippon 108, ICICI 146 — and every sheet names its own fund somewhere above
-the table. Matching that name to the AMFI master is what turns one download
-into a hundred portfolios instead of one.
+119, Nippon 108, ICICI 146 — and every sheet names its own fund above the table.
+Matching that name to the AMFI master turns one download into a hundred
+portfolios instead of one.
 
-**A wrong match is worse than no match**, and not by a little. It files one
-fund's holdings against another fund's ISIN, which looks exactly like a
-correct load: the portfolio reconciles against its own total, the weights sum
-to 100, the charts render. Nothing downstream can tell. So every rule here
-refuses rather than guesses, and refusing is the expected outcome for a
-meaningful minority of sheets.
+**A wrong match is worse than no match.** It files one fund's holdings against
+another fund's ISIN and looks exactly like a correct load: the portfolio
+reconciles against its own total, the weights sum to 100, nothing downstream can
+tell. So every rule here refuses rather than guesses.
 
-### Three gates, and why each exists
+Three gates:
 
-**Liveness.** A candidate must have been priced by AMFI on or after the
-disclosure date. This is the one that matters most, because the trap is not
-similar names — it is *dead* names. AMFI still lists
-`ICICI Prudential Multi-Asset Fund- Institutional`, one ISIN, last priced
-2020-04-24, beside the live `Multi Asset Allocation Fund`; and the AMC's own
-sheet says "Multi-Asset Fund", so the dead scheme is the *better* string match
-and the live one is not a string match at all. Latest NAV rather than a window
-around the date, because the warehouse backfills full history only where it
-needs it and a live fund can hold exactly one NAV row, from today.
-
-**Per line, not per blob.** A header is separate cells — the AMC's name, the
-fund's name, an as-on date, then column titles. Scored as one string the column
-titles drown the fund: ICICI's sheet fuzzy-matched
-`icici prudential psu equity fund` at 93 that way.
-
-**One family, one sheet.** Within a workbook a scheme appears once, so two
-sheets claiming the same family means at least one is wrong and **both are
-refused**. Measured on the two real multi-sheet workbooks, this catches two
-distinct causes: Nippon's `Index` sheet is a contents page listing every fund
-it contains, and Kotak's Gold *Fund*-of-fund names the Gold *ETF* it invests
-in. Neither is a near-miss a similarity threshold would have caught.
+- **Liveness.** A candidate must have been priced by AMFI on or after the
+  disclosure date. The trap is not similar names, it is DEAD ones: AMFI still
+  lists `ICICI Prudential Multi-Asset Fund- Institutional`, last priced
+  2020-04-24, and the AMC's sheet says "Multi-Asset Fund" — so the dead scheme
+  is the better string match and the live one is not a match at all.
+- **Per line, not per blob.** Scored as one string the column titles drown the
+  fund: ICICI's sheet fuzzy-matched `icici prudential psu equity fund` at 93.
+- **One family, one sheet.** Two sheets claiming one family means at least one
+  is wrong and BOTH are refused — Nippon's `Index` sheet is a contents page,
+  and Kotak's Gold fund-of-fund names the Gold ETF it invests in.
 
 Measured over 227 real sheets: 96 of Kotak's 119 identify and 94 of Nippon's
-108, with the rest refusing. The refusals are mostly debt and index schemes
-whose sheets name themselves by an internal code alone.
+108. The refusals are mostly sheets naming themselves by an internal code.
 """
 
 from __future__ import annotations
@@ -153,29 +139,20 @@ def detect_amc(
     """Whose workbook is this? Whichever AMC's funds are named in it.
 
     The alternative was a table mapping each parser's `amc_id` to the scheme
-    master's, which would have been three lines and wrong the first time an AMC
-    was added without one. This asks the file.
+    master's, wrong the first time an AMC was added without one. This asks the
+    file.
 
-    Two signals, because one is not enough. **Fund names** carry most files:
-    an AMFI scheme name begins with its house, so `kotak gold etf` and
-    `nippon india gold etf` are different keys for the same kind of fund. But
-    containment fails wherever an AMC does not spell its own fund the way AMFI
-    does, and ICICI does not — its sheet says `Multi-Asset Fund` where AMFI
-    says `Multi Asset Allocation Fund`, so no family is contained and the file
-    was skipped entirely.
+    Two signals. **Fund names** carry most files, since an AMFI scheme name
+    begins with its house — but containment fails where an AMC does not spell
+    its own fund the way AMFI does, and ICICI does not (`Multi-Asset Fund`
+    against `Multi Asset Allocation Fund`), so the file was skipped entirely.
+    So the **house's own name** counts too: ICICI's first header line is
+    literally `ICICI Prudential Mutual Fund`, verbatim what the `amc` table
+    holds.
 
-    So the **house's own name** counts too. ICICI's first header line is
-    literally `ICICI Prudential Mutual Fund`, which is verbatim what the `amc`
-    table holds. Cheap — 53 names — and it does not need the fuzzy matcher's
-    guard, because an exact containment of a fund house's registered name is
-    not a similarity judgement.
-
-    Returns `(amc_id, tally)` and refuses — `None` — unless one AMC accounts
-    for a **strict majority** of the sheets that matched anything. A workbook is
-    one house's monthly disclosure; a file where two AMCs are both well
-    represented is not the thing this was built to read, and guessing which
-    half to believe is exactly the kind of confident wrong answer the matcher
-    exists to avoid.
+    Returns `(amc_id, tally)` and refuses unless one AMC accounts for a STRICT
+    MAJORITY of the sheets that matched anything: a file where two AMCs are both
+    well represented is not one house's monthly disclosure.
     """
     tally: dict[str, int] = defaultdict(int)
     for candidates in sheets:
@@ -209,13 +186,11 @@ def identify_scheme(candidates: list[str], families: dict[str, list[str]]) -> Sc
     """Match a sheet's header lines to one family, or refuse.
 
     Containment first: a header that literally contains `kotak pioneer fund` is
-    not a similarity judgement and does not need one. The longest containment
-    wins, so `nippon india growth mid cap fund` beats `nippon india growth
-    fund` on a sheet that says the former.
+    not a similarity judgement. The longest containment wins.
 
     Fuzzy only when nothing is contained, and only through V1-02's guard — an
-    AMC may not spell its own fund the way AMFI does, which is the whole reason
-    ICICI needs it. A tie at the top is a refusal either way.
+    AMC may not spell its own fund the way AMFI does, which is why ICICI needs
+    it. A tie at the top is a refusal either way.
     """
     lines = [_norm(c) for c in candidates]
     lines = [line for line in lines if line]
