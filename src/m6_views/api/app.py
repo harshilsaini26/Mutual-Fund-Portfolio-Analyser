@@ -1,30 +1,25 @@
 """The HTTP API. MODULE_6.md §15.
 
-**Loopback only, no auth** (§15.3). Single user, bound to 127.0.0.1, remote
-access via Tailscale if ever wanted. Adding authentication before any non-
-loopback binding is its own decision requiring its own review — not something to
-bolt on when the bind address changes.
+**Loopback only, no auth** (§15.3). Single user, bound to 127.0.0.1. Adding
+authentication before any non-loopback binding is its own decision requiring its
+own review, not something to bolt on when the bind address changes.
 
 **A builder that raises must not take down the screen.** `PLAN.md` §4.9 is
-"degrade one panel, never the screen", so the route catches and returns an
-`error` envelope with the exception's class and message. Never a 500, never a
-stack trace: a traceback in a UI teaches nothing and looks like a crash.
+"degrade one panel, never the screen", so the route returns an `error` envelope
+with the exception's class and message — never a 500, never a stack trace.
 
-**The connections must be opened with `check_same_thread=False`, and every use
-takes `DB_LOCK`.** This was got wrong first: the original reasoning was that
-`async def` routes run on the event loop's single thread, so the default
-same-thread check would be satisfied. It is not — the loop runs in whatever
-thread the server started it in, which is never the thread that opened the
-database. The first API test failed with a `ProgrammingError` swallowed into an
-`error` envelope, which is exactly how a wrong assumption hides when the error
-path is well-behaved.
+**Connections are opened with `check_same_thread=False` and every use takes
+`DB_LOCK`.** The first reasoning was that `async def` routes run on the event
+loop's single thread and so satisfy the default check. They do not: the loop
+runs in whatever thread started it, never the one that opened the database. The
+first API test failed with a `ProgrammingError` swallowed into an `error`
+envelope — which is how a wrong assumption hides when the error path is
+well-behaved.
 
-So the opt-out is explicit at the call site (`create_app` opens nothing;
-`jobs/serve.py` passes `check_same_thread=False`) and the safety it removes is
-put back with a lock. sqlite3's check exists because concurrent use corrupts
-cursor state; serialising every request restores that guarantee without
-pretending the threading model is simpler than it is. For a single user on
-loopback, serialised access costs nothing.
+So the opt-out is explicit at the call site and the safety it removes is put
+back with a lock. sqlite3's check exists because concurrent use corrupts cursor
+state, and serialising every request restores that without pretending the
+threading model is simpler than it is.
 """
 
 from __future__ import annotations

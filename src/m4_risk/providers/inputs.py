@@ -1,35 +1,26 @@
 """`RiskInputs` — M4's view of everything upstream.
 
 MODULE_4.md §14.4. `PLAN.md` §8.2 rule 2: "M4 reaches everything via
-`RiskInputs`." The real implementation is an adapter holding a
-`LookThroughProvider`, a `MarketDataProvider` and so on — not a second data layer.
+`RiskInputs`." An adapter over the upstream providers, not a second data layer.
 
-Three amendments against the spec as written, all recorded in DECISIONS:
+Four amendments against the spec, recorded in DECISIONS:
 
-  D1  `lookthrough()` removed, `exposures()` used instead. The spec declares
-      `lookthrough(user_id, as_of) -> list[Exposure]` here and
-      `lookthrough(user_id, as_of, weight_basis) -> LookThroughResult` on
-      `LookThroughProvider`. One name, two return types, across a module
-      boundary. M3's `exposures()` already returns exactly what M4 wants, so the
-      adapter becomes a pass-through instead of a rename.
-
+  D1  `lookthrough()` removed, `exposures()` used instead — the spec gives one
+      name two return types across a module boundary, and M3's `exposures()`
+      already returns what M4 wants.
   D3  `sector_of()`, matching `MarketDataFeed`. One operation, one name.
-
   D5  `mcap_bucket()` gains `mcap_basis`. Without it M4 silently uses today's
-      AMFI list while M3 uses a pinned basis — `PLAN.md` §9.3's look-ahead bias,
-      in the flattering direction.
+      AMFI list while M3 uses a pinned basis — §9.3's look-ahead bias, in the
+      flattering direction.
+  D9  Six methods §13's `LIMIT_EVALUATORS` calls on `ri` but §14.4 never
+      declares. Without them the limit engine does not typecheck against its
+      own inputs.
 
-  D9  Six methods added that §13's `LIMIT_EVALUATORS` calls on `ri` but §14.4
-      never declares: `issuer_exposure_pct`, `sector_exposure_pct`,
-      `mcap_exposure_pct`, `illiquid_exposure_pct`, `current_drawdown`, and
-      `risk_snapshot` — the last of which the spec places on `RiskProvider`.
-      Without them the limit engine does not typecheck against its own inputs.
+After D1, the M3 block below is pure delegation to `LookThroughProvider`
+(`BUILD_ORDER.md` R1). Keep it that way.
 
-After D1 and D2, the M3 block below is a pure delegation to
-`LookThroughProvider`, which is `BUILD_ORDER.md` R1's amendment. Keep it that way.
-
-Slice Zero — Protocol stub, no implementation. `FakeRiskInputs` reading YAML
-fixtures ships alongside it.
+Slice Zero — Protocol stub. `FakeRiskInputs` reading YAML fixtures ships with
+it.
 """
 
 from __future__ import annotations

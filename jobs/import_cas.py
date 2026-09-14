@@ -5,32 +5,23 @@
 
     decrypt -> parse -> resolve -> import -> save -> rebuild
 
-This is the join `import_cas` was written waiting for. Its `known_txn_ids`
-parameter existed because *"persistence is Zone B and does not exist yet"* — so
-the report's duplicate count was a stand-in for what `INSERT OR IGNORE` would
-have done. Zone B exists now, and this job passes the real set, which makes
-`inserted` and `duplicate` describe the database rather than approximate it.
+**Two databases, opened for different reasons.** Zone A is read only, for
+scheme resolution and NAVs; Zone B is written. They never share a connection,
+and the dependency runs the way invariant 3 requires: M1 reads M0, never the
+reverse.
 
-**Two databases, opened for different reasons.** Zone A (the warehouse) is read
-only, for scheme resolution and NAVs; Zone B is written. They never share a
-connection, and the direction of the dependency is the one `CLAUDE.md` invariant
-3 requires: M1 reads M0, never the reverse.
+**Idempotent.** `txn_id` is §5.6's deterministic hash so re-importing inserts
+nothing, and `import_id` derives from the file's sha256 so the `cas_import` row
+is replaced. Re-running is the normal case — every new CAS re-covers periods
+already imported.
 
-**Idempotent, like every other loader here.** `txn_id` is §5.6's deterministic
-hash, so re-importing the same statement inserts nothing; `import_id` is derived
-from the file's sha256, so the `cas_import` row is replaced rather than
-duplicated. Re-running is the normal case, not the exception — every new CAS
-re-covers periods already imported.
+**Two secrets, both prompted for and neither stored.** §5.4 on the CAS password:
+*"From user input at import time. Never stored."* The Zone B key gets the same
+treatment, with no flag and no environment variable for either.
 
-**Two secrets, both prompted for and neither stored.** §5.4 is explicit about
-the CAS password: *"From user input at import time. Never stored."* The Zone B
-key gets the same treatment. There is no flag and no environment variable for
-either, deliberately — the one env-var path in this project is in a test, and
-it says so.
-
-`--allow-unencrypted` is gone from this command line. Zone B holds a PAN and
-folio numbers, and the escape hatch belongs in `connect_ledger` for tests, not
-in front of a user who is importing a real statement.
+`--allow-unencrypted` is deliberately not on this command line: Zone B holds a
+PAN and folio numbers, and the escape hatch belongs in `connect_ledger` for
+tests.
 """
 
 from __future__ import annotations

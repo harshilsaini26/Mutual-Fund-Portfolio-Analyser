@@ -7,27 +7,22 @@ One scheme's entire NAV history as JSON, keyed on the AMFI scheme code:
      "data": [{"date": "04-09-2026", "nav": "2271.32400"}, ...],
      "status": "SUCCESS"}
 
-**Why this exists when AMFI already publishes history.** AMFI's history export
-is keyed on the *AMC* code, so fetching three funds means fetching three whole
-fund houses. That is how the warehouse came to hold 3,118,359 NAV rows to serve
-the 5,924 that belong to schemes anyone holds — 0.19%. mfapi is per scheme,
-which is the capability AMFI's endpoint does not offer.
+**Why this exists when AMFI already publishes history.** AMFI's export is keyed
+on the AMC code, so fetching three funds means fetching three whole fund houses
+— 3,118,359 NAV rows to serve the 5,924 that belong to schemes anyone holds.
+mfapi is per scheme, which AMFI's endpoint does not offer.
 
-**It is a mirror, and is treated as one.** AMFI remains the source of record
-(V1-02): `PLAN.md` §4.2 wants the archived publisher file, and a mirror adds a
-hop that cannot be verified. Measured against our AMFI-loaded history for HDFC
-Flexi Cap: **2,117 overlapping dates, one disagreement** — 2026-03-12, mfapi
-`2111.846` against AMFI `2111.779`. One in two thousand is small and is exactly
-the size of error that moves an XIRR without moving anything visible, so rows
-from here only ever FILL GAPS. See `load.load_navs_where_absent`.
+**A mirror, treated as one.** AMFI remains the source of record (V1-02).
+Measured against our AMFI history for HDFC Flexi Cap: 2,117 overlapping dates,
+one disagreement — `2111.846` against `2111.779`. One in two thousand, and
+exactly the size that moves an XIRR without moving anything visible, so rows
+from here only ever FILL GAPS (`load_navs_where_absent`).
 
-**The identity checks are the load-bearing part.** The payload says which
-scheme it is about, twice: `meta.scheme_code`, and `meta.isin_growth` /
-`meta.isin_div_reinvestment`. Both are checked, and the ISIN check is the
-stronger one because it is the same key `scheme_id` is — a match needs no trust
-in the code mapping at all. Silently accepting a mismatch would file one fund's
-NAV history under another fund's ISIN: the V0-05 error class, worth ~10%/year
-between a Direct and a Regular plan, and invisible in every downstream number.
+**The identity checks are the load-bearing part.** The payload says which scheme
+it is about twice, and both are checked. The ISIN check is the stronger one
+because it is the same key `scheme_id` is. Accepting a mismatch would file one
+fund's NAV history under another's ISIN: V0-05's error class, ~10%/year between
+a Direct and a Regular plan, invisible downstream.
 """
 
 from __future__ import annotations
