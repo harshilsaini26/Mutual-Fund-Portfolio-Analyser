@@ -72,16 +72,17 @@ def main() -> None:
         as_of = latest_as_of(conn, scheme_id)
         if as_of is None:
             continue
-        # Unconditionally, not "only if absent". Guarding on absence meant a
+        # Unconditionally, not "only if absent": guarding on absence meant a
         # restated disclosure never refreshed the weights and every later
-        # report was computed from the withdrawn revision, silently.
-        # `materialise_weights` replaces the set, so re-running is cheap and
-        # idempotent.
+        # report used the withdrawn revision. Replacing the set is idempotent.
         materialise_weights(conn, scheme_id, as_of)
         found = load_issuer_weights(conn, scheme_id, as_of)
         if found:
             weights_by_scheme[scheme_id] = found
             as_of_by_scheme[scheme_id] = as_of
+    # ONE commit for the whole rebuild. `materialise_weights` used to commit
+    # per scheme -- 192 fsyncs, 0.86s of a 1.92s run.
+    conn.commit()
 
     positions, basis, ledger = _positions(args, weights_by_scheme)
     if not positions:
