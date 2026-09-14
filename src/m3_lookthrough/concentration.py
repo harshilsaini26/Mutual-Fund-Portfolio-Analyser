@@ -3,14 +3,12 @@
 HHI, effective-N, top-N and Gini over look-through exposures — "am I actually
 diversified?", which is the question the product exists to answer.
 
-**§8.2 is the part that decides whether the answer is true.** Synthetic issuers
-— cash, TREPS, receivables, margin, unresolved — are excluded from the
-denominator **in every scope**. Including `__CASH__` and `__TREPS__` inflates
-effective-N and understates concentration, *"precisely the number the product
-exists to surface"*. A fund that is 20% cash would otherwise look meaningfully
-more diversified than it is.
+**§8.2 decides whether the answer is true.** Synthetic issuers — cash, TREPS,
+receivables, margin, unresolved — are excluded from the denominator in EVERY
+scope: including them inflates effective-N and understates concentration, so a
+fund that is 20% cash would look meaningfully more diversified than it is.
 
-Every sum is a Python `Decimal` (`CLAUDE.md` invariant 1).
+Every sum is a Python `Decimal` (invariant 1).
 """
 
 from __future__ import annotations
@@ -30,18 +28,14 @@ METRIC_Q = Decimal("0.000001")
 class Exposed(Protocol):
     """The three fields a concentration figure needs from an exposure.
 
-    There are two `Exposure` dataclasses in this project — the engine's, which
-    the computation produces, and the frozen contract's, which M4 and M6
-    consume (V1-21). Both carry these three, so typing against the shape rather
-    than either class lets `filter_scope` and `lorenz_points` be called from
-    both sides without a conversion. A conversion in a view builder would be a
-    second place the two shapes meet, and V1-21 recorded that the provider is
-    the only one.
+    There are two `Exposure` dataclasses — the engine's and the frozen contract
+    M4 and M6 consume (V1-21). Both carry these three, so typing against the
+    SHAPE lets this be called from either side without a conversion, and V1-21
+    recorded that the provider is the only place the two meet.
 
-    Declared as properties rather than attributes deliberately: mypy treats a
-    Protocol's plain attributes as invariant, so `instrument_class: str | None`
-    here would reject the engine's `str`. Read-only members are covariant, and
-    nothing here writes.
+    Properties rather than attributes: mypy treats a Protocol's plain attributes
+    as invariant, so `instrument_class: str | None` would reject the engine's
+    `str`. Read-only members are covariant, and nothing here writes.
     """
 
     @property
@@ -86,21 +80,17 @@ def filter_scope(exposures: Sequence[E], scope: str) -> list[E]:
 def gini_coefficient(weights: list[Decimal]) -> Decimal | None:
     """§8.3. More intuitive than HHI for a lay reader; feeds M6's Lorenz curve.
 
-    **`None` when any weight is negative.** Gini summarises a Lorenz curve, and
-    that construction assumes a non-negative pool: with a short leg the
-    cumulative share is not monotonic, the "curve" crosses its own diagonal, and
-    the formula below still returns a perfectly ordinary-looking number between
-    -1 and 1 that describes nothing. V1-07 records that HDFC discloses exactly
-    this — Eternal Limited's short at -0.001% — so an issuer's net exposure
-    going negative is a real case, not a hypothetical.
+    **`None` when any weight is negative.** Gini summarises a Lorenz curve,
+    which assumes a non-negative pool: with a short leg the cumulative share is
+    not monotonic, the curve crosses its own diagonal, and the formula still
+    returns an ordinary-looking number that describes nothing. Real, not
+    hypothetical — HDFC discloses a short at -0.001% (V1-07).
 
-    An absent figure is the honest output. §4.3 types the column nullable, and
-    M6 renders a null as an em dash (§9.3) rather than as zero. V1-20 deferred
-    this decision to §4.3's persistence; this is that slice.
+    An absent figure is the honest output: §4.3 types the column nullable and M6
+    renders a null as an em dash rather than as zero.
 
-    Zero still means zero: an empty pool, or one that is entirely worthless, has
-    no inequality to measure, which is a different statement from "the question
-    does not apply".
+    Zero still means zero — an empty pool has no inequality to measure, which is
+    a different statement from "the question does not apply".
     """
     if any(x < 0 for x in weights):
         return None

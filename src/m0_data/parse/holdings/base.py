@@ -32,7 +32,6 @@ from src.m0_data.parse.base import (
 )
 from src.m0_data.resolve.isin import is_valid_isin
 
-#: §6.4, extended. The section labels that open a block of securities.
 #: §6.4, extended. The labels that open a block of securities. HDFC writes
 #: each of these twice — once as a heading in the ISIN column, once on the
 #: row that carries the numbers — so recognising the heading is what stops
