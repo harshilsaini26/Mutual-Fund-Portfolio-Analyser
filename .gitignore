@@ -81,3 +81,19 @@ Thumbs.db
 # its cache is keyed on mtime_ns so it churns on every file touch.
 graphify-out/
 **/graphify-out/
+
+# --- the specification, local-only -----------------------------------------
+# The 12,600-line spec and the decision log stay on this machine and off the
+# remote. DECISIONS.md in particular recorded which funds this machine's owner
+# holds — by name and ISIN — which is a statement about a person, not about
+# the software. Purged from all 107 commits on 2026-09-14, not merely deleted
+# at the tip, because a blob removed in a later commit stays fetchable.
+docs/DECISIONS.md
+docs/MODULE_0.md
+docs/MODULE_1.md
+docs/MODULE_2.md
+docs/MODULE_3.md
+docs/MODULE_4.md
+docs/MODULE_5.md
+docs/MODULE_6.md
+docs/PLAN.md
