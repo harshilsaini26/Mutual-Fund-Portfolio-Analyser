@@ -1,20 +1,16 @@
 """`FundDataProvider` — M2's only interface into M0.
 
-MODULE_2.md §5.1. M2 needs more than `MarketDataProvider` gives M1, so this is a
-second narrow protocol rather than a widening of the first.
+MODULE_2.md §5.1. M2 needs more than `MarketDataProvider` gives M1, so a second
+narrow protocol rather than a widening of the first.
 
-Two amendments against the spec as written, both recorded in DECISIONS:
+Two amendments, recorded in DECISIONS:
 
-  D6  +`index_level()`. MODULE_2.md §13 `segment_position()` calls
-      `fd.index_level(bm_id, w.start)`, but §5.1 declares only `index_series()`.
-      Regime segmentation needs a point lookup, not a series, and M0's and M4's
-      protocols already carry the method.
+  D6  +`index_level()`. §13's `segment_position()` calls it but §5.1 declares
+      only `index_series()`; regime segmentation needs a point lookup.
+  D3  `sector()` renamed `sector_of()`, matching the other two protocols.
 
-  D3  `sector()` renamed to `sector_of()`, matching `RiskInputs` and
-      `MarketDataFeed`. One operation, one name.
-
-Slice Zero — Protocol stub, no implementation. `FakeFundDataProvider` reading YAML
-fixtures ships alongside it: M2's entire test suite must run without a warehouse.
+Slice Zero — Protocol stub. `FakeFundDataProvider` reading YAML fixtures ships
+with it: M2's test suite must run without a warehouse.
 """
 
 from __future__ import annotations

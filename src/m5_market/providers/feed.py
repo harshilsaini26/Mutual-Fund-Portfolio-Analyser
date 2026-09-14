@@ -1,20 +1,17 @@
 """`MarketDataFeed` — M5's view of M0.
 
-MODULE_5.md §14.4, transcribed. Two amendments, both recorded in DECISIONS:
+MODULE_5.md §14.4, transcribed. Two amendments, recorded in DECISIONS:
 
-  D3  `sector_of()` — already this name here; kept, and `FundDataProvider`
-      renamed to match.
-
-  D5  `mcap_bucket()` gains `mcap_basis`, so M5 can pin the same AMFI list M3
+  D3  `sector_of()` — already this name here, and `FundDataProvider` renamed.
+  D5  `mcap_bucket()` gains `mcap_basis`, so M5 pins the same AMFI list M3
       pinned. Without it a sector dashboard and a portfolio tilt can disagree
       about which companies are large-cap.
 
-Unlike `FundDataProvider`, this reaches holdings across ALL schemes — it is the
-flow engine's foundation, and the only protocol in the corpus that is
-deliberately market-wide rather than portfolio-scoped.
+Unlike `FundDataProvider` this reaches holdings across ALL schemes — the flow
+engine's foundation, and the only protocol here that is deliberately
+market-wide rather than portfolio-scoped.
 
-Slice Zero — Protocol stub, no implementation. `FakeMarketDataFeed` reading YAML
-fixtures ships alongside it.
+Slice Zero — Protocol stub. `FakeMarketDataFeed` ships with it.
 """
 
 from __future__ import annotations

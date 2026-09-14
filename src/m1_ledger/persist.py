@@ -1,23 +1,18 @@
 """The ledger, in the database. MODULE_1.md §4, `PLAN.md` §8.3 invariant 5.
 
-Until now the ledger ran entirely in memory from fixtures, which made invariant
-5 — *"a full rebuild reproduces byte-identical derived tables"* — an in-memory
-comparison of two `LotBook`s. That is weaker than the invariant intends in the
-one way that matters: it never dropped a table, never wrote a Decimal through
-SQLite, and never proved the derived rows are actually droppable. SZ-13 already
-showed the storage layer has a trap in it that a pure-Python test cannot see.
+`rebuild()` is the whole point: **`txn` is the only input.** Every other table
+here is derived and may be dropped at any moment (invariant 10). If a number
+cannot be reconstructed from `txn` alone, it does not belong in a derived table.
 
-`rebuild()` is the whole point: **`txn` is the only input**. Every other table
-here is derived and may be dropped at any moment, which is CLAUDE.md invariant
-10. If a number cannot be reconstructed from `txn` alone, it does not belong in
-a derived table.
+Before this, invariant 5 was an in-memory comparison of two `LotBook`s — which
+never dropped a table, never wrote a Decimal through SQLite, and never proved
+the derived rows are droppable. SZ-13 showed the storage layer has a trap a
+pure-Python test cannot see.
 
 **Determinism, and where the timestamps go.** `rebuilt_at` and `checked_at`
-record when a rebuild ran, so two runs of the same rebuild differ in exactly
-those columns and in nothing else. `derived_fingerprint` therefore hashes the
-content and excludes them — and `rebuild()` takes `rebuilt_at` so a test can
-pin it and compare whole rows, timestamps included. The two checks answer
-different questions and both are worth having.
+record when a rebuild ran, so two runs differ in exactly those columns.
+`derived_fingerprint` hashes the content and excludes them, and `rebuild()`
+takes `rebuilt_at` so a test can pin it and compare whole rows.
 """
 
 from __future__ import annotations

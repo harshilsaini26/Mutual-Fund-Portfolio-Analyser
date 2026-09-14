@@ -3,23 +3,19 @@
     python -m jobs.backfill_scheme_nav --scheme INF179K01UT0 INF204K01E54
     python -m jobs.backfill_scheme_nav --held        # every scheme with a position
 
-OPEN-07 decided: *"full available history for schemes the user holds;
-earliest-transaction-onward for all others."* `jobs/backfill_nav.py` could not
-honour the first half, because **AMFI's history export is keyed on the AMC
-code** — asking for one fund means fetching the whole fund house. That is how
-`nav_daily` came to hold 3,118,359 rows to serve the 5,924 that belong to held
-schemes: 0.19%, and 584.9 MB of a 596 MB warehouse.
+OPEN-07 wants full history for schemes the user holds, but **AMFI's export is
+keyed on the AMC code** — asking for one fund means fetching the whole house.
+That is how `nav_daily` came to hold 3,118,359 rows to serve the 5,924 belonging
+to held schemes: 0.19%, and 584.9 MB of a 596 MB warehouse.
 
-mfapi (S6) is per scheme, so this job asks for exactly the schemes named and
-nothing else. One request per scheme, through the same rate limiter and robots
-check as every other fetch (V1-03), archived content-addressed like every other
-source.
+mfapi (S6) is per scheme, so this asks for exactly the schemes named. One request
+each, through the same rate limiter and robots check as every other fetch.
 
-**It fills gaps and never overwrites.** S6 is a mirror; AMFI stays the source
-of record (V1-02, V1-19). Where both have a date, AMFI's value stands.
+**It fills gaps and never overwrites.** S6 is a mirror and AMFI stays the source
+of record (V1-19): where both have a date, AMFI's value stands.
 
-`jobs/backfill_nav.py` is unchanged and still right for what it does — bulk
-history when you want a whole AMC. This is the scheme-scoped path beside it.
+`jobs/backfill_nav.py` is unchanged and still right for bulk history when you
+want a whole AMC.
 """
 
 from __future__ import annotations

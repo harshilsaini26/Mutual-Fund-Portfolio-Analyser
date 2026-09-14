@@ -4,20 +4,17 @@
     python -m jobs.fetch_amc --amc kotak --period 2026-08
     python -m jobs.fetch_amc --amc icici              # the latest published
 
-**The precision tier.** It lands the AMC's own statutory workbook in
-`data/inbox/`, where `jobs.ingest_inbox` already knows what to do with it --
-which house published it, which scheme each sheet describes, and how to load
-all of them. So this closes the one gap that was left: the file arrives by
-itself instead of by hand.
+**The precision tier.** Lands the AMC's own statutory workbook in `data/inbox/`,
+where `jobs.ingest_inbox` already knows what to do with it — so the file arrives
+by itself instead of by hand.
 
-Why the inbox rather than loading directly: `ingest_inbox` is the path every
-hand-downloaded file has taken since V1-39, it is the one that refuses a sheet
-it cannot identify, and routing a fetched file down a second path would mean
-two behaviours to keep in step. The fetch is the only thing that was missing.
+The inbox rather than loading directly, because `ingest_inbox` is the path every
+hand-downloaded file has taken since V1-39 and is the one that refuses a sheet it
+cannot identify. Routing a fetched file down a second path would mean two
+behaviours to keep in step.
 
-`--list` asks the AMC what it has and prints it. That is worth having on its
-own: it answers "is this month's disclosure out yet" without downloading 25 MB
-to find out, and the listings are historical, so it also says how far back a
+`--list` answers "is this month's disclosure out yet" without downloading 25 MB
+to find out, and since the listings are historical it also says how far back a
 backfill could go.
 """
 

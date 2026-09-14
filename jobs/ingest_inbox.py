@@ -2,22 +2,19 @@
 
     python -m jobs.ingest_inbox
 
-Drop an AMC's monthly portfolio workbook in the folder and run this. It works
-out which fund house published it, which scheme each sheet describes, and loads
-all of them — so the manual step is a download and nothing else.
+Drop an AMC's monthly portfolio workbook in the folder and run this: it works
+out which house published it, which scheme each sheet describes, and loads all
+of them.
 
-**Why the manual step exists at all.** V1-32 got discovery to the *page*, not
-the file: AMFI publishes a directory of every AMC's disclosure page (52 of them,
-`config/amc_disclosure_index.yaml`) but hosts none of the files, and each AMC
-renders its own file list its own way. Kotak answers a portfolio request with a
-Radware CAPTCHA, which this project does not solve. So for most houses a person
-opens a page and clicks a link; everything after that is automatic.
+**Why the manual step exists.** AMFI publishes a directory of every AMC's
+disclosure page but hosts none of the files, and each AMC renders its file list
+its own way (V1-32). `jobs/fetch_amc.py` closes that for the houses with a
+backend listing (V1-44); for the rest a person opens a page and clicks a link.
 
-Nothing here is destructive and nothing has to be tidied up. The archive is
-content-addressed, so re-running over the same folder re-derives rather than
-duplicating: a file already loaded by the same reader and cascade reports
-`skipped`, and one loaded by an older version produces a new revision (V1-29,
-V1-36). Files are left where they are.
+Nothing here is destructive. The archive is content-addressed, so re-running
+over the same folder re-derives rather than duplicating: a file already loaded
+by the same reader and cascade reports `skipped`, and one loaded by an older
+version produces a new revision (V1-29, V1-36).
 """
 
 from __future__ import annotations
