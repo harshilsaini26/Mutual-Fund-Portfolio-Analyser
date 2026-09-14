@@ -52,23 +52,19 @@ class WarehouseMarketDataProvider:
     ) -> SchemeRef:
         """ISIN, then AMFI code, then an *unambiguous* name. §11.3, narrowed.
 
-        §11.3's third step is a fuzzy name match, flagged low confidence. That
-        step is not implemented as written, and the reason is in the data: in
-        the live AMFI file **1,467 distinct (name, plan, option) triples map to
-        more than one scheme** — `Axis Children's Fund / Direct Plan / Growth
-        Option` is two schemes with different codes and NAVs 30.3228 and 30.9027
-        (lock-in and non-lock-in variants). A fuzzy match cannot separate those,
-        so it would be choosing one of two real schemes by coin flip and
-        labelling the result "low confidence".
+        §11.3's third step is a fuzzy name match flagged low confidence, and it
+        is deliberately not implemented: in the live AMFI file **1,467 distinct
+        (name, plan, option) triples map to more than one scheme** — one such
+        pair being lock-in and non-lock-in variants with NAVs 30.3228 and
+        30.9027. A fuzzy match would choose between two real schemes by coin
+        flip and label it "low confidence".
 
-        `CLAUDE.md` invariant 5 settles it: raise or return nothing, never guess.
-        A name resolves only when exactly one candidate matches; otherwise
-        `unresolved`, and M1 quarantines the row with `scheme_raw_*` intact so
-        it can be resolved later without re-importing. DECISIONS V0-21.
+        Invariant 5 settles it: a name resolves only when exactly one candidate
+        matches, otherwise `unresolved`, and M1 quarantines the row with
+        `scheme_raw_*` intact so it resolves later without re-importing (V0-21).
 
-        **Never resolve on name when an ISIN is present** (§11.3). That is the
-        path to Direct/Regular confusion and a silent ~1%/year error — V0-05,
-        which this warehouse can now prevent because AMFI states the plan.
+        **Never resolve on name when an ISIN is present** (§11.3): that is the
+        path to Direct/Regular confusion and a silent ~1%/year error (V0-05).
         """
         if isin:
             row = self._scheme_row("SELECT * FROM scheme WHERE isin = ?", (str(isin),))

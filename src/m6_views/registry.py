@@ -1,23 +1,19 @@
 """The view registry. MODULE_6.md §4.1 and §5.3.
 
-`VIEW_DEFS` is the catalogue — what a view is, what question it answers, what it
-needs. `VIEW_REGISTRY` is the set of builders that exist. **A startup check
-asserts the two match exactly**, in both directions: a definition with no builder
-is a screen that cannot render, and a builder with no definition is code nothing
-routes to. §5.3 calls a mismatch a deployment error, caught immediately.
+`VIEW_DEFS` is the catalogue; `VIEW_REGISTRY` is the set of builders that exist.
+**A startup check asserts the two match exactly**, both ways: a definition with
+no builder is a screen that cannot render, a builder with no definition is code
+nothing routes to. §5.3 calls a mismatch a deployment error.
 
-**`question` is a required field, and that is a design forcing-function rather
-than documentation.** §2.3: a view answers exactly one question, and *"if the
-question can't be stated in a sentence, the view shouldn't exist."* A view with
-no question does not get registered because it cannot be constructed.
+**`question` is a required field**, a forcing-function rather than
+documentation: §2.3 says *"if the question can't be stated in a sentence, the
+view shouldn't exist"*, and a view without one cannot be constructed.
 
-**Only the views that can be built are here.** `MODULE_6.md` §8.1 lists eleven
-portfolio views; six are registered. `holdings_treemap`, `sector_tilt`,
-`mcap_allocation`, `redundancy_table` and `marginal_contribution` each need M2 or
-M5, neither of which is built — so they are **absent**, not registered with a
-stub that returns empty. An absent view is an honest gap the consistency check
-enforces; a registered one that always returns `empty` is a broken feature
-pretending to be a data problem.
+**Only the views that can be built are here** — six of §8.1's eleven. The other
+five need M2 or M5 and are ABSENT rather than registered with a stub returning
+empty: an absent view is an honest gap the consistency check enforces, where a
+registered one that always returns `empty` is a broken feature pretending to be
+a data problem.
 """
 
 from __future__ import annotations

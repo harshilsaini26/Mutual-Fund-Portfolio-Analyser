@@ -22,26 +22,21 @@ from src.common.types import ViewState
 class ViewEnvelope:
     """One answer to one question, with everything needed to judge it.
 
-    Provenance and quality fields are ALL REQUIRED, with no defaults. That is
-    deliberate: a default would let a view omit its staleness by accident, and
-    `PLAN.md` §4.3 says staleness is displayed, never hidden.
+    Provenance and quality fields are ALL REQUIRED, with no defaults: a default
+    would let a view omit its staleness by accident, and §4.3 says staleness is
+    displayed, never hidden.
 
     `caveats` are user-facing sentences assembled upstream and passed through
-    unchanged — not flags, not log lines. If a caveat exists upstream and is not
-    in this list, that is a bug (§19.2 tests it). Examples that flow through:
+    unchanged — not flags, not log lines. A caveat that exists upstream and is
+    missing here is a bug (§19.2 tests it), e.g.:
 
       "Holdings as of 31 Jul 2026; 43 days stale."
-      "5 of 7 funds have current disclosures — 78% of your portfolio by value."
       "1.4% of your exposure could not be identified to a company."
-      "Manager tenure under 12 months; alpha is not meaningful."
 
-    `state_reason` is required whenever `state` is not `ok`. A blank chart
-    teaches the user the tool is broken; an explained absence teaches them how
-    the tool works. "No data" is not an acceptable reason — name what is missing
-    and what produces it.
+    `state_reason` is required whenever `state` is not `ok`, and "No data" is
+    not an acceptable one — name what is missing and what produces it.
 
-    Every string here must be descriptive, never prescriptive (`PLAN.md` §3.3).
-    CI lints for this.
+    Every string here is descriptive, never prescriptive (§3.3). CI lints it.
     """
 
     # identity
