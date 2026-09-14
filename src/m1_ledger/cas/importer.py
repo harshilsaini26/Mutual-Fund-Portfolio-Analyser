@@ -62,23 +62,16 @@ class ImportReport:
 def assign_sequences(staged: list[StagedTxn]) -> list[int]:
     """`txn_seq` per (folio, scheme, DATE) — not per scheme block. V0-15.
 
-    MODULE_1.md §5.3 increments `seq` from zero at each scheme block, so a
-    transaction's sequence is its ordinal position within whatever period the
-    statement happens to cover. §5.6 then feeds that number into the hash that
-    is supposed to make re-import idempotent.
+    §5.3 increments `seq` from zero at each scheme block, so a transaction's
+    sequence depends on whatever period the statement covers — and §5.6 feeds
+    that number into the hash meant to make re-import idempotent. Those cannot
+    both be true: the same redemption is seq 13 in one CAS and seq 1 in an
+    overlapping one, so `INSERT OR IGNORE` inserts it twice.
 
-    Those two cannot both be true. A CAS covering Jan-2024 to Jan-2026 gives a
-    January-2025 redemption seq 13; a later CAS covering Jan-2025 to Jun-2026
-    gives the same redemption seq 1. Different seq, different `txn_id`,
-    `INSERT OR IGNORE` inserts it again — and §5.6's own warning that "you WILL
-    re-import overlapping statements constantly" describes exactly the
-    condition under which its scheme breaks.
-
-    `txn_seq` has to come from something intrinsic to the transaction. Its job
-    (MODULE_1.md §4.3) is only to order same-day rows for the lot engine, so
-    the ordinal within a (folio, scheme, date) group is enough — and it is
-    stable across statements, because a CAS period is bounded by whole days: a
-    given day is either entirely inside the statement or entirely outside it.
+    `txn_seq` must come from something intrinsic. Its job (§4.3) is only to
+    order same-day rows for the lot engine, so the ordinal within a (folio,
+    scheme, date) group is enough — and it is stable across statements, because
+    a CAS period is bounded by whole days.
     """
     counters: dict[tuple[str, str, str], int] = defaultdict(int)
     out: list[int] = []
@@ -148,16 +141,12 @@ def import_cas(
 ) -> ImportReport:
     """MODULE_1.md §5.7. Staged rows in, ledger facts out — still no database.
 
-    `known_txn_ids` is what the caller has already stored. `jobs/import_cas.py`
-    passes the real set straight out of Zone B, so `inserted` and `duplicate`
-    describe what `INSERT OR IGNORE` will actually do rather than approximating
-    it. Passing nothing treats every row as new, which is what the parser tests
-    want.
+    `known_txn_ids` is what the caller has already stored, so `inserted` and
+    `duplicate` describe what `INSERT OR IGNORE` will actually do. Passing
+    nothing treats every row as new, which is what the parser tests want.
 
-    This function stays free of the database on purpose: it is the piece that
-    has to be exercised against synthetic statements, because a real CAS is Zone
-    B and cannot be committed. Persistence is `persist.save_txns`, one call
-    away, and the job is where the two meet.
+    Free of the database on purpose: this is the piece exercised against
+    synthetic statements, because a real CAS is Zone B and cannot be committed.
     """
     ctx = CasContext()
     staged = parse_cas(lines, ctx)
@@ -251,27 +240,19 @@ def link_switch_groups(txns: list[Txn]) -> tuple[list[Txn], list[tuple[str, str]
     """Pair the two legs of a switch. MODULE_1.md §5.8, with its tolerance fixed.
 
     CAS prints the OUT and IN legs in different scheme blocks, so they can only
-    be paired by (folio, date, amount).
-
-    §5.8 pairs the STORED amounts within Rs 1.00, and the two legs do not hold
-    the same number. Charges sit between them: exit load and STT come off the
-    proceeds, then stamp duty comes off what is reinvested. Only the middle
-    figure is shared.
+    be paired by (folio, date, amount) — and the two legs do not hold the same
+    number. Charges sit between them, and only the middle figure is shared:
 
         out.amount - exit_load - stt  ==  in.amount + stamp_duty
 
-    Both sides of that are Rs 22,711.6229 on this project's own V0.1 fixture,
-    exactly; the figures §5.8 compares are Rs 22,711.85 and Rs 22,710.4873,
-    Rs 1.36 apart against a Rs 1.00 tolerance. The gap is a percentage of the
-    switch, not a fixed overrun — so widening the tolerance does not fix it, it
-    just moves the size at which linking starts failing.
+    Both sides are Rs 22,711.6229 on the V0.1 fixture exactly, where the figures
+    §5.8 compares are Rs 1.36 apart against its Rs 1.00 tolerance. The gap is a
+    percentage of the switch, not a fixed overrun, so widening the tolerance
+    only moves the size at which linking fails (V0-15).
 
-    Reconstructing the shared figure removes the terms instead of budgeting for
-    them. Rs 1.00 of slack is kept for genuine rounding. DECISIONS V0-15.
-
-    An unpaired OUT leg is flagged `UNLINKED_SWITCH` and left alone: §5.8 is
-    right that this is a warning, because the IN leg may sit in a folio outside
-    this statement, and the lot engine treats each leg independently regardless.
+    An unpaired OUT leg is flagged `UNLINKED_SWITCH` and left alone: the IN leg
+    may sit in a folio outside this statement, and the lot engine treats each
+    leg independently regardless.
     """
     by_ref = {t.txn_ref: t for t in txns}
     outs = [t for t in txns if t.txn_type in {"SWITCH_OUT", "STP_OUT"}]

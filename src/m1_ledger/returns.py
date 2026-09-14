@@ -83,20 +83,15 @@ def build_cashflows(
 ) -> list[tuple[date, Decimal]]:
     """External cashflows, plus the closing value as the final inflow.
 
-    MODULE_1.md §9.1. `scope` is locked by `PLAN.md` §9.6:
+    §9.1. `scope` is locked by `PLAN.md` §9.6: `scheme` includes switch legs,
+    since leaving scheme A is a real exit from A; `portfolio` excludes them as
+    internal transfers. Both must be labelled in any UI or they will not tie
+    out and it reads as a bug.
 
-        scheme     include switch legs — leaving scheme A is a real exit from A
-        portfolio  exclude them — they are internal transfers
-
-    Both numbers must be labelled in any UI or they will not tie out and it
-    reads as a bug.
-
-    One correction against §9.1 as written (DECISIONS V0-07): `IDCW_REINVEST`
-    is in `OPENING_TYPES`, so the spec's branch order books it as
-    `-abs(amount)` and never adds the offsetting inflow. No external cash moves
-    on a reinvestment — the dividend is declared and immediately buys units in
-    the same scheme — so an unmatched outflow overstates the money invested and
-    understates XIRR. It is excluded at both scopes here.
+    One correction against §9.1 (V0-07): `IDCW_REINVEST` is in `OPENING_TYPES`,
+    so the spec books it as `-abs(amount)` with no offsetting inflow. No
+    external cash moves on a reinvestment, so that overstates money invested
+    and understates XIRR. Excluded at both scopes.
     """
     flows: list[tuple[date, Decimal]] = []
 
@@ -141,14 +136,12 @@ def npv(flows: list[tuple[date, Decimal]], rate: Decimal) -> Decimal:
 def xirr(flows: list[tuple[date, Decimal]], guess: float = 0.15) -> Decimal | None:
     """Money-weighted return: the rate at which NPV is zero.
 
-    MODULE_1.md §9.2. Returns None rather than a garbage number — XIRR is
-    genuinely undefined for some flow patterns, and no sign change means no
-    root.
+    §9.2. Returns None rather than a garbage number: XIRR is genuinely
+    undefined for some flow patterns, and no sign change means no root.
 
-    Newton-Raphson fails on real patterns (large late contributions, multiple
-    sign changes), so the bisection fallback is not optional.
-
-    Float lives inside this function only; the answer crosses back as Decimal.
+    Newton-Raphson fails on real patterns — large late contributions, multiple
+    sign changes — so the bisection fallback is not optional. Float lives inside
+    this function only; the answer crosses back as Decimal.
     """
     if len(flows) < 2:
         return None
@@ -217,17 +210,15 @@ def twrr(
 ) -> tuple[Decimal | None, Decimal | None]:
     """Time-weighted return: what the fund delivered, ignoring cashflows.
 
-    MODULE_1.md §9.3. At position level this collapses to a NAV ratio, because
-    M0 supplies a daily IDCW-adjusted series — no sub-period chaining needed.
-    That is a direct payoff from building `nav_adj` correctly.
+    §9.3. At position level this collapses to a NAV ratio, because M0 supplies
+    a daily IDCW-adjusted series — a direct payoff from building `nav_adj`
+    correctly.
 
-    Under one year there IS no annualised figure — the second element is
-    `None`, not a copy of the cumulative one. Returning the cumulative value in
-    the annualised slot is what `MODULE_2.md` §7.3 forbids, and it did not stay
-    cosmetic: `compute_returns` subtracts `twrr_ann` from an annualised XIRR to
-    get `timing_effect`, so a four-month position with 5% cumulative and 16%
-    XIRR reported +11 percentage points of "timing benefit" that was entirely
-    the unit mismatch between the two operands.
+    Under one year there IS no annualised figure: the second element is `None`,
+    not a copy of the cumulative one (`MODULE_2.md` §7.3). Not cosmetic —
+    `compute_returns` subtracts `twrr_ann` from an annualised XIRR, so a
+    four-month position reported +11 points of "timing benefit" that was
+    entirely the unit mismatch between the operands.
     """
     if nav_start is None or nav_end is None or nav_start <= 0 or days <= 0:
         return None, None

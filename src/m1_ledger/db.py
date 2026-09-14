@@ -1,27 +1,23 @@
 """Zone B connections and schema. MODULE_1.md §4, `PLAN.md` §6.3.
 
-Zone B holds transactions, units, folios and a PAN. §6.3 puts it under the
-strictest handling in the project: encrypted at rest, and it *"never leaves the
-device unencrypted."*
+Zone B holds transactions, units, folios and a PAN, and §6.3 says it *"never
+leaves the device unencrypted."*
 
-**Encryption is on.** `sqlcipher3` is installed (SQLCipher 4.12.0), and
-`PRAGMA key` is applied before any other statement on the connection — which is
-what SQLCipher requires, since the first read has to decrypt page 1. Verified:
-the file does not begin with `SQLite format 3`, the stdlib `sqlite3` cannot open
-it, and a wrong key fails the page HMAC rather than returning garbage.
+**Encryption is on.** `PRAGMA key` is applied before any other statement on the
+connection, which is what SQLCipher requires since the first read decrypts page
+1. Verified: the file does not begin with `SQLite format 3`, the stdlib
+`sqlite3` cannot open it, and a wrong key fails the page HMAC rather than
+returning garbage.
 
-This is the one runtime dependency the project has taken. V0-19 avoided a native
-dependency for **Zone A**, which holds public market data and can be rebuilt from
-the archive at any time. Zone B is the opposite: a PAN, folio numbers and a
-postal address, which `PLAN.md` §6.3 says *"never leaves the device
-unencrypted."* The cost is worth paying exactly here and nowhere else.
+The one native runtime dependency the project has taken. V0-19 avoided one for
+Zone A, which holds public data rebuildable from the archive; Zone B is the
+opposite, and the cost is worth paying exactly here.
 
-**An unencrypted Zone B database is refused, not silently opened** — no driver,
-or no key, and `connect_ledger` raises. A fallback that quietly produced a
-plaintext file holding a PAN is the class of failure this project keeps finding:
-the write succeeds and the result is quietly wrong. `allow_unencrypted=True`
-remains for tests and for a ledger holding nothing real, and it says so at every
-call site; it is no longer on any command line.
+**An unencrypted Zone B database is refused, not silently opened** — no driver
+or no key and `connect_ledger` raises. A fallback that quietly wrote a plaintext
+file holding a PAN is this project's recurring failure class: the write succeeds
+and the result is quietly wrong. `allow_unencrypted=True` remains for tests and
+is on no command line.
 """
 
 from __future__ import annotations
@@ -76,11 +72,10 @@ def sqlcipher_module() -> Any | None:
 def _restrict(path: str) -> None:
     """Make the ledger readable only by its owner. `PLAN.md` §6.3.
 
-    Measured before this existed: created with mode 0666, readable by every
-    local account. The contents are encrypted, so this is depth rather than
-    disclosure — but an encrypted blob anyone can copy is an offline-attack
-    target, and `allow_unencrypted=True` produces a PLAINTEXT ledger with the
-    same mode.
+    Measured before this existed: mode 0666, readable by every local account.
+    The contents are encrypted, so this is depth rather than disclosure — but an
+    encrypted blob anyone can copy is an offline-attack target, and
+    `allow_unencrypted=True` produces a PLAINTEXT ledger with the same mode.
 
     Best effort by design. On Windows `os.chmod` only toggles the read-only
     bit and POSIX modes do not apply; on a filesystem that does not support
