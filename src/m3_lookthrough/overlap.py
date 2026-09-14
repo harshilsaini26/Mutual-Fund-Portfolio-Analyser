@@ -1,21 +1,18 @@
 """Pairwise fund overlap. MODULE_3.md §9.1.
 
-"How much of these two funds is the same thing?" — the figure most likely to be
-the launch story, because a portfolio of five large-cap funds usually turns out
-to be one fund bought five times.
+"How much of these two funds is the same thing?" — a portfolio of five
+large-cap funds usually turns out to be one fund bought five times.
 
-**Keyed on `issuer_id`, never on ISIN.** §2.3 is explicit that writing this
-against `isin` *"produces a subtly understated answer — funds holding different
-series of the same issuer's debt look non-overlapping"*. Worse in the common
-case: one fund holds Reliance equity and another a Reliance NCD, which is the
-same corporate exposure and must count as overlap.
+**Keyed on `issuer_id`, never on ISIN** (§2.3): against `isin`, one fund holding
+Reliance equity and another a Reliance NCD look non-overlapping when they are
+the same corporate exposure.
 
-**Synthetics are dropped before comparing.** Two unrelated funds both hold cash;
-counting `__CASH__` would give every pair a floor of overlap and make the metric
-useless at exactly the low end where it should reassure.
+**Synthetics are dropped before comparing** — counting `__CASH__` would give
+every pair a floor of overlap, useless at exactly the low end where the metric
+should reassure.
 
-The measure is `Σ min(w_a, w_b)` over shared issuers: the share of each fund
-that the *other* one also holds. Identical funds give 100, disjoint give 0.
+The measure is `Σ min(w_a, w_b)` over shared issuers: identical funds give 100,
+disjoint give 0.
 """
 
 from __future__ import annotations

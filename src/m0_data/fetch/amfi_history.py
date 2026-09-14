@@ -1,27 +1,20 @@
 """AMFI's historical NAV export. MODULE_0.md §5, DECISIONS OPEN-07.
 
-OPEN-07 sets the depth: full available history for schemes the user holds,
-earliest-transaction-onward for everything else, and 31-Jan-2018 regardless
-because equity grandfathering needs that day's NAV (MODULE_1.md §7.5). One-time
-overnight job, not an incremental daily task — the daily leading edge is
-`jobs/fetch_nav.py`'s business.
+OPEN-07 sets the depth: full history for schemes the user holds,
+earliest-transaction-onward otherwise, and 31-Jan-2018 regardless because equity
+grandfathering needs that day's NAV. A one-time overnight job; the daily leading
+edge is `jobs/fetch_nav.py`.
 
-The endpoint takes a date range and an optional AMC filter. Both matter:
-
-  unfiltered, one day  ~1.0 MB
-  one AMC, one day     ~43 KB
-  one AMC, three years ~27 MB in a single request
-
-so filtering by AMC is a 23x reduction and a multi-year range costs one round
-trip rather than a thousand. Ranges are still chunked by year, for two reasons
-that have nothing to do with size: each chunk is archived as its own
-`raw_file`, so a failure part-way through keeps what already succeeded, and a
-re-run skips the chunks whose bytes are unchanged.
+Filtering by AMC is a 23x reduction (~43 KB against ~1.0 MB for one day) and a
+multi-year range costs one round trip rather than a thousand. Ranges are still
+chunked by year, for reasons unrelated to size: each chunk is its own
+`raw_file`, so a failure part-way keeps what succeeded and a re-run skips the
+chunks whose bytes are unchanged.
 
 **An unknown AMC code returns HTTP 200 with an HTML error page**, not a 404 and
-not an empty file. Anything that treats "no rows parsed" as "this AMC published
-nothing" will record zero NAVs and report success. `parse_navall` raises on it,
-and this module lets that raise.
+not an empty file — so anything treating "no rows parsed" as "published
+nothing" records zero NAVs and reports success. `parse_navall` raises on it and
+this module lets that raise.
 """
 
 from __future__ import annotations

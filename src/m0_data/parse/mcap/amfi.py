@@ -1,29 +1,22 @@
 """AMFI's half-yearly market-capitalisation list. MODULE_0.md §2.2 S4, §4.3.
 
 The authoritative point-in-time definition of the equity universe: rank 1-100
-is Large Cap, 101-250 Mid Cap, 251+ Small Cap, per the SEBI circular AMFI
-prepares it under. §2.2 is emphatic that **every style computation must apply
-the list in force at the holding date**, not today's — a stock that changed
-bucket otherwise creates phantom drift or masks real drift.
+Large, 101-250 Mid, 251+ Small. §2.2 requires **every style computation to apply
+the list in force at the holding date**, not today's — otherwise a stock that
+changed bucket creates phantom drift or masks real drift.
 
-Two traps in the file itself, both found by reading a real one (DECISIONS
-V1-02):
+Three traps in the file, all found by reading a real one (V1-02):
 
-1. **Both the rank and the market cap are formulas.** `Sr. No.` holds
-   `=RANK(J3,$J$3:$J$5429,0)` and column J — the figure that rank operates on —
-   holds `=AVERAGE(E3,G3,I3)`, the mean of the BSE, NSE and MSEI figures.
-   Reading the sheet yields formula text, or a cached value only if Excel
-   happened to save one. **Both are recomputed here** from the three exchange
-   columns, which are literal numbers. Reading column E alone, as the first
-   header containing "market cap", would silently rank on BSE only.
-2. **AMFI states the answer in column K**, `Categorization as per SEBI Circular
-   dated Oct 6, 2017`. That is not a reason to skip the arithmetic — it is a
-   reason to do it and compare. A disagreement between our rank-derived bucket
-   and AMFI's stated one means we have misread the file, and it is reported
-   rather than resolved in either direction.
-3. **The exchange figures are raw floats** — `1873294.7184957801` — converted to
-   `Decimal` at this boundary like every other number entering the system
-   (`PLAN.md` §8.2 rule 1). Units are Rs. crore, per the header.
+1. **Both the rank and the market cap are FORMULAS**, and the figure rank
+   operates on is the mean of the BSE, NSE and MSEI columns. Reading the sheet
+   yields formula text, or a cached value only if Excel saved one, so both are
+   recomputed here. Reading the first header containing "market cap" would
+   silently rank on BSE alone.
+2. **AMFI states the answer in column K.** Not a reason to skip the arithmetic —
+   a reason to do it and compare: a disagreement means we misread the file, and
+   it is reported rather than resolved in either direction.
+3. **The exchange figures are raw floats**, converted to `Decimal` at this
+   boundary like every other number entering the system (§8.2 rule 1).
 """
 
 from __future__ import annotations

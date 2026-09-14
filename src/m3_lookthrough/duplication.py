@@ -1,21 +1,19 @@
 """Portfolio-level duplication. MODULE_3.md §9.4.
 
-Pairwise overlap answers *"are these two funds similar?"*. This answers the
-question the user actually has: **"how much of my money is doubled up?"**
+Pairwise overlap answers *"are these two funds similar?"*; this answers **"how
+much of my money is doubled up?"**
 
-The whole module turns on one definition. For an issuer reached through several
-funds, the redundant part is `Σ contributions - largest contribution` — §9.4:
-*"the exposure you would still have if you kept only the largest provider of that
-issuer"*. Counting the issuer's **whole** exposure instead is the obvious
-mistake and it roughly doubles the reported figure, in the alarming direction.
+One definition carries the module: for an issuer reached through several funds
+the redundant part is `Σ contributions - largest contribution`, §9.4's *"the
+exposure you would still have if you kept only the largest provider"*. Counting
+the issuer's WHOLE exposure roughly doubles the figure, in the alarming
+direction.
 
-§9.4 is explicit that this is **descriptive, not a recommendation to
-consolidate** (`PLAN.md` §3.3). It states what is true about the portfolio. What
-to do about it is the user's call, and two funds holding the same company is
-often deliberate.
+**Descriptive, not a recommendation to consolidate** (§9.4, `PLAN.md` §3.3):
+two funds holding the same company is often deliberate.
 
-Aggregated in Python with `Decimal` — `CLAUDE.md` invariant 1 forbids `SUM()`
-over a `DECIMAL_TEXT` column, and `lookthrough_contribution.exposure_inr` is one.
+Aggregated in Python with `Decimal` — invariant 1 forbids `SUM()` over a
+`DECIMAL_TEXT` column, and `exposure_inr` is one.
 """
 
 from __future__ import annotations

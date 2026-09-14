@@ -1,20 +1,16 @@
 """Populate `scheme.scheme_family`. MODULE_0.md §3 (L2 -> L3), DECISIONS V1-37.
 
-Derived, re-runnable, and reading nothing but the scheme master — the same
-shape as `derive/nav_adj.py`. Re-running after an AMFI load is how a newly
-listed share class joins its family.
+Derived, re-runnable, reading nothing but the scheme master. Re-running after an
+AMFI load is how a newly listed share class joins its family.
 
-**A family that cannot be shown coherent does not fan out.** The coherence
-check is SEBI category: share classes of one scheme share one, and two
-different funds sharing both an AMC and a qualifier-free name are what would
-merge if the key were wrong. Three families of 4,195 span more than one, all of
-them AMFI writing the same category two ways (`Debt Scheme - Short Duration
-Fund` beside `Income/Debt Oriented Schemes - Short Term Fund`); those get NULL
-and behave exactly as the warehouse did before families existed.
+**A family that cannot be shown coherent does not fan out.** The coherence check
+is SEBI category, because two different funds sharing an AMC and a qualifier-free
+name are what would merge if the key were wrong. Three families of 4,195 span
+more than one — all AMFI writing the same category two ways — and those get NULL.
 
-Refusing there costs nothing today — none of the three has a disclosure — and
-the alternative is filing one fund's portfolio against another fund's ISIN,
-which is worse than no coverage and would not look like an error.
+Refusing costs nothing today (none of the three has a disclosure) and the
+alternative is filing one fund's portfolio against another fund's ISIN, which
+would not look like an error.
 """
 
 from __future__ import annotations
