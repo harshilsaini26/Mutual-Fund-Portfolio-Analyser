@@ -9,7 +9,7 @@ affordance, but the count stays visible.
 
 Every string is **descriptive** (`PLAN.md` §3.3): "43 days old" is a fact,
 "consider refreshing" is advice this product does not give.
-`tests/unit/test_m6_language.py` lints it.
+`tests/unit/test_m6_discipline.py::test_no_prescriptive_language` lints it.
 
 Where the honesty commitments made upstream become visible or quietly evaporate
 (§19.2). Staleness, coverage and the unresolved share are computed upstream; if

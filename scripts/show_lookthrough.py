@@ -42,11 +42,7 @@ from src.m3_lookthrough.persist_metrics import (
     save_duplication,
     save_overlap,
 )
-from src.m3_lookthrough.weights import (
-    latest_as_of,
-    load_issuer_weights,
-    materialise_weights,
-)
+from src.m3_lookthrough.weights import rebuild_weights
 
 TOP_N = 20
 
@@ -60,29 +56,10 @@ def main() -> None:
     args = parser.parse_args()
 
     conn = connect(str(warehouse_path()))
-    schemes = [
-        SchemeId(r[0])
-        for r in conn.execute(
-            "SELECT DISTINCT scheme_id FROM holding_disclosure WHERE is_current = 1"
-        )
-    ]
-    weights_by_scheme: dict[SchemeId, list[IssuerWeight]] = {}
-    as_of_by_scheme: dict[SchemeId, date] = {}
-    for scheme_id in schemes:
-        as_of = latest_as_of(conn, scheme_id)
-        if as_of is None:
-            continue
-        # Unconditionally, not "only if absent": guarding on absence meant a
-        # restated disclosure never refreshed the weights and every later
-        # report used the withdrawn revision. Replacing the set is idempotent.
-        materialise_weights(conn, scheme_id, as_of)
-        found = load_issuer_weights(conn, scheme_id, as_of)
-        if found:
-            weights_by_scheme[scheme_id] = found
-            as_of_by_scheme[scheme_id] = as_of
-    # ONE commit for the whole rebuild. `materialise_weights` used to commit
-    # per scheme -- 192 fsyncs, 0.86s of a 1.92s run.
-    conn.commit()
+    # One call, and it commits. The loop used to live here with the commit as
+    # its last line, which put the only statement that persists the rebuild
+    # somewhere no test could reach it.
+    weights_by_scheme, as_of_by_scheme = rebuild_weights(conn)
 
     positions, basis, ledger = _positions(args, weights_by_scheme)
     if not positions:

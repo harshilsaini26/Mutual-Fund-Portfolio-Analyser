@@ -32,6 +32,18 @@ def current_holdings(
 
     Resolved to the share-class family first: a disclosure describes a scheme,
     not an ISIN, and Direct and Regular hold one pool of assets (V1-37).
+
+    **Ordered by `row_number`**, the disclosure's own row order, because the
+    caller breaks an issuer's `instrument_class` tie on first-largest-wins.
+
+    Hardening, not a bug fix, and worth saying so. Without the ORDER BY the
+    rows already arrive in this order: `EXPLAIN QUERY PLAN` shows the search
+    running on `sqlite_autoindex_holding_1`, which is the primary key
+    `(scheme_id, as_of_date, revision, row_number)`. So the order is a
+    consequence of the plan rather than of the query, and a planner that chose
+    `ix_hold_issuer` instead would change which class is stored. No test can
+    fail on its absence for the same reason — see
+    `test_the_dominant_class_does_not_depend_on_scan_order`.
     """
     source = SchemeId(disclosure_scheme_for(conn, str(scheme_id), as_of.isoformat()))
     return [
@@ -42,7 +54,8 @@ def current_holdings(
             " JOIN holding_disclosure d"
             "   ON d.scheme_id = h.scheme_id AND d.as_of_date = h.as_of_date"
             "  AND d.revision = h.revision"
-            " WHERE h.scheme_id = ? AND h.as_of_date = ? AND d.is_current = 1",
+            " WHERE h.scheme_id = ? AND h.as_of_date = ? AND d.is_current = 1"
+            " ORDER BY h.row_number",
             (str(source), as_of),
         )
     ]
@@ -55,6 +68,12 @@ def materialise_weights(
 
     **Does not commit** — the caller owns the transaction. Committing per
     scheme cost 0.86s of a 1.92s run across 192 schemes, one fsync each.
+
+    That also makes a rebuild ATOMIC rather than incremental: a failure part-way
+    loses every scheme done so far, where the old per-scheme commit kept them.
+    Cheap here because the whole loop is under a second and this function is
+    idempotent, but a caller that runs it over a much larger set inherits the
+    trade. `rebuild_weights` below is the supported way to drive it.
 
     `weight_drift_adj` stays NULL: §9.3's drift basis needs `security_price`,
     which is not built, and copying the disclosed weight into it would be a
@@ -190,3 +209,37 @@ def latest_as_of(
     """§5.5's date alone, for callers that do not care which tier it came from."""
     found = latest_disclosure(conn, scheme_id, on_or_before)
     return found[0] if found else None
+
+
+def rebuild_weights(
+    conn: sqlite3.Connection,
+) -> tuple[dict[SchemeId, list[IssuerWeight]], dict[SchemeId, date]]:
+    """Re-materialise every disclosed scheme's weights, and COMMIT once.
+
+    Here rather than in `scripts/show_lookthrough.py` because the commit is the
+    only thing that persists the rebuild, and while it lived in the script no
+    test could reach it: every test calls `materialise_weights` and reads back
+    on the same connection, where uncommitted rows are visible. Deleting that
+    one line left all 1,163 tests green while the look-through reported correct
+    numbers and stored nothing.
+
+    Rebuilt unconditionally, not "only if absent": guarding on absence meant a
+    restated disclosure never refreshed its weights and every later report used
+    the withdrawn revision. Replacing the set is idempotent.
+    """
+    weights: dict[SchemeId, list[IssuerWeight]] = {}
+    as_ofs: dict[SchemeId, date] = {}
+    for row in conn.execute(
+        "SELECT DISTINCT scheme_id FROM holding_disclosure WHERE is_current = 1"
+    ).fetchall():
+        scheme_id = SchemeId(str(row[0]))
+        as_of = latest_as_of(conn, scheme_id)
+        if as_of is None:
+            continue
+        materialise_weights(conn, scheme_id, as_of)
+        found = load_issuer_weights(conn, scheme_id, as_of)
+        if found:
+            weights[scheme_id] = found
+            as_ofs[scheme_id] = as_of
+    conn.commit()
+    return weights, as_ofs

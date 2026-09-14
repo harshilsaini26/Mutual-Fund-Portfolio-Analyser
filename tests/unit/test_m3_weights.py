@@ -23,6 +23,7 @@ from src.m3_lookthrough.weights import (
     latest_disclosure,
     load_issuer_weights,
     materialise_weights,
+    rebuild_weights,
 )
 
 SCHEME = SchemeId("S1")
@@ -323,4 +324,94 @@ def test_the_tier_choice_does_not_move_with_the_report_date(
     }
     assert answers == {(july, "amc_direct")}, (
         f"the tier choice moved with the report date: {sorted(map(str, answers))}"
+    )
+
+
+class TestTheRebuildIsActuallyPersisted:
+    """The commit is the only thing that stores a rebuild, and it used to live
+    in `scripts/show_lookthrough.py` where no test could reach it: every test
+    below writes and reads back on ONE connection, where uncommitted rows are
+    visible either way. Deleting that line left all 1,163 tests green while the
+    look-through reported correct numbers and stored nothing."""
+
+    def test_the_rows_survive_the_connection_that_wrote_them(
+        self, conn: sqlite3.Connection, tmp_path: Path
+    ) -> None:
+        _issuer(conn, "ACME")
+        _disclose(conn, 1, [("ACME", "100", "equity")])
+        conn.commit()
+
+        weights, as_ofs = rebuild_weights(conn)
+        assert [str(k) for k in weights] == ["S1"]
+        assert as_ofs[SCHEME] == AS_OF
+        conn.close()
+
+        # A DIFFERENT connection. This is the assertion the suite never made.
+        reopened = connect(str(tmp_path / "w.db"))
+        stored = reopened.execute(
+            "SELECT issuer_id, weight_disclosed FROM scheme_issuer_weight"
+        ).fetchall()
+        reopened.close()
+        assert [(str(r[0]), Decimal(r[1])) for r in stored] == [
+            ("ACME", Decimal("100"))
+        ]
+
+    def test_materialise_weights_alone_does_not_commit(
+        self, conn: sqlite3.Connection, tmp_path: Path
+    ) -> None:
+        """The other half of the contract. `materialise_weights` stopped
+        committing so a 192-scheme rebuild costs one fsync rather than 192;
+        that only holds if it really does leave the transaction open."""
+        _issuer(conn, "ACME")
+        _disclose(conn, 1, [("ACME", "100", "equity")])
+        conn.commit()
+
+        assert materialise_weights(conn, SCHEME, AS_OF) == 1
+        assert conn.in_transaction, "the caller must still own the transaction"
+        conn.close()  # no commit: the process dying
+
+        reopened = connect(str(tmp_path / "w.db"))
+        left = reopened.execute(
+            "SELECT COUNT(*) FROM scheme_issuer_weight"
+        ).fetchone()[0]
+        reopened.close()
+        assert left == 0
+
+
+def test_the_dominant_class_does_not_depend_on_scan_order(
+    conn: sqlite3.Connection,
+) -> None:
+    """An issuer whose two largest holdings tie on ABSOLUTE weight but differ in
+    class: whichever row the reader sees first decides what is stored, so the
+    read needs an order. `current_holdings` orders by `row_number`, the
+    disclosure's own, which makes the answer the file's rather than SQLite's.
+
+    **This PINS the behaviour; it cannot fail if the ORDER BY is removed**, and
+    that is worth stating rather than leaving for someone to discover. The query
+    searches `sqlite_autoindex_holding_1` -- the primary key, which ends in
+    `row_number` -- so the rows already arrive in this order. Inserting them in
+    REVERSE row_number order, as below, does not change that: the index decides,
+    not the insertion. Measured both ways.
+
+    What the ORDER BY buys is independence from the query planner, and what this
+    test buys is a statement of which class is supposed to win.
+    """
+    _issuer(conn, "TIED")
+    _insert(
+        conn, "holding_disclosure", scheme_id="S1", as_of_date=AS_OF, revision=1,
+        source_file_id="f1", row_count=2, is_current=1,
+    )
+    for row_number, pct, klass in ((2, "-5", "derivative"), (1, "5", "equity")):
+        _insert(
+            conn, "holding", scheme_id="S1", as_of_date=AS_OF, revision=1,
+            row_number=row_number, issuer_id="TIED", instrument_raw_name="TIED",
+            market_value=Decimal("100"), pct_normalised=Decimal(pct),
+            instrument_class=klass,
+        )
+
+    materialise_weights(conn, SCHEME, AS_OF)
+    got = load_issuer_weights(conn, SCHEME, AS_OF)
+    assert got[0].instrument_class == "equity", (
+        "row 1 is the disclosure's own first row and must win, whatever order"
+        " SQLite happens to return the rows in"
     )
