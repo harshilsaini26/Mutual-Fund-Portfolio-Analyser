@@ -92,7 +92,7 @@ A working system, not a finished product.
 | | |
 |---|---|
 | AMC readers, each verified against a real published file | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
-| Plus a coverage tier | any fund Groww lists, at ~9% unresolved against 0.00% from an AMC's own file |
+| Plus a coverage tier | any fund Groww lists, at 19-23% unresolved against 0.00% from an AMC's own file |
 | Schemes with a loaded disclosure | 192, across 6 fund houses |
 | Modules built | M0 data, M1 ledger, M3 look-through, M6 views |
 | Not built | M2 fund analytics, M4 risk, M5 market, tax engine |
@@ -191,9 +191,12 @@ python -m jobs.fetch_groww --scheme INF179K01UT0
 ```
 
 It reaches any fund Groww lists, and it is deliberately not a replacement: the
-page carries no ISIN column, which costs ~9% of rows unresolved against 0.00%
-from the same fund's own workbook. A reader always prefers the AMC's file while
-that file is not itself stale.
+page carries no ISIN column, which costs 19-23% of rows unresolved against
+0.00% from the same fund's own workbook, measured on one fund in one month. The
+range moves because the page's figure falls as the entity master grows and the
+workbook's does not — a name match improves with the master, an ISIN match was
+never waiting on it. A reader always prefers the AMC's file while that file is
+not itself stale.
 
 Passwords are always prompted, never read from the environment. Every fetch is
 rate-limited per domain, respects `robots.txt`, uses conditional GET, and archives the raw
