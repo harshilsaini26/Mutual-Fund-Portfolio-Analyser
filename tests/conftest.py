@@ -17,9 +17,13 @@ test that asserts through it cannot pass on an uncommitted write.
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
+import tempfile
+from pathlib import Path
 
 from src.common.decimals import connect
+from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import connect_ledger
 
 
@@ -54,3 +58,29 @@ def reopen_ledger(conn: sqlite3.Connection, key: str) -> sqlite3.Connection:
     path = _main_path(conn)
     conn.close()
     return connect_ledger(path, key=key)
+
+
+#: A migrated, empty Zone A warehouse, built once per process. `migrated()`
+#: copies it; nothing writes to it.
+_TEMPLATE: Path | None = None
+
+
+def migrated(path: Path | str) -> str:
+    """An empty migrated warehouse at `path`, by COPY rather than by migration.
+
+    `apply_migrations` ran 228 times across `tests/unit` for 94s of a 261s run
+    — 36% of the suite spent re-applying the same 13 files. The result is a
+    244 KiB file that is identical every time, so it is built once and copied:
+    1.0ms against 209.5ms, measured.
+
+    Not used by `test_m0_migrations.py`, which is about migrations and has to
+    run them, nor by the two idempotency assertions in `test_m0_amfi.py` that
+    read `apply_migrations`' return value.
+    """
+    global _TEMPLATE
+    if _TEMPLATE is None or not _TEMPLATE.exists():
+        template = Path(tempfile.mkdtemp(prefix="mf-schema-")) / "migrated.db"
+        apply_migrations(str(template))
+        _TEMPLATE = template
+    shutil.copy(_TEMPLATE, path)
+    return str(path)

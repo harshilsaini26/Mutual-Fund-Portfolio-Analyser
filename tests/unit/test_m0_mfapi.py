@@ -25,6 +25,8 @@ from src.m0_data.parse.nav.mfapi import (
     parse_mfapi,
 )
 
+from tests.conftest import migrated
+
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "m0"
 SAMPLE = FIXTURES / "mfapi_118955_sample.json"
 SCHEME = "INF179K01UT0"
@@ -191,10 +193,9 @@ def test_a_mirror_row_never_overwrites_an_amfi_row(tmp_path: Path) -> None:
     from src.common.decimals import connect
     from src.m0_data.load import load_navs, load_navs_where_absent
     from src.m0_data.parse.nav.amfi import StagedNav
-    from src.m0_data.schema.apply import apply_migrations
 
     db = tmp_path / "w.db"
-    apply_migrations(str(db))
+    migrated(db)
     conn = connect(str(db))
     conn.execute(
         "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"
@@ -240,10 +241,9 @@ def test_load_navs_still_upserts_for_the_publisher(tmp_path: Path) -> None:
     from src.common.decimals import connect
     from src.m0_data.load import load_navs
     from src.m0_data.parse.nav.amfi import StagedNav
-    from src.m0_data.schema.apply import apply_migrations
 
     db = tmp_path / "w.db"
-    apply_migrations(str(db))
+    migrated(db)
     conn = connect(str(db))
     conn.execute(
         "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"

@@ -29,7 +29,6 @@ from pathlib import Path
 
 import pytest
 from src.common.types import IssuerId, SchemeId, UserId
-from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
 from src.m3_lookthrough.persist import save_lookthrough
@@ -37,6 +36,8 @@ from src.m6_views.builder import Scope
 from src.m6_views.builders import portfolio  # noqa: F401  — registers builders
 from src.m6_views.deps import Deps
 from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY
+
+from tests.conftest import migrated
 
 ROOT = Path(__file__).resolve().parents[2]
 BUILDERS = ROOT / "src" / "m6_views" / "builders"
@@ -129,7 +130,7 @@ def populated(tmp_path: Path) -> Deps:
     from src.common.decimals import connect
 
     warehouse_db = str(tmp_path / "warehouse.db")
-    apply_migrations(warehouse_db)
+    migrated(warehouse_db)
     warehouse: sqlite3.Connection = connect(warehouse_db)
     ledger = connect_ledger(str(tmp_path / "personal.db"), key="test-key")
     apply_ledger_schema(ledger)
@@ -194,7 +195,7 @@ def test_every_state_reason_names_something_actionable(tmp_path: Path) -> None:
     from src.common.decimals import connect
 
     warehouse_db = str(tmp_path / "bare_warehouse.db")
-    apply_migrations(warehouse_db)
+    migrated(warehouse_db)
     empty = connect_ledger(str(tmp_path / "bare.db"), key="test-key")
     apply_ledger_schema(empty)
 

@@ -27,7 +27,8 @@ from src.m0_data.parse.nav.amfi import parse_navall
 from src.m0_data.providers.fake import FakeMarketDataProvider
 from src.m0_data.providers.market_data import MarketDataProvider
 from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
-from src.m0_data.schema.apply import apply_migrations
+
+from tests.conftest import migrated
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 SAMPLE = FIXTURES / "m0" / "navall_sample.txt"
@@ -42,7 +43,7 @@ HDFC_IDCW_PAYOUT = SchemeId("INF179K01VL5")
 def warehouse(tmp_path_factory: pytest.TempPathFactory) -> Any:
     """A real warehouse, loaded from the real AMFI slice."""
     db = tmp_path_factory.mktemp("m0") / "canonical.db"
-    apply_migrations(str(db))
+    migrated(db)
     conn = connect(str(db))
     conn.row_factory = None
     parsed = parse_navall(SAMPLE.read_text(encoding="utf-8").splitlines())

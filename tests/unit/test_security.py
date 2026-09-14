@@ -27,12 +27,13 @@ import pytest
 from fastapi.testclient import TestClient
 from src.common.decimals import connect
 from src.common.types import IssuerId, SchemeId, UserId
-from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m6_views.api.app import create_app
 from src.m6_views.registry import seed_view_definitions
+
+from tests.conftest import migrated
 
 USER = "USER-01"
 AS_OF = date(2026, 9, 4)
@@ -50,7 +51,7 @@ FORMULA_NAME = "=cmd|'/c calc.exe'!A1"
 
 def _client(tmp_path: Path, issuer_name: str) -> TestClient:
     warehouse_db = str(tmp_path / "w.db")
-    apply_migrations(warehouse_db)
+    migrated(warehouse_db)
     warehouse = connect(warehouse_db, check_same_thread=False)
     warehouse.execute(
         "INSERT OR REPLACE INTO issuer (issuer_id, canonical_name, is_listed)"

@@ -38,6 +38,8 @@ from src.m0_data.schema.apply import (
     migration_files,
 )
 
+from tests.conftest import migrated
+
 SAMPLE = Path(__file__).resolve().parents[1] / "fixtures" / "m0" / "navall_sample.txt"
 AS_OF = date(2026, 9, 4)
 
@@ -389,7 +391,7 @@ def test_nav_adj_is_populated_even_with_no_idcw_events(
 
 def _warehouse(tmp_path: Path, parsed: AmfiParseResult):  # type: ignore[no-untyped-def]
     db = tmp_path / "warehouse.db"
-    apply_migrations(str(db))
+    migrated(db)
     conn = connect(str(db))
     load_parse_result(conn, parsed, "file-1", AS_OF)
     conn.commit()

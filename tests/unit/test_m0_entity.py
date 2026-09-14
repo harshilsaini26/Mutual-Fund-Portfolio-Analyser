@@ -52,7 +52,8 @@ from src.m0_data.resolve.isin import (
 )
 from src.m0_data.resolve.queue import accept, enqueue, pending, queue_id_for
 from src.m0_data.resolve.synthetic import match_synthetic
-from src.m0_data.schema.apply import apply_migrations
+
+from tests.conftest import migrated
 
 SAMPLE = Path(__file__).resolve().parents[1] / "fixtures" / "m0" / "amfi_mcap_sample.xlsx"
 SAMPLE_NAME = "AverageMarketCapitalization30Jun2026.xlsx"
@@ -66,7 +67,7 @@ MAHINDRA = "INE101A01026"
 @pytest.fixture
 def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
     db = tmp_path / "canonical.db"
-    apply_migrations(str(db))
+    migrated(db)
     connection = connect(str(db))
     parsed = parse_mcap_xlsx(SAMPLE.read_bytes(), SAMPLE_NAME)
     load_mcap(connection, parsed, "file-1")

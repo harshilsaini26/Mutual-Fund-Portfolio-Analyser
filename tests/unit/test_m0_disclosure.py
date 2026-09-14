@@ -20,7 +20,6 @@ from src.m0_data.derive.scheme_family import disclosure_scheme_for
 from src.m0_data.load import load_holdings, next_revision
 from src.m0_data.normalise.family import family_key
 from src.m0_data.normalise.weights import NormalisationError, normalise_weights
-from src.m0_data.schema.apply import apply_migrations
 from src.m0_data.validate.checks import (
     HoldingRow,
     as_json,
@@ -28,6 +27,8 @@ from src.m0_data.validate.checks import (
     promote_or_quarantine,
     validate_disclosure,
 )
+
+from tests.conftest import migrated
 
 AS_OF = date(2026, 7, 31)
 TODAY = date(2026, 9, 5)
@@ -240,7 +241,7 @@ def test_the_gate_names_the_checks_it_cannot_run() -> None:
 @pytest.fixture
 def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
     db = tmp_path / "w.db"
-    apply_migrations(str(db))
+    migrated(db)
     connection = connect(str(db))
     connection.execute(
         "INSERT INTO issuer (issuer_id, canonical_name) VALUES (?, ?)",

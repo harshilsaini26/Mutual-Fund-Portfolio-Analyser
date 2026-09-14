@@ -20,7 +20,8 @@ from src.m0_data.derive.disclosed_issuers import (
     issuer_segment,
 )
 from src.m0_data.resolve.synthetic import match_synthetic
-from src.m0_data.schema.apply import apply_migrations
+
+from tests.conftest import migrated
 
 
 def test_an_isin_says_what_kind_of_thing_it_is() -> None:
@@ -83,7 +84,7 @@ def test_a_fund_unit_is_never_an_issuer() -> None:
 @pytest.fixture
 def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
     db = tmp_path / "canonical.db"
-    apply_migrations(str(db))
+    migrated(db)
     c = connect(str(db))
     c.execute("INSERT INTO scheme (scheme_id, scheme_name, plan, option)"
               " VALUES ('S1','A Fund','direct','growth')")

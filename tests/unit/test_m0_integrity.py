@@ -17,13 +17,14 @@ import pytest
 from src.common.decimals import connect
 from src.m0_data.load import load_parse_result
 from src.m0_data.parse.nav.amfi import parse_navall
-from src.m0_data.schema.apply import apply_migrations
 from src.m0_data.validate.integrity import (
     MAX_NAV_GAP_BUSINESS_DAYS,
     assert_m1_contract,
     business_days_between,
     nav_gaps,
 )
+
+from tests.conftest import migrated
 
 SAMPLE = Path(__file__).resolve().parents[1] / "fixtures" / "m0" / "navall_sample.txt"
 AS_OF = date(2026, 9, 4)
@@ -33,7 +34,7 @@ HDFC_DIRECT = "INF179K01UT0"
 @pytest.fixture
 def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
     db = tmp_path / "canonical.db"
-    apply_migrations(str(db))
+    migrated(db)
     connection = connect(str(db))
     parsed = parse_navall(SAMPLE.read_text(encoding="utf-8").splitlines())
     load_parse_result(connection, parsed, "file-1", AS_OF)

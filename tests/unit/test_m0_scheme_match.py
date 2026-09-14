@@ -25,13 +25,14 @@ from src.m0_data.resolve.scheme_match import (
     live_families_by_amc,
     refuse_contested,
 )
-from src.m0_data.schema.apply import apply_migrations
+
+from tests.conftest import migrated
 
 
 @pytest.fixture
 def conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
     db = tmp_path / "canonical.db"
-    apply_migrations(str(db))
+    migrated(db)
     c = connect(str(db))
     c.execute(
         "INSERT INTO amc (amc_id, amc_name) VALUES ('icici_prudential','ICICI')"

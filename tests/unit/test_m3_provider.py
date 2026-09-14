@@ -23,7 +23,6 @@ from pathlib import Path
 
 import pytest
 from src.common.types import IssuerId, SchemeId, UserId, WeightBasis
-from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.concentration import concentration
 from src.m3_lookthrough.duplication import portfolio_duplication
@@ -38,6 +37,8 @@ from src.m3_lookthrough.persist_metrics import (
 )
 from src.m3_lookthrough.providers.lookthrough import LookThroughProvider
 from src.m3_lookthrough.providers.sqlite import SqliteLookThroughProvider
+
+from tests.conftest import migrated
 
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
@@ -71,7 +72,7 @@ def warehouse(tmp_path: Path) -> sqlite3.Connection:
     from src.common.decimals import connect
 
     db = str(tmp_path / "warehouse.db")
-    apply_migrations(db)
+    migrated(db)
     conn = connect(db)
     conn.execute(
         "INSERT OR REPLACE INTO issuer (issuer_id, canonical_name, is_listed)"

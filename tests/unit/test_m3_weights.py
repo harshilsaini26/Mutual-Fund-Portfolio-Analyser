@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 from src.common.decimals import connect
 from src.common.types import SchemeId
-from src.m0_data.schema.apply import apply_migrations
 from src.m3_lookthrough.engine import assert_weights_sum_to_100
 from src.m3_lookthrough.weights import (
     latest_as_of,
@@ -26,7 +25,7 @@ from src.m3_lookthrough.weights import (
     rebuild_weights,
 )
 
-from tests.conftest import reopen
+from tests.conftest import migrated, reopen
 
 SCHEME = SchemeId("S1")
 AS_OF = date(2026, 7, 31)
@@ -35,7 +34,7 @@ AS_OF = date(2026, 7, 31)
 @pytest.fixture
 def conn(tmp_path: Path) -> sqlite3.Connection:
     db = tmp_path / "w.db"
-    apply_migrations(str(db))
+    migrated(db)
     c = connect(str(db))
     c.execute(
         "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"

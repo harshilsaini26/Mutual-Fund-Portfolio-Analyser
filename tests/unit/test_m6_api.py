@@ -24,12 +24,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from src.common.types import IssuerId, SchemeId, UserId
-from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m6_views.api.app import BIND_HOST, create_app
 from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY, seed_view_definitions
+
+from tests.conftest import migrated
 
 USER = "USER-01"
 AS_OF = date(2026, 9, 4)
@@ -51,7 +52,7 @@ def client(tmp_path: Path) -> TestClient:
     from src.common.decimals import connect
 
     warehouse_db = str(tmp_path / "warehouse.db")
-    apply_migrations(warehouse_db)
+    migrated(warehouse_db)
     warehouse: sqlite3.Connection = connect(
         warehouse_db, check_same_thread=False
     )

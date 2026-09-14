@@ -31,10 +31,11 @@ from jobs.import_cas import run
 from src.common.decimals import connect
 from src.common.fixtures import load_yaml
 from src.common.types import UserId
-from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m1_ledger.persist import derived_fingerprint
 from src.m1_ledger.txn import load_transactions
+
+from tests.conftest import migrated
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 USER = UserId("USER-01")
@@ -52,7 +53,7 @@ def warehouse(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     because of yesterday's job is not a test.
     """
     db = tmp_path / "canonical.db"
-    apply_migrations(str(db))
+    migrated(db)
     conn = connect(str(db))
     series = load_yaml(FIXTURES / "nav_series.yaml")["series"]
     for scheme_id, block in series.items():
