@@ -109,15 +109,15 @@ class TestTheRebuildSurvivesAWarehouseWithRowsInIt:
         conn = connect(str(_loaded(tmp_path)))
         assert unsafe_decimal_columns(conn) == []
 
-    def test_an_interrupted_rebuild_does_not_wedge_the_chain(
+    def test_a_scratch_table_left_behind_does_not_wedge_the_chain(
         self, tmp_path: Path
     ) -> None:
-        """`executescript` is autocommit, so a process killed between the
-        INSERT and the DROP leaves `scheme_aum_next` populated with no
-        `schema_migration` row. Without the leading `DROP TABLE IF EXISTS` the
-        next run re-inserted into it -- `UNIQUE constraint failed`, on that run
-        and every run after it, blocking 014 and everything past it behind a
-        table only manual surgery could clear."""
+        """A populated `scheme_aum_next` with no `schema_migration` row, from
+        whatever cause -- a hand-run, or a version of this file that predates
+        its transaction. Without the leading `DROP TABLE IF EXISTS` the next
+        run re-inserts the same rows into it: `UNIQUE constraint failed`, on
+        that run and every run after it, blocking 014 and everything past it
+        behind a table only manual surgery could clear."""
         db = _loaded(tmp_path)
         conn = sqlite3.connect(str(db))
         conn.execute("DELETE FROM schema_migration WHERE name = ?", (M013.name,))
@@ -138,3 +138,38 @@ class TestTheRebuildSurvivesAWarehouseWithRowsInIt:
         # And it stays clean: the second application is a no-op, not a failure.
         conn.close()
         assert apply_migrations(str(db)) == []
+
+    def test_a_crash_after_the_old_table_is_dropped_loses_nothing(
+        self, tmp_path: Path
+    ) -> None:
+        """The window the leading DROP opened rather than closed. Killed
+        between `DROP TABLE scheme_aum` and the RENAME, the ONLY copy of the
+        data sits in `scheme_aum_next` -- which the next run's
+        `DROP TABLE IF EXISTS` then destroys. Statement order cannot close both
+        windows at once; a transaction can, and SQLite has transactional DDL.
+        """
+        db = _loaded(tmp_path)
+        conn = sqlite3.connect(str(db))
+        conn.execute("DELETE FROM schema_migration WHERE name = ?", (M013.name,))
+        conn.commit()
+
+        sql = M013.read_text(encoding="utf-8")
+        conn.executescript(sql[: sql.index("ALTER TABLE scheme_aum_next")])
+        atomic = conn.in_transaction
+        conn.close()  # the process dies here, having committed nothing
+
+        # Unwrapped, `scheme_aum` is already gone by now and the only copy of
+        # the rows is in a scratch table the next run drops on sight.
+        conn = sqlite3.connect(str(db))
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 3, (
+            "the rollback must leave the source table exactly as it was"
+        )
+        assert not conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'scheme_aum_next'"
+        ).fetchone()
+        conn.close()
+
+        assert apply_migrations(str(db)) == [M013.name]
+        conn = sqlite3.connect(str(db))
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 3
+        assert atomic, "the rebuild has to be one unit, not five"
