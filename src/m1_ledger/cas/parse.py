@@ -1,33 +1,24 @@
 """CAS text -> staged rows. MODULE_1.md §5.3.
 
-A line-oriented state machine, not table extraction. §5.2 is emphatic about
-this and it is right: CAS tables are unruled, columns drift across pages, and
-folio/scheme context lives outside any table, so `camelot` and
-`pdfplumber.extract_tables()` both lose the context that makes a row meaningful.
+A line-oriented state machine, not table extraction (§5.2): CAS tables are
+unruled, columns drift across pages, and folio/scheme context lives outside any
+table, so table extractors lose the context that makes a row meaningful.
 
-This module is deliberately PURE — it takes `list[str]` and returns staged rows.
-Decryption and text extraction live in `pdf.py`, which is the only place that
-touches a password or a file. That split is what makes the parser testable at
-all: a real CAS is Zone B personal data (PAN, folio numbers, address) and can
-never be committed, so every test here runs against a synthetic statement.
+Deliberately PURE — `list[str]` in, staged rows out. Decryption and text
+extraction live in `pdf.py`, the only place touching a password or a file. That
+split is what makes the parser testable: a real CAS is Zone B personal data and
+can never be committed, so every test runs against a synthetic statement.
 
-Two departures from §5.3's code, both recorded in DECISIONS V0-15:
+Two departures from §5.3, both recorded in V0-15:
 
 1.  **Nothing is silently dropped.** §5.3 skips any line inside a scheme block
-    that `TXN_RE` does not match. A regex that fails to match a real
-    transaction row therefore loses it without trace — and the ledger it feeds
-    is short one transaction with no error anywhere. §5.5 is careful to RAISE
-    on an unmapped description, but a row that never reaches the mapper cannot
-    raise. Every unconsumed line inside a scheme block is collected in
+    that `TXN_RE` does not match, so a regex that fails on a real transaction
+    loses it without trace. Every unconsumed line is collected in
     `CasContext.unparsed`, and the import refuses to report `ok` while any
     remain.
-
-2.  **Trailing numeric columns are tokenised from the right** rather than
-    matched positionally. §5.3's `TXN_RE` mandates exactly six columns, so a
-    zero-unit `IDCW_PAYOUT` — which §5.4 explicitly says is legitimate and must
-    not be filtered out — prints no units and no NAV, fails the match, and
-    falls into the silent-skip above. Anchoring at the right edge reads however
-    many columns the row actually has.
+2.  **Trailing numeric columns are tokenised from the right.** §5.3's `TXN_RE`
+    mandates exactly six columns, so a zero-unit `IDCW_PAYOUT` — legitimate per
+    §5.4 — prints no units, fails the match, and falls into the silent skip.
 """
 
 from __future__ import annotations
@@ -148,14 +139,12 @@ class BalanceMarker:
     """An opening or closing unit balance printed by the statement itself.
 
     The closing balance is what reconciliation checks the ledger against
-    (MODULE_1.md §11.1). Without it there is only internal self-consistency,
-    which proves nothing about a missing statement.
+    (§11.1); without it there is only internal self-consistency.
 
     The OPENING balance is captured too, which §5.3 does not do — it defines
-    `OPENING_RE` and never uses it. It is the direct evidence for §11.2's
-    `MISSING_EARLY_CAS`: a non-zero opening balance says in so many words that
-    units existed before this statement's period, so a short ledger is an
-    un-imported earlier period rather than a parser bug. DECISIONS V0-15.
+    `OPENING_RE` and never uses it. It is direct evidence for §11.2's
+    `MISSING_EARLY_CAS`: a non-zero opening balance says units existed before
+    this statement's period (V0-15).
     """
 
     folio: str
@@ -201,13 +190,11 @@ def to_decimal(raw: str) -> Decimal | None:
     """Parse one printed column. §5.4's two number traps, together.
 
     Indian digit grouping (`1,23,456.78`) is handled by stripping commas, which
-    §5.4 specifically prefers over locale parsing — `locale.atof` needs a
-    system locale that may not be installed and silently misreads the grouping
-    when it is not.
+    §5.4 prefers over `locale.atof` — that needs a system locale which may not
+    be installed and misreads the grouping silently when it is not.
 
-    Parenthesised negatives (`(500.00)`) are the accounting convention CAMS
-    uses for units leaving a folio. Reading `(20.000)` as +20 turns a
-    redemption into a purchase, so this is not cosmetic.
+    Parenthesised negatives are CAMS's convention for units leaving a folio.
+    Reading `(20.000)` as +20 turns a redemption into a purchase.
     """
     token = raw.strip()
     if not token or token in {"-", "--"}:
@@ -241,13 +228,10 @@ def parse_date(raw: str) -> date:
 def _split_trailing_numbers(rest: str) -> tuple[str, list[Decimal | None]]:
     """Peel numeric columns off the right-hand edge of a transaction line.
 
-    The description is free text (§5.4) and can contain almost anything,
-    including digits and parentheses. The numeric columns cannot: they are the
-    last N whitespace-separated tokens and every one of them is a number. So
-    the reliable anchor is the right edge, not a greedy `(.+?)` in the middle.
-
-    Stops at the first token from the right that is not numeric; whatever
-    remains to its left is the description.
+    The description is free text and can contain digits and parentheses; the
+    numeric columns cannot. So the reliable anchor is the right edge, not a
+    greedy `(.+?)` in the middle: stop at the first non-numeric token from the
+    right, and whatever remains to its left is the description.
     """
     tokens = rest.split()
     numbers: list[Decimal | None] = []

@@ -1,17 +1,14 @@
 """The FIFO lot engine.
 
-MODULE_1.md §7. FIFO is **statutory** for Indian mutual fund units — not a
-design choice — so there is no strategy parameter here and there never will be.
-What the product can offer is FIFO-aware *planning* ("these are the units that
-will be sold, and here is their tax character"), which is descriptive and
-belongs in a view, not here.
+MODULE_1.md §7. FIFO is **statutory** for Indian mutual fund units, not a
+design choice, so there is no strategy parameter here and there never will be.
 
-V0.1 scope: everything that needs no NAV. Lots, cost basis, FIFO consumption,
-holding periods and realised gains are all computable from transactions alone.
-Market value, unrealised P&L and TWRR need the NAV series and are not here yet.
+V0.1 scope: everything computable from transactions alone — lots, cost basis,
+FIFO consumption, holding periods, realised gains. Market value and TWRR need
+the NAV series and are not here yet.
 
-Grandfathering (§7.5) needs the 31-Jan-2018 NAV from M0 and is stubbed with an
-explicit marker rather than silently skipped — see `effective_cost`.
+Grandfathering (§7.5) needs the 31-Jan-2018 NAV from M0 and is marked
+explicitly rather than silently skipped — see `effective_cost`.
 """
 
 from __future__ import annotations
@@ -98,14 +95,13 @@ class Lot:
 class Consumption:
     """One lot's contribution to one closing transaction. MODULE_1.md §4.4.
 
-    `gain_type` is a property of the LOT, not of the sale: a single redemption
-    spanning the long-term boundary produces both LTCG and STCG rows. An engine
-    that classifies per-transaction gets this wrong.
+    `gain_type` is a property of the LOT, not of the sale: one redemption
+    spanning the long-term boundary produces both LTCG and STCG rows.
 
-    `tax_class_at_sale` is persisted rather than recomputed. Once a gain is
-    realised its tax character is a historical fact — this is the difference
-    between a tax report you can defend and one that silently changes when the
-    rules table is updated.
+    `tax_class_at_sale` is persisted rather than recomputed — once realised, a
+    gain's tax character is a historical fact, and that is the difference
+    between a tax report you can defend and one that changes when the rules
+    table is updated.
     """
 
     lot_id: str
@@ -148,13 +144,11 @@ def allocate_actual_cost(lot: Lot, units: Decimal) -> Decimal:
     """The lot's own money attributable to `units`. DECISIONS V0-10.
 
     When this consumption closes the lot, the lot's entire remaining cost is
-    handed out rather than recomputed. `cost_per_unit` is quantised to 6dp, so
-    re-multiplying it drifts — imperceptibly at a Rs 2,000 NAV where Rs 10,000
-    buys six units, by 2 paisa at a Rs 32 NAV where the same money buys 1,567.
-    Allocating the remainder exactly makes the drift structurally impossible:
-    a lot cannot pay out more cost than it took in.
-
-    A partial consumption is capped at the remaining cost for the same reason.
+    handed out rather than recomputed: `cost_per_unit` is quantised to 6dp, so
+    re-multiplying drifts by 2 paisa at a Rs 32 NAV. Allocating the remainder
+    exactly makes that impossible — a lot cannot pay out more cost than it took
+    in — and a partial consumption is capped at the remaining cost for the same
+    reason.
     """
     if (lot.units_remaining - units) <= EPS:
         return lot.cost_remaining
@@ -171,13 +165,13 @@ def effective_cost(
         effective_cost_per_unit = max(actual, min(FMV_31Jan2018, sale_price))
 
     It needs the 31-Jan-2018 NAV from M0. When the lot predates the cutoff and
-    that NAV is absent, the caller marks the consumption `confidence=low`
-    rather than computing a wrong number.
+    that NAV is absent, the caller marks the consumption `confidence=low` rather
+    than computing a wrong number.
 
-    Note the two costs are not the same thing. The grandfathered figure is a
-    statutory substitution used to compute the gain; the lot's actual money is
-    what `allocate_actual_cost` tracks. Only the latter is conserved — the
-    former can legitimately exceed it, which is the whole point of the relief.
+    The two costs are different things: the grandfathered figure is a statutory
+    substitution, the lot's actual money is what `allocate_actual_cost` tracks.
+    Only the latter is conserved — the former can legitimately exceed it, which
+    is the point of the relief.
     """
     actual = allocate_actual_cost(lot, units)
 
@@ -454,15 +448,13 @@ def _settle_proceeds_residual(
 ) -> list[Consumption]:
     """Make the per-lot proceeds sum to the transaction total. V0-06.
 
-    MODULE_1.md §7.2 quantises `net_per_unit` to 6dp and re-multiplies it per
-    lot, which cannot reproduce the total. The gap is a paisa or two, but a
-    capital gains schedule lists proceeds per lot and they must tie to the
-    redemption amount printed on the statement — otherwise the return does not
-    add up and a reviewer asks why.
+    §7.2 quantises `net_per_unit` to 6dp and re-multiplies per lot, which
+    cannot reproduce the total. The gap is a paisa or two, but a capital gains
+    schedule lists proceeds per lot and they must tie to the redemption amount
+    on the statement.
 
     The residual goes to the LAST consumption. Which lot absorbs it is
-    arbitrary; that it is deterministic is not, because a rebuild has to
-    reproduce the same rows byte for byte (CLAUDE.md invariant 10). FIFO order
+    arbitrary; that it is deterministic is not (invariant 10), and FIFO order
     makes "last" well defined.
     """
     if not consumptions:
@@ -496,17 +488,13 @@ def build_book(
     Reversals and the transactions they reverse are dropped first, before the
     engine sees anything — MODULE_1.md §3.2.
 
-    `grandfathering_navs` maps `scheme_id` to that scheme's **31-Jan-2018** NAV,
-    and is what makes §7.5's §112A relief actually apply. Without it this
-    function called `apply_transaction` with the parameter's `None` default, so
-    `effective_cost` returned early for every lot and the relief never ran —
-    while every pre-2018 lot was simultaneously stamped `confidence="low"`, so
-    the symptom was visible and read as a data gap rather than a wiring one.
-    `jobs/backfill_nav.py` clamps `--from` to 31-Jan-2018 specifically to fetch
-    these, and `persist.py` already writes the column.
+    `grandfathering_navs` maps `scheme_id` to that scheme's 31-Jan-2018 NAV and
+    is what makes §112A relief apply. Without it `effective_cost` returned early
+    for every lot and the relief never ran, while every pre-2018 lot was stamped
+    `confidence="low"` — so the symptom read as a data gap rather than a wiring
+    one. `jobs/backfill_nav.py` clamps `--from` to that date to fetch them.
 
-    Passed as a mapping rather than looked up here: this module does no I/O, and
-    the NAV is point-in-time data that belongs to M0.
+    Passed as a mapping rather than looked up here: this module does no I/O.
     """
     book = LotBook()
     live = drop_reversed(txns)

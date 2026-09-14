@@ -1,26 +1,21 @@
 """Reconciliation — the V0 gate.
 
 MODULE_1.md §11. `PLAN.md` §7 V0 does not ship until every folio passes: a
-ledger that is 99% right produces analytics that are confidently wrong, which
-is worse than none, because you will act on them.
+ledger that is 99% right produces analytics that are confidently wrong.
 
-Two checks are specified, and this module implements a third.
-
-§11.1 says the value check catches what the unit check cannot — a wrong-plan
-resolution, where units match perfectly while the NAV series belongs to the
-other share class, silently biasing every return by ~1%/year. As written it
+Two checks are specified; this module implements a third. §11.1 says the value
+check catches what the unit check cannot — a wrong-plan resolution, where units
+match while the NAV series belongs to the other share class. As written it
 cannot: it multiplies both sides by the same NAV, so the NAV cancels and the
 result is the unit delta restated.
 
-DECISIONS V0-12 resolves this. `nav_cross_check` compares the NAV each
-transaction was priced at, as printed on the statement, against our resolved
-scheme's NAV on the same date — an independent witness to which scheme the
-units actually belong to. It is now a gate condition, so a wrong-plan
-resolution fails reconciliation instead of passing it.
+`nav_cross_check` is the fix (V0-12): it compares the NAV each transaction was
+priced at, as printed on the statement, against our resolved scheme's NAV on
+that date — an independent witness to which scheme the units belong to. It is a
+gate condition, so a wrong-plan resolution now fails.
 
-The spec's own value ratio is still computed and reported as
-`delta_value_pct`, because it is what §11.1 defines and a reader will look for
-it. It simply is not what decides the gate.
+§11.1's own value ratio is still reported as `delta_value_pct`, because a
+reader will look for it. It simply does not decide the gate.
 """
 
 from __future__ import annotations
@@ -100,30 +95,26 @@ def diagnose(
 ) -> list[str]:
     """Name a probable cause. MODULE_1.md §11.2.
 
-    When reconciliation fails the system must say *why*, not merely *that* —
-    the actionable output is "import the statement covering before <date>", not
-    "mismatch".
+    When reconciliation fails the system must say WHY — the actionable output
+    is "import the statement covering before <date>", not "mismatch".
 
-    Some hypotheses in §11.2 need warehouse lookups this signature does not
-    carry (IDCW events near the delta, merger ratios, round-multiple splits).
-    They are reachable once M0 is real; the ones computable from the ledger
-    alone are here, and "UNKNOWN" is returned rather than an empty list so a
-    caller always has something to render.
+    Hypotheses needing warehouse lookups (IDCW events near the delta, merger
+    ratios, round-multiple splits) are not reachable from this signature. The
+    ones computable from the ledger alone are here, and "UNKNOWN" is returned
+    rather than an empty list so a caller always has something to render.
     """
     hypotheses: list[str] = []
 
     if delta < 0:
         # Fewer units than the statement reports: something bought them that we
-        # have not imported. Blame the start of the history only when the
-        # history does not demonstrably start at zero — `starts_at_zero=True`
-        # means the first transaction we hold opened the position, so the gap
-        # is somewhere later and pointing at an earlier statement wastes the
-        # user's time on a file that will not fix anything.
+        # have not imported. Blame the start of the history only when it does
+        # not demonstrably begin at zero — `starts_at_zero=True` means the first
+        # transaction we hold opened the position, so pointing at an earlier
+        # statement wastes time on a file that will not fix anything.
         #
-        # `None` is the third state: the statement printed no running balance,
-        # so we cannot tell. An unknown is reported as the actionable
-        # hypothesis rather than suppressed, because a missing early CAS is by
-        # far the most common cause of a negative delta.
+        # `None` is the third state, and an unknown is reported rather than
+        # suppressed: a missing early CAS is the most common cause of a
+        # negative delta.
         if starts_at_zero is not True:
             hypotheses.append("MISSING_EARLY_CAS")
     else:
@@ -233,17 +224,15 @@ def reconcile(
 def nav_cross_check(txns: list[Txn], navs: dict[date, Decimal]) -> NavCrossCheck:
     """Compare each statement-printed NAV against our resolved scheme's NAV.
 
-    This is what §11.1 wanted the value check to do. A statement prints the NAV
-    every transaction was priced at, so it is an independent witness to which
-    scheme the units actually belong to. If our resolved series disagrees, we
-    resolved the wrong scheme — most often the wrong plan.
+    What §11.1 wanted the value check to do. A statement prints the NAV each
+    transaction was priced at, so a disagreement with our resolved series means
+    we resolved the wrong scheme — most often the wrong plan.
 
-    The real V0-05 mismatch is exactly this case: HDFC Direct NAVs against a
-    Regular scheme record, ~10% apart. Units were unaffected, so neither
-    specified check would have noticed.
+    V0-05 is exactly this: HDFC Direct NAVs against a Regular scheme record,
+    ~10% apart, with units unaffected so neither specified check noticed.
 
-    A date the fund did not price counts as `unavailable`, not a mismatch —
-    an absence is not a disagreement.
+    A date the fund did not price counts as `unavailable`: an absence is not a
+    disagreement.
     """
     scheme_id = SchemeId(str(txns[0].scheme_id)) if txns else SchemeId("")
     matched = mismatched = unavailable = 0
@@ -363,14 +352,13 @@ def _latest_reported_balance(txns: list[Txn], as_of: date) -> Decimal | None:
 def _starts_at_zero(txns: list[Txn]) -> bool | None:
     """Did this folio's history begin with the earliest transaction we hold?
 
-    The statement is the witness. It prints a running balance against every
+    The statement is the witness: it prints a running balance against every
     entry, so if the earliest one's balance equals its own units, the position
-    opened there and nothing precedes it. A larger balance means units existed
-    before anything we have imported — which IS the missing-early-CAS case.
+    opened there. A larger balance means units existed before anything we
+    imported — the missing-early-CAS case.
 
-    `None` when the statement printed no balance, or the earliest entry carries
-    no units: the question is unanswerable rather than answered either way, and
-    `diagnose` treats an unknown as the actionable hypothesis.
+    `None` when the statement printed no balance: unanswerable rather than
+    answered either way, and `diagnose` treats an unknown as actionable.
     """
     live = [t for t in drop_reversed(txns) if t.units is not None]
     if not live:
