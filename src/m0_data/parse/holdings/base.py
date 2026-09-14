@@ -1,19 +1,14 @@
 """Portfolio disclosure workbooks -> staged rows. MODULE_0.md §6.
 
-SEBI mandates the disclosure columns, so every AMC publishes the same facts —
-instrument name, ISIN, industry or rating, quantity, market value, % to NAV —
-with different header wording, sheet names, units and section labels. That is
-configuration, not five different parsers, so one table reader is driven by a
-per-AMC `HoldingsFormat`.
+SEBI mandates the disclosure columns, so every AMC publishes the same facts with
+different header wording, sheet names, units and section labels. That is
+configuration, not five parsers: one table reader driven by a per-AMC
+`HoldingsFormat`.
 
-**Columns are located by header text, never by position.** V0-23 is why: AMFI
-publishes the same eight columns in two different orders across two endpoints,
-and a positional parser read one of them silently wrong. The same risk applies
-across five AMCs with far less excuse.
+Columns are located by HEADER TEXT, never by position (V0-23).
 
-§6.3 rule 1 is observed strictly — nothing here converts a unit, cleans a name
-or resolves an entity. The unit is *read* from the header and carried as a
-label; `normalise/units.py` applies it.
+§6.3 rule 1 strictly: nothing here converts a unit, cleans a name or resolves an
+entity. The unit is read from the header and carried as a label.
 """
 
 from __future__ import annotations
@@ -86,9 +81,8 @@ NAV_LABEL_RE = re.compile(r"(growth|idcw|dividend|payout|reinvest)", re.I)
 class HoldingsFormat:
     """Per-AMC configuration. The only thing that differs between AMCs.
 
-    Each entry is a list of header substrings tried in order, so an AMC that
-    writes `Name of Instrument` and another that writes `Instrument Name` need
-    no code between them.
+    Each entry is a list of header substrings tried in order, so `Name of
+    Instrument` and `Instrument Name` need no code between them.
     """
 
     amc_id: str
@@ -134,30 +128,24 @@ PCT_FRACTION_MAX = Decimal("2")
 PCT_PERCENT_MIN = Decimal(50)
 PCT_PERCENT_MAX = Decimal(200)
 
-#: How close a candidate subtotal must sit to the sum of the rows beneath it
-#: before it is read as their total rather than as a position of its own. One
-#: basis point: wide enough for the float noise a spreadsheet cell carries
-#: (`6180420.349999999` for a figure printed as `6180420.35`), far too tight
-#: for a real holding to land on by coincidence.
 #: How far down a sheet the scheme's own name might be. Four AMCs put it on
-#: rows 1-3 and the column titles arrive by row 5; six is slack, and a wrong
-#: extra string costs nothing because identification requires a match, not an
-#: absence of noise.
+#: rows 1-3 and the column titles arrive by row 5; six is slack.
 HEADER_SCAN_ROWS = 6
 
 #: The shared reader's own version, distinct from any AMC's `HoldingsFormat`.
-#:
-#: Every rule that has ever mattered lives here rather than in an AMC module —
-#: arithmetic demotion, the percentage scale, position past the total, the name
-#: span, the stray label, collapsing whitespace in a header — so "which parser
-#: read this file" is answered by this number far more than by `parser_id`.
-#: It is in `holding_disclosure`'s skip key, so fixing a rule re-parses the
-#: disclosures the old rule got wrong instead of reporting the fix and writing
-#: nothing. V1-36.
+#: Every rule that has ever mattered lives here rather than in an AMC module, so
+#: "which parser read this file" is answered by this number far more than by
+#: `parser_id`. It is in `holding_disclosure`'s skip key, so fixing a rule
+#: re-parses the disclosures the old rule got wrong (V1-36).
 #:
 #: Bump on any change that would read an already-loaded file differently.
 READER_VERSION = "4"
 
+#: How close a candidate subtotal must sit to the sum of the rows beneath it
+#: before it is read as their total rather than as a position of its own. One
+#: basis point: wide enough for the float noise a spreadsheet cell carries
+#: (`6180420.349999999` for a figure printed as `6180420.35`), far too tight for
+#: a real holding to land on by coincidence.
 SUBTOTAL_TOLERANCE = Decimal("0.0001")
 
 
@@ -166,32 +154,19 @@ def parse_holdings(
 ) -> HoldingsParseResult:
     """Read every table-shaped sheet in the workbook, or just the one named. §6.1.
 
-    `sheet` exists because Nippon publishes **one workbook holding 108 schemes,
-    one per sheet**. Reading all of them merges 108 portfolios into a single
-    result — a fund of everything, reconciling against whichever total came
-    last. HDFC ships a file per scheme and ICICI a ZIP of files per scheme, so
-    this is the third packaging model in three AMCs and none of them is the
-    spec's assumption.
+    `sheet` exists because Nippon publishes one workbook holding 108 schemes,
+    one per sheet; reading all of them merges 108 portfolios into one.
 
     Raises rather than returning a partial result (§6.3 rule 3): a disclosure
-    that half-parsed is a portfolio that is half-there, and a look-through
-    built on it is wrong in a way that still sums to 100.
+    that half-parsed is a portfolio that is half-there.
     """
     try:
-        # `data_only=True` reads the value Excel cached, not the formula text.
-        # Without it a formula cell comes back as `'=342762.56+E193-105.07'`,
-        # `to_decimal` rightly refuses it, the market value becomes None, and
-        # `classify_row` — seeing a name and no numbers — calls the row a
-        # section heading. The row is not dropped loudly; it stops being a
-        # holding.
-        #
-        # PPFAS found it: `Net Receivables / (Payables)` is a formula on its
-        # sheet, worth Rs 303 Cr, and the parse came to 0.2044% under the
-        # file's own stated total. **Inside the 2% guard**, which is the same
-        # way Nippon's stock futures hid at +0.155% (V1-15) — a wrong number
-        # that reconciles is the failure this project is built to refuse.
-        # Seven formula cells on that sheet; zero across HDFC, ICICI and Kotak,
-        # which is why four AMCs parsed before anyone noticed.
+        # `data_only=True` reads Excel's cached value, not the formula text.
+        # Without it a formula cell returns `'=342762.56+E193-105.07'`, the
+        # market value becomes None, and `classify_row` calls the row a section
+        # heading — it stops being a holding without being dropped loudly.
+        # PPFAS found it: seven formula cells, Rs 303 Cr, landing 0.2044% under
+        # the file's own total and INSIDE the 2% guard (V1-15).
         workbook = openpyxl.load_workbook(
             io.BytesIO(f.content), read_only=True, data_only=True
         )
@@ -315,12 +290,10 @@ def _stage_row(
         # See `_stray_label`.
         name = _stray_label(cells, columns)
 
-    # Coerce leniently first, classify, THEN decide how much the failures
-    # matter. The tail of a disclosure is prose in the same columns the table
-    # used — `Top Ten Holdings` lands in the quantity cell, a bare `@` in the
-    # percentage cell — so a strict read of every cell would raise on rows that
-    # are not holdings at all. Strictness belongs where the number is
-    # load-bearing, which is a security's market value.
+    # Coerce leniently, classify, THEN decide how much the failures matter. The
+    # tail of a disclosure is prose in the table's columns — `Top Ten Holdings`
+    # in the quantity cell, a bare `@` in the percentage cell. Strictness
+    # belongs where the number is load-bearing: a security's market value.
     quantity, quantity_bad = _soft(_at(cells, columns, "quantity"))
     market_value, mv_bad = _soft(_at(cells, columns, "market_value"))
     pct, pct_bad = _soft(_at(cells, columns, "pct"))
@@ -332,27 +305,16 @@ def _stage_row(
         _capture_stated_nav(cells, result)
     if after_total and kind in ("security", "unknown"):
         # §6.3 rule 4, positional. The file has already said what the portfolio
-        # comes to, so a row beneath that line is not part of it however much
-        # it looks like a holding.
+        # comes to, so a row beneath that line is not part of it.
         #
-        # Nippon's sheet is why. After `GRAND TOTAL` it prints a stock-future
-        # table with the SAME column shape, and then a derivatives annexure
-        # whose `Margin maintained` column lands under `Market/Fair Value`.
-        # Read as holdings those add Rs 78.5 crore to a Rs 5,075 crore
-        # portfolio — **+0.155%, comfortably inside the 2% reconciliation
-        # tolerance**, so the guard that catches a doubled portfolio cannot
-        # see this one. Measured, not supposed.
+        # Nippon prints a stock-future table with the SAME column shape after
+        # `GRAND TOTAL`: read as holdings it adds Rs 78.5 crore to Rs 5,075
+        # crore — +0.155%, inside the 2% reconciliation tolerance, so the guard
+        # that catches a doubled portfolio cannot see it (V1-15).
         #
-        # `unknown` is rewritten too: past the total a row we did not expect is
-        # noise rather than a mystery, and the real sheet raises 19 of them
-        # from its derivatives annexure alone.
-        #
-        # **This runs AFTER the summary branch above, and the order is
-        # load-bearing.** HDFC prints its industry summary and its NAV history
-        # *below* its own Grand Total, so rewriting `unknown` first swallows
-        # them — and with them `stated_navs`, the disclosure's own NAV, which
-        # is the cheapest independent witness in the pipeline and the thing
-        # that gave V1.2a its three-way agreement on 2267.177.
+        # AFTER the summary branch above, and the order is load-bearing: HDFC
+        # prints its industry summary and NAV history BELOW its own Grand Total,
+        # so rewriting `unknown` first swallows `stated_navs`.
         kind = "after_total"
 
     if kind == "security":
@@ -414,14 +376,12 @@ def _stage_row(
 def reconciliation_error(result: HoldingsParseResult) -> Decimal | None:
     """How far the parsed securities sit from the file's own stated total, in %.
 
-    `None` when the file states no total — some do not, and an absent check is
-    reported as absent rather than silently passing.
+    `None` when the file states no total — an absent check is reported as
+    absent, not silently passed.
 
-    This is the general defence that no list of section labels can be. HDFC
-    nests its sections one level deep and puts the numbers on a separate row;
-    ICICI nests four levels and puts a subtotal on the section row itself. A
-    parser tuned to one over-counts the other by 2.9x. Neither is detectable
-    from the rows alone — but both files say what they add up to.
+    The general defence no list of section labels can be: HDFC nests one level
+    deep, ICICI four, and a parser tuned to one over-counts the other by 2.9x.
+    Neither is detectable from the rows — but both files state their total.
     """
     if result.stated_total is None or not result.stated_total:
         return None
@@ -434,24 +394,15 @@ def reconciliation_error(result: HoldingsParseResult) -> Decimal | None:
 def detect_pct_scale(result: HoldingsParseResult) -> Decimal:
     """What the `% to NAV` column must be multiplied by to be a percentage.
 
-    HDFC writes `9.21` for 9.21%. ICICI writes `0.0596550260489`, and its total
-    row reads `0.9999999999896085`. Both are `% to Nav` in the header, and
-    nothing in the wording distinguishes them.
+    HDFC writes `9.21` for 9.21%; ICICI writes `0.0596550260489` and totals
+    `0.99999999999`. Both headers say `% to Nav`. Reading ICICI's as percentages
+    makes the weights sum to 1, failing §10's V1 and making `weight_residual`
+    read 99; assuming the reverse inflates HDFC's by 100x.
 
-    Reading ICICI's column as percentages makes the disclosed weights sum to 1
-    instead of 100, which fails §10's V1 (95-105) and makes `weight_residual`
-    read 99 — a portfolio that looks almost entirely unaccounted for. Assuming
-    the other direction would inflate HDFC's by 100x.
-
-    The file settles it: **the total row states what the whole portfolio comes
-    to in this column**, so its own arithmetic says which convention it used.
-    Same witness as `stated_total` (V1-08), read one column across. Falling
-    back to the sum of the securities when there is no total row keeps the
-    check available on files that state none.
-
-    Raises rather than guessing, for the reason §7.2 gives about units: a
-    column we could not interpret is far more likely to mean the sheet was
-    misread than to mean an unusual convention.
+    The total row states what the portfolio comes to in that column, so the
+    file's own arithmetic says which convention it used (V1-08). Raises rather
+    than guessing: a column we could not interpret usually means a misread
+    sheet, not an unusual convention.
     """
     witness = result.stated_total_pct
     if witness is None:
@@ -476,58 +427,20 @@ def detect_pct_scale(result: HoldingsParseResult) -> Decimal:
 def _demote_subtotals(staged: list[StagedHolding]) -> None:
     """Reclassify section rows that carry their own subtotal. §6.4, generalised.
 
-    ICICI writes the section label and that section's total on the SAME row:
-
-        Equity & Equity Related Instruments (Note -1)         1140638.30
-        Listed / Awaiting Listing On Stock Exchanges          1140638.30
-        HDFC Bank Ltd.          INE040A01034   69199542        517716.37
-        ICICI Bank Ltd.         INE090A01021   22730775        326277.54
-        Reliance Industries Ltd. INE002A01018  22682703        296644.39
-
-    `classify_row` calls those first two rows securities, and by its own rule
-    it is right to: a row carrying a market value is a position. That rule is
-    load-bearing — it is what stops HDFC's Rs 343194.12 of TREPS cash, which
-    also has no ISIN and no quantity, from being dropped as a heading (V1-04).
-
-    So two AMCs need opposite answers to the same question, and vocabulary does
-    not settle it. V1-08 measured that: excluding rows whose names match a
-    hand-written list of section labels still leaves ICICI's portfolio 18.8%
-    too large, because the nesting runs deeper than any list and the labels
-    differ per AMC.
+    ICICI writes the section label and that section's total on the SAME row, so
+    `classify_row` calls them securities — rightly, by its own rule, which is
+    what stops HDFC's TREPS cash being dropped as a heading (V1-04). Two AMCs
+    need opposite answers and vocabulary cannot settle it: a hand-written list
+    of section labels still left ICICI 18.8% too large (V1-08).
 
     Arithmetic settles it. **A row whose value equals the sum of the rows
-    beneath it is their total, not a peer of theirs.** That holds whatever the
-    section is called, at whatever depth, in whatever order the AMC nests them
-    — and it is `reconciliation_error`'s argument applied within the sheet
-    instead of across it.
+    beneath it is their total, not a peer.** Only rows with no ISIN and no
+    quantity are candidates, so a genuine holding is never at risk.
 
-    Only rows with no ISIN and no quantity are candidates, so a genuine holding
-    is never at risk of demotion: HDFC's TREPS is considered and kept, because
-    no run of the rows beneath it sums to its value.
-
-    **Nesting is resolved innermost-first, and a demoted subtotal then counts
-    once.** V1-10 accumulated the raw values of the following rows, which is
-    right only while a section's children are securities. The moment a child is
-    itself a section, its own subtotal row is added alongside the constituents
-    it already stands for, the running sum overshoots, and the parent is never
-    recognised. ICICI's multi-asset sheet is three levels deep and every parent
-    with more than one child failed exactly that way — four of them, carrying
-    Rs 8,138,769.97 onto a stated Rs 8,678,503.80, which is V1-25's +93.8%.
-
-    So the run is accumulated over the *forest*, not the list: a row already
-    demoted contributes its own value and the span it covers is skipped.
-    Innermost-first is what makes that available — a parent always precedes its
-    children on the sheet, so walking backwards settles every child before the
-    parent that needs it.
-
-    Deciding and labelling want opposite orders, so they are separate passes.
-    Demotion must run innermost-first for the arithmetic; `_assign_section`
-    must run outermost-first so that a nested subtotal's label overwrites its
-    parent's rather than the reverse. Doing both in one pass, as this did when
-    nesting was only ever two deep, silently picks the wrong section name.
-
-    A parent whose value equals its only child's still matches on that child
-    alone, which costs nothing — the child then labels the rows itself.
+    Nesting resolves INNERMOST-first and a demoted subtotal then counts once:
+    accumulating raw values double-counts a child section's own subtotal row,
+    which is V1-25's +93.8%. The run accumulates over the forest — a demoted row
+    contributes its value and its span is skipped.
     """
     positions = [i for i, r in enumerate(staged) if r.row_kind == "security"]
 
@@ -578,13 +491,10 @@ def _assign_section(
 ) -> None:
     """Give a demoted subtotal's rows the section it names.
 
-    ICICI's section labels ARE its subtotal rows, so demoting them without this
-    would leave every row beneath them with no section at all — and the section
-    heading is the only thing on the sheet that says a row is a derivative
-    rather than a holding (V1-07). Callers must apply demotions outermost first
-    so that a nested subtotal's label overwrites its parent's, which is the
-    specific one wanted; `_demote_subtotals` has a separate pass for exactly
-    that, because it has to *decide* in the opposite order.
+    ICICI's section labels ARE its subtotal rows, and the section heading is the
+    only thing on the sheet saying a row is a derivative (V1-07). Callers apply
+    demotions OUTERMOST first so a nested label overwrites its parent's;
+    `_demote_subtotals` decides in the opposite order, hence two passes.
     """
     label = header.instrument_raw_name.strip()
     if not label:
@@ -603,22 +513,15 @@ def classify_row(
 ) -> str:
     """§6.4, with the heuristic that misclassifies a real file corrected.
 
-    §6.4 ends with `if isin or qty or mv: return "security"`. On HDFC's sheet
-    that is wrong in a way that doubles the portfolio. After the holdings comes
-    a **portfolio-classification-by-industry summary**, and its rows are offset
-    from the securities table: the sector name lands in the ISIN column and the
-    percentage lands in the name column.
+    §6.4 ends with `if isin or qty or mv: return "security"`. HDFC's trailing
+    industry summary is offset by one column, so the sector name lands in the
+    ISIN cell:
 
         [122]  ISIN='Banks'   Name='28.94'   Quantity=None   MarketValue=None
 
-    `isin` is truthy, so §6.4 calls all 32 of those rows securities and every
-    sector is counted twice — once as its constituents and once as itself.
-
-    The fix is to **validate** rather than test for truthiness. A row is a
-    security when it carries a real ISIN, or a name that is not a number
-    alongside an actual market value. `Banks` fails the check digit and `28.94`
-    is not an instrument name, so the summary block classifies as `unknown` and
-    is surfaced rather than counted.
+    `isin` is truthy, so all 32 rows read as securities and every sector was
+    counted twice. VALIDATE rather than test truthiness: a real ISIN, or a
+    non-numeric name beside an actual market value.
     """
     if not name.strip() and not isin.strip():
         return "blank"
@@ -628,15 +531,11 @@ def classify_row(
         return "total"
     if is_valid_isin(isin):
         return "security"
-    # §6.4's `and mv is None` guard, and it is load-bearing. HDFC writes the
-    # section label twice: once as a bare heading, and once on the row that
-    # carries the numbers. `TREPS - Tri-party Repo` is a heading on one row and
-    # a Rs 343 crore position on the next. Testing the name alone would classify
-    # both as headings and drop the fund's entire cash position — 3.1% of the
-    # portfolio, silently, with the remaining weights renormalising to 100 so
-    # nothing downstream could tell.
-    #
-    # A row carrying a market value is a position, whatever its name looks like.
+    # §6.4's `and mv is None` guard, load-bearing. HDFC writes a section label
+    # twice: as a bare heading, and on the row carrying the numbers. Testing the
+    # name alone classified both as headings and dropped `TREPS` — the fund's
+    # whole Rs 343 crore cash position, 3.1%, with the rest renormalising to
+    # 100 so nothing downstream could tell (V1-04).
     if market_value is None:
         if SECTION_HEADERS.match(name) or SECTION_HEADERS.match(isin):
             return "section_header"
@@ -654,21 +553,13 @@ def classify_row(
 def _is_summary_row(cells: list[str], columns: dict[str, int]) -> bool:
     """A row of the trailing summary table, not an unrecognised holding.
 
-    Everything after the securities in HDFC's sheet is a **second table, offset
-    from the first**: a label in the ISIN column and a number where the
-    instrument name belongs. That covers the portfolio-classification-by-
-    industry block, the NAV history and the hedged-exposure lines.
+    HDFC's trailing block is a second table offset from the first — a label in
+    the ISIN column, a number where the name belongs:
 
         [122]  ISIN='Banks'                        Name='28.94'
-        [161]  ISIN='Direct Plan - Growth Option'  Name='2267.177'
 
-    Calling these `unknown` was technically safe — nothing counted them — but it
-    produced 45 warnings on a clean file, and a warning list that is always long
-    is a warning list nobody reads. Naming them `summary` says what they are and
-    leaves `unknown` meaning what it should: a row we genuinely did not expect.
-
-    The shape is precise: no market value in the table's own column, a text
-    label first, and a number after it.
+    Calling these `unknown` counted nothing but produced 45 warnings on a clean
+    file, and a warning list that is always long is one nobody reads.
     """
     if columns.get("market_value") is not None:
         mv_index = columns["market_value"]
@@ -697,20 +588,15 @@ def _looks_numeric(text: str) -> bool:
 def _capture_stated_nav(cells: list[str], result: HoldingsParseResult) -> None:
     """Pull `Direct Plan - Growth Option | 2267.177` out of the notes.
 
-    The disclosure states its own NAV per unit. We have that scheme's NAV from
-    AMFI, so the two cross-check — and a file mapped to the wrong scheme, or a
-    units error, breaks the comparison. It is the cheapest independent witness
-    in the whole pipeline and it is sitting in the notes block.
+    The disclosure states its own NAV per unit and AMFI states it too, so the
+    two cross-check: the cheapest independent witness in the pipeline.
     """
     populated = [c for c in cells if c.strip()]
     if len(populated) < 2 or not NAV_LABEL_RE.search(populated[0]):
         return
-    # The FIRST numeric after the label, because the NAV-history block lists
-    # the as-of month first and the prior month second:
-    #     NAVs per unit (Rs.) | July 31, 2026 | June 30, 2026
-    #     Direct Plan - Growth Option | 2267.177 | 2201.717
-    # Taking any numeric would silently capture last month's NAV, which is
-    # close enough to look right and wrong enough to break the cross-check.
+    # The FIRST numeric after the label. The NAV-history block lists this month
+    # then last month, so taking any numeric captures the prior month's NAV —
+    # close enough to look right, wrong enough to break the cross-check.
     for cell in populated[1:]:
         value, failed = _soft(cell)
         if not failed and value is not None and value > 0:
@@ -721,18 +607,10 @@ def _capture_stated_nav(cells: list[str], result: HoldingsParseResult) -> None:
 def _header_map(cells: list[str], fmt: HoldingsFormat) -> dict[str, int] | None:
     """Locate the header row and map its columns. Never positional — V0-23.
 
-    **Whitespace inside a header cell is collapsed before matching**, because a
-    header spelled across two lines is the same header. PPFAS writes
-    `% to Net
- Assets`, so the needle `% to net asset` — which matches every
-    other AMC — found nothing, no percentage column was mapped, and 100% of the
-    portfolio's weight was derived rather than reported. V1 caught it
-    (`pct_sum_raw` of 0 against a 95-105 band) and quarantined the load, which
-    is the gate working; but the file was fine and the reader was wrong.
-
-    Nippon's `Market/Fair Value
-( Rs. in Lacs)` had the same shape and matched
-    only by luck, on the shorter `fair value` alternative further down its list.
+    Whitespace inside a header cell is collapsed before matching: a header
+    spelled across two lines is the same header. PPFAS writes `% to Net\nAssets`,
+    which matched nothing, so no percentage column was mapped and 100% of the
+    weight was derived rather than reported.
     """
     lowered = [re.sub(r"\s+", " ", c).strip().lower() for c in cells]
     found: dict[str, int] = {}
@@ -771,17 +649,10 @@ def _name_span(columns: dict[str, int]) -> tuple[int, int]:
     """The columns the instrument name may occupy: its own, up to the next
     mapped field.
 
-    Kotak indents by COLUMN rather than by whitespace. Its header writes
-    `Name of Instrument` in column 0, then puts `Equity & Equity related` in
-    column 0, `Listed/Awaiting listing` in column 1 and every actual holding in
-    column 2 — the nesting level IS the column. Read as a single column the
-    name comes back empty for all 51 holdings.
-
-    A span rather than a special case, because it changes nothing for the AMCs
-    already parsing: HDFC maps name to 3 with `sector` at 4, ICICI name to 1
-    with `isin` at 2, Nippon name to 2 with `sector` at 3. Each span is one
-    column wide and the behaviour is identical. Verified on all three real
-    files, not reasoned about.
+    Kotak indents by COLUMN, not by whitespace — the nesting level IS the
+    column, so a single-column read came back empty for all 51 holdings. A span
+    rather than a special case: every other AMC's span is one column wide and
+    behaves exactly as before.
     """
     start = columns["name"]
     after = [i for field, i in columns.items() if field != "name" and i > start]
@@ -791,11 +662,9 @@ def _name_span(columns: dict[str, int]) -> tuple[int, int]:
 def _name_at(cells: list[str], columns: dict[str, int]) -> str:
     """First cell in the name span that could be a name.
 
-    **A number is skipped**, because an instrument is not called `0.1063`.
-    Kotak's debt sheets carry an unlabelled numeric column to the left of the
-    name, so "first non-empty" read YES BANK's AT1 bonds as a security named
-    `0` — which then failed on its market value and took the whole sheet with
-    it. The span exists to find the innermost LABEL; a bare number is not one.
+    A number is skipped: Kotak's debt sheets carry an unlabelled numeric column
+    left of the name, so "first non-empty" read YES BANK's AT1 bonds as a
+    security named `0`. The span looks for the innermost LABEL.
     """
     start, stop = _name_span(columns)
     for index in range(start, min(stop, len(cells))):
@@ -808,18 +677,12 @@ def _name_at(cells: list[str], columns: dict[str, int]) -> str:
 def _stray_label(cells: list[str], columns: dict[str, int]) -> str:
     """The label of a row that put nothing in the name span.
 
-    Kotak closes each section with a row reading `Total` in the **Industry**
-    column, and its portfolio with `Grand Total` in the same place. `TOTAL_ROW`
-    is matched against the name and the ISIN (§6.4), so neither was seen: the
-    rows carry a market value and no name, `classify_row` called all three
-    securities, and the parse came to 794,038.80 against a stated 402,258.02 —
-    +97.4%, which the reconciliation guard would have refused without ever
-    saying why.
+    Kotak closes each section with `Total` in the INDUSTRY column, and
+    `TOTAL_ROW` is matched against name and ISIN only (§6.4) — so all three
+    such rows parsed as securities: 794,038.80 against a stated 402,258.02.
 
-    Deliberately narrow. It only runs when the name span is empty, which for
-    every AMC parsing today never happens on a row that matters, and it ignores
-    the columns already mapped to numbers so that a quantity cannot be mistaken
-    for a label.
+    Narrow on purpose: only when the name span is empty, and ignoring columns
+    already mapped to numbers so a quantity cannot pass as a label.
     """
     start, stop = _name_span(columns)
     skip = {columns.get(f) for f in ("isin", "quantity", "market_value", "pct")}

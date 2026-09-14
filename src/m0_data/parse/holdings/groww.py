@@ -1,62 +1,29 @@
 """Groww scheme pages. MODULE_0.md §6.1, DECISIONS V1-43.
 
-**The coverage tier.** Every parser before this one reads an AMC's own
-statutory workbook, which is why the warehouse covers five fund houses and not
-fifty-two. This one reads an aggregator's scheme page, so it reaches any fund
-Groww lists — and it is the answer to "what if I hold a fund from an AMC with
-no parser", which no amount of work on the Excel readers would ever give.
+**The coverage tier.** Every other parser reads an AMC's own statutory
+workbook, which is why the warehouse covers five fund houses and not fifty-two.
+This one reads an aggregator's scheme page, so it reaches any fund Groww lists.
+It is not the source of record and must never outrank one.
 
-It is not the source of record and must never outrank one. See `HAS NO ISIN`
-below for what that costs, measured.
+The whole portfolio sits in the `__NEXT_DATA__` payload of the HTML a plain GET
+returns, so there is no browser here. `/v1/api/*` is `Disallow` in Groww's
+robots.txt and is deliberately not used; `/mutual-funds/<slug>` is allowed.
 
-## The page is server-rendered, so there is no browser here
+It is a whole portfolio, not a top-ten teaser — HDFC Flexi Cap, 2026-08-31: 86
+rows, `corpus_per` summing to exactly 100.0000%, and `sum(market_value)`
+equalling the page's own `aum` exactly. That equality is what gives §6's
+reconciliation gate a witness here.
 
-The whole portfolio sits in the `__NEXT_DATA__` payload of the HTML that a
-plain GET returns: `props.pageProps.mfServerSideData.holdings`. No headless
-browser, no internal API. `/v1/api/*` is `Disallow` in Groww's robots.txt and
-is deliberately not used; `/mutual-funds/<slug>` is allowed and the page sets
-`meta_robots: index`.
+**The rows have no ISIN, and that is the whole trade.** Four resolution rules
+key on ISIN structure (V1-29, V1-30, V1-41, V1-42) and all four are inert.
+Measured on the same fund and month: 0.00% unresolved from the AMC's file
+against 8.96% here, 7 rows of 86 — renames the master already carries
+(`Zomato` is now `Eternal`), and ambiguity the cascade refuses on purpose. Rows are
+staged with `isin_raw=None`: §6.3 rule 1, the parser does not invent what the
+source withheld.
 
-## It is a whole portfolio, not a top-ten teaser
-
-Verified on HDFC Flexi Cap, 2026-08-31:
-
-    86 rows, `corpus_per` summing to exactly 100.0000%
-    sum(market_value) = 113606.4660 == the page's own `aum` field, exactly
-
-That equality is what makes §6's reconciliation gate work here at all. Every
-Excel reader leans on the AMC printing what its portfolio adds up to; this page
-prints the same thing under a different name, so `stated_total` has a real
-witness and a misparse still refuses to load.
-
-## HAS NO ISIN, and that is the whole trade
-
-The rows carry `company_name`, not an identifier. Four of our resolution rules
-key on ISIN STRUCTURE -- V1-29's issuer segment, V1-30's sovereign prefix,
-V1-41's `INF` fund rule, V1-42's commodity-by-absence -- and all four are
-inert here. Measured through the real cascade against the real entity master,
-same fund, same month:
-
-    the AMC's own file      0.00% unresolved
-    this page               8.96% unresolved, 7 rows of 86
-
-The seven say it better than the percentage does. `Zomato Ltd` is `Eternal
-Limited` in the master and has been since the rename; `Kalpataru Power
-Transmission` is now `Kalpataru Projects International`. No name matcher fixes
-a rename, ever, and the ISIN never moved. The others are ambiguity the cascade
-refuses on purpose -- three `Kotak Mahindra` issuers, `Apollo Hospitals
-Enterprise` against the master's `...Enterprises Ltd.` -- which is V1-02
-departure 2 doing its job rather than failing.
-
-So the rows are staged with `isin_raw=None`. Not a placeholder, not a guess
-from the name: the page did not say, and §6.3 rule 1 means the parser does not
-invent what the source withheld.
-
-## One month only
-
-The page carries the latest disclosure and no archive. There is no backfill
-from here and a month not fetched is a month lost, which is the argument for
-the AMC tier keeping its place rather than being retired.
+One month only. The page carries the latest disclosure and no archive, which is
+the argument for the AMC tier keeping its place rather than being retired.
 """
 
 from __future__ import annotations
@@ -110,35 +77,26 @@ NATURE_SECTION = {
 }
 
 #: `instrument_name` values that name a derivative. The section built from
-#: `nature_name` alone would call a stock future EQUITY, which is precisely the
-#: misclassification V1-07 exists to prevent -- Groww files `Futures` under
-#: `nature_name: EQUITY`, just as HDFC writes its short leg under the same
-#: name as the long position twelve rows above.
+#: `nature_name` alone would call a stock future EQUITY — the misclassification
+#: V1-07 exists to prevent — because Groww files `Futures` under
+#: `nature_name: EQUITY`.
 #:
-#: `deriv` is in the list because `Index Derivatives` is how Groww labels an
-#: index position and the first draft, which matched only the four instrument
-#: words, classified one as EQUITY. Found on the second fund this parser was
-#: pointed at, which is the argument for pointing it at a second fund.
+#: `deriv` is here because `Index Derivatives` is how Groww labels an index
+#: position, and matching only the four instrument words classed one as EQUITY.
+#: Found on the second fund this parser was pointed at.
 DERIVATIVE_INSTRUMENTS = re.compile(r"\b(deriv|future|option|swap|forward)", re.I)
 
 #: `instrument_name` values that are money market rather than debt. Groww files
 #: `CBLO` under `nature_name: DEBT`, and on Axis Small Cap that was Rs 2,337 Cr
-#: -- the single largest unresolved row in the fund -- because `debt` is
-#: deliberately absent from §8.4's `CLASS_FALLBACK`: a bond HAS an issuer and
-#: bucketing one as cash would hide real credit exposure. CBLO does not have
-#: one. It is TREPS by its former name, and the cascade already knows the word
-#: once the row reaches it classed as cash.
+#: — the fund's largest unresolved row — because `debt` is deliberately absent
+#: from §8.4's `CLASS_FALLBACK`: a bond HAS an issuer and bucketing one as cash
+#: would hide real credit exposure. CBLO does not; it is TREPS by its former
+#: name.
 #:
-#: **Whole labels, anchored, not substrings.** The first draft matched a bare
-#: `deposit`, which is inside `Certificate of Deposit` -- and a CD is a bank's
-#: debt with the bank as its issuer, the exact thing the paragraph above says
-#: must not be bucketed as cash. On the live PPFAS page that swept **33 rows,
-#: Rs 6,011 Cr, 4.08% of the fund** into `__CASH__`, taking real Kotak Mahindra
-#: Bank credit exposure out of overlap and concentration entirely.
-#:
-#: So each alternative is a complete instrument name rather than a word that
-#: might appear in one. A label this does not recognise keeps whatever
-#: `nature_name` said, which for a CD is `DEBT` and is right.
+#: **Whole labels, anchored, not substrings.** A bare `deposit` is inside
+#: `Certificate of Deposit`, which IS a bank's debt — on the live PPFAS page
+#: that swept 33 rows, Rs 6,011 Cr, 4.08% of the fund into `__CASH__`. A label
+#: this does not recognise keeps whatever `nature_name` said.
 CASH_INSTRUMENTS = re.compile(
     r"^\s*(cblo|treps|tri[- ]?party\s+repo|(reverse\s+)?repo|"
     r"net\s+(payable|receivable)s?|net\s+current\s+assets?|"
@@ -163,16 +121,13 @@ class GrowwHoldingsParser:
         if f.content[:2] == b"PK" or f.content[:4] == b"\xd0\xcf\x11\xe0":
             return 0.0  # a workbook, and an AMC parser's business
 
-        # The WHOLE document, not a prefix. Next.js emits `__NEXT_DATA__` as
-        # the last element of `<body>`: on the page this was written against it
-        # begins at byte 250,231 of 491,655, so a 200 KB window -- which looked
-        # like the frugal choice -- scored this parser 0.00 on the very file it
-        # was written for. `bytes.find` over half a megabyte is microseconds,
-        # and "cheap" in §6.1 means no parsing, not no scanning.
-        #
-        # Both markers are literals Next.js and Groww emit with fixed casing,
-        # so they are matched case-sensitively rather than lowercasing a copy
-        # of the document to find them.
+        # The WHOLE document, not a prefix. Next.js emits `__NEXT_DATA__` last
+        # in `<body>`: on the page this was written against it begins at byte
+        # 250,231 of 491,655, so a 200 KB window scored this parser 0.00 on the
+        # very file it was written for. `bytes.find` over half a megabyte is
+        # microseconds, and "cheap" in §6.1 means no parsing, not no scanning.
+        # Both markers are fixed-casing literals, so they are matched
+        # case-sensitively rather than lowercasing a copy of the document.
         if b"__NEXT_DATA__" not in f.content:
             return 0.0
         score = 0.6
@@ -185,10 +140,9 @@ class GrowwHoldingsParser:
     def parse(self, f: RawFile, sheet: str | None = None) -> HoldingsParseResult:
         """§6.3 rule 3: raise rather than return a partial portfolio.
 
-        `sheet` is meaningless for a page that describes exactly one scheme,
-        and is accepted only to satisfy the protocol. Passing one is a caller
-        confusing this with Nippon's 108-sheet workbook, so it is refused
-        rather than ignored.
+        `sheet` is meaningless for a page describing one scheme and is accepted
+        only to satisfy the protocol; passing one is a caller confusing this
+        with Nippon's 108-sheet workbook, so it is refused rather than ignored.
         """
         if sheet is not None:
             raise ParseFailed(
@@ -214,15 +168,11 @@ class GrowwHoldingsParser:
         result.pct_scale = Decimal(1)
 
         # `stated_navs` is deliberately NOT filled. The page's `nav` is the
-        # LATEST published NAV -- `nav_date: 11-Sep-2026` against a portfolio
-        # dated 31-Aug -- and every consumer of `stated_navs` compares it to
-        # `nav_daily` at the disclosure's own as-of date. Storing a NAV from
-        # two weeks later would be a witness that disagrees by construction,
-        # and calling it "an independent witness that the slug maps to the
-        # right scheme" (as the first draft's comment did) would make it a
-        # false negative the moment scheme matching starts reading the field.
-        # The page's `isin` is the witness this parser actually has, and
-        # `jobs/fetch_groww.py` checks it.
+        # LATEST published NAV — `nav_date: 11-Sep-2026` against a portfolio
+        # dated 31-Aug — and every consumer compares `stated_navs` to
+        # `nav_daily` at the disclosure's own as-of date. A NAV from two weeks
+        # later is a witness that disagrees by construction. The page's `isin`
+        # is the witness this parser has, and `jobs/fetch_groww.py` checks it.
 
         for index, raw in enumerate(rows, start=1):
             if not isinstance(raw, dict):
@@ -237,11 +187,10 @@ class GrowwHoldingsParser:
 def _warn_unknown_natures(result: HoldingsParseResult, rows: list[Any]) -> None:
     """Say so when Groww uses a `nature_name` this parser has not seen.
 
-    An unmapped nature falls through as its own bare string, which matches
-    nothing in `CLASS_BY_SECTION`, so the row silently stores as `other`. That
-    is how `MF` -- a fund inside a fund -- was classed for a whole slice
-    without anyone noticing. The rows are still loaded, because §4.10 forbids
-    dropping one; the warning is what stops the NEXT nature repeating it.
+    An unmapped nature matches nothing in `CLASS_BY_SECTION`, so the row stores
+    as `other` — which is how `MF`, a fund inside a fund, went unnoticed for a
+    whole slice. Rows still load (§4.10 forbids dropping one); the warning is
+    what stops the next nature repeating it.
     """
     unknown = sorted(
         {
@@ -284,12 +233,11 @@ def _payload(f: RawFile) -> dict[str, Any]:
 
 
 def _stage(raw: dict[str, Any], row_number: int, f: RawFile) -> StagedHolding:
-    """One holding, verbatim. §6.3 rule 1 -- nothing is converted here.
+    """One holding, verbatim. §6.3 rule 1 — nothing is converted here.
 
-    Every row is a `security`. The page publishes a table of holdings and
-    nothing else: no section headings, no subtotals, no grand total, none of
-    §6.4's furniture. `Net Payables` is a real negative holding and is staged
-    as one, the same as a workbook's `Net Current Assets` row.
+    Every row is a `security`: the page publishes a table of holdings and none
+    of §6.4's furniture. `Net Payables` is a real negative holding, staged as
+    one.
     """
     name = _text(raw.get("company_name"))
     if not name:
@@ -357,11 +305,10 @@ def _as_of(rows: list[Any], f: RawFile) -> date:
 def _check_unit(result: HoldingsParseResult, f: RawFile) -> None:
     """Warn when the rows do not add up to the total the page states.
 
-    `MARKET_VALUE_UNIT` is the one assertion in this parser that no cell on the
-    page supports, so it gets its own check: `aum` and `market_value` are
-    published in the SAME unit whatever that unit is, and they agreed exactly
-    on every page measured. A disagreement means the assumption has moved and
-    the load must not proceed quietly -- §7.2 calls this the 100x-error path.
+    `MARKET_VALUE_UNIT` is the one assertion here that no cell on the page
+    supports, so it gets its own check: `aum` and `market_value` are published
+    in the SAME unit, whatever it is, and agreed exactly on every page measured.
+    §7.2 calls a disagreement the 100x-error path.
     """
     stated = result.stated_total
     if stated is None or stated == 0:

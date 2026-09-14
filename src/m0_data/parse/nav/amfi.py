@@ -1,25 +1,17 @@
 """AMFI NAVAll.txt -> staged scheme and NAV rows. MODULE_0.md §2.2, §6.
 
 **The file is sectioned, not flat** (§2.2). Blank lines, SEBI-category headers
-and AMC names interleave with data rows, and none of them carry a delimiter, so
-a CSV reader produces garbage. A line state machine carries the category and AMC
-context down onto each row — the same shape as M1's CAS parser, for the same
-reason.
+and AMC names interleave with data rows and carry no delimiter, so a CSV reader
+produces garbage. A line state machine carries category and AMC context down
+onto each row.
 
-The live file does not match §2.2's description, and the differences change what
-this parser can do. DECISIONS V0-20:
+The live file does not match §2.2's description (V0-20): eight columns, not six,
+with **plan and option stated rather than inferred**. That is the most valuable
+line here — V0-05, a Direct NAV series filed against a Regular scheme record
+10.13% apart, was possible because plan had to be read out of a scheme name.
 
-  §2.2:   Scheme Code;ISIN Growth;ISIN Reinvestment;Scheme Name;NAV;Date
-  actual: Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;
-          Scheme Name;Plan;Option;Net Asset Value;Date
-
-Eight columns, and **plan and option are stated rather than inferred**. That is
-the most valuable line in this module: V0-05 — a Direct NAV series filed against
-a Regular scheme record, 10.13% apart — was possible because plan had to be read
-out of a scheme name. It no longer does.
-
-This module is pure. It takes `list[str]` and returns rows; the fetch layer
-above it owns the network and the loader below it owns the database.
+Pure: takes `list[str]` and returns rows. The fetch layer owns the network and
+the loader owns the database.
 """
 
 from __future__ import annotations
@@ -40,18 +32,11 @@ PARSER_VERSION = "1"
 HEADER_RE = re.compile(r"^Scheme\s+Code\s*;", re.I)
 
 #: Header text -> canonical field, tried IN ORDER. AMFI publishes the same eight
-#: columns in two different orders:
+#: columns in two different orders (NAVAll.txt against the history endpoint), so
+#: reading either positionally puts the scheme NAME into the ISIN field on the
+#: other — which fails validation and silently unresolves every row (V0-23).
 #:
-#:   NAVAll.txt  Scheme Code; ISIN Growth; ISIN Reinvestment; Scheme Name;
-#:               Plan; Option; Net Asset Value; Date
-#:   history     Scheme Code; NAV Name; Plan; Option; ISIN Growth;
-#:               ISIN Reinvestment; Net Asset Value; Date
-#:
-#: Reading either positionally puts the scheme NAME into the ISIN field on the
-#: other, which then fails ISIN validation and silently unresolves every row.
-#: DECISIONS V0-23.
-#:
-#: Order matters: "ISIN Div Payout/ ISIN Growth" contains "growth", so the ISIN
+#: Order matters: `ISIN Div Payout/ ISIN Growth` contains "growth", so the ISIN
 #: rules must be tried before the name and option rules.
 _HEADER_RULES: tuple[tuple[str, str], ...] = (
     ("scheme code", "code"),
@@ -141,15 +126,13 @@ def normalise_plan(raw: str) -> str:
 def normalise_option(raw: str) -> str:
     """Collapse AMFI's option wording to the three the schema stores.
 
-    The DDL (§4.4) allows `growth | idcw_payout | idcw_reinvest`. The file is
-    wider than that: `IDCW-Re-investment`, `MONTHLY DCW Payout`,
-    `QUARTERLY IDCW Payout`, `Growth Option`. The payout frequency is real
-    information with nowhere to go, so `option_raw` keeps the original string
-    and the frequency is dropped rather than smuggled into `option`.
+    §4.4 allows `growth | idcw_payout | idcw_reinvest`; the file is wider
+    (`IDCW-Re-investment`, `MONTHLY DCW Payout`, `Growth Option`). The payout
+    frequency is real information with nowhere to go, so `option_raw` keeps the
+    original and the frequency is dropped rather than smuggled into `option`.
 
-    Reinvestment is checked before payout: `IDCW-Re-investment` contains
-    neither the word payout nor growth, but a frequency-qualified reinvestment
-    option could contain both.
+    Reinvestment is checked BEFORE payout: `IDCW-Re-investment` contains
+    neither payout nor growth, but a frequency-qualified one could contain both.
     """
     text = raw.strip().lower()
     if "reinvest" in text or "re-invest" in text:
@@ -174,14 +157,11 @@ def scheme_id_for(isin: str | None, amfi_code: str, option: str) -> str:
 def column_map(header_line: str) -> dict[str, int]:
     """Map canonical field -> column index, from the header the file printed.
 
-    Positional parsing is what makes the two AMFI layouts dangerous: they carry
-    the same eight columns in a different order, so a parser written against one
-    reads the scheme name where the other puts an ISIN. Nothing crashes — the
-    name fails ISIN validation, the row resolves to nothing, and an entire
-    export lands in the quarantine queue for a reason no message explains.
-
-    Reading the header removes the guess. §2 is explicit that the file is to be
-    verified rather than assumed, and this is that rule applied per column.
+    The two AMFI layouts carry the same eight columns in a different order, so
+    a positional parser reads the scheme name where the other puts an ISIN.
+    Nothing crashes: the name fails ISIN validation, the row resolves to
+    nothing, and an export lands in quarantine for a reason no message explains
+    (V0-23).
     """
     mapping: dict[str, int] = {}
     for index, raw in enumerate(header_line.split(";")):
@@ -214,13 +194,12 @@ def _field(fields: list[str], columns: dict[str, int], name: str) -> str:
 def _isin_or_none(raw: str, lineno: int, result: AmfiParseResult) -> str | None:
     """Validate an ISIN column. §8.3: reject malformed, warn, fall through.
 
-    The live file needs this. Its ISIN columns contain the literal string
-    `Redeemed` on nine rows and `HDFCNIVODG` on one — neither is an ISIN, and
-    accepting them keys nine unrelated IL&FS schemes to a single row called
-    `Redeemed`, which then collapse into one another on load.
+    The live file needs this — its ISIN columns carry the literal `Redeemed` on
+    nine rows and `HDFCNIVODG` on one, and accepting them keys nine unrelated
+    IL&FS schemes to a single row.
 
-    An absent ISIN is normal and silent; a *present but invalid* one is a
-    warning, because it means the source printed something it should not have.
+    An absent ISIN is normal and silent; a present but INVALID one warns,
+    because the source printed something it should not have.
     """
     token = raw.strip()
     if token in NO_ISIN:
@@ -234,11 +213,11 @@ def _isin_or_none(raw: str, lineno: int, result: AmfiParseResult) -> str | None:
 def parse_navall(lines: list[str]) -> AmfiParseResult:
     """Run the state machine over the file's lines.
 
-    Emits **one or two schemes per data row** (§2.2's two-ISIN trap). Column 2
-    is the ISIN for the payout-or-growth variant this row describes; column 3
-    is the reinvestment ISIN, present only when the scheme also offers
-    reinvestment. When it is present the row describes two distinct schemes
-    with two distinct NAV series, and collapsing them is the §4.4 error.
+    Emits ONE OR TWO schemes per data row (§2.2's two-ISIN trap). Column 2 is
+    the ISIN for the payout-or-growth variant; column 3 is the reinvestment
+    ISIN, present only when the scheme offers one. When it is present the row
+    describes two schemes with two NAV series, and collapsing them is the §4.4
+    error.
     """
     result = AmfiParseResult()
     amc_name: str | None = None
