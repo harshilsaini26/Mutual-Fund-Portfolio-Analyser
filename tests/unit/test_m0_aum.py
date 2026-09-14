@@ -23,9 +23,16 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
-from jobs.fetch_aum import AumScaleError, load_quarter, published, run
+from jobs.fetch_aum import (
+    _NO_COMPARISON,
+    AumScaleError,
+    load_quarter,
+    published,
+    run,
+)
 from src.common.decimals import connect
 from src.m0_data.fetch.amfi_aum import (
+    AAUM_FIELD,
     AAUM_UNIT,
     BASIS,
     AumPayloadError,
@@ -240,6 +247,28 @@ CREATE TABLE scheme_aum (
   folio_count BIGINT, basis TEXT NOT NULL DEFAULT 'point_in_time',
   period_label TEXT, source_file_id TEXT, ingested_at TIMESTAMP,
   PRIMARY KEY (scheme_id, as_of_date)
+);
+CREATE TABLE raw_file (
+  file_id TEXT PRIMARY KEY, source_id TEXT, url TEXT, fetched_at TIMESTAMP,
+  byte_size INTEGER, storage_path TEXT, parse_status TEXT, parser_id TEXT,
+  parser_version TEXT, parsed_at TIMESTAMP, as_of_date DATE
+);
+"""
+
+#: `holding_disclosure` as `migrations/004_holdings.sql` declares the columns
+#: the scale check reads -- separately, because a warehouse that has loaded no
+#: disclosure has no such table and `assert_scale`'s `has_table` branch is a
+#: case worth keeping reachable.
+#:
+#: `as_of_date` and `revision` are here because they are the whole point:
+#: `is_current` is flipped per (scheme_id, as_of_date), so several CURRENT rows
+#: per scheme is the normal shape and the three-column stand-in this replaces
+#: could not express it.
+DISCLOSURE_SCHEMA = """
+CREATE TABLE holding_disclosure (
+  scheme_id TEXT NOT NULL, as_of_date DATE NOT NULL, revision INTEGER NOT NULL,
+  total_mv DECIMAL_TEXT NOT NULL, is_current INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (scheme_id, as_of_date, revision)
 );
 """
 
@@ -466,18 +495,60 @@ class _Response:
     def raise_for_status(self) -> None:
         return None
 
+    @property
+    def text(self) -> str:
+        """`RobotsCache.allows` reads `.text`; `conditional_get` reads
+        `.content`. A stub with only one of them is not a stub of a response."""
+        return self.content.decode()
+
 
 class _Client:
-    """Serves AMFI's three payloads from memory. No network."""
+    """Serves AMFI's payloads from memory. No network.
 
-    def __init__(self, periods: dict[int, list[tuple[int, str]]]) -> None:
+    All THREE endpoints, including the data one -- `data_url` also carries
+    `fyId=`, so `periodId=` has to be tested first or a quarter's figures come
+    back as a list of financial years.
+    """
+
+    def __init__(
+        self,
+        periods: dict[int, list[tuple[int, str]]],
+        aaum: list[tuple[str, str, str]] | None = None,
+    ) -> None:
         self.periods = periods
+        #: (amfi_code, scheme name, AAUM in lakh)
+        self.aaum = aaum or []
         self.calls: list[str] = []
+
+    def get(self, url: str, **kw: object) -> Any:
+        """`conditional_get` reaches a client through `.get` for robots.txt
+        (`src/m0_data/fetch/base.py`), not through `.request`. Without this the
+        stub raised `AttributeError`, `RobotsCache` swallowed it as "an
+        unreachable policy file is not a prohibition", and these tests stayed
+        offline by accident rather than by construction."""
+        self.calls.append(url)
+        return _Response(b"User-agent: *\nAllow: /\n")
 
     def request(self, method: str, url: str, **kw: object) -> Any:
         self.calls.append(url)
         body: dict[str, Any]
-        if "fyId=" in url:
+        if "periodId=" in url:
+            body = {
+                "data": [
+                    {
+                        "Mfname": "A Fund",
+                        "schemes": [
+                            {
+                                "AMFI_Code": code,
+                                "SchemeNAVName": name,
+                                "AverageAumForTheMonth": {AAUM_FIELD: lakh},
+                            }
+                            for code, name, lakh in self.aaum
+                        ],
+                    }
+                ]
+            }
+        elif "fyId=" in url:
             fy = int(url.split("fyId=")[1].split("&")[0])
             body = {
                 "type": "periods",
@@ -703,7 +774,7 @@ class TestACodeWhoseSchemesContradictIsRefused:
         )
         written = sorted(r[0] for r in conn.execute("SELECT scheme_id FROM scheme_aum"))
         assert written == ["INF3"], "a contradicting code must write nothing"
-        assert counts["incoherent_families"] == 1
+        assert counts["incoherent_codes"] == 1
 
     def test_the_refusal_is_counted_not_silent(self, tmp_path: Path) -> None:
         """§4.10: a row never disappears without a record."""
@@ -714,7 +785,7 @@ class TestACodeWhoseSchemesContradictIsRefused:
         counts = load_quarter(
             conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
         )
-        assert counts["incoherent_families"] == 1
+        assert counts["incoherent_codes"] == 1
         assert counts["scheme_aum_rows"] == 0
 
     def test_a_family_beside_a_none_is_not_a_contradiction(self, tmp_path: Path) -> None:
@@ -730,7 +801,47 @@ class TestACodeWhoseSchemesContradictIsRefused:
         )
         written = sorted(r[0] for r in conn.execute("SELECT scheme_id FROM scheme_aum"))
         assert written == ["INF1", "INF2"]
-        assert counts["incoherent_families"] == 0
+        assert counts["incoherent_codes"] == 0
+
+    def test_a_refusal_retracts_what_an_earlier_load_wrote(
+        self, tmp_path: Path
+    ) -> None:
+        """Abstaining is not enough. These schemes already carry whatever an
+        earlier load wrote them under a grouping now judged incoherent, and
+        `aum_for` serves it for up to a year -- so V2 would reconcile a
+        disclosure against the very figure this run declined to stand behind."""
+        conn = _warehouse(
+            tmp_path / "w.db",
+            [("INF1", "100001", "abc", None), ("INF2", "100001", "abc", None)],
+        )
+        load_quarter(conn, [_aaum("100001", "A", "1000")], "January - March 2026", "f1")
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 2
+
+        # V1-37 re-derives and places the two share classes in different
+        # families. The code is a contradiction from here on.
+        conn.execute("UPDATE scheme SET scheme_family='famA' WHERE scheme_id='INF1'")
+        conn.execute("UPDATE scheme SET scheme_family='famB' WHERE scheme_id='INF2'")
+        counts = load_quarter(
+            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f2"
+        )
+        assert counts["incoherent_codes"] == 1
+        assert counts["retracted"] == 2
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 0
+
+
+def _disclosed(conn: Any, rows: list[tuple[str, str, str]]) -> None:
+    """(scheme_id, as_of_date, total_mv) -> one CURRENT disclosure each.
+
+    `revision` is 1 and `is_current` is 1 on every row, which is the point: the
+    real table flips `is_current` per (scheme_id, as_of_date), so two dates for
+    one scheme means two current rows, not a replacement.
+    """
+    for scheme_id, as_of, total_mv in rows:
+        conn.execute(
+            "INSERT INTO holding_disclosure VALUES (?,?,1,?,1)",
+            (scheme_id, date.fromisoformat(as_of), Decimal(total_mv)),
+        )
+    conn.commit()
 
 
 class TestTheScaleOfTheAaumIsChecked:
@@ -740,79 +851,151 @@ class TestTheScaleOfTheAaumIsChecked:
     its AUM, pass every test, and leave V2 quarantining the whole warehouse
     while blaming the disclosures."""
 
-    def _warehouse_with_disclosure(self, path: Path, total_mv: str) -> Any:
-        conn = _warehouse(path, [("INF1", "100001", "abc", None)])
-        conn.executescript(
-            "CREATE TABLE holding_disclosure (scheme_id TEXT, total_mv DECIMAL_TEXT,"
-            " is_current INTEGER);"
+    #: Rs 1,000 lakh in absolute rupees -- what `_aaum(.., "1000")` becomes once
+    #: `to_inr` has converted it. A scheme disclosed at this total agrees
+    #: exactly, so every ratio below is stated against it.
+    AGREES: ClassVar[str] = "100000000"
+
+    def _warehouse(self, path: Path, n: int) -> Any:
+        conn = _warehouse(
+            path, [(f"INF{i}", f"10000{i}", "abc", None) for i in range(1, n + 1)]
         )
-        conn.execute(
-            "INSERT INTO holding_disclosure VALUES ('INF1', ?, 1)", (Decimal(total_mv),)
-        )
-        conn.commit()
+        conn.executescript(DISCLOSURE_SCHEMA)
         return conn
 
+    def _load(self, conn: Any, n: int, lakh: str = "1000") -> dict[str, object]:
+        return load_quarter(
+            conn,
+            [_aaum(f"10000{i}", "A", lakh) for i in range(1, n + 1)],
+            "April - June 2026",
+            "f1",
+        )
+
     def test_a_hundredfold_unit_change_is_refused(self, tmp_path: Path) -> None:
-        # The fund really holds 1,000 lakh. AMFI starts publishing crore, so
-        # the same fund arrives as 10 -- and `to_inr(.., "lakh")` under-reads
-        # it by 100.
-        conn = self._warehouse_with_disclosure(tmp_path / "w.db", "100000000")
+        # The funds really hold 1,000 lakh each. AMFI starts publishing crore,
+        # so the same figure arrives as 10 -- and `to_inr(.., "lakh")`
+        # under-reads every one of them by 100.
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(conn, [(f"INF{i}", "2026-06-30", self.AGREES) for i in range(1, 6)])
         with pytest.raises(AumScaleError, match="AAUM_UNIT"):
-            load_quarter(conn, [_aaum("100001", "A", "10")], "April - June 2026", "f1")
+            self._load(conn, 5, "10")
+
+    def test_a_refused_load_leaves_no_rows_behind(self, tmp_path: Path) -> None:
+        """The assertion the first version of this class did not make, and the
+        reason the defect it was written to catch shipped anyway: the check ran
+        AFTER the write loop, so the rows were already staged and the next
+        `commit()` on that connection persisted them."""
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(conn, [(f"INF{i}", "2026-06-30", self.AGREES) for i in range(1, 6)])
+        with pytest.raises(AumScaleError):
+            self._load(conn, 5, "10")
+        conn.commit()  # what a batch loop reaches next
+        assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 0
+
+    def test_the_refusal_names_a_scheme_to_look_at(self, tmp_path: Path) -> None:
+        """The passing string names the worst scheme and the failure named
+        none, so the one message that aborts a whole quarter's load gave an
+        operator nothing to open."""
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(conn, [(f"INF{i}", "2026-06-30", self.AGREES) for i in range(1, 6)])
+        with pytest.raises(AumScaleError, match=r"worst .*INF\d"):
+            self._load(conn, 5, "10")
 
     def test_agreement_passes_and_says_what_it_measured(self, tmp_path: Path) -> None:
-        conn = self._warehouse_with_disclosure(tmp_path / "w.db", "100000000")
-        counts = load_quarter(
-            conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
-        )
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(conn, [(f"INF{i}", "2026-06-30", self.AGREES) for i in range(1, 6)])
+        counts = self._load(conn, 5)
         assert "median" in str(counts["scale_check"])
+        assert counts["scheme_aum_rows"] == 5
 
     def test_one_outlier_does_not_abort_a_correct_load(self, tmp_path: Path) -> None:
         """The check medians rather than taking the worst. A new index fund
         that grew from Rs 1 Cr to Rs 7 Cr since the quarter being averaged is
         7.4x out and entirely correct -- the live warehouse has two such, and
         the first version aborted on them."""
-        conn = _warehouse(
-            tmp_path / "w.db",
-            [(f"INF{i}", f"10000{i}", "abc", None) for i in range(1, 6)],
-        )
-        conn.executescript(
-            "CREATE TABLE holding_disclosure (scheme_id TEXT, total_mv DECIMAL_TEXT,"
-            " is_current INTEGER);"
-        )
-        for i in range(1, 6):
-            # Four agree; the fifth is 8x out.
-            mv = Decimal("100000000") * (8 if i == 5 else 1)
-            conn.execute("INSERT INTO holding_disclosure VALUES (?,?,1)", (f"INF{i}", mv))
-        conn.commit()
-        counts = load_quarter(
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(
             conn,
-            [_aaum(f"10000{i}", "A", "1000") for i in range(1, 6)],
-            "April - June 2026",
-            "f1",
+            [
+                (f"INF{i}", "2026-06-30", str(int(self.AGREES) * (8 if i == 5 else 1)))
+                for i in range(1, 6)
+            ],
         )
-        assert counts["scheme_aum_rows"] == 5
+        assert self._load(conn, 5)["scheme_aum_rows"] == 5
 
-    def test_no_disclosure_to_compare_against_is_not_a_failure(
+    def test_an_even_sample_takes_the_true_median(self, tmp_path: Path) -> None:
+        """`ratios[len(ratios) // 2]` is the UPPER median on an even-length
+        list. Three schemes agreeing and three 12x out have a true median of
+        6.5 and an upper median of 12, so the load turns on which was meant.
+        The live sample is even."""
+        conn = self._warehouse(tmp_path / "w.db", 6)
+        _disclosed(
+            conn,
+            [
+                (f"INF{i}", "2026-06-30", str(int(self.AGREES) * (12 if i > 3 else 1)))
+                for i in range(1, 7)
+            ],
+        )
+        assert self._load(conn, 6)["scheme_aum_rows"] == 6
+
+    def test_too_few_to_compare_is_reported_not_refused(self, tmp_path: Path) -> None:
+        """At n=2 the upper median IS the maximum, so a single legitimate
+        grower refused an entirely correct load -- the exact false refusal the
+        median exists to prevent. Below the minimum sample this reports a
+        missing witness instead of inventing a failing one."""
+        conn = self._warehouse(tmp_path / "w.db", 2)
+        _disclosed(
+            conn,
+            [
+                ("INF1", "2026-06-30", self.AGREES),
+                ("INF2", "2026-06-30", str(int(self.AGREES) * 12)),
+            ],
+        )
+        counts = self._load(conn, 2)
+        assert counts["scheme_aum_rows"] == 2
+        assert "too few" in str(counts["scale_check"])
+
+    def test_the_newest_of_several_current_disclosures_is_used(
         self, tmp_path: Path
     ) -> None:
+        """`is_current` is flipped per (scheme_id, as_of_date), so a scheme
+        disclosed at two dates has TWO current rows -- 13 of the 192 in the
+        live warehouse. Unordered, the read kept whichever row SQLite returned
+        last: neither the newest, nor the same one on the next rebuild
+        (`CLAUDE.md` invariant 10)."""
+        conn = self._warehouse(tmp_path / "w.db", 5)
+        _disclosed(
+            conn,
+            [
+                (f"INF{i}", "2026-03-31", str(int(self.AGREES) * 100))
+                for i in range(1, 6)
+            ]
+            + [(f"INF{i}", "2026-06-30", self.AGREES) for i in range(1, 6)],
+        )
+        assert "median 1.00x" in str(self._load(conn, 5)["scale_check"])
+
+    def test_an_empty_table_is_not_a_failure(self, tmp_path: Path) -> None:
         """A fresh warehouse has nothing to check the scale against, and that
         is a missing witness rather than a wrong one."""
+        conn = self._warehouse(tmp_path / "w.db", 1)
+        assert self._load(conn, 1)["scale_check"] == _NO_COMPARISON
+
+    def test_no_table_at_all_is_not_a_failure(self, tmp_path: Path) -> None:
+        """`has_table` -- migration 004 has not run, so there is no table to
+        read, which `aum_for` already treats as a missing witness."""
         conn = _warehouse(tmp_path / "w.db", [("INF1", "100001", "abc", None)])
-        conn.executescript(
-            "CREATE TABLE holding_disclosure (scheme_id TEXT, total_mv DECIMAL_TEXT,"
-            " is_current INTEGER);"
-        )
         counts = load_quarter(
             conn, [_aaum("100001", "A", "1000")], "April - June 2026", "f1"
         )
-        assert counts["scale_check"] == "no disclosure to compare against"
+        assert counts["scale_check"] == _NO_COMPARISON
 
 
 class TestRunEndToEnd:
     """V1-52. `run` wires fetch, archive, parse and load together and took no
     `client`, so none of its paths could be exercised offline. Three review
-    rounds in a row found a defect in a function that had no test."""
+    rounds in a row found a defect in a function that had no test -- and the
+    first version of this class was called end-to-end while every one of its
+    tests returned or raised inside `published()`."""
 
     def test_list_reports_the_quarters_by_their_end_date(self) -> None:
         client = _Client({1: [(1, "April - June 2026")]})
@@ -834,3 +1017,35 @@ class TestRunEndToEnd:
         with pytest.raises(SystemExit, match="YYYY-MM-DD"):
             run(quarter="Q1 2026", client=client)
         assert client.calls == [], "a bad date should not reach the network"
+
+    def test_a_quarter_is_fetched_archived_parsed_and_loaded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The half of `run` no test reached: `archive`, the `raw_file` row,
+        `parse_aaum`, `load_quarter` and the `parse_status='ok'` update. The
+        docstring saying this path "was verified only by having been run by
+        hand" was still true after the `client` seam was added."""
+        db = tmp_path / "w.db"
+        _warehouse(db, [("INF1", "100001", "abc", None)]).close()
+        monkeypatch.setattr("jobs.fetch_aum.warehouse_path", lambda: db)
+        monkeypatch.setattr("jobs.fetch_aum.raw_root", lambda: tmp_path / "raw")
+
+        client = _Client(
+            {1: [(1, "April - June 2026")]},
+            aaum=[("100001", "A Fund - Direct Plan", "1000")],
+        )
+        rows = run(client=client)
+
+        assert rows[0]["period"] == "April - June 2026"
+        assert rows[0]["share_classes"] == 1
+        assert rows[0]["scheme_aum_rows"] == 1
+
+        conn = connect(str(db))
+        assert conn.execute(
+            "SELECT aum_inr, basis, as_of_date FROM scheme_aum"
+        ).fetchone() == (to_inr(Decimal(1000), AAUM_UNIT), BASIS, date(2026, 6, 30))
+        status, storage = conn.execute(
+            "SELECT parse_status, storage_path FROM raw_file"
+        ).fetchone()
+        assert status == "ok"
+        assert Path(storage).is_file(), "the payload must be on disk, not just recorded"

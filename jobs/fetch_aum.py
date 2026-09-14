@@ -33,6 +33,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from statistics import median
 from typing import Any
 
 from src.common.decimals import connect
@@ -65,10 +66,15 @@ from src.m0_data.normalise.units import to_inr
 class AumScaleError(RuntimeError):
     """The fetched AAUM is not on the scale `AAUM_UNIT` claims.
 
-    `RuntimeError` so `jobs/ingest_inbox.py`'s per-file guard already catches
-    it, and raised rather than warned because a 100x-wrong AUM does not
-    degrade V2 -- it inverts it, quarantining every correct disclosure in the
-    warehouse.
+    Raised BEFORE a single row is written, and nothing catches it: the load is
+    abandoned and the CLI reports it. The first version justified the base
+    class as `RuntimeError` "so `jobs/ingest_inbox.py`'s per-file guard already
+    catches it", which was false twice over -- `ingest_inbox` never calls this
+    module, and that guard is a catch-and-continue whose next `conn.commit()`
+    would have persisted exactly the rows this refuses.
+
+    Refused rather than warned because a 100x-wrong AUM does not degrade V2 --
+    it inverts it, quarantining every correct disclosure in the warehouse.
     """
 
 
@@ -264,9 +270,21 @@ def _families(conn: Any) -> dict[str, list[_Member]]:
 #: which is what a new index fund gathering assets looks like.
 #:
 #: Measured on the live warehouse: median **1.06**, p90 1.23, max 7.42 across
-#: 194 schemes. A switch from lakh to crore would put the median at **106**. A
-#: bound of 10 sits an order of magnitude clear of both.
+#: the **182** schemes that had a disclosure to compare against. A switch from
+#: lakh to crore would put the median at **106**. A bound of 10 sits an order of
+#: magnitude clear of both.
 _SCALE_TOLERANCE = Decimal(10)
+
+#: Below this many comparable schemes there is no median to speak of, and the
+#: check cannot tell a unit change from one fund that grew. Two schemes -- one
+#: of them a new index fund up 12x since the quarter being averaged -- was
+#: enough to refuse an entirely correct load, which is the same false refusal
+#: the median was introduced to prevent, reappearing at small n. Too few is a
+#: missing witness: reported, and carried on from.
+_SCALE_MIN_SAMPLE = 5
+
+#: One spelling. `main` prints it and the tests assert it.
+_NO_COMPARISON = "no disclosure to compare against"
 
 
 def assert_scale(
@@ -297,15 +315,23 @@ def assert_scale(
     # failing one. `has_table` is the check `aum_for` already uses for exactly
     # this, rather than a second spelling of it here.
     if not has_table(conn, "holding_disclosure"):
-        return "no disclosure to compare against"
+        return _NO_COMPARISON
+    # ORDERED, and the newest row wins the comprehension. `is_current` is
+    # flipped per (scheme_id, as_of_date) -- `load.py`'s `UPDATE
+    # holding_disclosure SET is_current = 0 WHERE scheme_id=? AND as_of_date=?`
+    # -- so a scheme disclosed at several dates has several CURRENT rows: 13 of
+    # the 192 here. Unordered, this kept whichever row SQLite returned last,
+    # which is neither the newest nor the same one on the next rebuild
+    # (invariant 10). `_families` above orders its own read for this reason.
     known = {
         str(r[0]): Decimal(r[1])
         for r in conn.execute(
-            "SELECT scheme_id, total_mv FROM holding_disclosure WHERE is_current = 1"
+            "SELECT scheme_id, total_mv FROM holding_disclosure"
+            " WHERE is_current = 1 ORDER BY scheme_id, as_of_date"
         )
     }
     if not known:
-        return "no disclosure to compare against"
+        return _NO_COMPARISON
 
     ratios: list[Decimal] = []
     worst = Decimal(0)
@@ -320,19 +346,27 @@ def assert_scale(
             if ratio > worst:
                 worst, worst_scheme = ratio, scheme_id
     if not ratios:
-        return "no disclosure to compare against"
+        return _NO_COMPARISON
+    if len(ratios) < _SCALE_MIN_SAMPLE:
+        return (
+            f"only {len(ratios)} schemes to compare against;"
+            f" fewer than {_SCALE_MIN_SAMPLE} is too few for a median"
+        )
 
-    ratios.sort()
-    median = ratios[len(ratios) // 2]
-    if median > _SCALE_TOLERANCE:
+    # `statistics.median`, not `ratios[len(ratios) // 2]`. That is the UPPER
+    # median on an even-length list, and at n=2 it is simply the maximum --
+    # the check this one was written to replace. The live sample is even.
+    middle = median(ratios)
+    if middle > _SCALE_TOLERANCE:
         raise AumScaleError(
             f"the typical scheme's AAUM disagrees with its disclosed portfolio"
-            f" by {median:.1f}x across {len(ratios)} schemes."
+            f" by {middle:.1f}x across {len(ratios)} schemes"
+            f" (worst {worst:.1f}x, {worst_scheme})."
             f" `AAUM_UNIT` is asserted as {AAUM_UNIT!r}; a median near 100 means"
             f" AMFI changed it."
         )
     return (
-        f"{len(ratios)} schemes, median {median:.2f}x,"
+        f"{len(ratios)} schemes, median {middle:.2f}x,"
         f" worst {worst:.2f}x ({worst_scheme})"
     )
 
@@ -351,6 +385,7 @@ def load_quarter(
     members: dict[_GroupKey, set[str]] = defaultdict(set)
     unknown = 0
     incoherent = 0
+    refused: set[str] = set()
     for row in rows:
         found = index.get(row.amfi_code)
         if not found:
@@ -377,10 +412,23 @@ def load_quarter(
             # disappears without a record, and a code whose schemes contradict
             # each other about their fund is exactly the case a human has to
             # see rather than a number the loader invents.
+            #
+            # `incoherent_codes`, not `..._families`: this counts AMFI scheme
+            # codes, one per payload row, and a family is the one thing a
+            # refused code has no coherent answer for.
             incoherent += 1
+            refused.update(scheme_id for scheme_id, _ in found)
             continue
         totals[key] += to_inr(row.aaum_raw, AAUM_UNIT)
         members[key].update(scheme_id for scheme_id, _ in found)
+
+    # BEFORE anything is written, and that is the whole point. Checked after
+    # the write loop, the refusal never actually refused: the rows were staged
+    # on the connection, visible to the same transaction, and the next
+    # `commit()` -- which is what any batch loop that caught this would reach
+    # -- persisted the 100x-wrong figure the check had just rejected.
+    # Reproduced. Both maps are complete here, so this is where it belongs.
+    scale = assert_scale(conn, totals, members)
 
     now = datetime.now(UTC)
     # Every figure already stored for this quarter, in ONE query. The first
@@ -422,7 +470,19 @@ def load_quarter(
                 (scheme_id, as_of, total, BASIS, label, file_id, now),
             )
             written += 1
-    scale = assert_scale(conn, totals, members)
+
+    # A refusal has to RETRACT, not merely abstain. These schemes already carry
+    # whatever an earlier load wrote them under a grouping now judged
+    # incoherent, and `aum_for` goes on serving it for up to a year -- so V2
+    # would reconcile a disclosure against the very figure this run declined to
+    # stand behind. `scheme_aum` is derived and regenerable (invariant 10), and
+    # a missing witness is the documented safe state: V2 records "no AUM on
+    # record" and says so.
+    retracted = 0
+    for scheme_id in sorted(refused):
+        retracted += conn.execute(
+            "DELETE FROM scheme_aum WHERE scheme_id = ?", (scheme_id,)
+        ).rowcount
 
     conn.commit()
     return {
@@ -431,7 +491,8 @@ def load_quarter(
         "families": len(totals),
         "scheme_aum_rows": written,
         "unmatched_amfi_codes": unknown,
-        "incoherent_families": incoherent,
+        "incoherent_codes": incoherent,
+        "retracted": retracted,
         "restated": restated,
     }
 

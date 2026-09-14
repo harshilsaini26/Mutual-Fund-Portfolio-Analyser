@@ -131,7 +131,13 @@ def run(inbox: Path | None = None, amc_id: str | None = None) -> int:
             # without it here one corrupt `scheme_aum.basis` aborted the
             # whole batch -- 119 schemes from one workbook, where this
             # module's contract is to report a sheet it cannot handle and
-            # carry on.
+            # carry on. A second line of defence only: an unknown basis is a
+            # property of the WAREHOUSE, not of any one sheet, so it arrives
+            # here once per sheet -- 119 times for one workbook, each reported
+            # as though that sheet were at fault, and `main` exits 0 having
+            # loaded nothing. `migrations/013_scheme_aum_basis.sql` puts the
+            # vocabulary on the column, where a value V2 cannot read cannot be
+            # stored in the first place.
             except (ParseFailed, RuntimeError, UnknownAumBasis) as exc:
                 refusals.append((str(entry["sheet"]), "load failed", str(exc)[:70]))
                 continue
