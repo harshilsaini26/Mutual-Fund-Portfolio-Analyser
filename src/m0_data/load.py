@@ -1,13 +1,11 @@
 """Staged rows -> Zone A. MODULE_0.md §3 (L1 -> L2) and §4.4-4.5.
 
 Every write carries `source_file_id`, so `PLAN.md` §4.2 holds: any number in the
-warehouse traces back to a row in an archived file whose bytes are on disk under
-their own hash.
+warehouse traces back to a row in an archived file.
 
-Loads are idempotent by construction — `INSERT ... ON CONFLICT DO UPDATE` keyed
-on the natural key — because the daily job re-reads a file that overlaps
-everything already loaded, exactly as the CAS importer does (V0-15). Re-running
-a load must not create a second anything.
+Loads are idempotent by construction — `INSERT ... ON CONFLICT DO UPDATE` on the
+natural key — because the daily job re-reads a file that overlaps everything
+already loaded (V0-15).
 """
 
 from __future__ import annotations
@@ -42,19 +40,14 @@ def normalise_amc_id(amc_name: str) -> str:
 def scheme_id_collisions(schemes: list[StagedScheme]) -> dict[str, list[StagedScheme]]:
     """Distinct source rows that would land on the same `scheme_id`.
 
-    §4.4 assumes an ISIN identifies exactly one scheme. AMFI's own file breaks
-    that: five ISINs appear against two scheme codes with **different scheme
-    names** — `INF204KB1XN0` is both `Nippon India Fixed Horizon Fund XXXVI-
-    Series 9` and `... XXXVII- Series 9`, and there are similar pairs among the
-    wound-up Reliance FMPs.
+    §4.4 assumes an ISIN identifies exactly one scheme; AMFI's own file breaks
+    that on five ISINs, which appear against two scheme codes with DIFFERENT
+    names. An upsert resolves those by letting the last row win silently, which
+    invariant 4 forbids — the losing scheme is dropped and nothing records it.
+    They are returned so the caller counts them and the job reports `partial`.
 
-    An upsert resolves those by letting the last row win, silently, which
-    `CLAUDE.md` invariant 4 forbids — the losing scheme is dropped and nothing
-    records it. The collisions are returned so the caller can count them into
-    `job_run.warnings` and the job reports `partial` rather than `ok`.
-
-    Rows that agree on name, plan and option are not collisions: they are the
-    same scheme described twice, and collapsing them loses nothing.
+    Rows agreeing on name, plan and option are not collisions: the same scheme
+    described twice.
     """
     by_id: dict[str, list[StagedScheme]] = defaultdict(list)
     for s in schemes:
@@ -75,14 +68,13 @@ def load_schemes(
     """Upsert `amc` and `scheme`. Returns (amc_rows, scheme_rows).
 
     `first_seen` is preserved on conflict and `last_seen` advances: the pair is
-    how a wound-up scheme is detected later without deleting it, and §4.4 is
-    explicit that schemes are never deleted — doing so puts survivorship bias
-    into every historical comparison.
+    how a wound-up scheme is detected without deleting it, and §4.4 never
+    deletes a scheme — doing so puts survivorship bias into every historical
+    comparison.
 
-    Identity fields (name, plan, option) are updated on conflict rather than
-    left alone. AMFI corrects spellings, and the scheme_id is the ISIN, so the
-    row is the same scheme either way; refusing the correction would pin the
-    warehouse to whatever the first file happened to say.
+    Identity fields are updated on conflict: AMFI corrects spellings, and the
+    scheme_id is the ISIN, so refusing the correction would pin the warehouse to
+    whatever the first file happened to say.
     """
     amcs = {normalise_amc_id(s.amc_name): s.amc_name for s in schemes}
     for amc_id, amc_name in sorted(amcs.items()):
@@ -147,17 +139,15 @@ def load_navs_where_absent(
 ) -> int:
     """Insert only the dates not already on record. Returns rows actually added.
 
-    The counterpart to `load_navs`, and the difference is which source wins.
-    `load_navs` upserts because AMFI restates and the later publisher file is
-    the correction. This one is for a **mirror** (S6, mfapi): it may fill dates
-    the publisher's own export did not reach, but it must never overwrite a
-    value AMFI stated.
+    The counterpart to `load_navs`, differing in which source wins. `load_navs`
+    upserts because AMFI restates and the later file is the correction. This is
+    for a MIRROR (S6, mfapi): it may fill dates the publisher did not reach, but
+    must never overwrite a value AMFI stated.
 
-    That is not hypothetical. Measured on HDFC Flexi Cap, mfapi and AMFI agree
-    on 2,116 of 2,117 overlapping dates and disagree on 2026-03-12 —
-    `2111.846` against `2111.779`. One in two thousand, and precisely the size
-    of discrepancy that moves an XIRR without moving anything a reader would
-    notice. `DO NOTHING` keeps the publisher's number. DECISIONS V1-19.
+    Measured on HDFC Flexi Cap: mfapi and AMFI agree on 2,116 of 2,117
+    overlapping dates and disagree on one, `2111.846` against `2111.779` —
+    precisely the size that moves an XIRR without moving anything a reader
+    notices (V1-19).
     """
     added = 0
     for n in navs:
@@ -210,14 +200,13 @@ def load_parse_result(
 def issuer_id_for(isin: str) -> str:
     """One issuer per ISIN, at seed time.
 
-    A real security master would map many ISINs to one issuer — equity, prefs
-    and NCDs of the same company are one exposure (§8.1). AMFI's list is one
-    row per listed company, so at seed time the two coincide, and the
-    `instrument.issuer_id` indirection is what lets a later source collapse
-    them without rewriting any holding.
+    A real security master maps many ISINs to one issuer — equity, prefs and
+    NCDs of one company are one exposure (§8.1). AMFI's list is one row per
+    listed company, so at seed time the two coincide, and the
+    `instrument.issuer_id` indirection is what lets a later source collapse them
+    without rewriting any holding.
 
-    Prefixed rather than bare so a real issuer can never collide with a
-    synthetic one: `__CASH__` and an ISIN share no namespace.
+    Prefixed so a real issuer can never collide with a synthetic one.
     """
     return f"AMFI:{isin}"
 
@@ -229,13 +218,12 @@ def load_mcap(
 ) -> dict[str, int]:
     """Seed `issuer`, `instrument` and the `amfi_mcap` classification.
 
-    Classification is written **point-in-time** — `valid_from` is the list's
-    own period end, never today. `CLAUDE.md` invariant 6 and §2.2 S4: applying
-    the current list to a 2021 holding creates phantom drift or masks real
-    drift, and the only defence is that the basis date travels with the value.
+    Classification is written POINT-IN-TIME — `valid_from` is the list's own
+    period end, never today (invariant 6, §2.2 S4): applying the current list to
+    a 2021 holding creates phantom drift or masks real drift.
 
     Companies with no market cap get an issuer and an instrument but no
-    classification. They are real securities that simply cannot be ranked.
+    classification: real securities that cannot be ranked.
     """
     counts = {"issuer": 0, "instrument": 0, "classification": 0}
     for row in result.rows:
@@ -288,24 +276,20 @@ def next_revision(
 ) -> int | None:
     """§4.6. A RESTATED disclosure is a new revision. A re-run is not.
 
-    `CLAUDE.md` invariant 2: never UPDATE a fact row. AMCs do restate — a
-    correction, or a file re-uploaded after a formatting fix — and the earlier
+    Invariant 2: never UPDATE a fact row. AMCs do restate, and the earlier
     version is still what we reported at the time, so it keeps its rows and
     loses `is_current`.
 
     But a revision must mean "the AMC published something different", not "the
     job ran twice". `source_file_id` is the sha256 of the bytes, so identical
-    bytes already loaded return None and the caller skips — the same
-    content-addressed idempotence the archive and every other loader has.
-    Without this, a nightly re-run would stack revisions of an unchanged file
-    until the revision number told you only how many times cron fired.
+    bytes already loaded return None and the caller skips — without it a
+    nightly re-run stacks revisions until the number tells you only how many
+    times cron fired.
 
-    **`resolver_version` is the other half of that sameness, and it was missing
-    (V1-29).** `issuer_id` is derived, not disclosed, so identical bytes read by
-    an improved cascade are a different disclosure as far as the warehouse is
-    concerned. Skipping on the bytes alone meant a resolver fix could not reach
-    a holding already loaded: the job reported the better figure and wrote
-    nothing. Both must match for a run to be a repeat.
+    **`resolver_version` is the other half of that sameness** (V1-29).
+    `issuer_id` is derived, not disclosed, so identical bytes read by an
+    improved cascade are a different disclosure. Skipping on bytes alone meant
+    a resolver fix reported the better figure and wrote nothing.
     """
     current = conn.execute(
         "SELECT revision, source_file_id, resolver_version, parser_version"
@@ -341,9 +325,8 @@ def load_holdings(
     """Write one disclosure and its rows, as a new revision.
 
     `rows` carry already-normalised values — market value in rupees absolute,
-    `pct_normalised` summing to exactly 100, and a resolved `issuer_id`. The
-    loader does no arithmetic: everything it writes was computed by a step that
-    can be re-run without re-fetching (§3's layer invariant).
+    `pct_normalised` summing to exactly 100, a resolved `issuer_id`. The loader
+    does no arithmetic (§3's layer invariant).
     """
     revision = next_revision(
         conn, scheme_id, as_of, source_file_id, resolver_version, parser_version
@@ -418,11 +401,10 @@ def load_holdings(
 #: How old an AUM witness may be before it stops being one.
 #:
 #: AAUM is quarterly and arrives about ten days after a quarter ends, so a
-#: witness is normally 0-100 days old and two quarters is already unusual. A
-#: year means four quarters have been published and none was loaded, at which
-#: point the figure is not describing the fund V2 is checking. Refusing is
-#: better than passing: V2 records "no AUM on record" and says so, where a
-#: stale witness silently widens or narrows a check nobody knows is degraded.
+#: witness is normally 0-100 days old. A year means four quarters were published
+#: and none loaded, at which point the figure is not describing the fund V2 is
+#: checking. V2 then records "no AUM on record" and says so, where a stale
+#: witness silently widens a check nobody knows is degraded.
 WITNESS_MAX_AGE_DAYS = 365
 
 
@@ -430,16 +412,14 @@ WITNESS_MAX_AGE_DAYS = 365
 class AumWitness:
     """A scheme's AUM from OUTSIDE the disclosure being checked. V1-50.
 
-    Three fields, not a bare number, because V2 needs all three and a caller
-    left to infer any of them infers wrong:
+    Three fields, not a bare number, because V2 needs all three:
 
     - `amount` is rupees absolute.
-    - `basis` decides the tolerance. AMFI's quarterly average sits ~10% from a
-      month-end portfolio through ordinary market movement where a point-in-time
-      balance sits within 3%, and applying the wrong one gives either a false
-      quarantine or a check that has quietly stopped checking (V1-49).
-    - `as_of` is how old it is, which `basis` alone does not say. A figure can
-      be the right KIND of number and still be two quarters out of date.
+    - `basis` decides the tolerance. A quarterly average sits ~10% from a
+      month-end portfolio where a point-in-time balance sits within 3%, and the
+      wrong one gives a false quarantine or a check that has stopped checking
+      (V1-49).
+    - `as_of` is how old it is, which `basis` alone does not say.
     """
 
     amount: Decimal
@@ -450,21 +430,15 @@ class AumWitness:
 def aum_for(conn: sqlite3.Connection, scheme_id: str, as_of: date) -> AumWitness | None:
     """The scheme's own AUM on or before `as_of`, for §10's V2.
 
-    V2 is THE units check -- §7.2's 100x error fails it by two orders of
-    magnitude -- and it only runs when there is an AUM to reconcile against.
-    That makes this the one witness independent of the disclosure itself, so it
-    lives beside the loader rather than inside one job: `jobs/fetch_groww.py`
-    passed `None` here for a whole slice and disabled V2 on the very path where
-    the market-value unit is ASSERTED rather than read from a header.
+    V2 is THE units check — §7.2's 100x error fails it by two orders of
+    magnitude — and it runs only when there is an AUM to reconcile against. It
+    lives beside the loader rather than inside one job because
+    `jobs/fetch_groww.py` passed `None` here for a whole slice, disabling V2 on
+    the very path where the market-value unit is ASSERTED rather than read.
 
-    **Bounded by `WITNESS_MAX_AGE_DAYS`.** The first version took the newest row
-    on or before the date with no floor at all, so a 2027 disclosure would have
-    reconciled against a June 2026 average -- nine months of market movement --
-    at a tolerance chosen for one quarter of drift, and `validation_notes` would
-    have recorded only `(quarterly_average)` with no hint of the age.
-
-    None when `scheme_aum` has not been built or holds nothing recent enough,
-    which V2 records as "no AUM on record" rather than treating as a pass.
+    Bounded by `WITNESS_MAX_AGE_DAYS`: unbounded, a 2027 disclosure would have
+    reconciled against a June 2026 average at a tolerance chosen for one
+    quarter of drift.
     """
     if not has_table(conn, "scheme_aum"):
         return None

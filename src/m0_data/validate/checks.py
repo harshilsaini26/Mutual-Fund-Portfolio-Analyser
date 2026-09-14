@@ -1,13 +1,13 @@
 """Validation gates for a parsed disclosure. MODULE_0.md §10.
 
-Run after every L2 load. A failure at `quarantine` severity **stops the batch
-being promoted** rather than warning about it, because §10's whole argument is
-that a disclosure which is subtly wrong is worse than one that is absent: the
-absent one shows as missing coverage, the wrong one shows as a confident number.
+Run after every L2 load. A failure at `quarantine` severity STOPS the batch
+being promoted rather than warning: a disclosure that is subtly wrong is worse
+than one that is absent, because the absent one shows as missing coverage and
+the wrong one shows as a confident number.
 
-§10.2's closing instruction is easy to skip and worth keeping: **persist every
-result, passes included.** When a number looks wrong six months later, knowing
-which checks *passed* narrows the search as much as knowing which failed.
+§10.2: **persist every result, passes included.** When a number looks wrong six
+months later, knowing which checks passed narrows the search as much as knowing
+which failed.
 """
 
 from __future__ import annotations
@@ -28,39 +28,29 @@ AUM_TOLERANCE_PCT = Decimal(3)
 
 #: The same check against a QUARTERLY AVERAGE rather than a month-end balance.
 #:
-#: §10 gives V2 one tolerance and assumes `scheme_aum` holds a point-in-time
-#: figure. The source that exists holds AMFI's average over a quarter (V1-49),
-#: and measured against the two funds whose portfolios are loaded it sits
-#: -10.4% (HDFC Flexi Cap) and -4.6% (PPFAS Flexi Cap) from their August
-#: portfolios. That is two months of market movement and flows -- real, and
-#: outside 3%, so the spec's number would quarantine two disclosures that are
-#: correct.
+#: §10 gives V2 one tolerance and assumes a point-in-time figure; the source
+#: that exists holds AMFI's quarterly average (V1-49), which sits -10.4% (HDFC
+#: Flexi Cap) and -4.6% (PPFAS) from their August portfolios. Real movement,
+#: outside 3%, so the spec's number would quarantine two correct disclosures.
 #:
-#: 25% is chosen against what V2 is FOR. Its own comment says §7.2's 100x error
-#: "fails this by two orders of magnitude, which is why it quarantines rather
-#: than warns" -- a 100x error is 9,900% off, so 25% catches it with three
-#: orders of magnitude to spare while leaving room for a quarter of drift. It
-#: is a units check, not a valuation check, and widening it costs nothing it
-#: was ever able to detect.
+#: 25% is chosen against what V2 is FOR: a 100x error is 9,900% off, so 25%
+#: catches it with three orders of magnitude to spare while leaving room for a
+#: quarter of drift. A units check, not a valuation check.
 AUM_AVERAGE_TOLERANCE_PCT = Decimal(25)
 UNRESOLVED_MAX_PCT = Decimal(2)
 
 
 #: Which tolerance V2 applies to which kind of AUM, as a table rather than a
-#: comparison against one literal.
+#: comparison against one literal. Written as `AVERAGE if basis ==
+#: "quarterly_average" else STRICT`, any other string — a typo, a basis added
+#: later and not wired here — fell through to the strict 3% silently: a
+#: portfolio 14% from its AUM passes as `quarterly_average` and QUARANTINES as
+#: `quaterly_average` (V1-51).
 #:
-#: The first version wrote `AUM_AVERAGE_TOLERANCE_PCT if aum_basis ==
-#: "quarterly_average" else AUM_TOLERANCE_PCT`, so ANY other string -- a typo,
-#: a basis added later and not wired here -- fell through to the strict 3%
-#: silently. Measured: a portfolio 14% from its AUM passes as
-#: `quarterly_average` and QUARANTINES as `quaterly_average`, with nothing but
-#: a misspelling in `validation_notes` to say why a correct disclosure was
-#: refused. V2 quarantines rather than warns, so that is a load nobody gets.
-#:
-#: `migrations/012_scheme_aum.sql` declares the same vocabulary on the column.
-#: `tests/unit/test_m0_aum.py` asserts the fetch layer's `BASIS` is a key here,
-#: which is what keeps the two from drifting apart without an import between
-#: layers that do not otherwise depend on each other.
+#: `migrations/012_scheme_aum.sql` declares the same vocabulary on the column,
+#: and `tests/unit/test_m0_aum.py` asserts the fetch layer's `BASIS` is a key
+#: here — which keeps the two from drifting without an import between layers
+#: that do not otherwise depend on each other.
 TOLERANCE_BY_BASIS: Mapping[str, Decimal] = MappingProxyType({
     "point_in_time": AUM_TOLERANCE_PCT,
     "quarterly_average": AUM_AVERAGE_TOLERANCE_PCT,
@@ -137,11 +127,9 @@ def validate_disclosure(
 ) -> list[CheckResult]:
     """§10.1's checks that are computable from a single disclosure.
 
-    V4 (row count vs prior period), V5 (turnover), V6 (NAV continuity), V9
-    (coverage by day 22), V12-V14 all need either history or a cross-scheme
-    view. They are not silently skipped — `not_evaluated` names them, because a
-    gate that quietly checks less than it claims is worse than one that claims
-    less.
+    V4, V5, V6, V9 and V12-V14 need history or a cross-scheme view. They are not
+    silently skipped — `not_evaluated` names them, because a gate that quietly
+    checks less than it claims is worse than one that claims less.
     """
     results: list[CheckResult] = []
     total_mv = sum((r.market_value for r in rows), Decimal(0))
@@ -175,14 +163,13 @@ def validate_disclosure(
             )
         )
     else:
-        # NOT a pass. V2 is the units check, and with no AUM on record there is
-        # nothing to reconcile against, so it did not run -- but it recorded
-        # `passed: True`, and `validation_notes` for every disclosure in the
-        # warehouse therefore says the units check succeeded. It has never run:
-        # `scheme_aum` is not built, so all 205 current disclosures carry that
-        # claim. `None` is the spelling `as_json` already uses for a check that
-        # was not evaluated, and `promote_or_quarantine` now reads `is False`
-        # so an unrun check neither promotes nor fails a disclosure.
+        # NOT a pass. With no AUM on record there is nothing to reconcile
+        # against, so V2 did not run -- but it recorded `passed: True`, so
+        # `validation_notes` for all 205 current disclosures claimed the units
+        # check succeeded when it had never run. `None` is the spelling
+        # `as_json` already uses for a check that was not evaluated, and
+        # `promote_or_quarantine` reads `is False` so an unrun check neither
+        # promotes nor fails a disclosure.
         results.append(
             CheckResult("V2", None, INFO, "no AUM on record to reconcile against")
         )
@@ -283,12 +270,11 @@ def as_json(results: list[CheckResult], unpriced: list[str] | None = None) -> st
     """§10.2: persist every result, passes included.
 
     `unpriced` names the rows the file listed but did not price.
-    `holding.market_value` is NOT NULL, so such a row is stored as zero and
-    `normalise_weights` gives it a zero weight — it then contributes nothing to
-    any look-through while every quality figure is computed against a total
-    that already excludes it, so no number moves. `CLAUDE.md` invariant 4 is
-    "never silently drop rows"; the row survives, its exposure does not, and
-    this is the record that says so.
+    `holding.market_value` is NOT NULL, so such a row stores as zero with a zero
+    weight — it contributes nothing to any look-through while every quality
+    figure is computed against a total that already excludes it, so no number
+    moves. Invariant 4 is "never silently drop rows": the row survives, its
+    exposure does not, and this is the record that says so.
     """
     return json.dumps(
         [
