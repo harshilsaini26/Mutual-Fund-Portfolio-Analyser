@@ -6,24 +6,19 @@ The product's actual claim: what companies do I own, through the funds I hold?
 
     Σ_i exposure_inr(i)  ==  Σ_s position_value(s)
 
-and it *"must hold exactly (to rounding)"*. §2.2 names the three ways it breaks
-and each has a defence here — raw `pct_to_nav` instead of `pct_normalised`
-(refused by `assert_weights_sum_to_100`), unresolved holdings dropped by a join
-(`__UNRESOLVED__` is carried through and surfaced), and a scheme with no
-disclosure contributing silently zero (`__NO_DISCLOSURE__`).
+and it *"must hold exactly (to rounding)"*. §2.2 names three ways it breaks and
+each has a defence: raw `pct_to_nav` instead of `pct_normalised` (refused by
+`assert_weights_sum_to_100`), unresolved holdings dropped by a join
+(`__UNRESOLVED__` is carried through), and a scheme with no disclosure
+contributing silently zero (`__NO_DISCLOSURE__`). A look-through that quietly
+under-reports tells the user they are less concentrated than they are.
 
-A look-through that quietly under-reports is worse than none: the user concludes
-they are less concentrated than they are, which is the opposite of what this
-exists to tell them.
+**A pure function on plain data.** No SQL, no database handle: invariant 3 keeps
+module boundaries behind interfaces, and invariant 1 forbids aggregating
+`DECIMAL_TEXT` in SQL anyway. `scripts/show_lookthrough.py` does the wiring.
 
-**This module is a pure function on plain data.** No SQL, no database handle —
-`CLAUDE.md` invariant 3 keeps module boundaries behind interfaces, and invariant
-1's second clause forbids aggregating `DECIMAL_TEXT` in SQL anyway. Every sum
-here is a Python `Decimal`. `scripts/show_lookthrough.py` does the wiring.
-
-**Scope, deliberately small.** No prices, so no drift-adjusted basis (§3.2) and
-`weight_basis` is always `disclosed`. No `direct_holding` (§7). Both are
-additions to this shape rather than changes to it.
+No prices, so no drift-adjusted basis (§3.2) and `weight_basis` is always
+`disclosed`; no `direct_holding` (§7).
 """
 
 from __future__ import annotations
@@ -143,23 +138,18 @@ def assert_closure(
 ) -> None:
     """§5.2. *"Run this on every computation, not just in tests."*
 
-    Takes the computed total rather than the exposure list, so it is callable
-    from anywhere a total exists and cannot be accidentally passed a filtered
-    list — which would make it pass while proving nothing.
+    Takes the computed total rather than the exposure list, so it cannot be
+    accidentally passed a filtered list and pass while proving nothing.
 
     **`permitted_drift` reconciles two tolerances that otherwise contradict.**
-    §5.2 gives closure ±₹1 absolute and gives the weight check ±0.01
-    percentage points. Weights that are off by 0.01 move a position's exposure
-    by `value x 0.0001`, so on anything above ₹10,000 the weight guard accepts
-    data that the closure guard then refuses: 99.995% on a ₹1 crore position
-    sums ₹500 short and raised `ClosureViolation` for a discrepancy the
-    previous line had explicitly allowed.
+    §5.2 gives closure ±₹1 absolute and the weight check ±0.01 percentage
+    points — but 0.01 of weight moves exposure by `value x 0.0001`, so above
+    ₹10,000 the weight guard accepts what the closure guard then refuses: 99.995%
+    on a ₹1 crore position sums ₹500 short.
 
-    So the caller passes the drift it actually tolerated, and closure is exact
-    to ₹1 *beyond* that. When weights sum to exactly 100 — which is what
-    `MODULE_0.md` §7.3 guarantees and what every real disclosure produces — the
-    drift is zero and the tolerance is ₹1 unchanged. Nothing is loosened for
-    correct data; the slack is only ever as wide as the slack already granted.
+    So the caller passes the drift it actually tolerated and closure is exact to
+    ₹1 beyond it. Weights summing to exactly 100 — what §7.3 guarantees — give
+    zero drift and the tolerance is ₹1 unchanged.
     """
     tolerance = CLOSURE_TOL + abs(permitted_drift)
     if abs(got - expected) > tolerance:

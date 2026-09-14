@@ -69,30 +69,19 @@ def quantise_nav(v: Decimal) -> Decimal:
 
 # --- SQLite adapters -------------------------------------------------------
 #
-# The declared column type matters more than it looks. SQLite assigns *affinity*
-# from the type name, and NUMERIC affinity will convert a decimal string back
-# into a REAL if it can — silently, on write:
+# The declared column type decides affinity, and NUMERIC affinity rewrites a
+# decimal string as a REAL, silently, on write:
 #
 #     CREATE TABLE t (v DECIMAL)   -- NUMERIC affinity
 #     INSERT  '4821.442100'        -> typeof() = 'real', value 4821.4421
 #
-# Both the exactness and the trailing zeros are gone, which is precisely what
-# `PLAN.md` §8.2 rule 1 forbids. The affinity rules resolve in order, and only
-# rule 2 gives TEXT: the type name must contain INT (integer), CHAR/CLOB/TEXT
-# (text), BLOB or empty (blob), REAL/FLOA/DOUB (real), else NUMERIC. So
-# `DECIMAL`, `NUMERIC` and `DECIMAL(18,6)` are all unsafe here; `TEXT`,
-# `VARCHAR(n)` and `DECIMAL_TEXT` are safe.
+# Exactness and trailing zeros both gone, which `PLAN.md` §8.2 rule 1 forbids.
+# Only the text rule gives TEXT affinity, so `DECIMAL`, `NUMERIC` and
+# `DECIMAL(18,6)` are unsafe; `TEXT`, `VARCHAR(n)` and `DECIMAL_TEXT` are safe.
 #
-# MODULE_1.md §4.1 says "TEXT affinity" and its DDL declares money columns
-# `TEXT`, which is correct — but it registers only the adapter, leaving no way
-# for the read side to know a TEXT column held a Decimal. Two supported options:
-#
-#   1. Declare `TEXT` (spec-verbatim) and convert on read with `dec()`.
-#   2. Declare `DECIMAL_TEXT` and let the registered converter do it.
-#
-# Option 2 is the default below. `DECIMAL_TEXT` contains "TEXT", so it takes
-# TEXT affinity by rule 2, and it is a distinct name so the converter cannot
-# hijack ordinary text columns the way registering against `TEXT` would.
+# `DECIMAL_TEXT` rather than the spec's bare `TEXT`: it contains "TEXT" so it
+# takes TEXT affinity, and being a distinct name the converter cannot hijack
+# ordinary text columns the way registering against `TEXT` would.
 
 DECIMAL_SQLITE_TYPE = "DECIMAL_TEXT"
 """Declare Zone B money, unit, NAV and weight columns as this.
@@ -119,22 +108,20 @@ def _convert_decimal(b: bytes) -> Decimal:
 def register_decimal_sqlite(module: Any = sqlite3) -> None:
     """Register both directions of the Decimal <-> TEXT mapping.
 
-    MODULE_1.md §4.1 registers only the adapter (write side). Without a matching
-    converter the read side hands back `str`, and every call site has to
-    remember to re-wrap — which is exactly the boundary where a stray `float()`
-    gets introduced.
+    §4.1 registers only the adapter (write side). Without a converter the read
+    side hands back `str` and every call site has to remember to re-wrap, which
+    is the boundary a stray `float()` enters through.
 
-    The converter fires only for columns declared `DECIMAL_TEXT`, and only on
-    connections opened with `detect_types=PARSE_DECLTYPES`. Use `connect()`
-    below, or `m1_ledger.db.connect_ledger`, and both are handled.
+    The converter fires only for `DECIMAL_TEXT` columns on connections opened
+    with `detect_types=PARSE_DECLTYPES` — `connect()` below and
+    `m1_ledger.db.connect_ledger` both handle it.
 
     **`module` exists because these registries are per-module, not global.**
-    `sqlcipher3` is a separate DB-API driver with its own adapter and converter
-    tables, so registering against stdlib `sqlite3` does nothing for an
-    encrypted Zone B connection. Turning encryption on therefore detached the
-    whole Decimal discipline: writes raised `InterfaceError` (loud, and how this
-    was found) but reads would have returned `str` for every money column —
-    silent, and exactly the boundary a stray `float()` enters through.
+    `sqlcipher3` is a separate driver with its own tables, so registering
+    against stdlib `sqlite3` does nothing for an encrypted Zone B connection:
+    turning encryption on detached the whole Decimal discipline. Writes raised
+    `InterfaceError`, which is how this was found; reads would have returned
+    `str` for every money column, silently.
     """
     module.register_adapter(Decimal, _adapt_decimal)
     module.register_converter(DECIMAL_SQLITE_TYPE, _convert_decimal)

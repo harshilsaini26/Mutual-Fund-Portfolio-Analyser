@@ -1,19 +1,17 @@
 """Storing the look-through. MODULE_3.md §4.2, §4.6, §5.5, §14.
 
-The engine is a pure function; this is the only part of M3 that touches a
-database. Keeping the split means the arithmetic is tested without a connection
-and the storage is tested without re-deriving anything.
+The engine is a pure function; this is the only part of M3 touching a database,
+so the arithmetic is tested without a connection and the storage without
+re-deriving anything.
 
-**These tables are derived, and that changes the write rule.** `CLAUDE.md`
-invariant 2 forbids updating a fact row — but nothing here is a fact anyone
-stated, it is all recomputed from `txn` and `scheme_issuer_weight`. So a rebuild
-**replaces**: same user, same as-of, same basis, one row per issuer. Appending
-instead would double-count on the second run, which is a failure nothing
-downstream could see.
+**These tables are derived, and that changes the write rule.** Invariant 2
+forbids updating a fact row, but nothing here is a fact anyone stated — it is
+recomputed from `txn` and `scheme_issuer_weight`. So a rebuild REPLACES;
+appending would double-count on the second run, invisibly.
 
-**Every aggregation is a Python `Decimal`** (`CLAUDE.md` invariant 1). The
+**Every aggregation is a Python `Decimal`** (invariant 1): the
 contribution-to-exposure reconciliation is the obvious place for
-`SUM(exposure_inr) GROUP BY issuer_id` and it is not used.
+`SUM(exposure_inr) GROUP BY issuer_id`, and it is not used.
 """
 
 from __future__ import annotations
@@ -51,16 +49,13 @@ def confidence_for(
 ) -> str:
     """§14.1, verbatim, with one addition §14.1 does not cover.
 
-    §14.2 rule 3 makes portfolio confidence *"the weakest link, not an average"*,
-    which is why any one condition failing drops the whole result a level rather
-    than being blended away.
+    §14.2 rule 3 makes portfolio confidence *"the weakest link, not an
+    average"*, so any one condition failing drops the whole result a level.
 
-    **`None` means staleness is unknown, and unknown is not fresh.** It reaches
-    here when no per-scheme disclosure dates were supplied, and the previous
-    `max(..., default=0)` turned that into "zero days old" — so a portfolio
-    whose age nobody knew scored `high`, beside stored rows whose
-    `staleness_days` were correctly NULL. An unmeasured weakest link cannot be
-    asserted to be strong.
+    **`None` means staleness is unknown, and unknown is not fresh.**
+    `max(..., default=0)` turned it into "zero days old", so a portfolio whose
+    age nobody knew scored `high` beside stored rows whose `staleness_days`
+    were correctly NULL.
     """
     if (
         coverage_pct >= Decimal(98)
@@ -212,17 +207,14 @@ def load_exposures(
 ) -> list[Exposure]:
     """Read them back largest first, which is the order every view wants.
 
-    **Sorted in Python, and that is not fussiness.** `ORDER BY exposure_inr DESC`
-    on a `DECIMAL_TEXT` column sorts it as TEXT, so `"5000"` comes before
-    `"25000"` because `'5' > '2'`. The column is text by design (SZ-13), the SQL
-    looks entirely correct, and the wrong order is invisible until someone reads
-    a top-20 list that is not the top 20.
+    **Sorted in Python.** `ORDER BY exposure_inr DESC` on a `DECIMAL_TEXT`
+    column sorts as TEXT, so `"5000"` precedes `"25000"`. The column is text by
+    design (SZ-13), the SQL looks correct, and the wrong order is invisible
+    until someone reads a top-20 list that is not the top 20 (invariant 1).
 
-    §4.2's own `ix_lte_size` index is declared on `exposure_inr DESC` and has
-    the same problem; it is kept because it still helps the equality part of the
-    key, but it must never be trusted for ordering. Same family as invariant 1's
-    aggregation clause: a storage-layer default that is wrong in a way nothing
-    downstream can see.
+    §4.2's `ix_lte_size` index is declared on `exposure_inr DESC` and has the
+    same problem; kept for the equality part of the key, never trusted for
+    ordering.
     """
     rows = conn.execute(
         "SELECT issuer_id, exposure_inr, exposure_pct, instrument_class,"
