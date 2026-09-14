@@ -56,9 +56,6 @@ def main() -> None:
     args = parser.parse_args()
 
     conn = connect(str(warehouse_path()))
-    # One call, and it commits. The loop used to live here with the commit as
-    # its last line, which put the only statement that persists the rebuild
-    # somewhere no test could reach it.
     weights_by_scheme, as_of_by_scheme = rebuild_weights(conn)
 
     positions, basis, ledger = _positions(args, weights_by_scheme)

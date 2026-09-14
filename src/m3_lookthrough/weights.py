@@ -16,7 +16,10 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from src.common.types import IssuerId, SchemeId
-from src.m0_data.derive.scheme_family import disclosure_scheme_for
+from src.m0_data.derive.scheme_family import (
+    disclosed_scheme_ids,
+    disclosure_scheme_for,
+)
 from src.m3_lookthrough.engine import IssuerWeight
 from src.m3_lookthrough.persist import STALENESS_WARN_DAYS
 
@@ -33,17 +36,13 @@ def current_holdings(
     Resolved to the share-class family first: a disclosure describes a scheme,
     not an ISIN, and Direct and Regular hold one pool of assets (V1-37).
 
-    **Ordered by `row_number`**, the disclosure's own row order, because the
-    caller breaks an issuer's `instrument_class` tie on first-largest-wins.
-
-    Hardening, not a bug fix, and worth saying so. Without the ORDER BY the
-    rows already arrive in this order: `EXPLAIN QUERY PLAN` shows the search
-    running on `sqlite_autoindex_holding_1`, which is the primary key
-    `(scheme_id, as_of_date, revision, row_number)`. So the order is a
-    consequence of the plan rather than of the query, and a planner that chose
-    `ix_hold_issuer` instead would change which class is stored. No test can
-    fail on its absence for the same reason — see
-    `test_the_dominant_class_does_not_depend_on_scan_order`.
+    **No ORDER BY, deliberately.** One was added here to make the caller's
+    class tie-break deterministic and then removed: it put an ordering contract
+    on shared read infrastructure for one consumer's benefit, contradicting the
+    rule `latest_disclosure` states below, and `EXPLAIN QUERY PLAN` showed it
+    buying a `USE TEMP B-TREE FOR ORDER BY` for an order the primary-key index
+    already supplied. The tie-break is a total key instead — see
+    `materialise_weights`.
     """
     source = SchemeId(disclosure_scheme_for(conn, str(scheme_id), as_of.isoformat()))
     return [
@@ -54,8 +53,7 @@ def current_holdings(
             " JOIN holding_disclosure d"
             "   ON d.scheme_id = h.scheme_id AND d.as_of_date = h.as_of_date"
             "  AND d.revision = h.revision"
-            " WHERE h.scheme_id = ? AND h.as_of_date = ? AND d.is_current = 1"
-            " ORDER BY h.row_number",
+            " WHERE h.scheme_id = ? AND h.as_of_date = ? AND d.is_current = 1",
             (str(source), as_of),
         )
     ]
@@ -87,7 +85,7 @@ def materialise_weights(
     quantity: dict[str, Decimal] = defaultdict(Decimal)
     has_quantity: set[str] = set()
     klass: dict[str, str] = {}
-    largest: dict[str, Decimal] = {}
+    largest: dict[str, tuple[Decimal, str]] = {}
 
     for issuer_id, pct, instrument_class, qty in rows:
         disclosed[issuer_id] += pct
@@ -98,8 +96,15 @@ def materialise_weights(
         # equity and debt cannot flip with sheet order. Compared on ABSOLUTE
         # weight: a short leg's pct is negative, and an issuer held only short
         # still needs a class (V1-07).
-        if issuer_id not in largest or abs(pct) > abs(largest[issuer_id]):
-            largest[issuer_id] = pct
+        #
+        # A TOTAL key, so an exact tie does not fall through to whatever order
+        # the rows arrived in. `(abs, class)` rather than `abs` alone is what
+        # lets `current_holdings` stay an unordered read: the alternative was an
+        # ORDER BY there, which put this function's contract inside another
+        # function's SQL with only prose joining them.
+        key = (abs(pct), instrument_class)
+        if issuer_id not in largest or key > largest[issuer_id]:
+            largest[issuer_id] = key
             klass[issuer_id] = instrument_class
 
     # DELETE then insert, not `INSERT OR REPLACE` alone: replace leaves behind
@@ -216,23 +221,26 @@ def rebuild_weights(
 ) -> tuple[dict[SchemeId, list[IssuerWeight]], dict[SchemeId, date]]:
     """Re-materialise every disclosed scheme's weights, and COMMIT once.
 
-    Here rather than in `scripts/show_lookthrough.py` because the commit is the
-    only thing that persists the rebuild, and while it lived in the script no
-    test could reach it: every test calls `materialise_weights` and reads back
-    on the same connection, where uncommitted rows are visible. Deleting that
-    one line left all 1,163 tests green while the look-through reported correct
-    numbers and stored nothing.
+    Here rather than inline in `scripts/show_lookthrough.py`'s `main()` because
+    the commit is the only thing that persists the rebuild and it had no owner
+    a test could name. **Not because a script is unreachable** — this suite
+    already imports from `jobs/` and `scripts/` in four places, and the earlier
+    version of this docstring said otherwise. What hid the defect was that
+    every test read back on the connection that wrote, where uncommitted rows
+    are visible either way; see `tests/conftest.py`.
 
     Rebuilt unconditionally, not "only if absent": guarding on absence meant a
     restated disclosure never refreshed its weights and every later report used
     the withdrawn revision. Replacing the set is idempotent.
+
+    It commits, so it cannot be composed into a caller's larger transaction.
+    That is a real cost and `PROGRESS.md` carries it: the module that owns M3's
+    other commits is `persist.py`, and this arguably belongs there or in a job.
     """
     weights: dict[SchemeId, list[IssuerWeight]] = {}
     as_ofs: dict[SchemeId, date] = {}
-    for row in conn.execute(
-        "SELECT DISTINCT scheme_id FROM holding_disclosure WHERE is_current = 1"
-    ).fetchall():
-        scheme_id = SchemeId(str(row[0]))
+    for found_id in disclosed_scheme_ids(conn):
+        scheme_id = SchemeId(found_id)
         as_of = latest_as_of(conn, scheme_id)
         if as_of is None:
             continue

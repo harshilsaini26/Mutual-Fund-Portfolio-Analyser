@@ -30,6 +30,7 @@ from typing import Any
 
 from src.common.decimals import connect
 from src.m0_data.config import raw_root, source, warehouse_path
+from src.m0_data.derive.scheme_family import disclosed_scheme_ids
 from src.m0_data.fetch.base import (
     DomainRateLimiter,
     FetchCandidate,
@@ -52,13 +53,7 @@ def held_scheme_ids(conn: sqlite3.Connection) -> list[str]:
     the closest honest stand-in, and `--scheme` takes an explicit list when it
     is not.
     """
-    return [
-        r[0]
-        for r in conn.execute(
-            "SELECT DISTINCT scheme_id FROM holding_disclosure WHERE is_current = 1"
-            " ORDER BY scheme_id"
-        )
-    ]
+    return disclosed_scheme_ids(conn)
 
 
 def run(scheme_ids: list[str]) -> list[dict[str, object]]:

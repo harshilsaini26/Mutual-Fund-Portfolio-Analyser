@@ -24,6 +24,7 @@ from pathlib import Path
 
 from src.common.decimals import connect
 from src.m0_data.config import warehouse_path
+from src.m0_data.derive.scheme_family import disclosed_scheme_ids
 from src.m0_data.schema.apply import apply_migrations, assert_schema_is_decimal_safe
 
 #: Copied whole. `nav_daily` is the only table filtered — everything else is
@@ -34,13 +35,7 @@ FILTERED = "nav_daily"
 
 def scheme_ids_to_keep(conn: sqlite3.Connection, explicit: list[str]) -> list[str]:
     """The named schemes, plus every scheme with a current disclosure loaded."""
-    held = [
-        r[0]
-        for r in conn.execute(
-            "SELECT DISTINCT scheme_id FROM holding_disclosure WHERE is_current = 1"
-        )
-    ]
-    return sorted(set(explicit) | set(held))
+    return sorted(set(explicit) | set(disclosed_scheme_ids(conn)))
 
 
 def copyable_tables(conn: sqlite3.Connection) -> list[str]:

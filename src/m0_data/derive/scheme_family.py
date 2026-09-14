@@ -105,4 +105,31 @@ def disclosure_scheme_for(
     return str(row[0]) if row else scheme_id
 
 
-__all__ = ["derive_scheme_families", "disclosure_scheme_for"]
+def disclosed_scheme_ids(conn: sqlite3.Connection) -> list[str]:
+    """Every scheme with a current disclosure, ORDERED.
+
+    Three callers asked this question with the same SQL and three different
+    answers about order: `backfill_scheme_nav` sorted in SQL, `thin_warehouse`
+    sorted in Python, and `weights.rebuild_weights` did neither — so the
+    rebuild's iteration order was SQLite's, and it reaches the physical row
+    order of `lookthrough_contribution`, which `engine.compute_lookthrough`
+    appends to and never sorts. Invariant 10 wants a rebuild to reproduce
+    byte-identical output.
+
+    Ordered here so a caller cannot forget, which is the same argument
+    `disclosure_scheme_for` above makes for its own read.
+    """
+    return [
+        str(r[0])
+        for r in conn.execute(
+            "SELECT DISTINCT scheme_id FROM holding_disclosure"
+            " WHERE is_current = 1 ORDER BY scheme_id"
+        )
+    ]
+
+
+__all__ = [
+    "derive_scheme_families",
+    "disclosed_scheme_ids",
+    "disclosure_scheme_for",
+]

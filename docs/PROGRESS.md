@@ -177,6 +177,27 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 
 Ordered by what they cost.
 
+0. **Eleven library commits in `src/` are held by no test.** Measured by
+   deleting each one: `tests/unit` stays green for all of them. The worst is
+   `m3_lookthrough/persist.py:198` (`save_lookthrough`), which persists the
+   whole look-through and has 17 tests around it, none of which close the
+   connection. `tests/conftest.py`'s `reopen` is the mechanism; applying it to
+   the remaining sites is the work. V1-58 named this and fixed one site.
+0. **`rebuild_weights` commits, so it cannot compose into a caller's
+   transaction.** A job that loaded holdings and then rebuilt weights would
+   have its partial work committed by a library it called.
+   `m3_lookthrough/persist.py` is the module that owns M3's other commits.
+0. **The rebuild re-reads the 9,143 rows it just wrote.** `materialise_weights`
+   holds the weights and classes and discards them; `load_issuer_weights` then
+   issues 192 queries for the same data — 24ms of a 195ms rebuild. Returning
+   them is a behaviour change: a scheme whose holdings vanish currently keeps
+   surfacing its stale rows, because `materialise_weights` returns 0 without
+   deleting.
+0. **The unit suite spends 36% of its time re-running migrations.**
+   `apply_migrations` is called 228 times for 94s of a 261s run, across 78 call
+   sites in 35 files. Migrating once per session and copying the 244 KiB file
+   is ~200x cheaper (1.0ms against 209.5ms).
+
 0. **`scheme_aum` retracts by DELETE, because it has no revision.** V1-54 scoped the
    delete to one quarter, but invariant 2 forbids even an `UPDATE` of a fact row and
    this table deletes them. The fix is `revision`/`is_current` as every other fact
