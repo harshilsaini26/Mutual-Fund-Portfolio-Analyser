@@ -40,6 +40,8 @@ from src.m3_lookthrough.persist_metrics import (
     save_overlap,
 )
 
+from tests.conftest import reopen_ledger
+
 AS_OF = date(2026, 7, 31)
 
 
@@ -426,3 +428,73 @@ def test_the_metric_tables_come_back_on_a_rebuild(ledger: sqlite3.Connection) ->
         ledger, USER, AS_OF, portfolio_duplication([], Decimal("100000"))
     )
     assert load_duplication(ledger, USER, AS_OF) is not None
+
+
+class TestWhatIsWrittenSurvivesTheConnection:
+    """Every assertion here reads through a SECOND connection.
+
+    Measured before these existed: deleting the `conn.commit()` from any of
+    twelve functions in `src/` left `tests/unit` green, because a test that
+    reads back on the connection that wrote sees uncommitted rows either way.
+    The production failure is correct numbers reported and nothing stored.
+    DECISIONS V1-58, `tests/conftest.py`.
+    """
+
+    def _saved(self, ledger: sqlite3.Connection) -> None:
+        save_concentration(
+            ledger, USER, AS_OF,
+            [concentration([e("ACME", "60000"), e("BETA", "40000")], s) for s in SCOPES],
+        )
+        save_overlap(ledger, USER, AS_OF, [pair("S1", "S2", "40")])
+        save_duplication(
+            ledger, USER, AS_OF,
+            portfolio_duplication(
+                [Contribution(SchemeId("S1"), IssuerId("ACME"), Decimal("600")),
+                 Contribution(SchemeId("S2"), IssuerId("ACME"), Decimal("400"))],
+                Decimal("1000"),
+            ),
+        )
+
+    def _survives(self, ledger: sqlite3.Connection, table: str) -> int:
+        reopened = reopen_ledger(ledger, "test-key-not-a-secret")
+        n = int(reopened.execute(f"SELECT count(*) FROM {table}").fetchone()[0])
+        reopened.close()
+        return n
+
+    def test_save_concentration_commits(self, ledger: sqlite3.Connection) -> None:
+        """ONE saver per test. Calling all three and asserting once passes even
+        with two of the commits deleted, because the third flushes their rows
+        -- which is what the first version of this did."""
+        save_concentration(
+            ledger, USER, AS_OF,
+            [concentration([e("ACME", "60000"), e("BETA", "40000")], s) for s in SCOPES],
+        )
+        assert self._survives(ledger, "portfolio_concentration") > 0
+
+    def test_save_overlap_commits(self, ledger: sqlite3.Connection) -> None:
+        save_overlap(ledger, USER, AS_OF, [pair("S1", "S2", "40")])
+        assert self._survives(ledger, "fund_overlap") > 0
+
+    def test_save_duplication_commits(self, ledger: sqlite3.Connection) -> None:
+        save_duplication(
+            ledger, USER, AS_OF,
+            portfolio_duplication(
+                [Contribution(SchemeId("S1"), IssuerId("ACME"), Decimal("600")),
+                 Contribution(SchemeId("S2"), IssuerId("ACME"), Decimal("400"))],
+                Decimal("1000"),
+            ),
+        )
+        assert self._survives(ledger, "portfolio_duplication") > 0
+
+    def test_drop_metrics_commits(self, ledger: sqlite3.Connection) -> None:
+        self._saved(ledger)
+        drop_metrics(ledger)
+        reopened = reopen_ledger(ledger, "test-key-not-a-secret")
+        survived = [
+            t for t in METRIC_TABLES
+            if reopened.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (t,)
+            ).fetchone()
+        ]
+        reopened.close()
+        assert survived == []

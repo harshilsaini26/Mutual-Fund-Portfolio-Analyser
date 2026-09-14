@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-14 · 1,166 tests passing
+**Last updated:** 2026-09-14 · 1,178 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -177,12 +177,6 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 
 Ordered by what they cost.
 
-0. **Eleven library commits in `src/` are held by no test.** Measured by
-   deleting each one: `tests/unit` stays green for all of them. The worst is
-   `m3_lookthrough/persist.py:198` (`save_lookthrough`), which persists the
-   whole look-through and has 17 tests around it, none of which close the
-   connection. `tests/conftest.py`'s `reopen` is the mechanism; applying it to
-   the remaining sites is the work. V1-58 named this and fixed one site.
 0. **`rebuild_weights` commits, so it cannot compose into a caller's
    transaction.** A job that loaded holdings and then rebuilt weights would
    have its partial work committed by a library it called.

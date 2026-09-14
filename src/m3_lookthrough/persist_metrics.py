@@ -252,6 +252,15 @@ def drop_metrics(conn: sqlite3.Connection) -> None:
     """
     for table in METRIC_TABLES:
         conn.execute(f"DROP TABLE IF EXISTS {table}")
+    # DROP is DDL, so this commit is a NO-OP under `sqlite3`'s legacy
+    # isolation: a transaction opens before DML only, and the DROP above
+    # already left `in_transaction` False. Measured, and it is why no test
+    # holds this line where one holds every other commit in `src/`.
+    #
+    # Kept rather than deleted: it stops being a no-op the moment this
+    # connection is opened with `isolation_level=None` or 3.12's
+    # `autocommit`, and a reader who found a bare DROP with no commit
+    # beside three functions that do commit would reasonably add one back.
     conn.commit()
 
 

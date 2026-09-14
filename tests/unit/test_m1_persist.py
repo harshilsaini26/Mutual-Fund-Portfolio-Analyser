@@ -40,6 +40,8 @@ from src.m1_ledger.persist import (
 )
 from src.m1_ledger.txn import Txn, load_transactions
 
+from tests.conftest import reopen_ledger
+
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
@@ -503,3 +505,63 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
         ).fetchone()
     )
+
+
+class TestWhatIsWrittenSurvivesTheConnection:
+    """Every assertion here reads through a SECOND connection.
+
+    Measured before these existed: deleting the `conn.commit()` from any of
+    twelve functions in `src/` left `tests/unit` green, because a test that
+    reads back on the connection that wrote sees uncommitted rows either way.
+    The production failure is correct numbers reported and nothing stored.
+    DECISIONS V1-58, `tests/conftest.py`.
+    """
+
+    def test_save_txns_commits(self, conn: sqlite3.Connection) -> None:
+        """The `conn` fixture has already called `save_txns`; this is the first
+        thing to check its rows reached disk."""
+        reopened = reopen_ledger(conn, KEY)
+        stored = reopened.execute("SELECT count(*) FROM txn").fetchone()[0]
+        reopened.close()
+        assert stored > 0
+
+    def test_apply_ledger_schema_commits(self, tmp_path: Path) -> None:
+        """ALONE on a fresh ledger, because the `conn` fixture calls
+        `save_txns` straight afterwards and that commit would cover this one.
+
+        The DDL is not what needs holding -- `CREATE` autocommits under
+        `sqlite3`'s legacy isolation. The `schema_migration` rows are DML and
+        do not, and they are what says which version produced the database.
+        """
+        fresh = connect_ledger(str(tmp_path / "fresh.db"), key=KEY)
+        applied = apply_ledger_schema(fresh)
+        reopened = reopen_ledger(fresh, KEY)
+        recorded = reopened.execute(
+            "SELECT count(*) FROM schema_migration"
+        ).fetchone()[0]
+        reopened.close()
+        # The FULL count, not `> 0`: `executescript` commits what is pending
+        # before it runs, so every migration's row but the LAST is already
+        # durable by the time the trailing commit is reached.
+        assert recorded == len(applied) > 0
+
+    def test_rebuild_commits(
+        self, conn: sqlite3.Connection, navs: dict[str, dict[date, Decimal]]
+    ) -> None:
+        rebuild(conn, USER, AS_OF, navs, rebuilt_at=PINNED)
+        reopened = reopen_ledger(conn, KEY)
+        lots = reopened.execute("SELECT count(*) FROM lot").fetchone()[0]
+        reopened.close()
+        assert lots > 0
+
+    def test_drop_derived_commits(
+        self, conn: sqlite3.Connection, navs: dict[str, dict[date, Decimal]]
+    ) -> None:
+        rebuild(conn, USER, AS_OF, navs, rebuilt_at=PINNED)
+        drop_derived(conn)
+        reopened = reopen_ledger(conn, KEY)
+        survived = reopened.execute(
+            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='lot'"
+        ).fetchone()[0]
+        reopened.close()
+        assert survived == 0

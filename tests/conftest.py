@@ -20,18 +20,37 @@ from __future__ import annotations
 import sqlite3
 
 from src.common.decimals import connect
+from src.m1_ledger.db import connect_ledger
+
+
+def _main_path(conn: sqlite3.Connection) -> str:
+    """The file a connection is open on, from the connection itself.
+
+    Taken from the connection rather than from the caller, so a test never
+    restates the filename its own fixture chose — the first two tests to need
+    this hard-coded `tmp_path / "w.db"`, which the fixture three lines above
+    them owns.
+    """
+    return next(
+        str(row[2]) for row in conn.execute("PRAGMA database_list") if row[1] == "main"
+    )
 
 
 def reopen(conn: sqlite3.Connection) -> sqlite3.Connection:
-    """Close `conn` and return a NEW connection to the same file.
-
-    Takes the path from the connection rather than from the caller, so a test
-    never restates the filename its own fixture chose — two of the first tests
-    to need this hard-coded `tmp_path / "w.db"`, which is knowledge owned by
-    the fixture three lines above them.
-    """
-    path = next(
-        str(row[2]) for row in conn.execute("PRAGMA database_list") if row[1] == "main"
-    )
+    """Close `conn` and return a NEW connection to the same Zone A file."""
+    path = _main_path(conn)
     conn.close()
     return connect(path)
+
+
+def reopen_ledger(conn: sqlite3.Connection, key: str) -> sqlite3.Connection:
+    """`reopen` for Zone B, which is SQLCipher and needs its key again.
+
+    A separate function rather than a flag: `connect` and `connect_ledger` are
+    different drivers with different adapter registries (see
+    `src/common/decimals.py`), and a test that reopened Zone B through the
+    wrong one would read every money column back as `str`.
+    """
+    path = _main_path(conn)
+    conn.close()
+    return connect_ledger(path, key=key)

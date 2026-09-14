@@ -40,9 +40,16 @@ from src.m3_lookthrough.persist_metrics import (
 )
 from src.m6_views.builder import Scope
 from src.m6_views.builders import portfolio  # noqa: F401  — registers builders
+from src.m6_views.colors import assign_colors
 from src.m6_views.deps import Deps
 from src.m6_views.envelope import ViewEnvelope
-from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY
+from src.m6_views.registry import (
+    VIEW_DEFS,
+    VIEW_REGISTRY,
+    seed_view_definitions,
+)
+
+from tests.conftest import reopen, reopen_ledger
 
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
@@ -354,3 +361,32 @@ def test_the_concentration_view_returns_a_curve_and_its_summary(deps: Deps) -> N
     assert env.payload["curve"][0]["issuer_share"] == Decimal(0)
     assert env.payload["curve"][-1]["exposure_share"] == Decimal(1)
     assert env.payload["hhi"] is not None
+
+
+class TestWhatIsWrittenSurvivesTheConnection:
+    """Every assertion here reads through a SECOND connection.
+
+    Measured before these existed: deleting the `conn.commit()` from any of
+    twelve functions in `src/` left `tests/unit` green, because a test that
+    reads back on the connection that wrote sees uncommitted rows either way.
+    The production failure is correct numbers reported and nothing stored.
+    DECISIONS V1-58, `tests/conftest.py`.
+    """
+
+    def test_seed_view_definitions_commits(
+        self, warehouse: sqlite3.Connection
+    ) -> None:
+        seed_view_definitions(warehouse)
+        reopened = reopen(warehouse)
+        seeded = reopened.execute("SELECT count(*) FROM view_definition").fetchone()[0]
+        reopened.close()
+        assert seeded > 0
+
+    def test_assign_colors_commits(self, ledger: sqlite3.Connection) -> None:
+        """`color_assignment` is a ZONE B table (`migrations/zone_b/004`), so
+        this writes the ledger where `seed_view_definitions` writes Zone A."""
+        assign_colors(ledger, "issuer", ["ACME", "BETA"])
+        reopened = reopen_ledger(ledger, KEY)
+        assigned = reopened.execute("SELECT count(*) FROM color_assignment").fetchone()[0]
+        reopened.close()
+        assert assigned > 0

@@ -24,7 +24,12 @@ from pathlib import Path
 import pytest
 from src.common.types import IssuerId, SchemeId, UserId
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
-from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
+from src.m3_lookthrough.engine import (
+    IssuerWeight,
+    LookThroughResult,
+    Position,
+    compute_lookthrough,
+)
 from src.m3_lookthrough.persist import (
     STALENESS_WARN_DAYS,
     confidence_for,
@@ -33,6 +38,8 @@ from src.m3_lookthrough.persist import (
     load_summary,
     save_lookthrough,
 )
+
+from tests.conftest import reopen_ledger
 
 USER = UserId("USER-01")
 AS_OF = date(2026, 9, 4)
@@ -458,3 +465,41 @@ def test_weight_in_fund_is_unchanged_by_the_hoist(conn, result) -> None:  # type
     for scheme in ("S1", "S2"):
         total = sum((v for (_i, s), v in rows.items() if s == scheme), Decimal(0))
         assert total == Decimal(100), f"{scheme} weights sum to {total}"
+
+
+class TestWhatIsWrittenSurvivesTheConnection:
+    """Every assertion here reads through a SECOND connection.
+
+    Measured before these existed: deleting the `conn.commit()` from any of
+    twelve functions in `src/` left `tests/unit` green, because a test that
+    reads back on the connection that wrote sees uncommitted rows either way.
+    The production failure is correct numbers reported and nothing stored.
+    DECISIONS V1-58, `tests/conftest.py`.
+    """
+
+    def test_save_lookthrough_commits(
+        self, conn: sqlite3.Connection, result: LookThroughResult
+    ) -> None:
+        save_lookthrough(conn, USER, AS_OF, result, DATES)
+        reopened = reopen_ledger(conn, KEY)
+        counts = {
+            t: reopened.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+            for t in ("lookthrough_exposure", "lookthrough_contribution",
+                      "portfolio_summary")
+        }
+        reopened.close()
+        assert all(n > 0 for n in counts.values()), counts
+
+    def test_drop_lookthrough_commits(
+        self, conn: sqlite3.Connection, result: LookThroughResult
+    ) -> None:
+        save_lookthrough(conn, USER, AS_OF, result, DATES)
+        drop_lookthrough(conn)
+        reopened = reopen_ledger(conn, KEY)
+        # A DROP, not a DELETE -- the claim is that these are reconstructible.
+        survived = reopened.execute(
+            "SELECT count(*) FROM sqlite_master"
+            " WHERE type='table' AND name='lookthrough_exposure'"
+        ).fetchone()[0]
+        reopened.close()
+        assert survived == 0
