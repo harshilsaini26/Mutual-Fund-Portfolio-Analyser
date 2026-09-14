@@ -3,15 +3,16 @@
     python -m jobs.load_holdings --amc hdfc
     python -m jobs.load_holdings --file "path/to/Monthly ... .xlsx"
 
-This is the whole L0 -> L3 path for one file, and each stage is separable on
-purpose (§3): the archive is content-addressed, parsing is a pure function on
-bytes, resolution reads only the entity master, and normalisation and
-validation read only the parsed rows. A bug in any one of them is fixed by
-re-running from the layer to its left, never by editing data.
+The whole L0 -> L3 path for one file, each stage separable on purpose (§3): the
+archive is content-addressed, parsing is a pure function on bytes, resolution
+reads only the entity master, normalisation and validation read only the parsed
+rows. A bug in any one is fixed by re-running from the layer to its left, never
+by editing data.
 
-Discovery is not automated yet — `config/amc_manifest.yaml` carries the links
-(V1-03). The AMC pages are JavaScript-rendered, so finding a link needs a
-browser while fetching one does not, and that fragility is kept out of here.
+Links come from `config/amc_manifest.yaml`. Discovery for the AMCs that have a
+backend listing lives in `src/m0_data/fetch/amc_direct.py` and is driven by
+`jobs/fetch_amc.py` (V1-44); this job takes a path or a manifest entry and does
+not discover anything itself.
 """
 
 from __future__ import annotations

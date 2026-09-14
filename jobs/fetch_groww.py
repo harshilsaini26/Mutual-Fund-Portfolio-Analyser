@@ -4,21 +4,17 @@
     python -m jobs.fetch_groww --scheme INF179K01UT0
     python -m jobs.fetch_groww --slug <slug> --dry-run
 
-**The coverage tier.** `load_holdings` reads an AMC's own statutory workbook
-and so covers the five fund houses that have a parser; this reads an
-aggregator's page and covers any fund Groww lists. It is the answer to holding
-a fund from an AMC nobody has written a reader for, and it is NOT a replacement
-for the workbook where one exists -- the page carries no ISIN column, which
-costs 8.96% of rows unresolved against 0.00% on the same fund and month.
+**The coverage tier.** `load_holdings` reads an AMC's own workbook and covers
+the five houses with a parser; this reads an aggregator's page and covers any
+fund Groww lists. NOT a replacement where a workbook exists — the page carries
+no ISIN column, costing 8.96% of rows unresolved against 0.00%.
 
 **The slug is the whole risk, so it is checked twice.** A slug cannot be built
-from a scheme name -- Groww keeps the name a fund had before it was renamed, so
-HDFC Flexi Cap lives at `hdfc-equity-fund-direct-growth` and Parag Parikh Flexi
-Cap at `parag-parikh-long-term-value-fund-direct-growth`. A wrong slug that
-404s is harmless. A wrong slug that resolves is not: it would load a real
-portfolio under the wrong `scheme_id`, and nothing downstream could tell. So
-the page's own `isin` is compared against the one the map promised and a
-mismatch REFUSES rather than loads.
+from a scheme name: Groww keeps the pre-rename name, so HDFC Flexi Cap lives at
+`hdfc-equity-fund-direct-growth`. A wrong slug that 404s is harmless; one that
+RESOLVES would load a real portfolio under the wrong `scheme_id` with nothing
+downstream able to tell. So the page's own `isin` is compared against the one
+the map promised, and a mismatch REFUSES.
 """
 
 from __future__ import annotations
@@ -193,17 +189,11 @@ def _one(
 
     # Don't fetch what would not be read.
     #
-    # This began as the guard that kept the coverage tier from outranking an
-    # AMC file, and it was the WRONG PLACE for it: a rule enforced by the job
-    # that writes the data is a rule the next writer has to remember, and
-    # `latest_as_of` was meanwhile taking `max(as_of_date)` and reading no
-    # tier at all. V1-46 moved the decision into
-    # `m3_lookthrough.weights.latest_disclosure`, where every reader passes.
-    #
-    # What is left here is not correctness, it is restraint: a scheme the AMC
-    # tier already covers would have its page fetched, parsed, resolved and
-    # stored, and then never selected. `--force` is for deliberately putting
-    # the two side by side.
+    # Not correctness -- restraint. The guard that keeps the coverage tier from
+    # outranking an AMC file lives in `weights.latest_disclosure`, where every
+    # reader passes, rather than in the job that writes the data (V1-46). This
+    # only avoids fetching, parsing and storing a page that would then never be
+    # selected. `--force` puts the two side by side deliberately.
     covered = conn.execute(
         "SELECT as_of_date FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1 AND source_tier = 'amc_direct'"

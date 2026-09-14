@@ -1,55 +1,28 @@
 """AMFI's scheme-wise average AUM. MODULE_0.md §2.1's S3, DECISIONS V1-49.
 
 The source §10's V2 has been waiting for. AMFI's `aum-data/average-aum` page is
-a Next.js app, and — the third time this argument has paid (V1-44 for Kotak and
-ICICI) — its file list arrives as JSON from an endpoint that is neither
-authenticated nor challenged. robots.txt disallows only `/admin/`, `/login/`
-and `/search/`.
+a Next.js app whose data arrives as JSON from an endpoint that is neither
+authenticated nor challenged — the third time that argument has paid (V1-44).
+robots.txt disallows only `/admin/`, `/login/` and `/search/`.
 
-Three calls, because the page's own dropdowns are populated in that order:
+Three calls, in the order the page's own dropdowns populate: the financial
+years, then the quarters within one, then ~8,500 schemes with their AAUM.
 
-    /api/average-aum-schemewise?strType=Categorywise&MF_ID=0
-        -> the financial years, newest first, `id` 1 upward
+**Per PLAN, and the scheme is the sum of its plans.** HDFC Flexi Cap's
+Direct-Growth plan reports Rs 34,740 Cr where the fund's portfolio is Rs
+113,606 Cr — AMFI publishes one row per share class, and a disclosure describes
+the SCHEME (V1-37). `AMFI_Code` joins `scheme.amfi_code` directly, 8,448 of
+8,545 rows, with no name matching anywhere.
 
-    /api/average-aum-schemewise?fyId=<id>&strType=Categorywise&MF_ID=0
-        -> the quarters published within that year
+**An AVERAGE over a QUARTER.** Against the two funds whose portfolios are
+loaded, that average sits -10.4% and -4.6% from their August portfolios: real
+market movement, not a defect. §10 gives V2 a ±3% tolerance assuming a same-date
+balance, so `basis` travels with the figure and the check picks a tolerance that
+matches what it is comparing.
 
-    /api/average-aum-schemewise?strType=Categorywise&fyId=<id>&periodId=<id>&MF_ID=0
-        -> ~8,500 schemes with their AAUM
-
-## It is per PLAN, and the scheme is the sum of its plans
-
-`HDFC Flexi Cap Fund - Growth Option - Direct Plan` reports Rs 34,740 Cr where
-the fund's portfolio is Rs 113,606 Cr. The difference is not an error: AMFI
-publishes one row per share class, and V1-37 established that a disclosure
-describes the SCHEME — every plan of which holds one pool of assets. So a
-scheme's AUM is the sum over its family, and comparing a disclosure against any
-single plan's figure would fail by a factor of three.
-
-`AMFI_Code` is what makes that safe to do: it joins `scheme.amfi_code`
-directly, 8,448 of 8,545 rows (98.9%), with no name matching anywhere.
-
-## It is an AVERAGE over a QUARTER
-
-The field is `AverageAumForTheMonth` and the period is `April - June 2026`.
-Against the two funds whose portfolios are loaded, that average sits **-10.4%**
-(HDFC Flexi Cap) and **-4.6%** (PPFAS Flexi Cap) from their August portfolios —
-two months of market movement and flows, which is real and is not a defect in
-either number.
-
-§10 gives V2 a ±3% tolerance, which assumes a same-date balance. Storing this
-as though it were one would quarantine both of those funds. `basis` travels
-with the figure so the check can pick a tolerance that matches what it is
-comparing; see `validate/checks.py`.
-
-## Units
-
-Lakhs, as AMFI publishes everywhere. Asserted here rather than read — no field
-states it — and the assertion has a witness: a scheme's family sum lands within
-a few percent of its own disclosed portfolio total, which it could not do if
-the scale were wrong by 100x. `AAUM_UNIT` is carried as a label and
-`normalise/units.py` applies it, the same discipline §6.3 rule 1 puts on every
-parser.
+**Units are lakhs**, asserted rather than read since no field states it.
+`jobs/fetch_aum.py`'s `assert_scale` is the witness. Carried as a label for
+`normalise/units.py` to apply (§6.3 rule 1).
 """
 
 from __future__ import annotations

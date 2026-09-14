@@ -1,31 +1,23 @@
 """Asking an AMC's own backend what it has published. DECISIONS V1-44.
 
-V1-03 recorded that discovery could not be automated because every AMC's
-disclosure page is JavaScript-rendered, and drew from that the conclusion that
-finding a link needs a browser. **The conclusion was backwards.** A page that
+V1-03 concluded that discovery needs a browser because every AMC's disclosure
+page is JavaScript-rendered. **The conclusion was backwards:** a page that
 renders its file list in JavaScript is a page whose file list arrives as JSON,
-and the endpoint it arrives from is usually neither authenticated nor guarded:
+from an endpoint that is usually neither authenticated nor guarded.
 
-    Kotak   GET  java17vlbapi.kotakmf.com/kotakapi/forms/user/v1/getsubheaderList/417
-    ICICI   POST apps.digital.icicipruamc.com/nms/v1/downloads/files
-
-Kotak's is the pointed case. V1-32 recorded three dead ends and stopped at a
-Radware CAPTCHA, correctly -- this project does not solve those. But the CAPTCHA
-guards the *portfolio dropdown on the website*, and the backend the dropdown
-calls answers a plain GET with 307 entries, 198 of them portfolios reaching
-back to April 2013. Nothing here
+Kotak is the pointed case. V1-32 stopped at a Radware CAPTCHA, correctly — this
+project does not solve those. But the CAPTCHA guards the portfolio dropdown on
+the WEBSITE, and the backend that dropdown calls answers a plain GET with 307
+entries, 198 of them portfolios reaching back to April 2013. Nothing here
 defeats a bot check; it declines to visit the page that has one.
 
-That archive is the other reason this tier matters. The coverage tier (V1-43)
-serves one month and forgets, so a month not fetched is lost; these listings are
-historical -- Kotak's monthly archive runs to April 2013 -- so a fund loaded
-here can be backfilled.
+That archive is the other reason this tier matters: the coverage tier (V1-43)
+serves one month and forgets, where these listings are historical, so a fund
+loaded here can be backfilled.
 
 **This module discovers; it does not download.** `parse_listing` is a pure
-function on bytes, which is what keeps every test in this module offline
-(`fetch/base.py`'s opening rule), and `jobs/fetch_amc.py` does the fetching
-through the same polite, robots-respecting, archive-before-manifest path
-everything else uses.
+function on bytes, which keeps every test here offline, and `jobs/fetch_amc.py`
+does the fetching through the same polite, robots-respecting path.
 """
 
 from __future__ import annotations
@@ -121,16 +113,14 @@ def _json(payload: bytes, who: str) -> Any:
 class KotakDiscovery:
     """Kotak Mahindra Mutual Fund.
 
-    The listing is one flat array under `subHeaderList`, each entry carrying a
-    human title (`Fortnightly Portfolio as on August 31, 2026`) and a `content`
-    path relative to a public CloudFront origin. 307 entries, of which 198 are
-    portfolios: 70 monthly reaching back to 2013-04-30, 128 fortnightly.
+    One flat array under `subHeaderList`, each entry carrying a human title and
+    a `content` path relative to a public CloudFront origin — 307 entries, 198
+    of them portfolios.
 
     **Kotak's monthly disclosure is titled `Consolidated SEBI Portfolio`**, and
     its fortnightly one lands on the month end every other issue. Both are
-    month-end portfolios of every scheme; the kind is recorded and the caller
-    picks, because they are not the same document and guessing which the user
-    meant is not this layer's job.
+    month-end portfolios of every scheme, so the kind is recorded and the caller
+    picks: they are not the same document.
     """
 
     amc_id = "kotak"
@@ -336,20 +326,17 @@ def for_period(
     """The month-end disclosures for `YYYY-MM`. No period means the latest.
 
     Sorted in Python rather than trusting the publisher's order: Kotak's
-    listing is roughly newest-first and ICICI's is exactly so, and "roughly" is
-    not a property to build a monthly job on.
+    listing is ROUGHLY newest-first, which is not a property to build a monthly
+    job on.
 
     **One as-of date, whether or not a period was named.** Kotak publishes a
-    fortnightly on the 15th and again on the month end, so the first version
-    answered `--period 2026-08 --kind fortnightly` with BOTH -- 4.2 MB for the
-    2.1 MB wanted, and then `ingest_inbox` loaded the 15th as an ordinary
-    disclosure that `latest_disclosure` and the staleness report would both
-    treat as a month's portfolio. A caller naming a month for a monthly
-    disclosure means its month end.
+    fortnightly on the 15th and again on the month end, so answering
+    `--period 2026-08 --kind fortnightly` with both loaded the 15th as an
+    ordinary disclosure that the staleness report would treat as a month's
+    portfolio. A caller naming a month means its month end.
 
-    Two `kind`s can still come back together, because a monthly and a
-    fortnightly dated the same day are different documents and choosing
-    between them is the caller's business -- `--kind` is how it says.
+    Two `kind`s can still come back together: a monthly and a fortnightly dated
+    the same day are different documents, and `--kind` is how a caller chooses.
     """
     chosen = [f for f in files if kind is None or f.kind == kind]
     if period:
