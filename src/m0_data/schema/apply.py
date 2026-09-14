@@ -66,6 +66,16 @@ def apply_migrations(db_path: str, directory: Path = MIGRATIONS) -> list[str]:
     `schema_migration` is still recorded: it is the only thing that says which
     version produced the database, and a rebuild that silently re-ran an old
     file would be indistinguishable from one that did not.
+
+    **Applied one at a time, not all or nothing.** Each migration is committed
+    with its own `schema_migration` row before the next one runs, so a failure
+    part-way leaves every file before it permanently applied and marked, and
+    raises `MigrationError` naming the one that stopped. That is deliberate:
+    the DDL of a successful migration is committed the moment its script ends,
+    so rolling its MARKER back would only make an applied file look unapplied
+    and invite a re-run -- harmless for a `CREATE TABLE IF NOT EXISTS`, and a
+    silently dropped column for a rebuild. Retrying a failed call after fixing
+    the cause resumes from the migration that failed; no cleanup is needed.
     """
     conn = connect(db_path)
     try:
@@ -79,9 +89,23 @@ def apply_migrations(db_path: str, directory: Path = MIGRATIONS) -> list[str]:
         for path in migration_files(directory):
             if path.name in done:
                 continue
+            # Read and run are guarded SEPARATELY, and say different things.
+            # `read_text` used to sit inside the one guard below, which catches
+            # only `sqlite3.Error` -- so a migration saved in cp1252 (the exact
+            # accident V1-51 recorded, when `subprocess.run(text=True)` turned
+            # every section sign into mojibake across three files) escaped as a
+            # bare `UnicodeDecodeError` naming no file, from whichever job had
+            # called this at startup.
             try:
-                conn.executescript(path.read_text(encoding="utf-8"))
-            except sqlite3.Error as exc:
+                script = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                raise MigrationError(f"{path.name} could not be read: {exc}") from exc
+            try:
+                conn.executescript(script)
+            # `sqlite3.Warning` is NOT a subclass of `sqlite3.Error` -- its MRO
+            # is (Warning, Exception) -- so naming only the latter left one
+            # documented member of the family able to escape anonymously.
+            except (sqlite3.Error, sqlite3.Warning) as exc:
                 # NAMED. Without this the raw sqlite error propagates with no
                 # reference to the file, and since every job calls this at
                 # startup, one row a migration cannot accept stops the whole

@@ -65,8 +65,13 @@ def _cut(marker: str) -> str:
 
 
 def _loaded(tmp_path: Path, rows: int = 3) -> Path:
-    """A warehouse whose `scheme_aum` is populated, every migration applied."""
-    db = tmp_path / "canonical.db"
+    """A warehouse whose `scheme_aum` is populated, every migration applied.
+
+    Its own filename, because `_at_012` below builds a DIFFERENT state at the
+    same `tmp_path`: sharing one name means whichever helper ran second reads
+    the first one's `schema_migration` and silently does nothing.
+    """
+    db = tmp_path / "loaded.db"
     apply_migrations(str(db))
     with _open(db) as conn:
         conn.executemany(
@@ -91,7 +96,7 @@ def _at_012(tmp_path: Path) -> Path:
     for src in sorted(MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")):
         if int(src.name[:3]) <= 12:
             shutil.copy(src, staged / src.name)
-    db = tmp_path / "canonical.db"
+    db = tmp_path / "at_012.db"
     apply_migrations(str(db), staged)
     return db
 
@@ -183,6 +188,77 @@ class TestARowTheConstraintWillNotTake:
             conn.execute("DELETE FROM scheme_aum WHERE scheme_id = 'INF2'")
             conn.commit()
         assert apply_migrations(str(db)) == [M013.name]
+
+    def test_emptying_the_table_is_also_a_recovery(self, tmp_path: Path) -> None:
+        """The note's second route, for a warehouse whose figures are not worth
+        keeping. The rebuild copies nothing and `jobs.fetch_aum` reloads a
+        quarter per run."""
+        db = self._with_a_bad_basis(tmp_path)
+        with pytest.raises(MigrationError):
+            apply_migrations(str(db))
+        with _open(db) as conn:
+            conn.execute("DELETE FROM scheme_aum")
+            conn.commit()
+        assert apply_migrations(str(db)) == [M013.name]
+        with _open(db) as conn:
+            assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 0
+            with pytest.raises(sqlite3.IntegrityError):
+                conn.execute(
+                    "INSERT INTO scheme_aum (scheme_id, as_of_date, basis)"
+                    " VALUES ('X','2026-06-30','junk')"
+                )
+
+    def test_dropping_the_table_is_not_a_recovery(self, tmp_path: Path) -> None:
+        """The route the note warns against, pinned so the warning cannot drift
+        back into advice. An earlier version of that comment offered it: the
+        rebuild READS `scheme_aum`, so dropping it wedges this migration on
+        every run afterwards -- worse than the row it was meant to cure, and
+        `jobs/fetch_aum.py` cannot undo it, since it never calls
+        `apply_migrations` and never creates the table."""
+        db = self._with_a_bad_basis(tmp_path)
+        with pytest.raises(MigrationError):
+            apply_migrations(str(db))
+        with _open(db) as conn:
+            conn.execute("DROP TABLE scheme_aum")
+            conn.commit()
+        for _ in range(2):
+            with pytest.raises(MigrationError, match="no such table: scheme_aum"):
+                apply_migrations(str(db))
+
+
+class TestAMigrationThatCannotBeRead:
+    """The guard around `executescript` catches `sqlite3.Error`, which is not
+    what a file saved in the wrong encoding raises."""
+
+    def test_a_mis_encoded_migration_names_itself(self, tmp_path: Path) -> None:
+        """V1-51 turned every section sign into mojibake across three files by
+        reading them with the locale default. A migration that arrived that way
+        escaped as a bare `UnicodeDecodeError` naming no file, from whichever
+        job had called `apply_migrations` at startup."""
+        staged = tmp_path / "migrations_plus_cp1252"
+        staged.mkdir()
+        for src in sorted(MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")):
+            shutil.copy(src, staged / src.name)
+        (staged / "014_mojibake.sql").write_bytes(
+            ("-- a section \u00a7 sign\nCREATE TABLE t (x TEXT);\n")
+            .encode("cp1252")
+        )
+        with pytest.raises(MigrationError, match=re.escape("014_mojibake.sql")):
+            apply_migrations(str(tmp_path / "mojibake.db"), staged)
+
+    def test_it_says_unread_rather_than_failed(self, tmp_path: Path) -> None:
+        """A file that cannot be decoded and a file whose SQL was rejected are
+        different facts, and an operator handed one message for both has to
+        open the file to find out which."""
+        staged = tmp_path / "migrations_plus_cp1252"
+        staged.mkdir()
+        for src in sorted(MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")):
+            shutil.copy(src, staged / src.name)
+        (staged / "014_mojibake.sql").write_bytes(
+            b"-- \xa7\nCREATE TABLE t (x TEXT);\n"
+        )
+        with pytest.raises(MigrationError, match="could not be read"):
+            apply_migrations(str(tmp_path / "mojibake.db"), staged)
 
 
 class TestTheRebuildSurvivesAWarehouseWithRowsInIt:
@@ -305,7 +381,7 @@ class TestAnAppliedMigrationIsMarkedWithIt:
             "SELECT * FROM a_table_that_does_not_exist;", encoding="utf-8"
         )
 
-        db = tmp_path / "canonical.db"
+        db = tmp_path / "with_a_broken_014.db"
         with pytest.raises(MigrationError, match=re.escape("014_broken.sql")):
             apply_migrations(str(db), staged)
 

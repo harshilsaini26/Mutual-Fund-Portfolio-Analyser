@@ -39,9 +39,11 @@
 -- table left behind by some earlier hand-run -- but it is no longer what
 -- makes this safe.
 --
--- This file has not been applied to any warehouse yet (the live one is at
--- 012), so it is corrected here rather than superseded. `apply.py`'s rule is
--- that a migration is never edited ONCE APPLIED.
+-- Corrected in place rather than superseded, twice, each time before this file
+-- had run against any warehouse -- `apply.py`'s rule is that a migration is
+-- never edited ONCE APPLIED. DECISIONS V1-55 and V1-56 carry the dates and the
+-- reasons; a migration is read as a description of the present, so the history
+-- does not belong in here.
 --
 -- IF THIS MIGRATION FAILS, it is because a row already in `scheme_aum` holds a
 -- `basis` the constraint will not take, and the whole rebuild rolls back with
@@ -51,11 +53,21 @@
 --     SELECT scheme_id, as_of_date, basis FROM scheme_aum
 --      WHERE basis NOT IN ('point_in_time', 'quarterly_average');
 --
--- and delete it, or drop the table and reload it from scratch --
--- `python -m jobs.fetch_aum` rebuilds every row of it (invariant 10). What it
--- must NOT do is widen the vocabulary to admit the bad value: §10's V2 picks
--- its tolerance from this column, and a basis no reader knows is a check that
--- does not run.
+-- and delete that row. If the figures are not worth keeping, `DELETE FROM
+-- scheme_aum` empties the table and the rebuild then copies nothing;
+-- `python -m jobs.fetch_aum` reloads the newest quarter, and `--quarter` each
+-- older one, a quarter per run (invariant 10: the table is regenerable).
+--
+-- Do NOT `DROP TABLE scheme_aum`. The rebuild below reads it, so dropping it
+-- fails this migration with `no such table: scheme_aum` on that run and every
+-- run after it -- a worse state than the row you started with, and one
+-- `jobs/fetch_aum.py` cannot undo, since it never calls `apply_migrations` and
+-- never creates the table. Reproduced, and pinned by a test in
+-- `tests/unit/test_m0_migrations.py` so this paragraph cannot drift back.
+--
+-- What it must also NOT do is widen the vocabulary to admit the bad value:
+-- §10's V2 picks its tolerance from this column, and a basis no reader knows
+-- is a check that does not run.
 --
 -- The column list below is 012's. Re-running this file against a table that a
 -- LATER migration has widened would copy the columns named here and silently
