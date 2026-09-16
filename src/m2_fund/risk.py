@@ -1,0 +1,175 @@
+"""Return and risk arithmetic over a NAV series. MODULE_2.md §8.
+
+Pure functions: every one takes a series and returns a number. No SQL, no
+connection, no I/O — M2 reads through `MarketDataProvider` (invariant 3), and
+everything here operates on what that hands back.
+
+**The series must be adjusted NAV.** Raw NAV of an IDCW plan drops on every
+payout, so a return computed on it reads a distribution as a loss
+(`MODULE_0.md` §9.1). `nav_series` defaults to `adjusted=True`; nothing here
+re-checks it, because the column is chosen one layer up and checking twice
+invites the two checks to disagree.
+
+Every figure is a `Decimal` (invariant 1). That constrains the arithmetic more
+than it looks: `Decimal` has no fractional `**`, so annualisation goes through
+`ln`/`exp` rather than a power.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from itertools import pairwise
+
+from src.common.contracts.market import NavPoint
+
+#: Ratios and rates, six decimals — far finer than the NAV they derive from.
+METRIC_Q = Decimal("0.000001")
+
+#: Trading days in a year. The series is trading days, not calendar days, so
+#: daily volatility scales by sqrt(252) and NOT sqrt(365) — using 365 on a
+#: trading-day series overstates volatility by about 18%.
+TRADING_DAYS = Decimal(252)
+
+#: Calendar days in a year, for annualising a return over a wall-clock span.
+CALENDAR_DAYS = Decimal(365)
+
+
+class NonPositiveNav(ValueError):
+    """A NAV at or below zero. Invariant 5: raise rather than clamp.
+
+    No real scheme prices at zero, so this means the series is corrupt. The
+    arithmetic below would otherwise divide by it or take its log, and produce
+    a number that looks like a return.
+    """
+
+
+def daily_returns(navs: list[NavPoint]) -> list[Decimal]:
+    """Period-over-period returns. One shorter than the series it is given."""
+    out: list[Decimal] = []
+    for prev, cur in pairwise(navs):
+        if prev.nav <= 0:
+            raise NonPositiveNav(f"{prev.scheme_id} priced {prev.nav} on {prev.nav_date}")
+        out.append(cur.nav / prev.nav - 1)
+    return out
+
+
+def annualise(growth: Decimal, days: int) -> Decimal:
+    """A growth ratio over `days` expressed as an annual rate.
+
+    `growth` is end/start — 1.5 for a 50% gain — and the result is a rate, so
+    that same 50% over two years returns 0.2247, not 1.2247.
+
+    Sub-year windows are annualised too, which is what §8.1 does, and the
+    result is close to meaningless: a 5% month annualises to 80%. That is what
+    `confidence_from_obs` is for, and why §8.2 greys anything under a year
+    rather than hiding it.
+    """
+    if days <= 0:
+        raise ValueError(f"cannot annualise over {days} days")
+    if growth <= 0:
+        raise NonPositiveNav(f"growth ratio {growth} is not positive")
+    return ((growth.ln() * (CALENDAR_DAYS / Decimal(days))).exp() - 1).quantize(METRIC_Q)
+
+
+def annualised_vol(returns: list[Decimal]) -> Decimal:
+    """Annualised standard deviation of the daily return series.
+
+    Sample standard deviation (n-1), because the series is a sample of the
+    fund's behaviour rather than its whole population.
+    """
+    n = len(returns)
+    if n < 2:
+        return Decimal(0)
+    mean = sum(returns, Decimal(0)) / n
+    variance = sum(((r - mean) ** 2 for r in returns), Decimal(0)) / (n - 1)
+    return (variance.sqrt() * TRADING_DAYS.sqrt()).quantize(METRIC_Q)
+
+
+def downside_deviation(returns: list[Decimal], mar: Decimal = Decimal(0)) -> Decimal:
+    """Annualised deviation of returns BELOW `mar`, the minimum acceptable return.
+
+    Divided by the full observation count, not by the number of downside days.
+    Dividing by the downside count instead would make a fund that rarely falls
+    look more volatile than one that always does, which inverts the statistic.
+    """
+    n = len(returns)
+    if n < 2:
+        return Decimal(0)
+    shortfall = sum((min(r - mar, Decimal(0)) ** 2 for r in returns), Decimal(0)) / n
+    return (shortfall.sqrt() * TRADING_DAYS.sqrt()).quantize(METRIC_Q)
+
+
+@dataclass(frozen=True)
+class Drawdown:
+    """MODULE_2.md §8.3. `depth` is negative; zero means the fund never fell."""
+
+    depth: Decimal
+    peak: date
+    trough: date
+    #: None means the peak has not been regained within the window.
+    recovery: date | None
+    duration_days: int
+    recovery_days: int | None
+
+
+def max_drawdown(navs: list[NavPoint]) -> Drawdown:
+    """The worst peak-to-trough fall in the window, and whether it recovered.
+
+    Recovery is measured against the peak that PRECEDED the trough, not the
+    highest point in the whole window — a fund that falls, recovers, then rises
+    further has recovered, and comparing against the later high would say it
+    never did.
+    """
+    if not navs:
+        raise ValueError("max_drawdown needs at least one NAV point")
+
+    peak_v, peak_d = navs[0].nav, navs[0].nav_date
+    depth, worst_peak, trough_d = Decimal(0), peak_d, navs[0].nav_date
+    worst_peak_v = peak_v
+
+    for p in navs:
+        if p.nav <= 0:
+            raise NonPositiveNav(f"{p.scheme_id} priced {p.nav} on {p.nav_date}")
+        if p.nav > peak_v:
+            peak_v, peak_d = p.nav, p.nav_date
+        fall = p.nav / peak_v - 1
+        if fall < depth:
+            depth, worst_peak, trough_d = fall, peak_d, p.nav_date
+            worst_peak_v = peak_v
+
+    # Only a real fall can recover. Without this guard a series that never
+    # fell reports the peak it set on day two as a "recovery", because the
+    # trough still points at the first observation.
+    recovery = (
+        next(
+            (p.nav_date for p in navs if p.nav_date > trough_d and p.nav >= worst_peak_v),
+            None,
+        )
+        if depth < 0
+        else None
+    )
+    return Drawdown(
+        depth=depth.quantize(METRIC_Q),
+        peak=worst_peak,
+        trough=trough_d,
+        recovery=recovery,
+        duration_days=(trough_d - worst_peak).days,
+        recovery_days=(recovery - trough_d).days if recovery else None,
+    )
+
+
+def confidence_from_obs(obs_days: int) -> str:
+    """MODULE_2.md §8.2, verbatim.
+
+    Three years is `high`, one year `medium`, anything shorter `low`. The point
+    is not the thresholds but that the tier travels with every number: an
+    eleven-month figure rendered with the same weight as a seven-year one is
+    the attribution failure this project exists to refuse.
+    """
+    if obs_days >= 1095:
+        return "high"
+    if obs_days >= 365:
+        return "medium"
+    return "low"
