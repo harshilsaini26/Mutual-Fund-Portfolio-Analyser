@@ -95,7 +95,7 @@ A working system, not a finished product.
 | Plus a coverage tier | any fund Groww lists, at 19-23% unresolved against 0.00% from an AMC's own file |
 | Schemes with a loaded disclosure | 192, across 6 fund houses |
 | Modules built | M0 data, M1 ledger, M3 look-through, M6 views |
-| Partly built | M2 fund x-ray — return windows and risk stats from NAV; no benchmark, so no alpha or Sharpe |
+| Partly built | M2 fund x-ray — return windows, risk stats and rolling returns from NAV; no benchmark, so no alpha or Sharpe |
 | Not built | M4 risk, M5 market, tax engine |
 | Has anyone actually used it | **no** |
 
@@ -124,7 +124,7 @@ it and fails if anything resolves that the lock does not mention. The extras are
 ### The gate
 
 ```bash
-python -m pytest -q                                   # 1,140 tests, ~80s, hermetic
+python -m pytest -q                                   # 1,141 tests, ~80s, hermetic
 python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                        # strict, 178 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift

@@ -32,6 +32,7 @@ from src.m2_fund.windows import (
     WINDOW_YEARS,
     ReturnWindow,
     compute_return_window,
+    rolling_returns,
     window_start,
 )
 
@@ -129,6 +130,21 @@ def main() -> None:
                 f"  worst fall {dd.peak} -> {dd.trough}"
                 f" ({dd.duration_days}d), {back}"
             )
+
+        rolls = [
+            r for y in (1, 3, 5)
+            if (r := rolling_returns(full, 365 * y)) is not None
+        ]
+        if rolls:
+            print()
+            print(f"  {'rolling':16} {'worst':>9} {'median':>9} {'best':>9}"
+                  f"  {'windows':>7}  positive")
+            print("  " + "-" * 62)
+            for r in rolls:
+                print(
+                    f"  {r.horizon_days // 365}y{'':14}{pct(r.worst)} {pct(r.median)}"
+                    f" {pct(r.best)}  {r.windows:>7}  {r.pct_positive:>6.1f}%"
+                )
 
         filled = whole.interpolated_pct if whole else Decimal(0)
         if filled > 0:

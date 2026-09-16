@@ -16,6 +16,7 @@ from src.common.types import SchemeId
 from src.m2_fund.windows import (
     NonPositiveNav,
     compute_return_window,
+    rolling_returns,
     window_start,
 )
 
@@ -160,3 +161,38 @@ def test_a_leap_day_start_lands_on_the_28th() -> None:
     """29 February has no counterpart in a non-leap year. One day short is the
     only answer that exists; raising would make a whole window unavailable."""
     assert window_start(date(2024, 2, 29), "1y") == date(2023, 2, 28)
+
+
+# --- rolling returns -------------------------------------------------------
+
+
+def test_too_few_windows_is_no_summary() -> None:
+    """MODULE_2.md §9's floor: below twelve windows the percentiles describe
+    the sample rather than the fund."""
+    navs = series([str(100 + i) for i in range(200)])
+    assert rolling_returns(navs, horizon_days=100, step_days=30) is None
+
+
+def test_a_rising_series_is_positive_in_every_window() -> None:
+    navs = series([str(100 + i) for i in range(500)])
+    r = rolling_returns(navs, horizon_days=100, step_days=30)
+    assert r is not None
+    assert r.windows == 14  # starts at day 0, 30, ... 390; 390 + 100 <= 499
+    assert r.pct_positive == Decimal("100.000000")
+    assert r.worst > 0
+    assert r.worst <= r.median <= r.best
+
+
+def test_a_falling_series_is_negative_in_every_window() -> None:
+    """Catches a sign inversion that a rising series cannot see."""
+    navs = series([str(600 - i) for i in range(500)])
+    r = rolling_returns(navs, horizon_days=100, step_days=30)
+    assert r is not None
+    assert r.pct_positive == Decimal(0)
+    assert r.best < 0
+
+
+def test_rolling_validates_the_series_like_the_window_does() -> None:
+    """Both entry points route through the same guard."""
+    with pytest.raises(NonPositiveNav):
+        rolling_returns(series(["0"] + [str(100 + i) for i in range(499)]), 100, 30)

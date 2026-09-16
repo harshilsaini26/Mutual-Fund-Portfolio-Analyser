@@ -19,9 +19,12 @@ inception date is exactly the thing we do not have.
 
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
+from statistics import median
+from typing import NamedTuple
 
 from src.common.contracts.market import NavPoint
 from src.m2_fund.risk import (
@@ -38,6 +41,9 @@ from src.m2_fund.risk import (
 #: start is a property of the series, not of the calendar.
 WINDOW_YEARS = {"1y": 1, "3y": 3, "5y": 5}
 
+#: §9: below twelve windows the distribution says nothing worth printing.
+MIN_ROLLING_WINDOWS = 12
+
 
 class NonPositiveNav(ValueError):
     """A NAV at or below zero. Invariant 5: raise rather than clamp.
@@ -46,6 +52,29 @@ class NonPositiveNav(ValueError):
     arithmetic downstream would otherwise divide by it or take its log, and
     produce a number that looks like a return.
     """
+
+
+def _reject_non_positive(navs: list[NavPoint]) -> None:
+    """The one validation both entry points route through."""
+    for p in navs:
+        if p.nav <= 0:
+            raise NonPositiveNav(f"{p.scheme_id} priced {p.nav} on {p.nav_date}")
+
+
+class Rolling(NamedTuple):
+    """Every window of one horizon, summarised. MODULE_2.md §9.
+
+    Answers what a single 3y figure cannot: was that number typical, or one
+    good year carrying the average. `worst` is the question people actually
+    ask -- the worst three years this fund ever handed anyone who held it.
+    """
+
+    horizon_days: int
+    windows: int
+    worst: Decimal
+    median: Decimal
+    best: Decimal
+    pct_positive: Decimal
 
 
 @dataclass(frozen=True)
@@ -104,9 +133,7 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
     if len(navs) < 2 or len({p.nav for p in navs}) < 2:
         return None
 
-    for p in navs:
-        if p.nav <= 0:
-            raise NonPositiveNav(f"{p.scheme_id} priced {p.nav} on {p.nav_date}")
+    _reject_non_positive(navs)
 
     first, last = navs[0], navs[-1]
     obs_days = (last.nav_date - first.nav_date).days
@@ -126,4 +153,47 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
         obs_count=len(navs),
         interpolated_pct=(Decimal(filled) * 100 / Decimal(len(navs))).quantize(METRIC_Q),
         confidence=confidence_from_obs(obs_days),
+    )
+
+
+def rolling_returns(
+    navs: list[NavPoint], horizon_days: int, step_days: int = 30
+) -> Rolling | None:
+    """Annualised return of every `horizon_days` window, stepped by `step_days`.
+
+    §9 steps by calendar month. 30 days is the same thing without pulling in
+    `dateutil` for a distinction the distribution cannot feel -- and dateutil
+    is not a declared dependency here, only a transitive accident (V0-19).
+
+    `None` when the series yields fewer than twelve windows: §9's own floor,
+    below which percentiles describe the sample rather than the fund.
+    """
+    if len(navs) < 2:
+        return None
+    _reject_non_positive(navs)
+
+    dates = [p.nav_date for p in navs]
+    horizon, step = timedelta(days=horizon_days), timedelta(days=step_days)
+    rets: list[Decimal] = []
+    start = dates[0]
+    while start + horizon <= dates[-1]:
+        # The series is sorted, so both ends are a binary search rather than
+        # the linear scan M1's nav_on_or_before does over a dict.
+        i = bisect_left(dates, start)
+        j = bisect_right(dates, start + horizon) - 1
+        if i <= j:
+            rets.append(annualise(navs[j].nav / navs[i].nav, horizon_days))
+        start += step
+
+    if len(rets) < MIN_ROLLING_WINDOWS:
+        return None
+    return Rolling(
+        horizon_days=horizon_days,
+        windows=len(rets),
+        worst=min(rets),
+        median=median(rets),
+        best=max(rets),
+        pct_positive=(
+            Decimal(sum(1 for r in rets if r > 0)) * 100 / len(rets)
+        ).quantize(METRIC_Q),
     )

@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-16 · 1,140 tests passing
+**Last updated:** 2026-09-16 · 1,141 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -155,7 +155,7 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication |
 | **M6 views** | built — six views, CSV export, loopback API |
-| M2 fund x-ray | partly built — return windows and risk statistics from NAV |
+| M2 fund x-ray | partly built — return windows, risk statistics and rolling returns from NAV |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
 | Tax engine | not built; rates live in a human-verified config and are never invented |
