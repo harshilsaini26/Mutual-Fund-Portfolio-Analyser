@@ -181,6 +181,27 @@ def test_an_unknown_view_is_a_404_that_says_what_exists(
     assert "available" in response.json()
 
 
+def test_an_unknown_view_id_is_escaped_not_reflected(
+    client: TestClient,
+) -> None:
+    """The HTML 404 echoes the view_id the caller asked for, and it is the one
+    response in M6 built as a raw string rather than rendered by Jinja, whose
+    autoescaping would have covered it. `!r` quotes a string; it does not
+    escape it (CodeQL #2).
+
+    Loopback-bound and single-user narrows who can be induced to click, it does
+    not make the payload inert.
+    """
+    # No slash in the payload: `/view/{view_id}` is one path segment, so
+    # anything containing `/` never reaches the handler and gets Starlette's
+    # own JSON 404 instead. That narrows the payload space; it does not close
+    # it, and an onerror handler needs no slash at all.
+    response = client.get("/view/<img src=x onerror=alert(1)>")
+    assert response.status_code == 404
+    assert "<img" not in response.text
+    assert "&lt;img" in response.text
+
+
 def test_a_builder_that_raises_degrades_one_panel_not_the_screen(
     client: TestClient,
 ) -> None:

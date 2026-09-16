@@ -22,6 +22,7 @@ defaults are §9's.
 
 from __future__ import annotations
 
+import html
 import sqlite3
 from datetime import date
 from pathlib import Path
@@ -155,8 +156,13 @@ def make_router(
         if view_id not in VIEW_REGISTRY:
             return HTMLResponse(
                 status_code=404,
+                # escaped: `view_id` is a path parameter and this is the one
+                # response in M6 built as raw HTML rather than rendered by
+                # Jinja, whose autoescaping would have covered it. Reflected
+                # XSS otherwise -- `!r` quotes the string, it does not escape
+                # it (CodeQL #2).
                 content=(
-                    f"<p>No view {view_id!r}. "
+                    f"<p>No view {html.escape(repr(view_id))}. "
                     f"Known views: {', '.join(sorted(VIEW_DEFS))}.</p>"
                 ),
             )

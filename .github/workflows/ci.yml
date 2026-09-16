@@ -19,6 +19,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The gate reads the repo and writes nothing. Without this the job inherits
+# whatever the repository default is, which on older settings is write-all --
+# a token any dependency in the install step could reach (CodeQL #3).
+permissions:
+  contents: read
+
 jobs:
   gate:
     runs-on: ubuntu-latest
