@@ -63,14 +63,9 @@ class Quality(Protocol):
 
 def dedupe_preserving_order(items: list[str]) -> list[str]:
     """§6.1 rule 4. Order matters — data-completeness first, methodology second
-    — so a `set` is not available here."""
-    seen: set[str] = set()
-    out: list[str] = []
-    for item in items:
-        if item not in seen:
-            seen.add(item)
-            out.append(item)
-    return out
+    — so a `set` is not available here. `dict` is: it has kept insertion
+    order since 3.7, and this project needs 3.11."""
+    return list(dict.fromkeys(items))
 
 
 def assemble_caveats(

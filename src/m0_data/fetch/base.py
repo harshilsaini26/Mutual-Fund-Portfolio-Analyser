@@ -18,7 +18,7 @@ import urllib.robotparser
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -73,18 +73,6 @@ class FetchResult:
     byte_size: int = 0
     error: str | None = None
     storage_path: str | None = None
-
-
-class SourceFetcher(Protocol):
-    """MODULE_0.md §5.1."""
-
-    source_id: str
-
-    def discover(self, as_of: Any) -> list[FetchCandidate]:
-        """Candidate URLs. One item for a fixed-URL source."""
-        ...
-
-    def fetch(self, candidate: FetchCandidate) -> FetchResult: ...
 
 
 class DomainRateLimiter:
