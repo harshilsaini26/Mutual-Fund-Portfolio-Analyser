@@ -24,7 +24,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from src.common.fixtures import load_yaml
 from src.common.types import SchemeId
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.returns import (
@@ -39,6 +38,8 @@ from src.m1_ledger.returns import (
     xirr,
 )
 from src.m1_ledger.txn import load_transactions
+
+from tests.fakes.loader import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = SchemeId("INF179K01UT0")

@@ -1,9 +1,12 @@
 """`FakeMarketDataProvider` and `FakeFundDataProvider`.
 
-MODULE_0.md §11.5 and §14 (`providers/fake.py`), MODULE_2.md §5.1. Both read
-YAML fixtures, so M1's and M2's entire test suites run with zero database —
-`BUILD_ORDER.md` R1 step 2, and what makes V0.1 (ledger on fixtures) possible
-before any of M0's ingestion exists.
+MODULE_0.md §11.5 and §14. Both read YAML fixtures, so M1's entire test suite
+runs with zero database — `BUILD_ORDER.md` R1 step 2, and what makes V0.1
+(ledger on fixtures) possible before any of M0's ingestion exists.
+
+Lives under `tests/` rather than `src/`: a test double is not library code,
+and shipping one means every install carries it. M2, which §5.1 of its own
+spec pointed at `FakeFundDataProvider`, was never built.
 
 These fakes are deliberately strict. Where the real provider would raise on a
 missing scheme or an absent NAV, so does this one: a fake that returns a
@@ -21,14 +24,6 @@ from src.common.contracts.entity import Holding, MergerLink, SchemeRef
 from src.common.contracts.market import IdcwEvent, IndexPoint, NavPoint
 from src.common.contracts.quality import DisclosureQuality
 from src.common.contracts.scheme import ManagerRow, McapList, SchemeRow, Tenure, TerPoint
-from src.common.fixtures import (
-    FixtureError,
-    FixtureStore,
-    as_date,
-    as_decimal,
-    default_store,
-    fixture_key,
-)
 from src.common.types import (
     Confidence,
     IndexId,
@@ -41,6 +36,15 @@ from src.common.types import (
     SchemeId,
     SourceFileId,
     ValidationStatus,
+)
+
+from tests.fakes.loader import (
+    FixtureError,
+    FixtureStore,
+    as_date,
+    as_decimal,
+    default_store,
+    fixture_key,
 )
 
 

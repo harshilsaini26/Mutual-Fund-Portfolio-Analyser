@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from src.common.fixtures import load_yaml
 from src.m1_ledger.lots import (
     InsufficientUnits,
     LotBook,
@@ -26,6 +25,8 @@ from src.m1_ledger.lots import (
     gain_type_for,
 )
 from src.m1_ledger.txn import Txn, load_transactions
+
+from tests.fakes.loader import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = "INF179K01UT0"

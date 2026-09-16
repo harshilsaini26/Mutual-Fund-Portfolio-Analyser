@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 from src.common.decimals import UNSAFE_DECIMAL_TYPES
-from src.common.fixtures import load_yaml
 from src.common.types import UserId
 from src.m0_data.schema.apply import MigrationError
 from src.m1_ledger.db import (
@@ -41,6 +40,7 @@ from src.m1_ledger.persist import (
 from src.m1_ledger.txn import Txn, load_transactions
 
 from tests.conftest import reopen_ledger
+from tests.fakes.loader import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 USER = UserId("USER-01")

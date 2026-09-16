@@ -23,7 +23,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from src.common.decimals import MONEY_Q, UNITS_Q
-from src.common.fixtures import load_yaml
+from tests.fakes.loader import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "v0_ledger"
 

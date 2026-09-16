@@ -13,21 +13,22 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from src.common.fixtures import DecimalSafeLoader, FixtureError, FixtureStore, load_yaml
 from src.common.types import (
     Isin,
     IssuerId,
     SchemeId,
     UserId,
 )
-from src.m0_data.providers.fake import FakeFundDataProvider, FakeMarketDataProvider
 from src.m0_data.providers.market_data import MarketDataProvider
 from src.m3_lookthrough.providers.data import LookThroughDataProvider
-from src.m3_lookthrough.providers.fake import (
+from src.m3_lookthrough.providers.lookthrough import LookThroughProvider
+
+from tests.fakes.loader import DecimalSafeLoader, FixtureError, FixtureStore, load_yaml
+from tests.fakes.m0 import FakeFundDataProvider, FakeMarketDataProvider
+from tests.fakes.m3 import (
     FakeLookThroughDataProvider,
     FakeLookThroughProvider,
 )
-from src.m3_lookthrough.providers.lookthrough import LookThroughProvider
 
 USER = UserId("USER-01")
 AS_OF = date(2026, 7, 31)

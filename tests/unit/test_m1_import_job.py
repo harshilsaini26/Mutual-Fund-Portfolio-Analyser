@@ -29,13 +29,13 @@ from pathlib import Path
 import pytest
 from jobs.import_cas import run
 from src.common.decimals import connect
-from src.common.fixtures import load_yaml
 from src.common.types import UserId
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m1_ledger.persist import derived_fingerprint
 from src.m1_ledger.txn import load_transactions
 
 from tests.conftest import migrated
+from tests.fakes.loader import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 USER = UserId("USER-01")

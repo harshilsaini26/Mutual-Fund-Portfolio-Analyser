@@ -16,7 +16,6 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from src.common.fixtures import load_yaml
 from src.common.types import SchemeId
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.reconcile import (
@@ -29,6 +28,8 @@ from src.m1_ledger.reconcile import (
     reconcile_all,
 )
 from src.m1_ledger.txn import Txn, load_transactions
+
+from tests.fakes.loader import load_yaml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = SchemeId("INF179K01UT0")

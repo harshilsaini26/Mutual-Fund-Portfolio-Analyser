@@ -19,16 +19,16 @@ from typing import Any
 
 import pytest
 from src.common.decimals import connect
-from src.common.fixtures import FixtureStore
 from src.common.types import Confidence, Isin, Plan, SchemeId
 from src.m0_data.derive.nav_adj import build_all_nav_adj
 from src.m0_data.load import load_parse_result
 from src.m0_data.parse.nav.amfi import parse_navall
-from src.m0_data.providers.fake import FakeMarketDataProvider
 from src.m0_data.providers.market_data import MarketDataProvider
 from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
 
 from tests.conftest import migrated
+from tests.fakes.loader import FixtureStore
+from tests.fakes.m0 import FakeMarketDataProvider
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 SAMPLE = FIXTURES / "m0" / "navall_sample.txt"

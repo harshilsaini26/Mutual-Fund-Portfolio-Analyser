@@ -154,5 +154,5 @@ class FixtureStore:
 
 def default_store() -> FixtureStore:
     """The fixture set committed under `tests/fixtures/slice_zero/`."""
-    root = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "slice_zero"
+    root = Path(__file__).resolve().parents[1] / "fixtures" / "slice_zero"
     return FixtureStore(root)

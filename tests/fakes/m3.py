@@ -1,7 +1,7 @@
 """`FakeLookThroughDataProvider` and `FakeLookThroughProvider`.
 
-MODULE_3.md §15.4 and §15.1. The first lets M3 itself be built against fixtures;
-the second lets M4, M5 and M6 be built before M3 exists.
+MODULE_3.md §15.4 and §15.1. The first lets M3 itself be built against
+fixtures; the second let M6 be built before M3 existed.
 """
 
 from __future__ import annotations
@@ -14,15 +14,6 @@ from typing import Any
 
 from src.common.contracts.entity import DirectHolding, IssuerWeight
 from src.common.contracts.market import PricePoint
-from src.common.fixtures import (
-    FixtureError,
-    FixtureStore,
-    as_date,
-    as_datetime,
-    as_decimal,
-    default_store,
-    fixture_key,
-)
 from src.common.types import (
     CashflowScope,
     ClassificationBasis,
@@ -35,7 +26,6 @@ from src.common.types import (
     UserId,
     WeightBasis,
 )
-from src.m0_data.providers.fake import FakeFundDataProvider
 from src.m1_ledger.handoff import LotSummary, PositionContext
 from src.m3_lookthrough.providers.lookthrough import (
     Concentration,
@@ -48,6 +38,17 @@ from src.m3_lookthrough.providers.lookthrough import (
     Redundancy,
     Tilt,
 )
+
+from tests.fakes.loader import (
+    FixtureError,
+    FixtureStore,
+    as_date,
+    as_datetime,
+    as_decimal,
+    default_store,
+    fixture_key,
+)
+from tests.fakes.m0 import FakeFundDataProvider
 
 
 class FakeLookThroughDataProvider:

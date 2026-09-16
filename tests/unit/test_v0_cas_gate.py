@@ -27,14 +27,15 @@ from pathlib import Path
 
 import pytest
 from scripts.build_v0_cas import ISINS
-from src.common.fixtures import FixtureStore, load_yaml
 from src.common.types import Isin, SchemeId, UserId
-from src.m0_data.providers.fake import FakeMarketDataProvider
 from src.m1_ledger.cas import ImportReport, StagedTxn, import_cas
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.reconcile import apply_gate, nav_cross_check, reconcile_all
 from src.m1_ledger.returns import build_cashflows, npv, xirr
 from src.m1_ledger.txn import Txn, drop_reversed, load_transactions
+
+from tests.fakes.loader import FixtureStore, load_yaml
+from tests.fakes.m0 import FakeMarketDataProvider
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 STATEMENT = FIXTURES / "cas_statement.txt"

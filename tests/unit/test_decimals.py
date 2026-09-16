@@ -27,7 +27,8 @@ from src.common.decimals import (
     quantise_units,
 )
 from src.common.types import SchemeId
-from src.m0_data.providers.fake import FakeFundDataProvider, FakeMarketDataProvider
+
+from tests.fakes.m0 import FakeFundDataProvider, FakeMarketDataProvider
 
 # NAVs and unit counts that no binary float can hold exactly. Every one is a
 # realistic figure: 6-decimal units are what a CAS actually prints.
