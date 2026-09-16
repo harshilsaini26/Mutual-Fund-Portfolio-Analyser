@@ -15,43 +15,27 @@ from pathlib import Path
 import pytest
 from src.common.fixtures import DecimalSafeLoader, FixtureError, FixtureStore, load_yaml
 from src.common.types import (
-    ClassificationBasis,
-    IndexId,
     Isin,
     IssuerId,
     SchemeId,
-    UniverseId,
     UserId,
 )
 from src.m0_data.providers.fake import FakeFundDataProvider, FakeMarketDataProvider
-from src.m0_data.providers.fund_data import FundDataProvider
 from src.m0_data.providers.market_data import MarketDataProvider
-from src.m2_fund.providers.characteristics import SchemeCharacteristics
-from src.m2_fund.providers.fake import FakeSchemeCharacteristics
 from src.m3_lookthrough.providers.data import LookThroughDataProvider
 from src.m3_lookthrough.providers.fake import (
     FakeLookThroughDataProvider,
     FakeLookThroughProvider,
 )
 from src.m3_lookthrough.providers.lookthrough import LookThroughProvider
-from src.m4_risk.providers.fake import FakeRiskInputs
-from src.m4_risk.providers.inputs import RiskInputs
-from src.m5_market.providers.fake import FakeMarketDataFeed, FakeMarketIntelligence
-from src.m5_market.providers.feed import MarketDataFeed
-from src.m5_market.providers.intelligence import MarketIntelligence
 
 USER = UserId("USER-01")
 AS_OF = date(2026, 7, 31)
 
 PAIRS = [
     (FakeMarketDataProvider, MarketDataProvider),
-    (FakeFundDataProvider, FundDataProvider),
-    (FakeSchemeCharacteristics, SchemeCharacteristics),
     (FakeLookThroughDataProvider, LookThroughDataProvider),
     (FakeLookThroughProvider, LookThroughProvider),
-    (FakeRiskInputs, RiskInputs),
-    (FakeMarketDataFeed, MarketDataFeed),
-    (FakeMarketIntelligence, MarketIntelligence),
 ]
 
 
@@ -322,21 +306,6 @@ def test_unresolved_and_no_disclosure_are_present_not_dropped() -> None:
     assert "__NO_DISCLOSURE__" in ids
 
 
-def test_quarantined_scheme_is_excluded_but_its_value_is_not() -> None:
-    """§14.3: exclude from look-through, still show the position value."""
-    chars = FakeSchemeCharacteristics()
-    assert chars.quality(SchemeId("SBI-SC-DIR"), AS_OF).usable_for_lookthrough is False
-
-    lt = FakeLookThroughProvider()
-    no_disc = next(
-        e for e in lt.exposures(USER, AS_OF) if e.issuer_id == "__NO_DISCLOSURE__"
-    )
-    ledger_value = FakeLookThroughDataProvider().position_value(
-        USER, SchemeId("SBI-SC-DIR"), AS_OF
-    )
-    assert no_disc.exposure_inr == ledger_value
-
-
 def test_concentration_excludes_synthetics_from_the_denominator() -> None:
     """§8.2, the denominator trap.
 
@@ -393,124 +362,6 @@ def test_recursion_guard_blocks_cycles_and_depth() -> None:
 # --- M4 behaviour ----------------------------------------------------------
 
 
-def test_risk_inputs_m3_block_is_pure_delegation() -> None:
-    """`BUILD_ORDER.md` R1's amendment, proved at runtime.
-
-    Each of the four M3-block methods must return exactly what
-    `LookThroughProvider` returns — no arithmetic in the adapter.
-    """
-    ltp = FakeLookThroughProvider()
-    ri = FakeRiskInputs(lookthrough=ltp)
-
-    assert ri.exposures(USER, AS_OF) == ltp.exposures(USER, AS_OF)
-    assert ri.concentration(USER, AS_OF, "equity") == ltp.concentration(
-        USER, AS_OF, "equity"
-    )
-    assert ri.max_pairwise_overlap(USER, AS_OF) == ltp.max_pairwise_overlap(USER, AS_OF)
-    assert ri.sector_exposure(USER, AS_OF, ClassificationBasis.CURRENT) == (
-        ltp.sector_exposure(USER, AS_OF, ClassificationBasis.CURRENT)
-    )
-
-
-def test_index_meta_exposes_pri_so_callers_can_suppress() -> None:
-    """`PLAN.md` §9.4. A PRI index overstates alpha by the dividend yield."""
-    ri = FakeRiskInputs()
-    assert ri.index_meta(IndexId("NIFTY100-TRI")).is_total_return is True
-    assert ri.index_meta(IndexId("NIFTY100-PRI")).is_total_return is False
-
-
-def test_mcap_basis_pins_the_amfi_list() -> None:
-    """DECISIONS SZ-05. Without the parameter, M4 and M3 would disagree."""
-    ri = FakeRiskInputs()
-    pinned = ri.mcap_bucket(
-        IssuerId(IssuerId("ISS-PERSISTENT")), AS_OF, mcap_basis=date(2026, 1, 1)
-    )
-    default = ri.mcap_bucket(IssuerId(IssuerId("ISS-PERSISTENT")), AS_OF)
-    assert pinned != default
-
-
-def test_limit_evaluator_methods_all_resolve() -> None:
-    """DECISIONS SZ-09: the six methods §13 calls but §14.4 never declared."""
-    ri = FakeRiskInputs()
-    assert (
-        ri.issuer_exposure_pct(USER, AS_OF, IssuerId(IssuerId("ISS-HDFCBANK")))
-        is not None
-    )
-    assert ri.sector_exposure_pct(USER, AS_OF, "Financial Services") is not None
-    assert ri.mcap_exposure_pct(USER, AS_OF, "large") is not None
-    assert ri.illiquid_exposure_pct(USER, AS_OF) is not None
-    assert ri.current_drawdown(USER, AS_OF) is not None
-    assert ri.risk_snapshot(USER, AS_OF).confidence == "medium"
-
-
-def test_risk_snapshot_confidence_matches_observation_count() -> None:
-    """§14.3: high needs 756 observations. 588 is medium, and says so."""
-    snap = FakeRiskInputs().risk_snapshot(USER, AS_OF)
-    assert snap.obs_count < 756
-    assert snap.confidence == "medium"
-    assert snap.caveats, "a degraded snapshot must carry a caveat"
-
-
 # --- M5 behaviour ----------------------------------------------------------
 
 
-def test_quarantined_scheme_never_enters_a_flow_calculation() -> None:
-    """A misparsed quantity column becomes a fabricated industry-wide buy."""
-    feed = FakeMarketDataFeed()
-    ok_only = feed.schemes_with_disclosure(AS_OF, status_ok_only=True)
-    everything = feed.schemes_with_disclosure(AS_OF, status_ok_only=False)
-
-    assert "SBI-SC-DIR" in everything
-    assert "SBI-SC-DIR" not in ok_only
-
-
-def test_conviction_is_equity_only() -> None:
-    """§8.4. A fund holding a company's NCD is not expressing equity conviction."""
-    feed = FakeMarketDataFeed()
-    with_debt = feed.all_scheme_weights(
-        IssuerId(IssuerId("ISS-RELIANCE")), AS_OF, equity_only=False
-    )
-    equity = feed.all_scheme_weights(
-        IssuerId(IssuerId("ISS-RELIANCE")), AS_OF, equity_only=True
-    )
-
-    total_with = sum((w.weight for w in with_debt), Decimal(0))
-    total_eq = sum((w.weight for w in equity), Decimal(0))
-    assert total_with > total_eq, "the NCD line should be excluded from equity-only"
-
-
-def test_every_flow_result_carries_coverage_and_a_caveat() -> None:
-    """§14.3 and `PLAN.md` §4.10: unparsed AMCs are never estimated."""
-    flows = FakeMarketIntelligence().flow_leaders(AS_OF, "in", scope="market")
-    assert flows
-    for f in flows:
-        assert f.coverage_pct < Decimal(100)
-        assert f.caveats
-        assert "not estimated" in f.caveats[0]
-
-
-def test_watch_scope_is_the_default() -> None:
-    """§3.1 rule 2 is enforced by the API's default, not by each caller."""
-    sig = inspect.signature(MarketIntelligence.flow_leaders)
-    assert sig.parameters["scope"].default == "watch"
-    sig = inspect.signature(MarketIntelligence.conviction_map)
-    assert sig.parameters["scope"].default == "watch"
-
-
-def test_announcements_carry_headline_and_url_only() -> None:
-    """`PLAN.md` §3.2 puts news aggregation out of scope on licensing grounds."""
-    items = FakeMarketIntelligence().announcements(IssuerId("ISS-CUMMINS"))
-    assert items
-    fields = {f for f in items[0].__dataclass_fields__}
-    assert "headline" in fields and "url" in fields
-    assert "body" not in fields and "text" not in fields
-
-
-def test_rotation_and_sector_dashboard_load() -> None:
-    mi = FakeMarketIntelligence()
-    assert mi.rotation(AS_OF, UniverseId("NSE500"))
-    assert mi.sector_dashboard(AS_OF, UniverseId("NSE500"), scope="market")
-    assert mi.user_sector_context(USER, AS_OF, ClassificationBasis.CURRENT)
-    assert (
-        mi.company_page(IssuerId(IssuerId("ISS-CUMMINS")), AS_OF).mcap_basis is not None
-    )

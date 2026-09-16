@@ -26,42 +26,29 @@ CONTRACT_MODULES = [
     "src.common.contracts.quality",
     "src.common.contracts.scheme",
     "src.m0_data.providers.market_data",
-    "src.m0_data.providers.fund_data",
     "src.m1_ledger.handoff",
-    "src.m2_fund.providers.characteristics",
     "src.m3_lookthrough.providers.lookthrough",
     "src.m3_lookthrough.providers.data",
-    "src.m4_risk.providers.risk",
-    "src.m4_risk.providers.inputs",
-    "src.m5_market.providers.intelligence",
-    "src.m5_market.providers.feed",
     "src.m6_views.envelope",
     "src.m6_views.builder",
 ]
 
 PROTOCOLS = {
     "src.m0_data.providers.market_data": "MarketDataProvider",
-    "src.m0_data.providers.fund_data": "FundDataProvider",
-    "src.m2_fund.providers.characteristics": "SchemeCharacteristics",
     "src.m3_lookthrough.providers.lookthrough": "LookThroughProvider",
     "src.m3_lookthrough.providers.data": "LookThroughDataProvider",
-    "src.m4_risk.providers.risk": "RiskProvider",
-    "src.m4_risk.providers.inputs": "RiskInputs",
-    "src.m5_market.providers.intelligence": "MarketIntelligence",
-    "src.m5_market.providers.feed": "MarketDataFeed",
     "src.m6_views.builder": "ViewBuilder",
 }
 
-# `PLAN.md` §8.2 rule 3. Index = position in M0 -> M1 -> M2 -> M3 -> M4/M5 -> M6.
-# M4 and M5 are peers; neither may import the other.
+# `PLAN.md` §8.2 rule 3. Index = position in M0 -> M1 -> M3 -> M6.
+# The gaps are M2, M4 and M5, which are specified but not built. Their indices
+# are left free rather than closed up, so adding one later does not renumber
+# the modules that already exist.
 TIER = {
     "src.common": 0,
     "src.m0_data": 1,
     "src.m1_ledger": 2,
-    "src.m2_fund": 3,
     "src.m3_lookthrough": 4,
-    "src.m4_risk": 5,
-    "src.m5_market": 5,
     "src.m6_views": 6,
 }
 
@@ -144,49 +131,8 @@ def test_classification_basis_never_defaults() -> None:
                     )
 
 
-def test_risk_inputs_m3_block_delegates_to_lookthrough_provider() -> None:
-    """`BUILD_ORDER.md` R1's amendment, plus DECISIONS D1 and D2.
-
-    `LookThroughProvider` must expose every M3-block method `RiskInputs` needs,
-    with a compatible signature, so M4's adapter is a pass-through and no M3
-    calculation leaks into M4.
-    """
-    from src.m3_lookthrough.providers.lookthrough import LookThroughProvider
-    from src.m4_risk.providers.inputs import RiskInputs
-
-    m3_block = ["exposures", "sector_exposure", "concentration", "max_pairwise_overlap"]
-
-    for name in m3_block:
-        assert hasattr(RiskInputs, name), f"RiskInputs is missing {name}"
-        assert hasattr(LookThroughProvider, name), (
-            f"LookThroughProvider cannot serve RiskInputs.{name}"
-        )
-
-        ri_params = set(inspect.signature(getattr(RiskInputs, name)).parameters)
-        ltp_params = set(inspect.signature(getattr(LookThroughProvider, name)).parameters)
-        assert ri_params <= ltp_params, (
-            f"RiskInputs.{name} asks for {ri_params - ltp_params}, "
-            f"which LookThroughProvider does not accept"
-        )
-
-
-def test_risk_inputs_has_no_lookthrough_method() -> None:
-    """DECISIONS D1: the colliding name is gone.
-
-    MODULE_4.md §14.4 declared `lookthrough() -> list[Exposure]` while
-    MODULE_3.md §15.1 declares `lookthrough() -> LookThroughResult`. One name,
-    two return types, across a module boundary.
-    """
-    from src.m4_risk.providers.inputs import RiskInputs
-
-    assert not hasattr(RiskInputs, "lookthrough"), (
-        "RiskInputs.lookthrough() collides with LookThroughProvider.lookthrough(); "
-        "use exposures() instead"
-    )
-
-
 def test_rendered_results_carry_caveats() -> None:
-    """MODULE_4.md §14.2 and MODULE_6.md §3.2.
+    """MODULE_6.md §3.2.
 
     Caveats are user-facing sentences that must reach `ViewEnvelope` unchanged.
     If a type M6 renders cannot carry them, they get dropped somewhere between
@@ -196,17 +142,9 @@ def test_rendered_results_carry_caveats() -> None:
         LookThroughResult,
         PortfolioSummary,
     )
-    from src.m4_risk.providers.risk import RiskSnapshot
-    from src.m5_market.providers.intelligence import IssuerFlow
     from src.m6_views.envelope import ViewEnvelope
 
-    for klass in (
-        LookThroughResult,
-        PortfolioSummary,
-        RiskSnapshot,
-        IssuerFlow,
-        ViewEnvelope,
-    ):
+    for klass in (LookThroughResult, PortfolioSummary, ViewEnvelope):
         assert "caveats" in typing.get_type_hints(klass), (
             f"{klass.__name__} cannot carry caveats"
         )

@@ -285,11 +285,11 @@ class FakeMarketDataProvider:
 
 
 class FakeFundDataProvider(FakeMarketDataProvider):
-    """M2's only interface into M0 — fixture-backed.
+    """The holdings and classification surface, fixture-backed.
 
-    Satisfies `FundDataProvider`. Inherits the NAV, TER and benchmark surface
-    from `FakeMarketDataProvider` because both protocols declare those
-    identically; the holdings, classification and manager surface is added here.
+    Written for M2, which was never built; it survives because M3's fake reads
+    holdings through it. Inherits NAV, TER and benchmark from
+    `FakeMarketDataProvider` and adds holdings, classification and manager.
     """
 
     def __init__(self, store: FixtureStore | None = None) -> None:
