@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from src.m0_data.config import inbox_root, source
@@ -69,6 +69,12 @@ def listing(amc_id: str, cfg: dict[str, Any], client: Any = None) -> list[Discov
     return adapter.parse_listing(response.content)
 
 
+#: What a disclosure download may be named. `ingest_inbox` reads workbooks;
+#: ICICI publishes a ZIP. Anything else out of a listing is not a portfolio,
+#: and an allow-list removes `.bat`, `.lnk` and `.ps1` endings entirely.
+DOWNLOADABLE = (".xlsx", ".xls", ".zip")
+
+
 def download(found: DiscoveredFile, cfg: dict[str, Any], into: Path) -> Path:
     """The file, into the inbox, under the name the AMC published it as.
 
@@ -91,7 +97,29 @@ def download(found: DiscoveredFile, cfg: dict[str, Any], into: Path) -> Path:
         raise FetchError(f"{found.url} returned no bytes")
 
     into.mkdir(parents=True, exist_ok=True)
-    target = into / found.filename
+
+    # `found.filename` is whatever the AMC's listing JSON said, and `into /
+    # name` contains nothing by itself: pathlib splits on both separators on
+    # Windows, honours `..`, and an ABSOLUTE right operand discards the left
+    # entirely. A hijacked listing could therefore name any path the user can
+    # write -- a .bat in the Startup folder, say -- and `write_bytes` below
+    # would put its own bytes there.
+    #
+    # This project already treats AMC-published content as untrusted
+    # (`tests/unit/test_security.py` hardens against XSS and CSV formula
+    # payloads in the same documents). The listing is the same boundary, and
+    # every OTHER network-to-disk write here is content-addressed and ignores
+    # the publisher's name entirely (`fetch/base.py`'s `archive_path`). This
+    # one needs a name, so it takes only the basename.
+    #
+    # PureWindowsPath, not Path: it splits on `\\` on every platform. Path
+    # does not on Linux, which would leave `..\\..\\evil` intact there.
+    name = PureWindowsPath(found.filename).name
+    if not name.lower().endswith(DOWNLOADABLE):
+        raise FetchError(
+            f"{found.url}: refusing publisher filename {found.filename!r}"
+        )
+    target = into / name
     part = target.with_suffix(target.suffix + ".part")
     part.write_bytes(response.content)
     part.replace(target)

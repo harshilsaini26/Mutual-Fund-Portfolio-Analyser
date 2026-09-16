@@ -4,8 +4,11 @@ Every case here was **demonstrated against the running code** before it was
 written down, not inferred from a pattern. Two of them share a source: issuer
 names come from AMC disclosure files fetched over the internet, so a hostile or
 compromised disclosure is remote input that reaches a local page and a local
-spreadsheet. That is the only untrusted-input path this project has, and it is
-the one worth testing.
+spreadsheet.
+
+That framing was too narrow. The AMC's LISTING is the same trust boundary as
+its content, and the filename in it reaches a filesystem write -- a worse sink
+than either. See the download case below.
 
 `src/m1_ledger/` is test-first by `CLAUDE.md`, which covers the ledger file-mode
 case below.
@@ -401,3 +404,103 @@ def test_the_temp_directory_helper_is_not_used_for_secrets() -> None:
         "gettempdir",
     ):
         assert forbidden not in pdf, f"{forbidden} in the module that holds a password"
+
+
+# --- the AMC listing is untrusted too, and its filename reaches the disk -----
+
+
+def _hostile(name: str) -> object:
+    from src.m0_data.fetch.amc_direct import DiscoveredFile
+
+    return DiscoveredFile(
+        amc_id="kotak",
+        as_of=date(2026, 8, 31),
+        url="https://example.invalid/x",
+        filename=name,
+        kind="monthly",
+        title="Portfolio as on August 31, 2026",
+    )
+
+
+def _served(monkeypatch: pytest.MonkeyPatch, body: bytes = b"PK\x03\x04payload") -> None:
+    """`download` with the network replaced by a fixed body."""
+    import jobs.fetch_amc as job
+
+    class Response:
+        content = body
+
+        def raise_for_status(self) -> None:
+            return None
+
+    monkeypatch.setattr(job, "conditional_get", lambda *a, **k: Response())
+
+
+CFG = {
+    "user_agent": "t",
+    "timeout_connect": 1,
+    "timeout_read": 1,
+    "retries": 0,
+    "rate_limit_per_sec": 99,
+    "burst": 1,
+}
+
+
+@pytest.mark.parametrize(
+    "hostile",
+    [
+        "..\\..\\..\\Startup\\upd.bat",
+        "../../../evil.bat",
+        "C:/Windows/Temp/evil.ps1",
+        "..",
+        "",
+    ],
+)
+def test_a_publisher_filename_cannot_escape_the_inbox(
+    hostile: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A hijacked listing must not choose where bytes land.
+
+    `into / name` contains nothing by itself: pathlib splits on both separators
+    on Windows, honours `..`, and an absolute right operand discards the left
+    entirely. Every other network-to-disk write here is content-addressed and
+    ignores the publisher's name; this one needs it, so it takes the basename
+    and an extension allow-list.
+    """
+    from jobs.fetch_amc import download
+    from src.m0_data.fetch.base import FetchError
+
+    _served(monkeypatch)
+    inbox = tmp_path / "inbox"
+    with pytest.raises(FetchError, match="refusing publisher filename"):
+        download(_hostile(hostile), CFG, inbox)  # type: ignore[arg-type]
+
+    escaped = [p for p in tmp_path.rglob("*") if p.is_file() and p.parent != inbox]
+    assert not escaped, f"bytes written outside the inbox: {escaped}"
+
+
+def test_a_traversing_name_with_a_real_extension_is_flattened(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The traversal is stripped rather than the download refused: the name is
+    still a legitimate workbook name, it just stops being a path."""
+    from jobs.fetch_amc import download
+
+    _served(monkeypatch)
+    inbox = tmp_path / "inbox"
+    target = download(_hostile("..\\..\\evil.xlsx"), CFG, inbox)  # type: ignore[arg-type]
+
+    assert target == inbox / "evil.xlsx"
+    assert target.parent == inbox
+
+
+def test_a_legitimate_publisher_name_still_downloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guard must not break the happy path it wraps -- ICICI publishes a
+    ZIP, Kotak an XLSX."""
+    from jobs.fetch_amc import download
+
+    _served(monkeypatch)
+    inbox = tmp_path / "inbox"
+    for name in ("Monthly-Portfolio-Disclosure-August-2026.zip", "FAD_Aug2026.xlsx"):
+        assert download(_hostile(name), CFG, inbox).name == name  # type: ignore[arg-type]
