@@ -123,9 +123,9 @@ it and fails if anything resolves that the lock does not mention. The extras are
 ### The gate
 
 ```bash
-python -m pytest -q                                   # 1,178 tests, ~80s, hermetic
+python -m pytest -q                                   # 1,100 tests, ~80s, hermetic
 python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 187 files
+python -m mypy                                        # strict, 173 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
 
@@ -251,12 +251,13 @@ src/m0_data/          fetch, parse, resolve, validate, load        (the warehous
 src/m1_ledger/        CAS parsing, FIFO lots, returns, reconcile   (your positions)
 src/m3_lookthrough/   exposure, overlap, concentration, duplication
 src/m6_views/         envelope, builders, formatting, export, API, templates
-src/m2_fund/ m4_risk/ m5_market/     contracts only — not built
 jobs/   scripts/   migrations/   docs/   tests/
+tests/fakes/          fixture-backed test doubles, out of the shipped library
 ```
 
-**One-way dependencies:** `M0 -> M1 -> M2 -> M3 -> M4/M5 -> M6`, through Protocol
-interfaces, never reaching across a boundary with SQL. The view layer performs no
+**One-way dependencies:** `M0 -> M1 -> M3 -> M6`, through Protocol interfaces, never
+reaching across a boundary with SQL. The gaps are M2, M4 and M5 — specified in `docs/`,
+not built, and carrying no code at all rather than a package of empty contracts. The view layer performs no
 financial computation at all — a static check over the builders enforces it, because a
 number derived in a view is a second source of truth nobody can reconcile.
 

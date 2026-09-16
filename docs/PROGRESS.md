@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-14 · 1,178 tests passing
+**Last updated:** 2026-09-16 · 1,100 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -155,10 +155,18 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication |
 | **M6 views** | built — six views, CSV export, loopback API |
-| M2 fund analytics | contracts only |
-| M4 risk | contracts only |
-| M5 market | contracts only |
+| M2 fund analytics | specified, not built |
+| M4 risk | specified, not built |
+| M5 market | specified, not built |
 | Tax engine | not built; rates live in a human-verified config and are never invented |
+
+The three unbuilt modules had a package each — Protocols plus a fake per
+protocol, 2,416 lines — whose only importers were the two tests that checked
+each contract against its own fake. They were deleted on 2026-09-16. The
+specification for all three is unchanged in `docs/`, which is where an unbuilt
+module belongs: a Protocol with one implementation, and that implementation a
+test double, is a placeholder with a type annotation, and it cost a compile, a
+typecheck and a lint on every commit to keep.
 
 ## What is not true yet
 
