@@ -110,8 +110,21 @@ def _expand_zips(folder: Path) -> int:
     workbook someone edited or placed themselves.
     """
     extracted = 0
-    for archive in sorted(folder.glob("*.zip")):
-        with zipfile.ZipFile(archive) as zf:
+    # iterdir + suffix.lower(), not glob("*.zip"): glob is case-sensitive on
+    # Linux and not on Windows, so a publisher's `.ZIP` expanded locally and
+    # was silently skipped in CI. The scan below already matches this way.
+    archives = sorted(
+        p for p in folder.iterdir() if p.is_file() and p.suffix.lower() == ".zip"
+    )
+    for archive in archives:
+        try:
+            zf = zipfile.ZipFile(archive)
+        except zipfile.BadZipFile:
+            # A truncated download must cost its own archive, not the batch.
+            # Every other failure in this module is reported and stepped over.
+            print(f"    SKIPPED {archive.name}: not a readable ZIP")
+            continue
+        with zf:
             for member in zf.namelist():
                 name = PureWindowsPath(member).name
                 if not name.lower().endswith(WORKBOOKS) or name.startswith("~$"):

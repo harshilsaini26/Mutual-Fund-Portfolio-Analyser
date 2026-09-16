@@ -29,6 +29,7 @@ from src.common.types import SchemeId
 from src.m0_data.config import warehouse_path
 from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
 from src.m2_fund.windows import (
+    MIN_DISTINCT_NAVS,
     WINDOW_YEARS,
     ReturnWindow,
     compute_return_window,
@@ -48,10 +49,15 @@ def line(w: ReturnWindow) -> str:
         if dd.recovery_days is not None
         else "not recovered" if dd.depth < 0 else "-"
     )
+    # Per row, not once for the series: a fund backfilled densely for years
+    # and interpolated through the last twelve months reports ~2% overall
+    # while its 1y row is mostly filled, and that row's volatility is the
+    # understated one.
+    filled = " *" if w.interpolated_pct > 0 else ""
     return (
         f"  {w.window_key:16} {pct(w.return_ann)} {pct(w.return_cum)}"
         f" {pct(w.volatility_ann)} {pct(dd.depth)}"
-        f"  {w.obs_count:>5}  {w.confidence:<6} {recovered}"
+        f"  {w.obs_count:>5}  {w.confidence:<6} {recovered}{filled}"
     )
 
 
@@ -76,6 +82,9 @@ def main() -> None:
             return
 
         as_of = date.fromisoformat(args.as_of) if args.as_of else full[-1].nav_date
+        # One slice, used by every figure below. Rolling returns previously
+        # took `full`, so --as-of moved the table and not the distribution.
+        upto = [p for p in full if p.nav_date <= as_of]
 
         print(f"FUND X-RAY  {args.scheme}   as of {as_of}")
         print(
@@ -89,8 +98,8 @@ def main() -> None:
         # paid out rather than accrued -- is invisible. 4,595 of the 15,006
         # schemes with NAV are IDCW options, so this is not a rare shape.
         # Printing 0.00% for them would be a confident wrong answer.
-        if len({p.nav for p in full}) < 3:
-            distinct = len({p.nav for p in full})
+        if len({p.nav for p in upto}) < MIN_DISTINCT_NAVS:
+            distinct = len({p.nav for p in upto})
             plural = "" if distinct == 1 else "s"
             print()
             print(f"  NAV takes {distinct} distinct value{plural} across the whole")
@@ -106,6 +115,7 @@ def main() -> None:
               f"  {'obs':>5}  {'conf':<6} drawdown")
         print("  " + "-" * 86)
 
+        shown: list[ReturnWindow] = []
         for key in WINDOW_YEARS:
             navs = md.nav_series(
                 scheme_id, window_start(as_of, key), as_of, adjusted=True
@@ -113,12 +123,13 @@ def main() -> None:
             w = compute_return_window(navs, key)
             short = f"  {key:16} insufficient history ({len(navs)} points)"
             print(line(w) if w else short)
+            if w:
+                shown.append(w)
 
-        whole = compute_return_window(
-            [p for p in full if p.nav_date <= as_of], "since_first_nav"
-        )
+        whole = compute_return_window(upto, "since_first_nav")
         if whole:
             print(line(whole))
+            shown.append(whole)
 
         if whole and whole.drawdown.depth < 0:
             # The dates are what make the depth checkable against market
@@ -133,7 +144,7 @@ def main() -> None:
 
         rolls = [
             r for y in (1, 3, 5)
-            if (r := rolling_returns(full, 365 * y)) is not None
+            if (r := rolling_returns(upto, 365 * y)) is not None
         ]
         if rolls:
             print()
@@ -146,10 +157,11 @@ def main() -> None:
                     f" {pct(r.best)}  {r.windows:>7}  {r.pct_positive:>6.1f}%"
                 )
 
-        filled = whole.interpolated_pct if whole else Decimal(0)
-        if filled > 0:
-            print(f"\n  {filled:.2f}% of NAV points are interpolated, not fetched —")
-            print("  a filled series is a straight line, which understates volatility.")
+        if any(w.interpolated_pct > 0 for w in shown):
+            print()
+            print("  * some NAV points in that row were interpolated, not")
+            print("  fetched. A filled series is a straight line, which has")
+            print("  no variance, so its volatility reads low.")
 
         print("\n  no benchmark on record: alpha, beta, tracking error and capture are")
         print("  not computed. no risk-free series: Sharpe and Sortino are not computed.")

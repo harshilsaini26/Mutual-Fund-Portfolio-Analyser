@@ -34,6 +34,8 @@ from src.m0_data.fetch.base import (
     conditional_get,
 )
 
+from jobs.ingest_inbox import WORKBOOKS
+
 #: S5 is the AMC disclosure source; these adapters only change how its URL is
 #: found, so they inherit its politeness settings rather than declaring new ones.
 SOURCE_ID = "S5"
@@ -69,10 +71,12 @@ def listing(amc_id: str, cfg: dict[str, Any], client: Any = None) -> list[Discov
     return adapter.parse_listing(response.content)
 
 
-#: What a disclosure download may be named. `ingest_inbox` reads workbooks;
-#: ICICI publishes a ZIP. Anything else out of a listing is not a portfolio,
-#: and an allow-list removes `.bat`, `.lnk` and `.ps1` endings entirely.
-DOWNLOADABLE = (".xlsx", ".xls", ".zip")
+#: What a disclosure download may be named: whatever `ingest_inbox` can read,
+#: plus the ZIP it now expands. Derived rather than restated -- two hand-kept
+#: lists drift, and a format added to one but not the other downloads and is
+#: then silently skipped, which is exactly the ICICI ZIP bug in a new guise.
+#: The allow-list also removes `.bat`, `.lnk` and `.ps1` endings entirely.
+DOWNLOADABLE = (*WORKBOOKS, ".zip")
 
 
 def download(found: DiscoveredFile, cfg: dict[str, Any], into: Path) -> Path:

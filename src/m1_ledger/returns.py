@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from src.common.decimals import annualise
 from src.common.types import SchemeId
 from src.m1_ledger.txn import (
     CASH_NEUTRAL_TYPES,
@@ -229,8 +230,10 @@ def twrr(
     if years < 1:
         return cumulative, None
 
-    annualised = Decimal(str(float(growth) ** (1.0 / float(years)))) - 1
-    return cumulative, annualised
+    # Shared with M2 via `src/common/`, because invariant 3 forbids M1
+    # importing M2. Was a float round-trip here, which agreed to ~1e-7 but
+    # converted twice on a money path invariant 1 keeps in Decimal.
+    return cumulative, annualise(growth, days)
 
 
 def nav_on_or_before(navs: dict[date, Decimal], on: date) -> Decimal | None:

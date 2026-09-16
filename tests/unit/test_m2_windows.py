@@ -196,3 +196,24 @@ def test_rolling_validates_the_series_like_the_window_does() -> None:
     """Both entry points route through the same guard."""
     with pytest.raises(NonPositiveNav):
         rolling_returns(series(["0"] + [str(100 + i) for i in range(499)]), 100, 30)
+
+
+def test_a_window_holding_one_price_is_not_a_zero_return() -> None:
+    """The defect every dense-series test above is blind to.
+
+    When both ends of a window bisect to the SAME price the ratio is forced to
+    1.0 and the window reports exactly 0.00% -- a fabricated figure. On a
+    series sparse relative to the horizon every window lands that way: these
+    points rise 100 -> 2050, a 20x gain, and the whole block read 0.00% worst,
+    0.00% median, 0.00% best before `i < j`.
+    """
+    sparse = series([str(100 + d) for d in range(0, 2100, 150)], step_days=150)
+    assert rolling_returns(sparse, horizon_days=100, step_days=30) is None
+
+
+def test_a_gapped_series_still_reports_the_windows_it_can_fill() -> None:
+    """The refusal above must not throw away windows that do span two prices."""
+    dense = series([str(100 + i) for i in range(500)])  # 14 windows, over the floor
+    r = rolling_returns(dense, horizon_days=100, step_days=30)
+    assert r is not None
+    assert r.worst > 0

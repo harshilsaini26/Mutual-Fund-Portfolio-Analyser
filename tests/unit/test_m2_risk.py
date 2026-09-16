@@ -17,9 +17,9 @@ from decimal import Decimal
 
 import pytest
 from src.common.contracts.market import NavPoint
+from src.common.decimals import annualise
 from src.common.types import SchemeId
 from src.m2_fund.risk import (
-    annualise,
     annualised_vol,
     confidence_from_obs,
     daily_returns,

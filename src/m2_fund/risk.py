@@ -26,38 +26,17 @@ from decimal import Decimal
 from itertools import pairwise
 
 from src.common.contracts.market import NavPoint
-
-#: Ratios and rates, six decimals — far finer than the NAV they derive from.
-METRIC_Q = Decimal("0.000001")
+from src.common.decimals import RATE_Q
 
 #: Trading days in a year. The series is trading days, not calendar days, so
 #: daily volatility scales by sqrt(252) and NOT sqrt(365) — using 365 on a
 #: trading-day series overstates volatility by about 18%.
 TRADING_DAYS = Decimal(252)
 
-#: Calendar days in a year, for annualising a return over a wall-clock span.
-CALENDAR_DAYS = Decimal(365)
-
 
 def daily_returns(navs: list[NavPoint]) -> list[Decimal]:
     """Period-over-period returns. One shorter than the series it is given."""
     return [cur.nav / prev.nav - 1 for prev, cur in pairwise(navs)]
-
-
-def annualise(growth: Decimal, days: int) -> Decimal:
-    """A growth ratio over `days` expressed as an annual rate.
-
-    `growth` is end/start — 1.5 for a 50% gain — and the result is a rate, so
-    that same 50% over two years returns 0.2247, not 1.2247.
-
-    Sub-year windows are annualised too, which is what §8.1 does, and the
-    result is close to meaningless: a 5% month annualises to 80%. That is what
-    `confidence_from_obs` is for, and why §8.2 greys anything under a year
-    rather than hiding it.
-    """
-    if days <= 0:
-        raise ValueError(f"cannot annualise over {days} days")
-    return ((growth.ln() * (CALENDAR_DAYS / Decimal(days))).exp() - 1).quantize(METRIC_Q)
 
 
 def annualised_vol(returns: list[Decimal]) -> Decimal:
@@ -71,7 +50,7 @@ def annualised_vol(returns: list[Decimal]) -> Decimal:
         return Decimal(0)
     mean = sum(returns, Decimal(0)) / n
     variance = sum(((r - mean) ** 2 for r in returns), Decimal(0)) / (n - 1)
-    return (variance.sqrt() * TRADING_DAYS.sqrt()).quantize(METRIC_Q)
+    return (variance.sqrt() * TRADING_DAYS.sqrt()).quantize(RATE_Q)
 
 
 @dataclass(frozen=True)
@@ -122,7 +101,7 @@ def max_drawdown(navs: list[NavPoint]) -> Drawdown:
         else None
     )
     return Drawdown(
-        depth=depth.quantize(METRIC_Q),
+        depth=depth.quantize(RATE_Q),
         peak=worst_peak,
         trough=trough_d,
         recovery=recovery,

@@ -27,10 +27,9 @@ from statistics import median
 from typing import NamedTuple
 
 from src.common.contracts.market import NavPoint
+from src.common.decimals import RATE_Q, annualise
 from src.m2_fund.risk import (
-    METRIC_Q,
     Drawdown,
-    annualise,
     annualised_vol,
     confidence_from_obs,
     daily_returns,
@@ -43,6 +42,13 @@ WINDOW_YEARS = {"1y": 1, "3y": 3, "5y": 5}
 
 #: §9: below twelve windows the distribution says nothing worth printing.
 MIN_ROLLING_WINDOWS = 12
+
+#: A series with fewer distinct prices than this has no return to read. The
+#: shape a daily-IDCW plan takes when its declarations are not loaded: the
+#: whole return was distributed rather than accrued, so `nav_adj` equals raw
+#: NAV and the line is flat. Named here, and imported by the reporting layer,
+#: so there is one answer to "is this computable?" rather than two.
+MIN_DISTINCT_NAVS = 2
 
 
 class NonPositiveNav(ValueError):
@@ -130,7 +136,7 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
     This is also where the series is validated, once, for the arithmetic in
     `risk.py` that assumes positive prices.
     """
-    if len(navs) < 2 or len({p.nav for p in navs}) < 2:
+    if len(navs) < 2 or len({p.nav for p in navs}) < MIN_DISTINCT_NAVS:
         return None
 
     _reject_non_positive(navs)
@@ -145,13 +151,13 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
 
     return ReturnWindow(
         window_key=window_key,
-        return_cum=(growth - 1).quantize(METRIC_Q),
+        return_cum=(growth - 1).quantize(RATE_Q),
         return_ann=annualise(growth, obs_days),
         volatility_ann=annualised_vol(daily_returns(navs)),
         drawdown=max_drawdown(navs),
         obs_days=obs_days,
         obs_count=len(navs),
-        interpolated_pct=(Decimal(filled) * 100 / Decimal(len(navs))).quantize(METRIC_Q),
+        interpolated_pct=(Decimal(filled) * 100 / Decimal(len(navs))).quantize(RATE_Q),
         confidence=confidence_from_obs(obs_days),
     )
 
@@ -181,7 +187,12 @@ def rolling_returns(
         # the linear scan M1's nav_on_or_before does over a dict.
         i = bisect_left(dates, start)
         j = bisect_right(dates, start + horizon) - 1
-        if i <= j:
+        # STRICTLY less: i == j means both ends resolve to the SAME price, so
+        # the ratio is forced to 1.0 and the window reports exactly 0.00% --
+        # a fabricated figure. On a series sparse relative to the horizon every
+        # window can land that way: points every 150 days rising 100 -> 2050
+        # reported 0.00% across all 49 windows before this.
+        if i < j:
             rets.append(annualise(navs[j].nav / navs[i].nav, horizon_days))
         start += step
 
@@ -195,5 +206,5 @@ def rolling_returns(
         best=max(rets),
         pct_positive=(
             Decimal(sum(1 for r in rets if r > 0)) * 100 / len(rets)
-        ).quantize(METRIC_Q),
+        ).quantize(RATE_Q),
     )

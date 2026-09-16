@@ -83,6 +83,33 @@ def quantise_nav(v: Decimal) -> Decimal:
 # takes TEXT affinity, and being a distinct name the converter cannot hijack
 # ordinary text columns the way registering against `TEXT` would.
 
+#: Rates and ratios, six decimals — finer than the NAV they derive from.
+RATE_Q = Decimal("0.000001")
+
+#: Calendar days in a year, for annualising over a wall-clock span.
+CALENDAR_DAYS = Decimal(365)
+
+
+def annualise(growth: Decimal, days: int) -> Decimal:
+    """A growth ratio over `days` as an annual rate. `growth` is end/start.
+
+    Here rather than in a module because M1 and M2 both need it and the
+    dependency direction is one-way (invariant 3): M1 cannot import M2. M1
+    previously had its own copy that went through `float`, which agreed to
+    about 1e-7 but converted twice on a money path that invariant 1 exists to
+    keep in `Decimal`.
+
+    `Decimal` has no fractional `**`, so this goes through ln/exp.
+
+    Whether a sub-year window SHOULD be annualised is the caller's policy and
+    deliberately differs: M1 returns None under a year, M2 annualises and
+    attaches a confidence tier.
+    """
+    if days <= 0:
+        raise ValueError(f"cannot annualise over {days} days")
+    return ((growth.ln() * (CALENDAR_DAYS / Decimal(days))).exp() - 1).quantize(RATE_Q)
+
+
 DECIMAL_SQLITE_TYPE = "DECIMAL_TEXT"
 """Declare Zone B money, unit, NAV and weight columns as this.
 
