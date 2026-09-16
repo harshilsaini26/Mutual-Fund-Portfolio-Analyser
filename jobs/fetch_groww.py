@@ -37,19 +37,12 @@ from src.m0_data.fetch.base import (
     conditional_get,
 )
 from src.m0_data.load import aum_for as _aum_for
-from src.m0_data.load import load_holdings
-from src.m0_data.normalise.instrument_class import (
-    class_from_section,
-    instrument_class,
-)
-from src.m0_data.normalise.units import to_inr
-from src.m0_data.normalise.weights import normalise_weights
+from src.m0_data.load import build_holding_rows, load_holdings
 from src.m0_data.parse.base import ParseFailed, RawFile
 from src.m0_data.parse.holdings.groww import GrowwHoldingsParser
 from src.m0_data.resolve.cascade import (
     load_isin_prefix_index,
     load_issuer_index,
-    resolve,
 )
 from src.m0_data.validate.checks import (
     HoldingRow,
@@ -187,71 +180,6 @@ def _archive_page(conn: Any, content: bytes, url: str) -> Any:
     return result
 
 
-def _build_rows(
-    conn: Any, parsed: Any, index: dict[str, str], prefixes: dict[str, str]
-) -> tuple[list[dict[str, object]], Any, list[str]]:
-    """Resolve every security to an issuer and normalise its weight.
-
-    Returns the rows, the weight result, and the names of any rows the page
-    did not price -- `holding.market_value` is NOT NULL, so an unpriced row is
-    stored as zero and weighted zero. It contributes nothing to any
-    look-through while every quality figure is computed against a total that
-    already excludes it. Nothing moves and nobody is told, which is what
-    `CLAUDE.md` invariant 4 forbids, so the names travel with the result.
-    """
-    securities = parsed.securities
-    values = [
-        to_inr(s.market_value_raw, s.market_value_unit)
-        if s.market_value_raw is not None
-        else None
-        for s in securities
-    ]
-    pcts = [
-        s.pct_to_nav_raw * parsed.pct_scale if s.pct_to_nav_raw is not None else None
-        for s in securities
-    ]
-    weights = normalise_weights(values, pcts)
-
-    rows: list[dict[str, object]] = []
-    for security, value, weight, pct in zip(
-        securities, values, weights.weights, pcts, strict=True
-    ):
-        resolution = resolve(
-            conn,
-            security.instrument_raw_name,
-            # None, always. The page has no ISIN column and §6.3 rule 1 means
-            # the parser did not invent one -- this is where that costs.
-            None,
-            class_from_section(security.section),
-            index,
-            prefixes,
-        )
-        rows.append(
-            {
-                "isin": None,
-                "issuer_id": str(resolution.issuer_id),
-                "instrument_raw_name": security.instrument_raw_name,
-                "quantity": security.quantity_raw,
-                "market_value": value if value is not None else Decimal(0),
-                "pct_to_nav": pct,
-                "pct_normalised": weight,
-                "instrument_class": instrument_class(
-                    security.section, str(resolution.issuer_id)
-                ),
-                "reported_sector": security.reported_sector,
-                "resolution_method": resolution.method,
-                "resolution_conf": resolution.confidence,
-            }
-        )
-
-    unpriced = [
-        securities[i].instrument_raw_name
-        for i, value in enumerate(values)
-        if value is None
-    ]
-    return rows, weights, unpriced
-
-
 def _validate_rows(
     conn: Any, scheme_id: str, parsed: Any, rows: list[dict[str, object]]
 ) -> tuple[list[Any], str, str, Decimal | None]:
@@ -349,7 +277,9 @@ def _one(
         }
 
     result = _archive_page(conn, content, url)
-    rows, weights, unpriced = _build_rows(conn, parsed, index, prefixes)
+    rows, weights, unpriced = build_holding_rows(
+        conn, parsed.securities, parsed.pct_scale, index, prefixes
+    )
     checks, status, unresolved, aum = _validate_rows(conn, scheme_id, parsed, rows)
 
     counts = load_holdings(

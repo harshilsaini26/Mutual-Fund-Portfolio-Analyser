@@ -39,21 +39,12 @@ from src.m0_data.fetch.base import (
     conditional_get,
 )
 from src.m0_data.load import aum_for as _aum_for
-from src.m0_data.load import load_holdings
-from src.m0_data.normalise.instrument_class import (
-    class_from_section as _class_from_section,
-)
-from src.m0_data.normalise.instrument_class import (
-    instrument_class as _instrument_class,
-)
-from src.m0_data.normalise.units import to_inr
-from src.m0_data.normalise.weights import normalise_weights
+from src.m0_data.load import build_holding_rows, load_holdings
 from src.m0_data.parse.base import HoldingsParser, ParseFailed, RawFile
 from src.m0_data.parse.holdings.registry import by_parser_id, route
 from src.m0_data.resolve.cascade import (
     load_isin_prefix_index,
     load_issuer_index,
-    resolve,
 )
 from src.m0_data.resolve.scheme_match import (
     canonical_scheme,
@@ -325,54 +316,9 @@ def _one(
     scheme_id = entry["scheme_id"]
     securities = parsed.securities
 
-    # Units first — everything after this is in rupees absolute (§7.2).
-    values = [
-        to_inr(s.market_value_raw, s.market_value_unit)
-        if s.market_value_raw is not None else None
-        for s in securities
-    ]
-    # §7.3 and §10's V1 both work in percent. HDFC reports `% to NAV` as one;
-    # ICICI reports a fraction summing to 1.0. The parser observed which
-    # (`pct_scale`) and this is where it is applied — the same boundary
-    # `to_inr` sits on for market value, one column across. Skipping it makes
-    # ICICI's reported weights sum to 1, failing V1 and making
-    # `weight_residual` read 99: a portfolio that looks almost unaccounted for.
-    pcts = [
-        s.pct_to_nav_raw * parsed.pct_scale if s.pct_to_nav_raw is not None else None
-        for s in securities
-    ]
-    weights = normalise_weights(values, pcts)
-
-    rows: list[dict[str, object]] = []
-    for security, value, weight, pct in zip(
-        securities, values, weights.weights, pcts, strict=True
-    ):
-        resolution = resolve(
-            conn, security.instrument_raw_name, security.isin_raw,
-            _class_from_section(security.section), index, prefixes,
-        )
-        rows.append({
-            "isin": security.isin_raw,
-            "issuer_id": str(resolution.issuer_id),
-            "instrument_raw_name": security.instrument_raw_name,
-            "quantity": security.quantity_raw,
-            # `holding.market_value` is NOT NULL, so an unpriced row has to be
-            # stored as zero. That loses the distinction between "worth
-            # nothing" and "the file did not price it", so the count is carried
-            # to the disclosure header below rather than left silent —
-            # `CLAUDE.md` invariant 4 is that a row is never dropped without a
-            # record, and a row whose exposure is zeroed is dropped in every
-            # way that matters downstream.
-            "market_value": value if value is not None else Decimal(0),
-            "pct_to_nav": pct,
-            "pct_normalised": weight,
-            "instrument_class": _instrument_class(
-                security.section, str(resolution.issuer_id)
-            ),
-            "reported_sector": security.reported_sector,
-            "resolution_method": resolution.method,
-            "resolution_conf": resolution.confidence,
-        })
+    rows, weights, unpriced = build_holding_rows(
+        conn, securities, parsed.pct_scale, index, prefixes
+    )
 
     witness = _aum_for(conn, scheme_id, parsed.as_of_date)
     aum = witness.amount if witness else None
@@ -393,17 +339,6 @@ def _one(
     )
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"
-
-    # A row the file did not price is stored with market_value 0 (the column is
-    # NOT NULL) and `normalise_weights` independently gives it weight 0, so it
-    # contributes nothing to any look-through while every quality figure is
-    # computed against a total that already excludes it — nothing moves, and
-    # nobody is told. Counting them here is what makes the loss visible.
-    unpriced = [
-        securities[i].instrument_raw_name
-        for i, value in enumerate(values)
-        if value is None
-    ]
 
     counts = load_holdings(
         conn, scheme_id, parsed.as_of_date, rows,

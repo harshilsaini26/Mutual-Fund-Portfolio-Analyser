@@ -17,10 +17,17 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from src.m0_data.normalise.instrument_class import (
+    class_from_section,
+    instrument_class,
+)
+from src.m0_data.normalise.units import to_inr
+from src.m0_data.normalise.weights import NormalisedWeights, normalise_weights
+from src.m0_data.parse.base import StagedHolding
 from src.m0_data.parse.holdings.base import READER_VERSION
 from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
-from src.m0_data.resolve.cascade import RESOLVER_VERSION
+from src.m0_data.resolve.cascade import RESOLVER_VERSION, resolve
 
 
 def normalise_amc_id(amc_name: str) -> str:
@@ -465,3 +472,89 @@ def has_table(conn: sqlite3.Connection, name: str) -> bool:
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
         ).fetchone()
     )
+
+
+def build_holding_rows(
+    conn: sqlite3.Connection,
+    securities: list[StagedHolding],
+    pct_scale: Decimal,
+    index: dict[str, str],
+    prefixes: dict[str, str],
+) -> tuple[list[dict[str, object]], NormalisedWeights, list[str]]:
+    """Staged rows -> loadable rows: units applied, issuers resolved, weights normalised.
+
+    Shared by both load paths. `jobs/load_holdings.py` reads an AMC's own
+    workbook and `jobs/fetch_groww.py` reads an aggregator page, and the two
+    carried a verbatim copy of this loop each. They had already diverged once
+    on the section table (V1-48), where the copy classified a REIT as equity
+    and a fund-of-fund unit could never be found; the fix was to share that
+    table, and this is the rest of the same duplication.
+
+    Nothing here branches on which tier called it. The aggregator page has no
+    ISIN column, but its parser stages `isin_raw=None` (§6.3 rule 1 — the
+    parser does not invent what the page does not state), so the cascade is
+    handed None by the data rather than by a flag.
+
+    Returns the rows, the normalisation result, and the names of rows the file
+    did not price. That last list is not optional bookkeeping:
+    `holding.market_value` is NOT NULL, so an unpriced row is stored as zero
+    and `normalise_weights` independently gives it weight zero. It then
+    contributes nothing to any look-through while every quality figure is
+    computed against a total that already excludes it -- nothing moves and
+    nobody is told, which is exactly what `CLAUDE.md` invariant 4 forbids.
+    """
+    # Units first -- everything after this is in rupees absolute (§7.2).
+    values = [
+        to_inr(s.market_value_raw, s.market_value_unit)
+        if s.market_value_raw is not None
+        else None
+        for s in securities
+    ]
+    # §7.3 and §10's V1 both work in percent. HDFC reports `% to NAV` as one;
+    # ICICI reports a fraction summing to 1.0. The parser observed which
+    # (`pct_scale`) and this is where it is applied -- the same boundary
+    # `to_inr` sits on for market value, one column across. Skipping it makes
+    # ICICI's reported weights sum to 1, failing V1 and making
+    # `weight_residual` read 99: a portfolio that looks almost unaccounted for.
+    pcts = [
+        s.pct_to_nav_raw * pct_scale if s.pct_to_nav_raw is not None else None
+        for s in securities
+    ]
+    weights = normalise_weights(values, pcts)
+
+    rows: list[dict[str, object]] = []
+    for security, value, weight, pct in zip(
+        securities, values, weights.weights, pcts, strict=True
+    ):
+        resolution = resolve(
+            conn,
+            security.instrument_raw_name,
+            security.isin_raw,
+            class_from_section(security.section),
+            index,
+            prefixes,
+        )
+        rows.append(
+            {
+                "isin": security.isin_raw,
+                "issuer_id": str(resolution.issuer_id),
+                "instrument_raw_name": security.instrument_raw_name,
+                "quantity": security.quantity_raw,
+                "market_value": value if value is not None else Decimal(0),
+                "pct_to_nav": pct,
+                "pct_normalised": weight,
+                "instrument_class": instrument_class(
+                    security.section, str(resolution.issuer_id)
+                ),
+                "reported_sector": security.reported_sector,
+                "resolution_method": resolution.method,
+                "resolution_conf": resolution.confidence,
+            }
+        )
+
+    unpriced = [
+        securities[i].instrument_raw_name
+        for i, value in enumerate(values)
+        if value is None
+    ]
+    return rows, weights, unpriced
