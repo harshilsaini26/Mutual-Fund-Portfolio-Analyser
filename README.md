@@ -95,7 +95,8 @@ A working system, not a finished product.
 | Plus a coverage tier | any fund Groww lists, at 19-23% unresolved against 0.00% from an AMC's own file |
 | Schemes with a loaded disclosure | 192, across 6 fund houses |
 | Modules built | M0 data, M1 ledger, M3 look-through, M6 views |
-| Not built | M2 fund analytics, M4 risk, M5 market, tax engine |
+| Partly built | M2 fund x-ray — return windows and risk stats from NAV; no benchmark, so no alpha or Sharpe |
+| Not built | M4 risk, M5 market, tax engine |
 | Has anyone actually used it | **no** |
 
 Five of the eleven portfolio views in the spec are deliberately *absent* rather than
@@ -123,9 +124,9 @@ it and fails if anything resolves that the lock does not mention. The extras are
 ### The gate
 
 ```bash
-python -m pytest -q                                   # 1,100 tests, ~80s, hermetic
+python -m pytest -q                                   # 1,140 tests, ~80s, hermetic
 python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 173 files
+python -m mypy                                        # strict, 178 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
 
@@ -249,6 +250,7 @@ regression test in `tests/unit/test_security.py`, written against a demonstrated
 src/common/           Decimal + SQLite discipline, frozen contracts, types
 src/m0_data/          fetch, parse, resolve, validate, load        (the warehouse)
 src/m1_ledger/        CAS parsing, FIFO lots, returns, reconcile   (your positions)
+src/m2_fund/          return windows, risk statistics       (fund x-ray)
 src/m3_lookthrough/   exposure, overlap, concentration, duplication
 src/m6_views/         envelope, builders, formatting, export, API, templates
 jobs/   scripts/   migrations/   docs/   tests/
@@ -256,8 +258,9 @@ tests/fakes/          fixture-backed test doubles, out of the shipped library
 ```
 
 **One-way dependencies:** `M0 -> M1 -> M3 -> M6`, through Protocol interfaces, never
-reaching across a boundary with SQL. The gaps are M2, M4 and M5 — specified in `docs/`,
-not built, and carrying no code at all rather than a package of empty contracts. The view layer performs no
+reaching across a boundary with SQL. M2 hangs off M0 alone — it reads NAV through
+`MarketDataProvider` and writes no SQL of its own. M4 and M5 are specified in `docs/` and
+carry no code at all, rather than a package of empty contracts. The view layer performs no
 financial computation at all — a static check over the builders enforces it, because a
 number derived in a view is a second source of truth nobody can reconcile.
 

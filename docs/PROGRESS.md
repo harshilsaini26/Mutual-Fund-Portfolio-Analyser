@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-16 · 1,100 tests passing
+**Last updated:** 2026-09-16 · 1,140 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -155,14 +155,21 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication |
 | **M6 views** | built — six views, CSV export, loopback API |
-| M2 fund analytics | specified, not built |
+| M2 fund x-ray | partly built — return windows and risk statistics from NAV |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
 | Tax engine | not built; rates live in a human-verified config and are never invented |
 
-The three unbuilt modules had a package each — Protocols plus a fake per
-protocol, 2,416 lines — whose only importers were the two tests that checked
-each contract against its own fake. They were deleted on 2026-09-16. The
+M2 was rebuilt on 2026-09-16 as two files and no SQL: §8's return windows
+and the risk statistics that need neither a benchmark nor a risk-free rate,
+reading NAV through the `MarketDataProvider` that already existed. The rest of
+its spec — the three-window model, peer ranks, the manager dossier, turnover —
+is blocked on data rather than effort.
+
+M4 and M5 still have no code. All three previously had a package each —
+Protocols plus a fake per protocol, 2,416 lines — whose only importers were the
+two tests that checked each contract against its own fake. They were deleted on
+2026-09-16. The
 specification for all three is unchanged in `docs/`, which is where an unbuilt
 module belongs: a Protocol with one implementation, and that implementation a
 test double, is a placeholder with a type annotation, and it cost a compile, a
@@ -184,6 +191,26 @@ typecheck and a lint on every commit to keep.
 ## Known defects, measured and unfixed
 
 Ordered by what they cost.
+
+0. **`scheme_idcw` is empty, so every IDCW plan's return is understated.**
+   9,187 of 19,598 schemes are `idcw_payout` or `idcw_reinvest` and the table
+   holds **0 rows**. `build_nav_adj` writes `nav_adj = nav` when a scheme has no
+   events, so the column is fully populated and identical to raw NAV — a
+   total-return series in name only. Any return computed from it is short by the
+   whole distributed amount; for a daily-IDCW plan that is the entire return,
+   which is how a liquid fund reports 0.00%.
+
+   §10.3's contract check tested `nav_adj IS NULL`, which this failure never
+   trips. It now also fails an IDCW option with no declarations on record, and
+   M2 refuses to compute a window from a series that never moves. Both are
+   guards, not the fix. The fix is **S14** (§3's source table: IDCW declarations
+   from AMC/AMFI), one of the nine sources of fourteen that have no fetcher.
+
+   Three of those nine are why M2 stops where it does, and they map one to one
+   onto what it cannot compute: **S14** IDCW → understated returns for IDCW
+   plans, **S12** index levels (TRI) → no alpha, beta, tracking error or
+   capture, **S13** RBI T-bill yields → no Sharpe or Sortino. None of the three
+   is hard; all three are unfetched.
 
 0. **`rebuild_weights` commits, so it cannot compose into a caller's
    transaction.** A job that loaded holdings and then rebuilt weights would

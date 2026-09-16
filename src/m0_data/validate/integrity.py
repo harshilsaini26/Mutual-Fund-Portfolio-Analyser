@@ -117,6 +117,28 @@ def assert_m1_contract(
                     f"{scheme_id}: IDCW option with {missing} rows missing nav_adj"
                 )
 
+            # The NULL check above cannot catch the failure that actually
+            # happens. `build_nav_adj` sets `nav_adj = nav` when a scheme has
+            # no IDCW events, so for an IDCW plan whose declarations were never
+            # loaded the column is fully populated and identical to raw NAV --
+            # a total-return series in name only. Every return computed from it
+            # is understated by the whole distributed amount, and for a
+            # daily-IDCW plan that is the entire return.
+            #
+            # `scheme_idcw` currently holds 0 rows against 9,187 IDCW-option
+            # schemes (S14 is specified but has no fetcher), so this fires for
+            # every held IDCW plan until that source exists. That is the point:
+            # §10.3 exists to convert silent corruption into a loud failure,
+            # and M1 computing XIRR on raw NAV is exactly that corruption.
+            declared = conn.execute(
+                "SELECT COUNT(*) FROM scheme_idcw WHERE scheme_id = ?", (scheme_id,)
+            ).fetchone()[0]
+            if not declared:
+                report.violations.append(
+                    f"{scheme_id}: IDCW option with no declarations on record, so"
+                    " nav_adj is raw NAV and every return from it is understated"
+                )
+
         if _merger_chain_has_cycle(conn, scheme_id):
             report.violations.append(f"{scheme_id}: cyclic merger chain")
 

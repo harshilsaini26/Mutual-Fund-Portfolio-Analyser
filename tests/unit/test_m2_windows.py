@@ -50,13 +50,29 @@ def test_a_doubling_over_a_year_reports_both_returns() -> None:
     assert w.confidence == "medium"
 
 
-def test_a_flat_series_is_zero_everywhere() -> None:
-    """Catches sign and division errors that a rising series hides."""
-    w = compute_return_window(series(["100"] * 400), "1y")
+def test_a_series_that_never_moves_is_refused_not_reported_as_zero() -> None:
+    """The shape a daily-IDCW plan takes when its declarations are not loaded.
+
+    The whole return was distributed rather than accrued, so `nav_adj` -- which
+    equals raw NAV when no events are on record -- is a flat line. Reporting
+    0.00% would be indistinguishable from a fund that genuinely went nowhere,
+    and 9,187 of this warehouse's schemes are IDCW options against an empty
+    `scheme_idcw`. Refusing is the only honest answer.
+    """
+    assert compute_return_window(series(["100"] * 400), "1y") is None
+
+
+def test_a_barely_moving_series_still_computes() -> None:
+    """The refusal above must not swallow a fund that really is this quiet.
+
+    One paisa of movement is a real return, and a liquid Growth fund looks
+    almost like this. Catches sign and division errors that a strongly rising
+    series would hide.
+    """
+    w = compute_return_window(series(["100"] * 200 + ["100.01"] * 200), "1y")
     assert w is not None
-    assert w.return_cum == Decimal(0)
-    assert w.return_ann == Decimal(0)
-    assert w.volatility_ann == Decimal(0)
+    assert w.return_cum > 0
+    assert w.volatility_ann > 0
     assert w.max_drawdown == Decimal(0)
 
 

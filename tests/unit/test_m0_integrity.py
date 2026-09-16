@@ -146,3 +146,49 @@ def test_the_gate_names_what_it_did_not_check(
     report = assert_m1_contract(conn, [HDFC_DIRECT], date(2026, 1, 1), AS_OF)
     assert any("tax_class" in n for n in report.not_checked)
     assert any("scheme_ter" in n for n in report.not_checked)
+
+
+def test_an_idcw_plan_with_no_declarations_is_a_violation(
+    conn: sqlite3.Connection,
+) -> None:
+    """The failure the spec's own nav_adj check cannot see.
+
+    §10.3 tests `nav_adj IS NULL`, but `build_nav_adj` writes `nav_adj = nav`
+    when a scheme has no IDCW events. So an IDCW plan whose declarations were
+    never loaded has a fully populated column identical to raw NAV -- a
+    total-return series in name only -- and the NULL check passes over it.
+
+    Every return computed from that column is understated by the whole
+    distributed amount. For a daily-IDCW plan it is the entire return, which
+    is how a liquid fund comes to report 0.00%.
+    """
+    conn.execute(
+        "UPDATE scheme SET option = 'idcw_payout' WHERE scheme_id = ?", (HDFC_DIRECT,)
+    )
+    conn.execute("UPDATE nav_daily SET nav_adj = nav WHERE scheme_id = ?", (HDFC_DIRECT,))
+    conn.commit()
+
+    report = assert_m1_contract(conn, [HDFC_DIRECT], date(2026, 1, 1), AS_OF)
+    assert not report.passed
+    assert any("no declarations on record" in v for v in report.violations), (
+        "an IDCW plan with an empty scheme_idcw must be caught; nav_adj being "
+        "non-NULL says nothing about whether it is a total-return series"
+    )
+
+
+def test_a_growth_plan_with_no_declarations_is_fine(
+    conn: sqlite3.Connection,
+) -> None:
+    """The other half, without which the check above could be a blanket refusal.
+
+    A Growth option distributes nothing, so having no IDCW rows is correct and
+    `nav_adj == nav` is the right answer rather than a missing one.
+    """
+    conn.execute(
+        "UPDATE scheme SET option = 'growth' WHERE scheme_id = ?", (HDFC_DIRECT,)
+    )
+    conn.execute("UPDATE nav_daily SET nav_adj = nav WHERE scheme_id = ?", (HDFC_DIRECT,))
+    conn.commit()
+
+    report = assert_m1_contract(conn, [HDFC_DIRECT], date(2026, 1, 1), AS_OF)
+    assert not any("declarations" in v for v in report.violations)

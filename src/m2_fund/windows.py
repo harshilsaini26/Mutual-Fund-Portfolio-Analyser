@@ -98,6 +98,16 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
     if len(navs) < 2:
         return None
 
+    # A series that never moves has no return and no risk to report, and
+    # zeros would be indistinguishable from a fund that genuinely went
+    # nowhere. This is the shape a daily-IDCW plan takes when its
+    # declarations were never loaded: the whole return was distributed
+    # rather than accrued, so `nav_adj` -- which equals raw NAV with no
+    # events on record -- is a flat line. Refusing here rather than only in
+    # the caller means no consumer of this function can be handed 0.00%.
+    if len({p.nav for p in navs}) < 2:
+        return None
+
     first, last = navs[0], navs[-1]
     obs_days = (last.nav_date - first.nav_date).days
     if obs_days <= 0:
