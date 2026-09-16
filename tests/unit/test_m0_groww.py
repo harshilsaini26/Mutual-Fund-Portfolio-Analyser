@@ -509,7 +509,7 @@ class TestTheLoadPathGivesV2AWitness:
 
         import jobs.fetch_groww as job
 
-        body = inspect.getsource(job._one)
+        body = inspect.getsource(job._validate_rows)
         assert "_aum_for(conn, scheme_id, parsed.as_of_date)" in body
         assert "date.today(),\n        None,\n    )" not in body, (
             "validate_disclosure is still being handed a None AUM"

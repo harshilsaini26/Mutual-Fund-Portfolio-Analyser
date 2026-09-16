@@ -120,63 +120,18 @@ def _archived(conn: Any, file_id: str) -> bool:
     return row is not None
 
 
-def _one(
-    conn: Any,
-    scheme_id: str | None,
-    slug: str,
-    cfg: dict[str, Any],
-    index: dict[str, str],
-    prefixes: dict[str, str],
-    dry_run: bool,
-    force: bool = False,
-) -> dict[str, object]:
-    content, url = fetch_page(slug, cfg)
+def _guard_scheme_is_known(conn: Any, slug: str, scheme_id: str) -> None:
+    """The scheme has to exist before a disclosure can be filed against it.
 
-    # Parsed ONCE. The first draft parsed here for the ISIN check, again for
-    # the dry-run summary and a third time after archiving -- three passes of
-    # the `__NEXT_DATA__` regex and three `json.loads` of a ~500 KB payload for
-    # one page. Nothing the later passes needed came from the parse; the only
-    # thing that changes after archiving is the `file_id`, which is a field on
-    # `RawFile` and not an input to parsing.
-    parsed = GrowwHoldingsParser().parse(
-        RawFile("probe", SOURCE_ID, f"{slug}.html", content)
-    )
-    assert parsed.as_of_date is not None
-    stated = page_isin(content)
-
-    if scheme_id and stated and stated != scheme_id.upper():
-        raise SlugMismatch(
-            f"{slug}: the map promised {scheme_id} and the page states {stated}."
-            " Refusing to load a portfolio under a scheme_id it does not claim."
-        )
-
-    if dry_run:
-        return {
-            "slug": slug,
-            "scheme_name": parsed.scheme_raw_name,
-            "isin": stated,
-            "as_of": str(parsed.as_of_date),
-            "rows": len(parsed.securities),
-            "stated_total": str(parsed.stated_total),
-            "loaded": "no (dry run)",
-            "yaml": f"  {stated}:\n    slug: {slug}\n"
-            f"    scheme_name: {parsed.scheme_raw_name}",
-        }
-
-    if not stated:
-        raise SlugMismatch(f"{slug}: the page states no ISIN; refusing to guess one")
-    scheme_id = stated
-
-    # The scheme has to exist before a disclosure can be filed against it.
-    #
-    # `holding_disclosure.scheme_id REFERENCES scheme(scheme_id)` is declared
-    # and INERT -- SQLite enforces foreign keys only under
-    # `PRAGMA foreign_keys = ON`, which this project does not set. So with
-    # `--slug`, which bypasses the map and takes whatever ISIN the page states,
-    # an unknown scheme wrote a full disclosure and every holding row under an
-    # id no scheme has. It then vanished from anything that joins `scheme` --
-    # including `jobs/status.py`'s own report -- so the fund read as loaded and
-    # missing at the same time depending which query you asked.
+    `holding_disclosure.scheme_id REFERENCES scheme(scheme_id)` is declared and
+    INERT -- SQLite enforces foreign keys only under `PRAGMA foreign_keys = ON`,
+    which this project does not set. So with `--slug`, which bypasses the map and
+    takes whatever ISIN the page states, an unknown scheme wrote a full
+    disclosure and every holding row under an id no scheme has. It then vanished
+    from anything that joins `scheme` -- including `jobs/status.py`'s own report
+    -- so the fund read as loaded and missing at the same time depending which
+    query you asked.
+    """
     known = conn.execute(
         "SELECT 1 FROM scheme WHERE scheme_id = ?", (scheme_id,)
     ).fetchone()
@@ -187,28 +142,27 @@ def _one(
             " portfolio against a scheme nothing else can see."
         )
 
-    # Don't fetch what would not be read.
-    #
-    # Not correctness -- restraint. The guard that keeps the coverage tier from
-    # outranking an AMC file lives in `weights.latest_disclosure`, where every
-    # reader passes, rather than in the job that writes the data (V1-46). This
-    # only avoids fetching, parsing and storing a page that would then never be
-    # selected. `--force` puts the two side by side deliberately.
-    covered = conn.execute(
+
+def _amc_direct_cover(conn: Any, scheme_id: str) -> str | None:
+    """The as-of date of an AMC file already covering this scheme, if any.
+
+    Not correctness -- restraint. The guard that keeps the coverage tier from
+    outranking an AMC file lives in `weights.latest_disclosure`, where every
+    reader passes, rather than in the job that writes the data (V1-46). This
+    only avoids fetching, parsing and storing a page that would then never be
+    selected. `--force` puts the two side by side deliberately.
+    """
+    row = conn.execute(
         "SELECT as_of_date FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1 AND source_tier = 'amc_direct'"
         " ORDER BY as_of_date DESC LIMIT 1",
         (scheme_id,),
     ).fetchone()
-    if covered and not force:
-        return {
-            "slug": slug,
-            "scheme_id": scheme_id,
-            "as_of": str(parsed.as_of_date),
-            "skipped": f"covered amc_direct at {covered[0]}",
-            "hint": "--force to load anyway; the AMC's own file resolves more",
-        }
+    return str(row[0]) if row else None
 
+
+def _archive_page(conn: Any, content: bytes, url: str) -> Any:
+    """Archive the raw bytes and file the `raw_file` row, if it is new."""
     result, path = archive(
         content,
         FetchCandidate(url=url, source_id=SOURCE_ID),
@@ -230,10 +184,22 @@ def _one(
             ),
         )
         conn.commit()
+    return result
 
-    parser = GrowwHoldingsParser()
+
+def _build_rows(
+    conn: Any, parsed: Any, index: dict[str, str], prefixes: dict[str, str]
+) -> tuple[list[dict[str, object]], Any, list[str]]:
+    """Resolve every security to an issuer and normalise its weight.
+
+    Returns the rows, the weight result, and the names of any rows the page
+    did not price -- `holding.market_value` is NOT NULL, so an unpriced row is
+    stored as zero and weighted zero. It contributes nothing to any
+    look-through while every quality figure is computed against a total that
+    already excludes it. Nothing moves and nobody is told, which is what
+    `CLAUDE.md` invariant 4 forbids, so the names travel with the result.
+    """
     securities = parsed.securities
-
     values = [
         to_inr(s.market_value_raw, s.market_value_unit)
         if s.market_value_raw is not None
@@ -278,18 +244,30 @@ def _one(
             }
         )
 
-    # §10's V2 is THE units check, and it was being skipped here: the call
-    # passed `aum_reported=None`, so every Groww disclosure recorded "no AUM on
-    # record to reconcile against". That is the wrong path to disable it on.
-    # `MARKET_VALUE_UNIT` is ASSERTED on this page rather than read off a header
-    # -- no cell states a unit -- and the parser's own `_check_unit` compares
-    # rows to the page's `aum`, both in the same unit, so it scales with a unit
-    # error and can never catch one. `scheme_aum` is the only witness here that
-    # is independent of the page, which is exactly what V2 wants.
+    unpriced = [
+        securities[i].instrument_raw_name
+        for i, value in enumerate(values)
+        if value is None
+    ]
+    return rows, weights, unpriced
+
+
+def _validate_rows(
+    conn: Any, scheme_id: str, parsed: Any, rows: list[dict[str, object]]
+) -> tuple[list[Any], str, str, Decimal | None]:
+    """Run the disclosure checks against an AUM witness the page cannot fake.
+
+    §10's V2 is THE units check, and it was being skipped here: the call passed
+    `aum_reported=None`, so every Groww disclosure recorded "no AUM on record to
+    reconcile against". That is the wrong path to disable it on.
+    `MARKET_VALUE_UNIT` is ASSERTED on this page rather than read off a header
+    -- no cell states a unit -- and the parser's own `_check_unit` compares rows
+    to the page's `aum`, both in the same unit, so it scales with a unit error
+    and can never catch one. `scheme_aum` is the only witness here that is
+    independent of the page, which is exactly what V2 wants.
+    """
     witness = _aum_for(conn, scheme_id, parsed.as_of_date)
     aum = witness.amount if witness else None
-    aum_basis = witness.basis if witness else "point_in_time"
-    aum_as_of = witness.as_of if witness else None
 
     checks = validate_disclosure(
         [
@@ -305,23 +283,74 @@ def _one(
         parsed.as_of_date,
         date.today(),
         aum,
-        aum_basis,
-        aum_as_of,
+        witness.basis if witness else "point_in_time",
+        witness.as_of if witness else None,
     )
     status = promote_or_quarantine(checks)
     unresolved = next(c for c in checks if c.code == "V3").observed or "0%"
+    return checks, status, unresolved, aum
 
-    # `holding.market_value` is NOT NULL, so a row the page did not price is
-    # stored as zero and `normalise_weights` independently gives it weight zero
-    # -- it contributes nothing to any look-through while every quality figure
-    # is computed against a total that already excludes it. Nothing moves and
-    # nobody is told, which is what `CLAUDE.md` invariant 4 forbids. The AMC
-    # path has carried this list since V1-42; this one was omitting it.
-    unpriced = [
-        securities[i].instrument_raw_name
-        for i, value in enumerate(values)
-        if value is None
-    ]
+
+def _one(
+    conn: Any,
+    scheme_id: str | None,
+    slug: str,
+    cfg: dict[str, Any],
+    index: dict[str, str],
+    prefixes: dict[str, str],
+    dry_run: bool,
+    force: bool = False,
+) -> dict[str, object]:
+    content, url = fetch_page(slug, cfg)
+
+    # Parsed ONCE. The first draft parsed here for the ISIN check, again for
+    # the dry-run summary and a third time after archiving -- three passes of
+    # the `__NEXT_DATA__` regex and three `json.loads` of a ~500 KB payload for
+    # one page. Nothing the later passes needed came from the parse; the only
+    # thing that changes after archiving is the `file_id`, which is a field on
+    # `RawFile` and not an input to parsing.
+    parser = GrowwHoldingsParser()
+    parsed = parser.parse(RawFile("probe", SOURCE_ID, f"{slug}.html", content))
+    assert parsed.as_of_date is not None
+    stated = page_isin(content)
+
+    if scheme_id and stated and stated != scheme_id.upper():
+        raise SlugMismatch(
+            f"{slug}: the map promised {scheme_id} and the page states {stated}."
+            " Refusing to load a portfolio under a scheme_id it does not claim."
+        )
+
+    if dry_run:
+        return {
+            "slug": slug,
+            "scheme_name": parsed.scheme_raw_name,
+            "isin": stated,
+            "as_of": str(parsed.as_of_date),
+            "rows": len(parsed.securities),
+            "stated_total": str(parsed.stated_total),
+            "loaded": "no (dry run)",
+            "yaml": f"  {stated}:\n    slug: {slug}\n"
+            f"    scheme_name: {parsed.scheme_raw_name}",
+        }
+
+    if not stated:
+        raise SlugMismatch(f"{slug}: the page states no ISIN; refusing to guess one")
+    scheme_id = stated
+    _guard_scheme_is_known(conn, slug, scheme_id)
+
+    covered = _amc_direct_cover(conn, scheme_id)
+    if covered and not force:
+        return {
+            "slug": slug,
+            "scheme_id": scheme_id,
+            "as_of": str(parsed.as_of_date),
+            "skipped": f"covered amc_direct at {covered}",
+            "hint": "--force to load anyway; the AMC's own file resolves more",
+        }
+
+    result = _archive_page(conn, content, url)
+    rows, weights, unpriced = _build_rows(conn, parsed, index, prefixes)
+    checks, status, unresolved, aum = _validate_rows(conn, scheme_id, parsed, rows)
 
     counts = load_holdings(
         conn,
@@ -334,7 +363,9 @@ def _one(
             "unresolved_mv_pct": Decimal(unresolved.rstrip("%")),
             "total_mv": weights.total_market_value,
             "aum_reported": aum,
-            "reported_unit": securities[0].market_value_unit if securities else None,
+            "reported_unit": parsed.securities[0].market_value_unit
+            if parsed.securities
+            else None,
             "validation_status": status,
             "validation_notes": as_json(checks, unpriced=unpriced),
             "source_tier": TIER,
