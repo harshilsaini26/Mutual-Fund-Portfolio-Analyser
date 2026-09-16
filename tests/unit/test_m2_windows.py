@@ -13,7 +13,11 @@ from decimal import Decimal
 import pytest
 from src.common.contracts.market import NavPoint
 from src.common.types import SchemeId
-from src.m2_fund.windows import compute_return_window, window_start
+from src.m2_fund.windows import (
+    NonPositiveNav,
+    compute_return_window,
+    window_start,
+)
 
 SCHEME = SchemeId("TEST-01")
 START = date(2024, 1, 1)
@@ -73,7 +77,7 @@ def test_a_barely_moving_series_still_computes() -> None:
     assert w is not None
     assert w.return_cum > 0
     assert w.volatility_ann > 0
-    assert w.max_drawdown == Decimal(0)
+    assert w.drawdown.depth == Decimal(0)
 
 
 def test_fewer_than_two_points_is_no_window_rather_than_a_zero_row() -> None:
@@ -103,23 +107,23 @@ def test_obs_count_and_obs_days_are_different_things() -> None:
 # --- what the data cannot support ------------------------------------------
 
 
-def test_the_two_unavailable_flags_are_stated_not_implied() -> None:
-    """benchmark_id is populated on 0 of 19,598 schemes and there is no
-    risk-free series, so alpha, beta, Sharpe and Sortino are absent. The flags
-    say so rather than leaving a reader to infer it from missing fields."""
-    w = compute_return_window(series(["100", "110"]), "1y")
-    assert w is not None
-    assert w.bm_available is False
-    assert w.rf_available is False
-
-
 def test_no_benchmark_relative_field_is_carried_as_a_silent_none() -> None:
     """A field that is always None claims to be optional when it is
     unavailable. They are omitted until there is data behind them."""
     w = compute_return_window(series(["100", "110"]), "1y")
     assert w is not None
-    for absent in ("alpha_ann", "beta", "tracking_error", "sharpe", "sortino"):
+    for absent in (
+        "alpha_ann", "beta", "tracking_error", "sharpe", "sortino",
+        "downside_dev_ann",   # only feeds sortino, which needs the missing rf
+        "bm_available", "rf_available",  # booleans with one reachable value
+    ):
         assert not hasattr(w, absent), f"{absent} is carried but can never be computed"
+
+
+def test_a_non_positive_nav_raises_rather_than_dividing() -> None:
+    """Invariant 5. Validated once here, so risk.py can assume positive prices."""
+    with pytest.raises(NonPositiveNav):
+        compute_return_window(series(["0", "100"]), "1y")
 
 
 # --- interpolation ---------------------------------------------------------

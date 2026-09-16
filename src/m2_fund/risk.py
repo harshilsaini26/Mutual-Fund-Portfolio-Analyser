@@ -10,6 +10,9 @@ payout, so a return computed on it reads a distribution as a loss
 re-checks it, because the column is chosen one layer up and checking twice
 invites the two checks to disagree.
 
+Callers hand over a validated series: `compute_return_window` rejects a
+non-positive NAV once, before any of this runs.
+
 Every figure is a `Decimal` (invariant 1). That constrains the arithmetic more
 than it looks: `Decimal` has no fractional `**`, so annualisation goes through
 `ln`/`exp` rather than a power.
@@ -36,23 +39,9 @@ TRADING_DAYS = Decimal(252)
 CALENDAR_DAYS = Decimal(365)
 
 
-class NonPositiveNav(ValueError):
-    """A NAV at or below zero. Invariant 5: raise rather than clamp.
-
-    No real scheme prices at zero, so this means the series is corrupt. The
-    arithmetic below would otherwise divide by it or take its log, and produce
-    a number that looks like a return.
-    """
-
-
 def daily_returns(navs: list[NavPoint]) -> list[Decimal]:
     """Period-over-period returns. One shorter than the series it is given."""
-    out: list[Decimal] = []
-    for prev, cur in pairwise(navs):
-        if prev.nav <= 0:
-            raise NonPositiveNav(f"{prev.scheme_id} priced {prev.nav} on {prev.nav_date}")
-        out.append(cur.nav / prev.nav - 1)
-    return out
+    return [cur.nav / prev.nav - 1 for prev, cur in pairwise(navs)]
 
 
 def annualise(growth: Decimal, days: int) -> Decimal:
@@ -68,8 +57,6 @@ def annualise(growth: Decimal, days: int) -> Decimal:
     """
     if days <= 0:
         raise ValueError(f"cannot annualise over {days} days")
-    if growth <= 0:
-        raise NonPositiveNav(f"growth ratio {growth} is not positive")
     return ((growth.ln() * (CALENDAR_DAYS / Decimal(days))).exp() - 1).quantize(METRIC_Q)
 
 
@@ -85,20 +72,6 @@ def annualised_vol(returns: list[Decimal]) -> Decimal:
     mean = sum(returns, Decimal(0)) / n
     variance = sum(((r - mean) ** 2 for r in returns), Decimal(0)) / (n - 1)
     return (variance.sqrt() * TRADING_DAYS.sqrt()).quantize(METRIC_Q)
-
-
-def downside_deviation(returns: list[Decimal], mar: Decimal = Decimal(0)) -> Decimal:
-    """Annualised deviation of returns BELOW `mar`, the minimum acceptable return.
-
-    Divided by the full observation count, not by the number of downside days.
-    Dividing by the downside count instead would make a fund that rarely falls
-    look more volatile than one that always does, which inverts the statistic.
-    """
-    n = len(returns)
-    if n < 2:
-        return Decimal(0)
-    shortfall = sum((min(r - mar, Decimal(0)) ** 2 for r in returns), Decimal(0)) / n
-    return (shortfall.sqrt() * TRADING_DAYS.sqrt()).quantize(METRIC_Q)
 
 
 @dataclass(frozen=True)
@@ -130,8 +103,6 @@ def max_drawdown(navs: list[NavPoint]) -> Drawdown:
     worst_peak_v = peak_v
 
     for p in navs:
-        if p.nav <= 0:
-            raise NonPositiveNav(f"{p.scheme_id} priced {p.nav} on {p.nav_date}")
         if p.nav > peak_v:
             peak_v, peak_d = p.nav, p.nav_date
         fall = p.nav / peak_v - 1

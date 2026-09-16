@@ -19,12 +19,10 @@ import pytest
 from src.common.contracts.market import NavPoint
 from src.common.types import SchemeId
 from src.m2_fund.risk import (
-    NonPositiveNav,
     annualise,
     annualised_vol,
     confidence_from_obs,
     daily_returns,
-    downside_deviation,
     max_drawdown,
 )
 
@@ -56,12 +54,6 @@ def test_daily_returns_is_one_shorter_than_its_input() -> None:
 def test_daily_returns_are_ratios_not_differences() -> None:
     """A 100 -> 110 step is 0.1, not 10. The units are the whole point."""
     assert daily_returns(series(["100", "110"]))[0] == Decimal("0.1")
-
-
-def test_a_zero_nav_raises_rather_than_dividing() -> None:
-    """Invariant 5. A zero NAV means a corrupt series, not a 100% loss."""
-    with pytest.raises(NonPositiveNav):
-        daily_returns(series(["0", "100"]))
 
 
 # --- annualisation ---------------------------------------------------------
@@ -113,21 +105,6 @@ def test_volatility_is_annualised_on_trading_days_not_calendar_days() -> None:
     vol = annualised_vol(daily)
     sample_sd = Decimal("0.010259")  # n-1 over this alternating series
     assert abs(vol - sample_sd * Decimal(252).sqrt()) < Decimal("0.001")
-
-
-# --- downside deviation ----------------------------------------------------
-
-
-def test_a_series_that_only_rises_has_no_downside() -> None:
-    assert downside_deviation([Decimal("0.01")] * 5) == Decimal(0)
-
-
-def test_downside_divides_by_all_observations_not_just_the_down_days() -> None:
-    """Dividing by the down-day count would make a fund that rarely falls look
-    MORE volatile than one that always does, inverting the statistic."""
-    rare = [Decimal("-0.10")] + [Decimal("0.01")] * 9
-    often = [Decimal("-0.10")] * 10
-    assert downside_deviation(rare) < downside_deviation(often)
 
 
 # --- drawdown --------------------------------------------------------------

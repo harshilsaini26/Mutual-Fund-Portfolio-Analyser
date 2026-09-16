@@ -35,23 +35,21 @@ from src.m2_fund.windows import (
     window_start,
 )
 
-#: Far enough back to precede any Indian mutual fund's first NAV.
-EPOCH = date(1990, 1, 1)
-
 
 def pct(value: Decimal) -> str:
     return f"{value * 100:>8.2f}%"
 
 
 def line(w: ReturnWindow) -> str:
+    dd = w.drawdown
     recovered = (
-        f"recovered in {w.dd_recovery_days}d"
-        if w.dd_recovery_days is not None
-        else "not recovered" if w.max_drawdown < 0 else "-"
+        f"recovered in {dd.recovery_days}d"
+        if dd.recovery_days is not None
+        else "not recovered" if dd.depth < 0 else "-"
     )
     return (
         f"  {w.window_key:16} {pct(w.return_ann)} {pct(w.return_cum)}"
-        f" {pct(w.volatility_ann)} {pct(w.max_drawdown)}"
+        f" {pct(w.volatility_ann)} {pct(dd.depth)}"
         f"  {w.obs_count:>5}  {w.confidence:<6} {recovered}"
     )
 
@@ -69,7 +67,7 @@ def main() -> None:
         md = WarehouseMarketDataProvider(conn)
         scheme_id = SchemeId(args.scheme)
 
-        full = md.nav_series(scheme_id, EPOCH, date.today(), adjusted=True)
+        full = md.nav_series(scheme_id, date.min, date.today(), adjusted=True)
         if len(full) < 2:
             print(f"{args.scheme}: {len(full)} NAV points — nothing to compute.")
             print("Load history first:")
@@ -121,18 +119,15 @@ def main() -> None:
         if whole:
             print(line(whole))
 
-        if whole and whole.max_drawdown < 0:
+        if whole and whole.drawdown.depth < 0:
             # The dates are what make the depth checkable against market
             # history; a bare percentage is not something a reader can verify.
-            back = (
-                f"back {whole.dd_recovery_date}"
-                if whole.dd_recovery_date
-                else "not yet recovered"
-            )
+            dd = whole.drawdown
+            back = f"back {dd.recovery}" if dd.recovery else "not yet recovered"
             print()
             print(
-                f"  worst fall {whole.dd_peak_date} -> {whole.dd_trough_date}"
-                f" ({whole.dd_duration_days}d), {back}"
+                f"  worst fall {dd.peak} -> {dd.trough}"
+                f" ({dd.duration_days}d), {back}"
             )
 
         filled = whole.interpolated_pct if whole else Decimal(0)
