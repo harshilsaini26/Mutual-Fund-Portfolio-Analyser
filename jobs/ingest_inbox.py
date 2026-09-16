@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
+import zipfile
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from src.common.decimals import connect
@@ -89,12 +90,49 @@ def _amc_for(conn: Any, path: Path) -> tuple[str | None, dict[str, int], str]:
     return amc_id, tally, ""
 
 
+def _expand_zips(folder: Path) -> int:
+    """Flatten any ZIP in the inbox into loose workbooks beside it.
+
+    ICICI publishes its monthly disclosure as a ZIP of per-scheme workbooks,
+    and `jobs.status` prints `fetch_amc --amc icici && ingest_inbox` as the
+    catch-up command -- but the scan below only reads `.xlsx`/`.xls`, so the
+    archive landed in the inbox and was silently skipped. The only ICICI
+    disclosure in this warehouse got there through a `file://` URL: somebody
+    unzipped it by hand.
+
+    Member names are reduced to a basename before they become a path. A ZIP
+    entry is attacker-controlled the moment the publisher is (zip-slip), and
+    this archive comes off the same listing whose `fileName` could already
+    choose where bytes landed. PureWindowsPath splits on `\\` on every
+    platform; Path does not on Linux.
+
+    An existing file is never overwritten -- re-running must not clobber a
+    workbook someone edited or placed themselves.
+    """
+    extracted = 0
+    for archive in sorted(folder.glob("*.zip")):
+        with zipfile.ZipFile(archive) as zf:
+            for member in zf.namelist():
+                name = PureWindowsPath(member).name
+                if not name.lower().endswith(WORKBOOKS) or name.startswith("~$"):
+                    continue
+                target = folder / name
+                if not target.exists():
+                    target.write_bytes(zf.read(member))
+                    extracted += 1
+    return extracted
+
+
 def run(inbox: Path | None = None, amc_id: str | None = None) -> int:
     """Returns the number of schemes loaded."""
     folder = inbox or inbox_root()
     if not folder.exists():
         print(f"no inbox at {folder} — create it and drop a workbook in")
         return 0
+
+    expanded = _expand_zips(folder)
+    if expanded:
+        print(f"expanded {expanded} workbook(s) out of ZIP archives")
 
     files = sorted(
         p for p in folder.iterdir()
