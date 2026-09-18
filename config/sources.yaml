@@ -109,3 +109,29 @@ sources:
     # DECISIONS V1-43.
     role: coverage
     tier: aggregator
+
+  S12:
+    name: nse_index_tri
+    kind: per_index_range
+    # POSTed, not fetched by URL: the page's own script builds a `cinfo`
+    # envelope and `src/m0_data/fetch/nifty_tri.py` builds the same one. One
+    # calendar year per request -- their script refuses a wider range and the
+    # endpoint agrees.
+    url: "https://www.niftyindices.com/BackPage/getTotalReturnIndexString"
+    parser: index.nifty_tri
+    verified_on: 2026-09-19
+    provides: [index_level, benchmark_index]
+    # niftyindices drops a request with no User-Agent and answers a
+    # browser-shaped one with 200. DECISIONS V1-05 settled this host by name,
+    # alongside HDFC's CDN; the contact travels in `From:`.
+    user_agent: browser
+    # Read 2026-09-19: `Allow: /`, four unrelated pages disallowed, nothing
+    # under /BackPage. There is no challenge here to answer -- the block is a
+    # User-Agent filter, not bot detection.
+    respect_robots: true
+    # TOTAL RETURN, and that is the whole point. PLAN.md §9.4 refuses a
+    # price-return series for alpha: PRI omits dividends, so alpha measured
+    # against it is overstated by roughly the index's dividend yield, in our
+    # favour and invisibly. The endpoint returns gross TRI and net-of-tax NTR
+    # side by side; migrations/014_index.sql stores the gross one.
+    role: source_of_record

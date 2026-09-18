@@ -33,6 +33,14 @@ from src.m0_data.schema.apply import (
 
 M013 = MIGRATIONS / "013_scheme_aum_basis.sql"
 
+#: The next number no real migration has taken. Synthetic migrations below
+#: have to land here: `migration_files` requires contiguous numbering, so a
+#: fixture that hardcodes a number a real migration later claims stops
+#: testing what it says and starts colliding. That happened when 014 landed
+#: -- one of these tests went on passing because "014_mojibake.sql" appears
+#: in the collision message too.
+NEXT = f"{max(int(f.name[:3]) for f in MIGRATIONS.glob('[0-9][0-9][0-9]_*.sql')) + 1:03d}"
+
 
 @contextmanager
 def _open(db: Path, *, decimals: bool = False) -> Iterator[sqlite3.Connection]:
@@ -187,7 +195,9 @@ class TestARowTheConstraintWillNotTake:
             assert [r[0] for r in bad] == ["INF2"]
             conn.execute("DELETE FROM scheme_aum WHERE scheme_id = 'INF2'")
             conn.commit()
-        assert apply_migrations(str(db)) == [M013.name]
+        # `in`, not `==`: a warehouse at 012 runs 013 AND every migration after
+        # it. What this asserts is that 013 itself now succeeds.
+        assert M013.name in apply_migrations(str(db))
 
     def test_emptying_the_table_is_also_a_recovery(self, tmp_path: Path) -> None:
         """The note's second route, for a warehouse whose figures are not worth
@@ -199,7 +209,9 @@ class TestARowTheConstraintWillNotTake:
         with _open(db) as conn:
             conn.execute("DELETE FROM scheme_aum")
             conn.commit()
-        assert apply_migrations(str(db)) == [M013.name]
+        # `in`, not `==`: a warehouse at 012 runs 013 AND every migration after
+        # it. What this asserts is that 013 itself now succeeds.
+        assert M013.name in apply_migrations(str(db))
         with _open(db) as conn:
             assert conn.execute("SELECT COUNT(*) FROM scheme_aum").fetchone()[0] == 0
             with pytest.raises(sqlite3.IntegrityError):
@@ -239,11 +251,11 @@ class TestAMigrationThatCannotBeRead:
         staged.mkdir()
         for src in sorted(MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")):
             shutil.copy(src, staged / src.name)
-        (staged / "014_mojibake.sql").write_bytes(
+        (staged / f"{NEXT}_mojibake.sql").write_bytes(
             ("-- a section \u00a7 sign\nCREATE TABLE t (x TEXT);\n")
             .encode("cp1252")
         )
-        with pytest.raises(MigrationError, match=re.escape("014_mojibake.sql")):
+        with pytest.raises(MigrationError, match=re.escape(f"{NEXT}_mojibake.sql")):
             apply_migrations(str(tmp_path / "mojibake.db"), staged)
 
     def test_it_says_unread_rather_than_failed(self, tmp_path: Path) -> None:
@@ -254,7 +266,7 @@ class TestAMigrationThatCannotBeRead:
         staged.mkdir()
         for src in sorted(MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")):
             shutil.copy(src, staged / src.name)
-        (staged / "014_mojibake.sql").write_bytes(
+        (staged / f"{NEXT}_mojibake.sql").write_bytes(
             b"-- \xa7\nCREATE TABLE t (x TEXT);\n"
         )
         with pytest.raises(MigrationError, match="could not be read"):
@@ -275,7 +287,9 @@ class TestTheRebuildSurvivesAWarehouseWithRowsInIt:
             )
             conn.commit()
 
-        assert apply_migrations(str(db)) == [M013.name]
+        # `in`, not `==`: a warehouse at 012 runs 013 AND every migration after
+        # it. What this asserts is that 013 itself now succeeds.
+        assert M013.name in apply_migrations(str(db))
         with _open(db, decimals=True) as conn:
             kept = conn.execute(
                 "SELECT scheme_id, aum_inr, folio_count, period_label FROM scheme_aum"
@@ -369,7 +383,8 @@ class TestAnAppliedMigrationIsMarkedWithIt:
     def test_a_later_failure_does_not_unmark_an_earlier_success(
         self, tmp_path: Path
     ) -> None:
-        """014 here is a migration that cannot run. 013 has already rebuilt the
+        """The synthetic one here is a migration that cannot run. 013 has already
+        rebuilt the
         table by then, and re-applying a rebuild against a schema a later file
         has changed is how a column gets silently dropped -- 013's own column
         list is 012's."""
@@ -377,12 +392,12 @@ class TestAnAppliedMigrationIsMarkedWithIt:
         staged.mkdir()
         for src in sorted(MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")):
             shutil.copy(src, staged / src.name)
-        (staged / "014_broken.sql").write_text(
+        (staged / f"{NEXT}_broken.sql").write_text(
             "SELECT * FROM a_table_that_does_not_exist;", encoding="utf-8"
         )
 
         db = tmp_path / "with_a_broken_014.db"
-        with pytest.raises(MigrationError, match=re.escape("014_broken.sql")):
+        with pytest.raises(MigrationError, match=re.escape(f"{NEXT}_broken.sql")):
             apply_migrations(str(db), staged)
 
         with _open(db) as conn:
@@ -390,4 +405,4 @@ class TestAnAppliedMigrationIsMarkedWithIt:
                 str(r[0]) for r in conn.execute("SELECT name FROM schema_migration")
             }
         assert M013.name in marked, "013 ran; it must not be a candidate to re-run"
-        assert "014_broken.sql" not in marked
+        assert f"{NEXT}_broken.sql" not in marked

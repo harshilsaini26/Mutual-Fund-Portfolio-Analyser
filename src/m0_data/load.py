@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from src.m0_data.normalise.index_id import index_id_for
 from src.m0_data.normalise.instrument_class import (
     class_from_section,
     instrument_class,
@@ -25,6 +26,7 @@ from src.m0_data.normalise.units import to_inr
 from src.m0_data.normalise.weights import NormalisedWeights, normalise_weights
 from src.m0_data.parse.base import StagedHolding
 from src.m0_data.parse.holdings.base import READER_VERSION
+from src.m0_data.parse.index.nifty import StagedIndexLevel
 from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
 from src.m0_data.resolve.cascade import RESOLVER_VERSION, resolve
@@ -169,6 +171,76 @@ def load_navs_where_absent(
         # SQLite reports -1 when the ON CONFLICT clause skipped the row.
         added += max(cursor.rowcount, 0)
     return added
+
+
+class MixedIndexResponse(ValueError):
+    """One response carried levels for more than one index. S12."""
+
+
+def load_index_levels(
+    conn: sqlite3.Connection,
+    staged: list[StagedIndexLevel],
+    source_file_id: str | None,
+    *,
+    provider: str = "NSE Indices",
+    is_total_return: bool = True,
+) -> tuple[str | None, int]:
+    """Upsert `benchmark_index` and `index_level`. Returns `(index_id, rows)`.
+
+    `is_total_return` is a parameter rather than something read off the name,
+    because it is a property of the ENDPOINT the bytes came from. NSE serves
+    gross TRI from one URL and price levels from another, and both print the
+    index as "Nifty 50" -- so a name is exactly the wrong thing to decide it
+    from. §9.4 refuses PRI for alpha, and `migrations/014_index.sql` will not
+    take a NULL, so the caller has to know which door it used.
+
+    A response carrying two indices RAISES. Filing one index's levels under
+    another's id is the kind of wrong that never surfaces: the series stays
+    dense, the dates stay plausible, and a fund's tracking error is computed
+    against the wrong market. Invariant 5 -- crash rather than continue.
+
+    Levels upsert on their natural key, like `load_navs`: NSE restates a level
+    occasionally and the later file is the correction.
+    """
+    if not staged:
+        return None, 0
+
+    names = {s.index_name for s in staged}
+    if len(names) > 1:
+        raise MixedIndexResponse(
+            f"one response carried {len(names)} indices: {sorted(names)}"
+        )
+
+    name = names.pop()
+    index_id = index_id_for(name, provider=provider, is_total_return=is_total_return)
+    first = min(s.level_date for s in staged)
+    last = max(s.level_date for s in staged)
+
+    conn.execute(
+        """
+        INSERT INTO benchmark_index
+            (index_id, index_name, is_total_return, provider, first_seen, last_seen)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(index_id) DO UPDATE SET
+            index_name = excluded.index_name,
+            first_seen = MIN(COALESCE(benchmark_index.first_seen, excluded.first_seen),
+                             excluded.first_seen),
+            last_seen  = MAX(COALESCE(benchmark_index.last_seen, excluded.last_seen),
+                             excluded.last_seen)
+        """,
+        (index_id, name, int(is_total_return), provider, first, last),
+    )
+    for s in staged:
+        conn.execute(
+            """
+            INSERT INTO index_level (index_id, level_date, level, source_file_id)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(index_id, level_date) DO UPDATE SET
+                level = excluded.level, source_file_id = excluded.source_file_id
+            """,
+            (index_id, s.level_date, s.level, source_file_id),
+        )
+    return index_id, len(staged)
 
 
 def load_parse_result(
