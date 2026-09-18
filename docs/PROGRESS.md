@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-18 · 1,177 tests passing
+**Last updated:** 2026-09-18 · 1,185 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -192,7 +192,7 @@ typecheck and a lint on every commit to keep.
 
 Ordered by what they cost.
 
-0. **`scheme_idcw` is empty, so every IDCW plan's return is understated.**
+0. **`scheme_idcw` is empty; most IDCW returns are now derived instead.**
    9,187 of 19,598 schemes are `idcw_payout` or `idcw_reinvest` and the table
    holds **0 rows**. `build_nav_adj` writes `nav_adj = nav` when a scheme has no
    events, so the column is fully populated and identical to raw NAV — a
@@ -200,11 +200,19 @@ Ordered by what they cost.
    whole distributed amount; for a daily-IDCW plan that is the entire return,
    which is how a liquid fund reports 0.00%.
 
-   §10.3's contract check tested `nav_adj IS NULL`, which this failure never
-   trips. It now also fails an IDCW option with no declarations on record, and
-   M2 refuses to compute a window from a series that never moves. Both are
-   guards, not the fix. The fix is **S14** (§3's source table: IDCW declarations
-   from AMC/AMFI), one of the nine sources of fourteen that have no fetcher.
+   **Largely solved 2026-09-18, with no fetcher.** A Growth option and an IDCW
+   option of one plan hold ONE portfolio at one TER, so the Growth series is
+   already a record of what the IDCW plan earned. `build_nav_adj` derives from
+   it when no declarations exist: `nav_adj(t) = nav(anchor) * G(t)/G(anchor)`.
+   Verified on Kotak Liquid Daily-IDCW, whose full-series return went from
+   **4.97% on raw NAV to 64.81% adjusted**.
+
+   Scope, stated honestly. 4,468 of the 4,595 IDCW schemes with NAV have such
+   a sibling, but only **604** have more than one NAV row of their own — the
+   rest are a single point, where no return exists to correct. Of those 604,
+   **522** now carry a real total-return series. The remainder follow
+   automatically as NAV history backfills; the derivation is already in place.
+   A real **S14** is still what the 127 schemes with no Growth sibling need.
 
    Three of those nine are why M2 stops where it does, and they map one to one
    onto what it cannot compute: **S14** IDCW → understated returns for IDCW

@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from itertools import pairwise
 
+from src.m0_data.derive.nav_adj import growth_sibling
+
 #: §11.4: "nav_daily has no gaps > 3 business days for held schemes".
 MAX_NAV_GAP_BUSINESS_DAYS = 3
 
@@ -133,10 +135,17 @@ def assert_m1_contract(
             declared = conn.execute(
                 "SELECT COUNT(*) FROM scheme_idcw WHERE scheme_id = ?", (scheme_id,)
             ).fetchone()[0]
-            if not declared:
+            # Declarations are one way to a trustworthy nav_adj, not the only
+            # one. A Growth sibling holds the same portfolio at the same TER,
+            # so its series already carries what this plan earned and
+            # `build_nav_adj` derives from it (§9.1). 4,468 of the 4,595 IDCW
+            # schemes with NAV are settled that way; asking for declarations
+            # alone would fail every one of them for data that is now right.
+            if not declared and growth_sibling(conn, scheme_id) is None:
                 report.violations.append(
-                    f"{scheme_id}: IDCW option with no declarations on record, so"
-                    " nav_adj is raw NAV and every return from it is understated"
+                    f"{scheme_id}: IDCW option with neither declarations nor a"
+                    " Growth sibling, so nav_adj is raw NAV and every return"
+                    " from it is understated"
                 )
 
         if _merger_chain_has_cycle(conn, scheme_id):

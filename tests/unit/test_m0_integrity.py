@@ -163,17 +163,49 @@ def test_an_idcw_plan_with_no_declarations_is_a_violation(
     is how a liquid fund comes to report 0.00%.
     """
     conn.execute(
-        "UPDATE scheme SET option = 'idcw_payout' WHERE scheme_id = ?", (HDFC_DIRECT,)
+        "UPDATE scheme SET option = 'idcw_payout', scheme_family = 'lonely'"
+        " WHERE scheme_id = ?",
+        (HDFC_DIRECT,),
     )
     conn.execute("UPDATE nav_daily SET nav_adj = nav WHERE scheme_id = ?", (HDFC_DIRECT,))
     conn.commit()
 
     report = assert_m1_contract(conn, [HDFC_DIRECT], date(2026, 1, 1), AS_OF)
     assert not report.passed
-    assert any("no declarations on record" in v for v in report.violations), (
-        "an IDCW plan with an empty scheme_idcw must be caught; nav_adj being "
-        "non-NULL says nothing about whether it is a total-return series"
+    assert any("neither declarations nor a" in v for v in report.violations), (
+        "an IDCW plan with no route to a real nav_adj must be caught; nav_adj "
+        "being non-NULL says nothing about whether it is a total-return series"
     )
+
+
+def test_an_idcw_plan_with_a_growth_sibling_is_fine(
+    conn: sqlite3.Connection,
+) -> None:
+    """Declarations are one route to a trustworthy nav_adj, not the only one.
+
+    A Growth option of the same plan holds the same portfolio at the same TER,
+    so its series already carries what this plan earned and `build_nav_adj`
+    derives from it. 4,468 of the 4,595 IDCW schemes with NAV are settled that
+    way -- demanding declarations would fail every one of them for data that
+    is right.
+    """
+    conn.execute(
+        "UPDATE scheme SET option = 'idcw_payout', scheme_family = 'paired'"
+        " WHERE scheme_id = ?",
+        (HDFC_DIRECT,),
+    )
+    conn.execute(
+        "INSERT INTO scheme (scheme_id, scheme_name, plan, option, scheme_family)"
+        " VALUES ('SIB','Sibling Growth','direct','growth','paired')"
+    )
+    conn.execute(
+        "INSERT INTO nav_daily (scheme_id, nav_date, nav) VALUES ('SIB', ?, ?)",
+        (AS_OF, Decimal("100")),
+    )
+    conn.commit()
+
+    report = assert_m1_contract(conn, [HDFC_DIRECT], date(2026, 1, 1), AS_OF)
+    assert not any("declarations" in v for v in report.violations)
 
 
 def test_a_growth_plan_with_no_declarations_is_fine(

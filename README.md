@@ -124,9 +124,9 @@ it and fails if anything resolves that the lock does not mention. The extras are
 ### The gate
 
 ```bash
-python -m pytest -q                                   # 1,177 tests, ~80s, hermetic
+python -m pytest -q                                   # 1,185 tests, ~80s, hermetic
 python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 182 files
+python -m mypy                                        # strict, 183 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
 
