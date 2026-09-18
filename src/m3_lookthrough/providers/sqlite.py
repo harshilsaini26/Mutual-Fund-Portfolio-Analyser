@@ -72,8 +72,11 @@ _NOT_BUILT = {
         "overlap_matrix()."
     ),
     "marginal": (
-        "marginal contribution needs the fee and style inputs M2 produces, "
-        "which is not built."
+        "marginal contribution is computed in m3_lookthrough.marginal, which "
+        "takes positions and weights; this provider holds persisted RESULTS "
+        "and has no path back to either. Wiring it needs the fund-detail view "
+        "that would call it, which is one of the five M6 views not built. "
+        "Only style_shift_pp and fee_cost_inr actually need M2."
     ),
     "tilts": (
         "portfolio tilt needs M5's canonical sector taxonomy, deferred in "

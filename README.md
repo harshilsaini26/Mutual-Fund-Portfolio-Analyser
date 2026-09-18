@@ -124,9 +124,9 @@ it and fails if anything resolves that the lock does not mention. The extras are
 ### The gate
 
 ```bash
-python -m pytest -q                                   # 1,141 tests, ~80s, hermetic
+python -m pytest -q                                   # 1,177 tests, ~80s, hermetic
 python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 178 files
+python -m mypy                                        # strict, 182 files
 python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
 ```
 
@@ -251,7 +251,7 @@ src/common/           Decimal + SQLite discipline, frozen contracts, types
 src/m0_data/          fetch, parse, resolve, validate, load        (the warehouse)
 src/m1_ledger/        CAS parsing, FIFO lots, returns, reconcile   (your positions)
 src/m2_fund/          return windows, risk statistics       (fund x-ray)
-src/m3_lookthrough/   exposure, overlap, concentration, duplication
+src/m3_lookthrough/   exposure, overlap, concentration, duplication, nested funds
 src/m6_views/         envelope, builders, formatting, export, API, templates
 jobs/   scripts/   migrations/   docs/   tests/
 tests/fakes/          fixture-backed test doubles, out of the shipped library

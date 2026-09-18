@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-16 · 1,141 tests passing
+**Last updated:** 2026-09-18 · 1,177 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -153,7 +153,7 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 |---|---|
 | **M0 data** | built — fetch, parse, resolve, validate, load |
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
-| **M3 look-through** | built — exposure, overlap, concentration, duplication |
+| **M3 look-through** | built — exposure, overlap, concentration, duplication, nested funds, marginal contribution |
 | **M6 views** | built — six views, CSV export, loopback API |
 | M2 fund x-ray | partly built — return windows, risk statistics and rolling returns from NAV |
 | M4 risk | specified, not built |
@@ -240,9 +240,13 @@ Ordered by what they cost.
 3. **`checks.py:96` claims V3 blocks the look-through. Nothing does.** No module
    reads `validation_status`. Either the block should exist or the comment
    should not claim it.
-4. **A fund inside a fund is not looked through.** ICICI's Gold ETF and PPFAS's
-   overseas holdings resolve to `__MFUNIT__` — correctly disclosed, not
-   analysed. That is §10's nested look-through, V2 work.
+4. ~~**A fund inside a fund is not looked through.**~~ **Closed 2026-09-18.**
+   §6's recursion is built: a `__MFUNIT__` holding expands into the issuers of
+   the fund it names, depth-capped at 2 and cycle-guarded. The opaque bucket
+   went from 6.15% of an illustrative portfolio to 1.84%, closure unchanged.
+   What remains bucketed is honest: 17 of the 53 funds held as units have no
+   disclosure of their own, and a unit staged without an ISIN (the aggregator
+   tier) has nothing to resolve against.
 5. **204 disclosures predate the AUM witness.** V2 runs now (V1-49) and
    `scheme_aum` covers 99.5% of schemes with a disclosure, but rows loaded
    before the table existed keep `aum_reported` NULL and record V2 as "did not
