@@ -118,8 +118,23 @@ def _expand_zips(folder: Path) -> int:
     for archive in archives:
         # The whole body, not just the open: a ZIP whose directory parses but
         # whose member data is truncated -- what a half-finished download
-        # leaves -- opens fine and raises BadZipFile from `read`. A bad archive
-        # must cost itself, not the batch, as every other failure here does.
+        # leaves -- opens fine and raises from `read`. A bad archive must cost
+        # itself, not the batch, as every other failure here does.
+        #
+        # `zipfile` signals four different ways for four kinds of unreadable,
+        # and only one of them is BadZipFile. Catching that alone let an
+        # encrypted member abort the whole run before any workbook loaded --
+        # the exact failure this guard exists to prevent, wearing a different
+        # exception type:
+        #
+        #   BadZipFile          corrupt directory, or a member that fails CRC
+        #   RuntimeError        member is encrypted and no password was given
+        #   NotImplementedError a compression method zipfile cannot read
+        #   ValueError          a member name with an embedded NUL
+        #
+        # OSError is deliberately NOT caught: a write that fails is the disk
+        # or the permissions talking, not this archive, and the next archive
+        # would fail the same way. That one should stop the run.
         try:
             with zipfile.ZipFile(archive) as zf:
                 for member in zf.namelist():
@@ -130,8 +145,15 @@ def _expand_zips(folder: Path) -> int:
                     if not target.exists():
                         target.write_bytes(zf.read(member))
                         extracted += 1
-        except zipfile.BadZipFile:
-            print(f"    SKIPPED {archive.name}: not a readable ZIP")
+        except (
+            zipfile.BadZipFile,
+            RuntimeError,
+            NotImplementedError,
+            ValueError,
+        ) as exc:
+            # The reason, not just the refusal: "encrypted" and "corrupt" want
+            # different things from whoever is reading the output.
+            print(f"    SKIPPED {archive.name}: {type(exc).__name__}: {str(exc)[:70]}")
     return extracted
 
 

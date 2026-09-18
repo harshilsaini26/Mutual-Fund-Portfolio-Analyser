@@ -106,3 +106,53 @@ def test_a_corrupt_member_costs_its_archive_not_the_batch(tmp_path: Path) -> Non
     assert _expand_zips(tmp_path) == 1
     assert (tmp_path / "Fine.xlsx").read_bytes() == b"ok"
     assert not (tmp_path / "Broken.xlsx").exists()
+
+
+def _mark_encrypted(path: Path) -> None:
+    """Set general-purpose bit 0 on every member, local header and directory.
+
+    `zipfile` cannot WRITE an encrypted archive, so the flag is flipped by
+    hand. Reading such a member raises RuntimeError, not BadZipFile.
+    """
+    raw = bytearray(path.read_bytes())
+    for magic, flag_offset in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
+        at = 0
+        while (i := raw.find(magic, at)) >= 0:
+            raw[i + flag_offset] |= 1
+            at = i + 4
+    path.write_bytes(bytes(raw))
+
+
+def test_an_encrypted_member_costs_its_archive_not_the_batch(tmp_path: Path) -> None:
+    """`zipfile` signals four ways for four kinds of unreadable and only one is
+    BadZipFile. Catching that alone let an encrypted member abort the whole run
+    before any workbook loaded -- the exact failure the guard exists to stop,
+    wearing a different exception type.
+    """
+    locked = tmp_path / "locked.zip"
+    _zip(locked, {"Secret.xlsx": b"payload"})
+    _mark_encrypted(locked)
+    _zip(tmp_path / "fine.zip", {"Good.xlsx": b"ok"})
+
+    assert _expand_zips(tmp_path) == 1
+    assert (tmp_path / "Good.xlsx").read_bytes() == b"ok"
+    assert not (tmp_path / "Secret.xlsx").exists()
+
+
+def test_an_unsupported_compression_costs_its_archive_not_the_batch(
+    tmp_path: Path,
+) -> None:
+    """Deflate64 and friends raise NotImplementedError from `read`."""
+    odd = tmp_path / "odd.zip"
+    _zip(odd, {"Weird.xlsx": b"payload"})
+    raw = bytearray(odd.read_bytes())
+    for magic, off in ((b"PK\x03\x04", 8), (b"PK\x01\x02", 10)):
+        at = 0
+        while (i := raw.find(magic, at)) >= 0:
+            raw[i + off : i + off + 2] = (9).to_bytes(2, "little")  # Deflate64
+            at = i + 4
+    odd.write_bytes(bytes(raw))
+    _zip(tmp_path / "fine.zip", {"Good.xlsx": b"ok"})
+
+    assert _expand_zips(tmp_path) == 1
+    assert (tmp_path / "Good.xlsx").read_bytes() == b"ok"
