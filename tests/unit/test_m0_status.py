@@ -10,6 +10,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 from jobs.status import (
@@ -325,7 +326,14 @@ class TestAHouseNeverGetsAnotherHousesPage:
         added for."""
         _index.cache_clear()
         page = _disclosure_page("nippon_india")
-        assert page and "nipponindiaim.com" in page
+        # The HOST, not a substring of the whole URL. `"x.com" in url` is also
+        # true of `evil-x.com/...` and of a path or query that merely mentions
+        # it, so it is a weaker claim than this test means to make -- it means
+        # the lookup resolved to Nippon's own page. CodeQL flags the substring
+        # shape for exactly that reason (alert #4); here it was a false
+        # positive, since an assertion decides nothing, but the precise form
+        # is the better test anyway.
+        assert page and urlparse(page).netloc == "mf.nipponindiaim.com"
 
     def test_no_index_entry_is_a_word_prefix_of_another(self) -> None:
         """The property that makes prefix matching safe at all. If this ever
