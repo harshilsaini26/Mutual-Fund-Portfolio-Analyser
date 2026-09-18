@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import Decimal
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -189,7 +190,7 @@ def test_the_rate_in_force_is_the_latest_on_or_before(tmp_path: Path) -> None:
 
 
 def test_no_file_and_no_observations_are_both_just_empty(tmp_path: Path) -> None:
-    """The shipped state. Not an error: every other M2 figure is unaffected."""
+    """Not an error: every M2 figure but Sharpe and Sortino is unaffected."""
     from src.m0_data.config import risk_free_on, risk_free_rates
 
     missing = tmp_path / "absent.yaml"
@@ -199,3 +200,95 @@ def test_no_file_and_no_observations_are_both_just_empty(tmp_path: Path) -> None
     assert risk_free_rates(missing) == []
     assert risk_free_rates(empty) == []
     assert risk_free_on(date(2024, 1, 1), empty) is None
+
+
+def test_the_cache_keys_on_the_path(tmp_path: Path) -> None:
+    """`risk_free_rates` is memoised -- parsing 772 rows once per window per
+    scheme is 50 minutes of re-reading one unchanged file. Two files must still
+    give two answers, which is the way that optimisation goes wrong."""
+    from src.m0_data.config import risk_free_on
+
+    a, b = tmp_path / "a.yaml", tmp_path / "b.yaml"
+    a.write_text("observations:\n  2020-01-01: 5.0\n", encoding="utf-8")
+    b.write_text("observations:\n  2020-01-01: 9.0\n", encoding="utf-8")
+
+    assert risk_free_on(date(2021, 1, 1), a) == Decimal("5.0")
+    assert risk_free_on(date(2021, 1, 1), b) == Decimal("9.0")
+    assert risk_free_on(date(2021, 1, 1), a) == Decimal("5.0")   # still, from cache
+
+
+# --- the shipped series -------------------------------------------------------
+
+
+def test_the_shipped_file_carries_the_auction_series() -> None:
+    """The file is the feature. Emptied, Sharpe silently becomes `None` on
+    every window in the warehouse and nothing else fails -- so this asserts the
+    data is there, not merely that the reader works.
+
+    The cadence check is the one that matters: a quarterly sample of this
+    series is out by up to 4.50pp at a window start, because the 91-day cut-off
+    went 7.24% -> 12.02% inside Q3 2013. Weekly observations cost 20KB and
+    carry no such error.
+    """
+    from src.m0_data.config import risk_free_rates
+
+    rates = risk_free_rates()
+    assert len(rates) > 700, "the shipped auction series is missing or truncated"
+    assert rates[0][0] == date(2011, 4, 6), "no longer starts at S13's first auction"
+
+    gaps = [(b - a).days for (a, _), (b, _) in pairwise(rates)]
+    assert max(gaps) <= 31, "a gap over a month: resampled coarser than weekly"
+    assert all(Decimal(1) < v < Decimal(15) for _, v in rates), "a yield outside 1-15%"
+
+
+def test_every_fixed_window_open_today_has_a_rate() -> None:
+    """§8.1's three windows, as a reader would actually ask for them. This is
+    what "Sharpe is on" means: not that the function exists, but that the rate
+    it needs is on record for every window the warehouse can open today."""
+    from src.m0_data.config import risk_free_on
+    from src.m2_fund.windows import WINDOW_YEARS, window_start
+
+    today = date.today()
+    for key in WINDOW_YEARS:
+        assert risk_free_on(window_start(today, key)) is not None, key
+
+
+def test_a_window_older_than_the_record_still_gets_no_sharpe() -> None:
+    """The boundary is a real date now, not a hypothetical. 2 of the 15,006
+    schemes with NAV start before it, and they must get `None` rather than the
+    2011 rate stretched backwards over history it did not apply to."""
+    from src.m0_data.config import risk_free_on
+
+    assert risk_free_on(date(2011, 4, 5)) is None
+    assert risk_free_on(date(2011, 4, 6)) is not None
+
+
+def test_sharpe_and_sortino_come_out_of_a_real_window() -> None:
+    """End to end, over dates the shipped file actually covers.
+
+    The series falls before it rises, because a monotonic one has zero downside
+    deviation and Sortino is correctly `None` for it -- a rising-only fixture
+    would assert nothing about Sortino at all.
+    """
+    from src.m2_fund.windows import compute_return_window
+
+    start = date(2022, 1, 3)
+    path = ["100", "97", "94", "99", "103", "108", "112", "119", "126", "134"]
+    navs = [
+        NavPoint(
+            scheme_id=SCHEME,
+            nav_date=start + timedelta(days=i * 90),
+            nav=Decimal(v),
+            is_interpolated=False,
+        )
+        for i, v in enumerate(path)
+    ]
+
+    w = compute_return_window(navs, "3y")
+    assert w is not None
+    assert w.risk_free_pct == Decimal("3.657")   # the auction of 2021-12-29
+    assert w.sharpe is not None
+    assert w.sortino is not None
+    # It beat a 3.69% bill comfortably, and punishing only the falls flatters it.
+    assert w.sharpe > 0
+    assert w.sortino > w.sharpe

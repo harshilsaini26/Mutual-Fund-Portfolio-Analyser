@@ -10,6 +10,7 @@ import os
 from bisect import bisect_right
 from datetime import date
 from decimal import Decimal
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -96,14 +97,21 @@ def source(source_id: str, path: Path = SOURCES_YAML) -> dict[str, Any]:
 WORKBOOKS = (".xlsx", ".xls")
 
 
+@lru_cache(maxsize=8)
 def risk_free_rates(path: Path = RISK_FREE_YAML) -> list[tuple[date, Decimal]]:
     """Hand-entered risk-free observations, oldest first. S13.
 
     A list rather than a dict so `risk_free_on` can binary-search it, and
     `Decimal` because a rate feeds a ratio that money is judged by
-    (invariant 1). Empty is the normal state, not an error: the file ships
-    without observations because RBI answers an automated client with a bot
-    check and this project does not defeat those.
+    (invariant 1). Empty is not an error: the file may carry no observation,
+    and every M2 figure except Sharpe and Sortino is unaffected by that.
+
+    Cached because the file holds every 91-day auction since 2011 and M2 asks
+    for a rate once per window per scheme. Parsing it costs 52ms, which over
+    15,006 schemes and four windows is 50 minutes of re-reading one unchanged
+    file. Keyed on `path`, so a test pointing at its own tmp file is unaffected
+    -- but a caller that REWRITES a path it already read must call
+    `risk_free_rates.cache_clear()`, as `jobs.status` does for `_index`.
     """
     if not path.exists():
         return []

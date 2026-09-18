@@ -1,14 +1,17 @@
 """Return windows. MODULE_2.md §8.1.
 
 §8.1 computes eighteen fields; eight of them need a benchmark or a risk-free
-rate, and this warehouse has neither — `benchmark_id` is populated on 0 of
-19,598 schemes and no risk-free series exists. Alpha, beta, tracking error,
-information ratio, Sharpe, Sortino and the capture ratios are therefore absent
-rather than `None`: a field that is always `None` claims to be optional when it
-is in fact unavailable.
+rate. The risk-free side is on record: `config/risk_free.yaml` carries every
+91-day Treasury Bill auction since 2011 (S13), so Sharpe, Sortino and the
+downside deviation that feeds Sortino are all computed here, with the rate that
+produced them travelling beside as `risk_free_pct`.
 
-Downside deviation is absent for the same reason once removed — it exists only
-to feed Sortino, which needs the risk-free rate (S13) nobody fetches.
+The benchmark side is not. `benchmark_id` is populated on 0 of 19,598 schemes,
+so alpha, beta, tracking error, information ratio and the capture ratios are
+absent rather than `None`: a field that is always `None` claims to be optional
+when it is in fact unavailable. Sharpe and Sortino ARE `None` for a window
+starting before 2011, and that is the other thing — the rate exists, this
+particular window is simply older than the record of it.
 
 The three-window model of §3 — fund, manager, user — is not here either. There
 is no manager or tenure data, `inception_date` is empty for every scheme, and

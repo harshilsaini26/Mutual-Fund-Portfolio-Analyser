@@ -1,8 +1,9 @@
 """Return window assembly. MODULE_2.md §8.1.
 
-These test the parts §8.1 keeps that this warehouse can feed, and the two
-absences it declares rather than hides: no benchmark on any of 19,598 schemes,
-and no risk-free series at all.
+These test the parts §8.1 keeps that this warehouse can feed, the absence it
+declares rather than hides — no benchmark on any of 19,598 schemes — and the
+one field that is genuinely optional: Sharpe needs a risk-free rate, and
+`config/risk_free.yaml` records those back to 2011 and no further.
 """
 
 from __future__ import annotations
@@ -120,11 +121,27 @@ def test_no_benchmark_relative_field_is_carried_as_a_silent_none() -> None:
         assert not hasattr(w, absent), f"{absent} is carried but can never be computed"
 
 
-def test_sharpe_is_none_when_no_rate_is_on_record() -> None:
-    """`config/risk_free.yaml` ships empty: RBI answers an automated client
-    with a bot check, so the rate arrives by hand or not at all. Optional
-    because it depends on that file, not absent like the benchmark fields."""
-    w = compute_return_window(series(["100", "110"]), "1y")
+def test_sharpe_is_none_for_a_window_older_than_the_record() -> None:
+    """`config/risk_free.yaml` starts at the 91-day auction of 2011-04-06, the
+    oldest DBIE publishes. A window opening before that gets no Sharpe, rather
+    than one built on the 2011 rate stretched back over history it never
+    applied to.
+
+    This asserted an empty file until S13's series landed. The property it was
+    really after -- optional because the record is finite, not absent like the
+    benchmark fields -- is unchanged; it now has a real boundary to sit on.
+    """
+    old = [
+        NavPoint(
+            scheme_id=SCHEME,
+            nav_date=date(2010, 1, 1) + timedelta(days=i * 30),
+            nav=Decimal(100 + i),
+            is_interpolated=False,
+        )
+        for i in range(13)
+    ]
+
+    w = compute_return_window(old, "1y")
     assert w is not None
     assert w.risk_free_pct is None
     assert w.sharpe is None and w.sortino is None
