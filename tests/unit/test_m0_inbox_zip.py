@@ -84,3 +84,25 @@ def test_an_existing_workbook_is_never_overwritten(tmp_path: Path) -> None:
 
 def test_no_zip_is_not_an_error(tmp_path: Path) -> None:
     assert _expand_zips(tmp_path) == 0
+
+
+def test_a_corrupt_member_costs_its_archive_not_the_batch(tmp_path: Path) -> None:
+    """The open succeeding is not the same as the members being readable.
+
+    A ZIP whose central directory parses but whose member data is truncated --
+    what a half-finished download leaves -- opens fine and raises BadZipFile
+    from `read`. Guarding only the open left that path aborting the whole run.
+    """
+    bad = tmp_path / "half-downloaded.zip"
+    with zipfile.ZipFile(bad, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("Broken.xlsx", b"payload" * 200)
+    raw = bytearray(bad.read_bytes())
+    start = 30 + len("Broken.xlsx")  # past the local file header, into the data
+    raw[start + 5 : start + 15] = b"\x00" * 10
+    bad.write_bytes(bytes(raw))
+
+    _zip(tmp_path / "good.zip", {"Fine.xlsx": b"ok"})
+
+    assert _expand_zips(tmp_path) == 1
+    assert (tmp_path / "Fine.xlsx").read_bytes() == b"ok"
+    assert not (tmp_path / "Broken.xlsx").exists()

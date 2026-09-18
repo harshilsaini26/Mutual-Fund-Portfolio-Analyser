@@ -17,7 +17,7 @@ from decimal import Decimal
 
 import pytest
 from src.common.contracts.market import NavPoint
-from src.common.decimals import annualise
+from src.common.decimals import RATE_Q, annualise
 from src.common.types import SchemeId
 from src.m2_fund.risk import (
     annualised_vol,
@@ -65,8 +65,12 @@ def test_doubling_over_exactly_a_year_annualises_to_100_percent() -> None:
 
 
 def test_annualising_returns_a_rate_not_a_growth_ratio() -> None:
-    """50% over two years is 22.47% a year, not 122.47%."""
-    assert annualise(Decimal("1.5"), 730) == Decimal("0.224745")
+    """50% over two years is 22.47% a year, not 122.47%.
+
+    Quantised here, not by `annualise`: it returns full precision so M1's
+    ledger output is not silently rounded to M2's display scale.
+    """
+    assert annualise(Decimal("1.5"), 730).quantize(RATE_Q) == Decimal("0.224745")
 
 
 def test_no_change_over_any_span_annualises_to_zero() -> None:

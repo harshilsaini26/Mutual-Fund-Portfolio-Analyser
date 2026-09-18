@@ -104,10 +104,14 @@ def annualise(growth: Decimal, days: int) -> Decimal:
     Whether a sub-year window SHOULD be annualised is the caller's policy and
     deliberately differs: M1 returns None under a year, M2 annualises and
     attaches a confidence tier.
+
+    Returned at full precision. Quantising here would silently round every
+    caller to `RATE_Q`, which is a display scale M2 wants and M1's ledger
+    output never asked for.
     """
     if days <= 0:
         raise ValueError(f"cannot annualise over {days} days")
-    return ((growth.ln() * (CALENDAR_DAYS / Decimal(days))).exp() - 1).quantize(RATE_Q)
+    return (growth.ln() * (CALENDAR_DAYS / Decimal(days))).exp() - 1
 
 
 DECIMAL_SQLITE_TYPE = "DECIMAL_TEXT"

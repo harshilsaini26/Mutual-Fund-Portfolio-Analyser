@@ -82,3 +82,11 @@ def source(source_id: str, path: Path = SOURCES_YAML) -> dict[str, Any]:
         "{CONTACT_EMAIL}", contact_email()
     )
     return merged
+
+
+#: The workbook formats the holdings parsers read. Here rather than in a job:
+#: `jobs.fetch_amc` needs it to allow-list downloads, and importing it from
+#: `jobs.ingest_inbox` dragged in `jobs.load_holdings` and openpyxl -- 1.4s to
+#: import a two-element tuple, against a decision (V1-48) that load_holdings
+#: does too much at import to be worth importing.
+WORKBOOKS = (".xlsx", ".xls")

@@ -13,9 +13,7 @@ invites the two checks to disagree.
 Callers hand over a validated series: `compute_return_window` rejects a
 non-positive NAV once, before any of this runs.
 
-Every figure is a `Decimal` (invariant 1). That constrains the arithmetic more
-than it looks: `Decimal` has no fractional `**`, so annualisation goes through
-`ln`/`exp` rather than a power.
+Every figure is a `Decimal` (invariant 1).
 """
 
 from __future__ import annotations

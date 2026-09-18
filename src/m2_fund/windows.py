@@ -152,7 +152,7 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
     return ReturnWindow(
         window_key=window_key,
         return_cum=(growth - 1).quantize(RATE_Q),
-        return_ann=annualise(growth, obs_days),
+        return_ann=annualise(growth, obs_days).quantize(RATE_Q),
         volatility_ann=annualised_vol(daily_returns(navs)),
         drawdown=max_drawdown(navs),
         obs_days=obs_days,
@@ -193,7 +193,9 @@ def rolling_returns(
         # window can land that way: points every 150 days rising 100 -> 2050
         # reported 0.00% across all 49 windows before this.
         if i < j:
-            rets.append(annualise(navs[j].nav / navs[i].nav, horizon_days))
+            rets.append(
+                annualise(navs[j].nav / navs[i].nav, horizon_days).quantize(RATE_Q)
+            )
         start += step
 
     if len(rets) < MIN_ROLLING_WINDOWS:

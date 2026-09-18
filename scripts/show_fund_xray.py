@@ -82,14 +82,25 @@ def main() -> None:
             return
 
         as_of = date.fromisoformat(args.as_of) if args.as_of else full[-1].nav_date
-        # One slice, used by every figure below. Rolling returns previously
-        # took `full`, so --as-of moved the table and not the distribution.
+        # One slice, used by every figure below. Rolling returns once took
+        # `full`, so --as-of moved the table and not the distribution.
         upto = [p for p in full if p.nav_date <= as_of]
 
         print(f"FUND X-RAY  {args.scheme}   as of {as_of}")
+
+        # Before the IDCW guard, because an as-of that predates the series
+        # leaves `upto` empty and that is not an IDCW plan -- it is a date
+        # with no data behind it. The guard below would otherwise diagnose a
+        # Growth fund as one whose distributions are unloaded.
+        if len(upto) < 2:
+            print(f"  {len(upto)} NAV points on or before {as_of}, of"
+                  f" {len(full):,} from {full[0].nav_date} to {full[-1].nav_date}.")
+            print("  Nothing to compute: pick a later --as-of.")
+            return
+
         print(
-            f"  adjusted NAV, {len(full):,} points"
-            f" from {full[0].nav_date} to {full[-1].nav_date}"
+            f"  adjusted NAV, {len(upto):,} points"
+            f" from {upto[0].nav_date} to {upto[-1].nav_date}"
         )
 
         # A series that does not move is not a fund that made nothing. It is an
@@ -102,8 +113,9 @@ def main() -> None:
             distinct = len({p.nav for p in upto})
             plural = "" if distinct == 1 else "s"
             print()
-            print(f"  NAV takes {distinct} distinct value{plural} across the whole")
-            print("  series, so no return can be read from it.")
+            print(f"  NAV takes {distinct} distinct value{plural} across the"
+                  f" {len(upto):,} points to {as_of},")
+            print("  so no return can be read from it.")
             print()
             print("  This is an IDCW plan whose distributions are not loaded:")
             print("  scheme_idcw is empty, so nav_adj == nav and the return that")

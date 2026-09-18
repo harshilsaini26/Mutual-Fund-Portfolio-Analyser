@@ -25,7 +25,7 @@ import sys
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
-from src.m0_data.config import inbox_root, source
+from src.m0_data.config import WORKBOOKS, inbox_root, source
 from src.m0_data.fetch.amc_direct import DISCOVERY, DiscoveredFile, for_period
 from src.m0_data.fetch.base import (
     DomainRateLimiter,
@@ -33,8 +33,6 @@ from src.m0_data.fetch.base import (
     RobotsCache,
     conditional_get,
 )
-
-from jobs.ingest_inbox import WORKBOOKS
 
 #: S5 is the AMC disclosure source; these adapters only change how its URL is
 #: found, so they inherit its politeness settings rather than declaring new ones.

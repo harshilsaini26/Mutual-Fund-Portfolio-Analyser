@@ -26,7 +26,7 @@ from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from src.common.decimals import connect
-from src.m0_data.config import inbox_root, source, warehouse_path
+from src.m0_data.config import WORKBOOKS, inbox_root, source, warehouse_path
 from src.m0_data.parse.base import ParseFailed, RawFile
 from src.m0_data.parse.holdings.registry import NoParserMatched
 from src.m0_data.resolve.cascade import load_isin_prefix_index, load_issuer_index
@@ -41,7 +41,6 @@ from jobs.load_holdings import _one, _parser_for, discover_sheets
 
 #: Extensions an AMC publishes a portfolio under. `.xls` is here because
 #: Nippon serves a ZIP-format workbook under it and the extension lies (V1-15).
-WORKBOOKS = (".xlsx", ".xls")
 
 
 def _amc_for(conn: Any, path: Path) -> tuple[str | None, dict[str, int], str]:
@@ -117,22 +116,22 @@ def _expand_zips(folder: Path) -> int:
         p for p in folder.iterdir() if p.is_file() and p.suffix.lower() == ".zip"
     )
     for archive in archives:
+        # The whole body, not just the open: a ZIP whose directory parses but
+        # whose member data is truncated -- what a half-finished download
+        # leaves -- opens fine and raises BadZipFile from `read`. A bad archive
+        # must cost itself, not the batch, as every other failure here does.
         try:
-            zf = zipfile.ZipFile(archive)
+            with zipfile.ZipFile(archive) as zf:
+                for member in zf.namelist():
+                    name = PureWindowsPath(member).name
+                    if not name.lower().endswith(WORKBOOKS) or name.startswith("~$"):
+                        continue
+                    target = folder / name
+                    if not target.exists():
+                        target.write_bytes(zf.read(member))
+                        extracted += 1
         except zipfile.BadZipFile:
-            # A truncated download must cost its own archive, not the batch.
-            # Every other failure in this module is reported and stepped over.
             print(f"    SKIPPED {archive.name}: not a readable ZIP")
-            continue
-        with zf:
-            for member in zf.namelist():
-                name = PureWindowsPath(member).name
-                if not name.lower().endswith(WORKBOOKS) or name.startswith("~$"):
-                    continue
-                target = folder / name
-                if not target.exists():
-                    target.write_bytes(zf.read(member))
-                    extracted += 1
     return extracted
 
 
