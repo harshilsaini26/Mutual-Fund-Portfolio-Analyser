@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from enum import Enum, auto
 
@@ -220,9 +220,46 @@ def to_decimal(raw: str) -> Decimal | None:
     return -value if negative else value
 
 
+#: Month number by name, lowercased. CAS prints `04-Nov-2024` and every
+#: registrar prints it in English, but `strptime`'s `%b` READS that through
+#: `LC_TIME`: on a machine with a German locale `Mar`, `May`, `Oct` and `Dec`
+#: all raise, because de_DE spells them `Mär`, `Mai`, `Okt` and `Dez`.
+#:
+#: Nothing catches that. `parse_date` is called from inside the state machine,
+#: so the failure is not a line landing in `unparsed` — the whole import
+#: ABORTS, and a statement that imports on one machine cannot be imported on
+#: another. `CLAUDE.md` invariant 10 wants the same bytes to produce the same
+#: ledger wherever they are read.
+#:
+#: Spelled out here rather than imported from M0's `normalise/numbers.py`,
+#: which carries the same table: this parser depends on nothing outside
+#: `src.common`, and the M0/M1 coercion pair is already duplicated on purpose
+#: — see that module's docstring on `to_decimal`.
+MONTHS = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+#: `04-Nov-2024`. The month is captured as letters and looked up in `MONTHS`,
+#: never handed to `%b`.
+CAS_DATE_RE = re.compile(r"^(\d{1,2})-([A-Za-z]{3})-(\d{4})$")
+
+
 def parse_date(raw: str) -> date:
-    """`04-Nov-2024`. The only date format CAS uses, in every registrar's output."""
-    return datetime.strptime(raw.strip(), "%d-%b-%Y").date()
+    """`04-Nov-2024`. The only date format CAS uses, in every registrar's output.
+
+    Raises rather than returning None: a transaction whose date cannot be read
+    is not a row to degrade, it is a row whose position in the ledger is
+    unknown, and §5.4's ordering is what every lot computation depends on.
+    """
+    match = CAS_DATE_RE.match(raw.strip())
+    month = MONTHS.get(match.group(2).lower()) if match else None
+    if match is None or month is None:
+        raise CasParseError(f"unparseable date {raw!r}")
+    try:
+        return date(int(match.group(3)), month, int(match.group(1)))
+    except ValueError as exc:
+        raise CasParseError(f"impossible date {raw!r}: {exc}") from exc
 
 
 def _split_trailing_numbers(rest: str) -> tuple[str, list[Decimal | None]]:

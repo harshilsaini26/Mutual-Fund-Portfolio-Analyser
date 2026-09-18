@@ -29,7 +29,7 @@ from decimal import Decimal
 
 import openpyxl
 
-from src.m0_data.normalise.numbers import to_decimal
+from src.m0_data.normalise.numbers import month_number, to_decimal
 from src.m0_data.resolve.isin import is_valid_isin
 
 PARSER_ID = "mcap.amfi"
@@ -110,14 +110,23 @@ def basis_date_from_name(filename: str) -> date:
     §7.5 forbids defaulting to "last month-end" when a date cannot be found,
     and this is why: `mcap_basis` is what stops a 2026 classification being
     applied to a 2021 holding, so a wrong one is silent look-ahead bias.
+
+    The month is read from `month_number`, not `%b`, which renders through
+    `LC_TIME` — see that table. A German locale would turn `30Jun2026` into a
+    file this parser refuses, and invariant 10 wants the archive to rebuild the
+    same warehouse wherever it is run.
     """
     match = PERIOD_RE.search(filename)
     if not match:
         raise McapParseError(f"no period end in filename: {filename!r}")
     day, month, year = match.groups()
-    from datetime import datetime
-
-    return datetime.strptime(f"{day}-{month}-{year}", "%d-%b-%Y").date()
+    number = month_number(month)
+    if number is None:
+        raise McapParseError(f"unknown month in filename: {filename!r}")
+    try:
+        return date(int(year), number, int(day))
+    except ValueError as exc:
+        raise McapParseError(f"impossible period end in {filename!r}: {exc}") from exc
 
 
 def bucket_for(rank: int) -> str:

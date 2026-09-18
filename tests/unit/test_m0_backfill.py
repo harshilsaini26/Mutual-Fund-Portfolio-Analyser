@@ -16,6 +16,7 @@ from src.m0_data.fetch.amfi_history import (
     GRANDFATHER_DATE,
     HistoryChunk,
     plan_backfill,
+    query_date,
     year_chunks,
 )
 
@@ -87,6 +88,29 @@ def test_the_query_uses_amfis_date_format_not_iso() -> None:
     assert chunk.params == {
         "frmdt": "31-Jan-2018", "todt": "31-Dec-2018", "mf": "9",
     }
+
+
+def test_the_query_date_does_not_go_through_the_locale() -> None:
+    """Every month, spelled the way AMFI spells it.
+
+    `strftime("%d-%b-%Y")` renders the month through `LC_TIME`, so a German
+    locale would send `01-Mrz-2024` — and AMFI answers a query it cannot read
+    with HTTP 200 and an HTML error page, so nothing raises and the job records
+    zero NAVs and reports success. Invariant 10 wants the same archived bytes
+    from any machine too.
+
+    The months are asserted rather than the locale forced: `setlocale` needs a
+    locale that is installed, and `de_DE.UTF-8` is not present on Windows CI.
+    All twelve are listed because only some differ — `Jan` and `Dec` read the
+    same in German, and a test that used only those would pass anywhere.
+    """
+    got = [query_date(date(2024, m, 1)) for m in range(1, 13)]
+    assert got == [
+        "01-Jan-2024", "01-Feb-2024", "01-Mar-2024", "01-Apr-2024",
+        "01-May-2024", "01-Jun-2024", "01-Jul-2024", "01-Aug-2024",
+        "01-Sep-2024", "01-Oct-2024", "01-Nov-2024", "01-Dec-2024",
+    ]
+    assert query_date(date(2018, 1, 31)) == "31-Jan-2018", "the day is zero-padded"
 
 
 def test_an_unfiltered_chunk_omits_the_amc_parameter() -> None:

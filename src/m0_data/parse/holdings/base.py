@@ -21,7 +21,11 @@ from decimal import Decimal
 
 import openpyxl
 
-from src.m0_data.normalise.numbers import CoercionError, to_decimal
+from src.m0_data.normalise.numbers import (
+    CoercionError,
+    month_number,
+    to_decimal,
+)
 from src.m0_data.normalise.units import AmbiguousUnitError, unit_from_header
 from src.m0_data.parse.base import (
     HoldingsParseResult,
@@ -61,14 +65,32 @@ AS_ON_RE = re.compile(
     r")",
     re.I,
 )
-_DATE_FORMATS = (
-    "%d-%b-%Y", "%d %b %Y", "%d-%B-%Y", "%d %B %Y", "%Y-%m-%d", "%d/%m/%Y",
-    # ICICI's month-first form. §7.5 would otherwise fall through to the
-    # filename, and ICICI's members are named for the scheme with no date in
-    # them at all — so the file would be refused for want of an as-of date it
-    # states plainly in row 3.
-    "%b %d,%Y", "%B %d,%Y",
+
+#: `31-Jul-2026`, `31 July 2026`. The month is captured as letters and looked
+#: up in `MONTH_NUMBERS`, never handed to `%b`/`%B` — those render through
+#: `LC_TIME`, so on a machine with a German locale this parser would refuse a
+#: disclosure it reads here, and the archive would rebuild by geography
+#: (invariant 10).
+_DAY_FIRST = re.compile(
+    r"^(?P<day>\d{1,2})[-\s]+(?P<month>[A-Za-z]+)[-\s]+(?P<year>\d{4})$"
 )
+
+#: ICICI's month-first form, `Jul 31,2026`. §7.5 would otherwise fall through
+#: to the filename, and ICICI's members are named for the scheme with no date
+#: in them at all — so the file would be refused for want of an as-of date it
+#: states plainly in row 3.
+_MONTH_FIRST = re.compile(
+    r"^(?P<month>[A-Za-z]+)[-\s]+(?P<day>\d{1,2}),(?P<year>\d{4})$"
+)
+
+#: The all-numeric forms, which name no month and so carry no `LC_TIME`
+#: dependence: `%Y`, `%m` and `%d` are digits in every locale.
+#:
+#: The slash form cannot actually fire — `_parse_date` rewrites `/` to `-`
+#: before matching, and `AS_ON_RE` requires letters where it puts a month
+#: anyway. It is kept because removing it is a behaviour question about which
+#: spellings §7.5 accepts, not part of the locale fix.
+_NUMERIC_FORMATS = ("%Y-%m-%d", "%d/%m/%Y")
 
 #: A NAV-history line in the notes: `Direct Plan - Growth Option | 2267.177`.
 #: Not a holding, but an independent witness that we mapped the file to the
@@ -705,11 +727,22 @@ def _date_from_filename(filename: str) -> date | None:
 
 
 def _parse_date(text: str) -> date | None:
+    """§7.5. None rather than raising — every caller has another candidate."""
     cleaned = re.sub(r"\s*,\s*", ",", text.replace("/", "-").strip())
-    for fmt in _DATE_FORMATS:
-        for candidate in (cleaned, cleaned.replace("-", " ")):
-            try:
-                return datetime.strptime(candidate, fmt).date()
-            except ValueError:
-                continue
+    for pattern in (_DAY_FIRST, _MONTH_FIRST):
+        match = pattern.match(cleaned)
+        if match is None:
+            continue
+        month = month_number(match["month"])
+        if month is None:
+            continue
+        try:
+            return date(int(match["year"]), month, int(match["day"]))
+        except ValueError:
+            return None
+    for fmt in _NUMERIC_FORMATS:
+        try:
+            return datetime.strptime(cleaned, fmt).date()
+        except ValueError:
+            continue
     return None

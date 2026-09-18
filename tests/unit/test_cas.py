@@ -16,6 +16,7 @@ import pytest
 from src.common.types import SchemeId, UserId
 from src.m1_ledger.cas import (
     CasContext,
+    CasParseError,
     StagedTxn,
     assign_sequences,
     import_cas,
@@ -29,6 +30,7 @@ from src.m1_ledger.cas.importer import (
     switch_consideration,
     switch_proceeds,
 )
+from src.m1_ledger.cas.parse import parse_date
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.txn import UnmappedTransactionType, drop_reversed
 
@@ -131,6 +133,32 @@ def test_indian_digit_grouping_is_read_by_stripping_commas() -> None:
     """
     assert to_decimal("1,23,456.78") == Decimal("123456.78")
     assert to_decimal("1,755.672000") == Decimal("1755.672000")
+
+
+def test_the_transaction_date_does_not_go_through_the_locale() -> None:
+    """§5.4's distrust of the system locale applies to the date column too.
+
+    Every registrar prints the month in English, but a German machine spells
+    four of them differently — `Mär`, `Mai`, `Okt`, `Dez` — so `strptime`'s
+    `%b` would raise on `Mar`, `May`, `Oct` and `Dec`. `parse_cas` calls this
+    from inside the state machine with nothing catching it, so that is not a
+    line landing in `unparsed`: the whole import ABORTS, and a statement that
+    imports on this machine cannot be imported on that one. Invariant 10 wants
+    the same bytes to produce the same ledger wherever they are read.
+
+    All twelve months are asserted rather than a locale forced: `setlocale`
+    needs one that is installed, and `de_DE.UTF-8` is not present on Windows
+    CI. Listing only `Jan` and `Dec` would pass anywhere and prove nothing.
+    """
+    months = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    for number, name in enumerate(months, start=1):
+        assert parse_date(f"04-{name}-2024") == date(2024, number, 4)
+    assert parse_date("04-NOV-2024") == date(2024, 11, 4), "registrars vary in case"
+    with pytest.raises(CasParseError):
+        parse_date("04-Mrz-2024")  # a locale-rendered month is not a CAS month
+    with pytest.raises(CasParseError):
+        parse_date("31-Nov-2024")  # November has 30 days
 
 
 def test_a_parenthesised_number_is_negative(staged: list[StagedTxn]) -> None:
