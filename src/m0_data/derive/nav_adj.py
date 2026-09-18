@@ -14,8 +14,85 @@ from __future__ import annotations
 import sqlite3
 from bisect import bisect_right
 from decimal import Decimal
+from typing import Any
 
 from src.common.decimals import NAV_Q
+
+#: A re-denomination moves NAV by a power of ten, and only these. Restricted
+#: deliberately: `INF174KA1DB4` drops 10.0727 -> 0.0001 in one day, which is
+#: 10^-5 and a clean power of ten, but it is a dying fund's last row rather
+#: than a split. Ten- and hundred-fold are what AMCs actually do; anything
+#: wilder is a defect and must stay visible as one.
+SPLIT_RATIOS = (Decimal(100), Decimal(10), Decimal("0.1"), Decimal("0.01"))
+
+#: A split lands NEAR its ratio, not on it: the fund also moved that day. An
+#: overnight fund barely does -- ICICI came out at x10.0014 -- but an equity
+#: ETF does, and the real ones here run from x0.09729 to x0.10302, up to 3%
+#: off. 1% was calibrated on the overnight fund and missed 13 ETF splits.
+#:
+#: 10% is safe because of how far apart the two populations are: this admits
+#: only 0.09-0.11, 0.009-0.011, 9-11 and 90-110, and no fund has a single-day
+#: move anywhere near those. The gap between "re-denomination" and "bad day"
+#: is three orders of magnitude, not a judgement call.
+SPLIT_TOLERANCE = Decimal("0.10")
+
+
+def _split_ratio(previous: Decimal, current: Decimal) -> Decimal | None:
+    """The re-denomination between two NAVs, or None if this is a real move."""
+    if previous <= 0:
+        return None
+    moved = current / previous
+    for ratio in SPLIT_RATIOS:
+        if abs(moved / ratio - 1) <= SPLIT_TOLERANCE:
+            return ratio
+    return None
+
+
+def rescale_splits(
+    navs: list[tuple[Any, Decimal]],
+) -> list[tuple[Any, Decimal]]:
+    """The series on ONE scale, with unit re-denominations divided out.
+
+    A 10-for-1 re-denomination multiplies units and divides NAV; the holding
+    is worth exactly what it was a moment earlier. Left alone it reads as a
+    900% gain, which is how ICICI Prudential Overnight Fund -- a fund that
+    cannot move 1% in a day -- appeared to return 14.8x over seven years.
+
+    55 schemes in this warehouse carry one, clustered on three dates, all at
+    x10, x1/10 or x1/100.
+
+    Everything is brought to the LATEST scale: an earlier NAV is multiplied by
+    every split that came after it. That way `nav_adj` still reads on the same
+    order as today's `nav`, which §9.1 wants, and only history is restated --
+    which is what a re-denomination does anyway.
+
+    MODULE_0.md §2.2 states the rule for securities: "Do not use bhavcopy
+    close for return computation without applying `security_adjustment` -- a
+    bonus issue otherwise reads as a 50% crash." A fund's units split for the
+    same reasons and need the same treatment.
+    """
+    if len(navs) < 2:
+        return list(navs)
+
+    # Walk forward to find the splits, then apply each one to everything
+    # BEFORE it. Two passes rather than one because a split's multiplier
+    # applies retroactively and is not known until it happens.
+    splits: list[tuple[int, Decimal]] = []
+    for i in range(1, len(navs)):
+        ratio = _split_ratio(navs[i - 1][1], navs[i][1])
+        if ratio is not None:
+            splits.append((i, ratio))
+    if not splits:
+        return list(navs)
+
+    multiplier = [Decimal(1)] * len(navs)
+    running = Decimal(1)
+    for i in range(len(navs) - 1, -1, -1):
+        multiplier[i] = running
+        for at, ratio in splits:
+            if at == i:
+                running *= ratio
+    return [(d, (v * multiplier[i]).quantize(NAV_Q)) for i, (d, v) in enumerate(navs)]
 
 
 def growth_sibling(conn: sqlite3.Connection, scheme_id: str) -> str | None:
@@ -40,8 +117,8 @@ def growth_sibling(conn: sqlite3.Connection, scheme_id: str) -> str | None:
 
 
 def _from_sibling(
-    conn: sqlite3.Connection, navs: list[tuple[object, Decimal]], sibling: str
-) -> list[tuple[Decimal, object]] | None:
+    conn: sqlite3.Connection, navs: list[tuple[Any, Decimal]], sibling: str
+) -> list[tuple[Decimal, Any]] | None:
     """`nav_adj` for an IDCW plan, taken from its Growth sibling's returns.
 
     Reinvesting every distribution tracks the Growth plan exactly, so
@@ -56,22 +133,25 @@ def _from_sibling(
     Rows before the anchor keep `nav_adj == nav`: there is no sibling NAV to
     scale against and inventing one would be worse than saying nothing.
     """
-    g = conn.execute(
+    g_raw = conn.execute(
         "SELECT nav_date, nav FROM nav_daily"
         " WHERE scheme_id = ? AND nav IS NOT NULL ORDER BY nav_date",
         (sibling,),
     ).fetchall()
+    # The sibling needs the same treatment: its split would otherwise travel
+    # into this plan's adjusted series as a tenfold return it never had.
+    g = rescale_splits([(d, Decimal(v)) for d, v in g_raw])
     if not g:
         return None
     g_dates = [r[0] for r in g]
 
-    def on_or_before(when: object) -> Decimal | None:
+    def on_or_before(when: Any) -> Decimal | None:
         i = bisect_right(g_dates, when) - 1
         return Decimal(g[i][1]) if i >= 0 else None
 
     anchor_nav: Decimal | None = None
     anchor_g: Decimal | None = None
-    out: list[tuple[Decimal, object]] = []
+    out: list[tuple[Decimal, Any]] = []
     for nav_date, nav in navs:
         gv = on_or_before(nav_date)
         if gv is None or gv <= 0:
@@ -101,10 +181,15 @@ def build_nav_adj(conn: sqlite3.Connection, scheme_id: str) -> int:
       negative. That is a data error, not an arithmetic one, and is skipped
       rather than allowed to produce a negative or infinite factor.
     """
-    navs = conn.execute(
+    raw = conn.execute(
         "SELECT nav_date, nav FROM nav_daily WHERE scheme_id = ? ORDER BY nav_date",
         (scheme_id,),
     ).fetchall()
+    if not raw:
+        return 0
+    # Before anything else: a re-denomination is not a return, and leaving it
+    # in makes every figure downstream wrong by a factor of ten.
+    navs = rescale_splits([(d, Decimal(v)) for d, v in raw if v is not None])
     if not navs:
         return 0
 
@@ -132,7 +217,7 @@ def build_nav_adj(conn: sqlite3.Connection, scheme_id: str) -> int:
             return len(derived)
 
     factor = Decimal(1)
-    updates: list[tuple[Decimal, str, object]] = []
+    updates: list[tuple[Decimal, str, Any]] = []
     for i, (nav_date, nav) in enumerate(navs):
         amount = idcw.get(nav_date)
         if amount is not None and i > 0:

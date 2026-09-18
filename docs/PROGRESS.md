@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-18 · 1,191 tests passing
+**Last updated:** 2026-09-18 · 1,207 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -191,6 +191,21 @@ typecheck and a lint on every commit to keep.
 ## Known defects, measured and unfixed
 
 Ordered by what they cost.
+
+0. ~~**A unit re-denomination read as a 900% gain.**~~ **Closed 2026-09-18.**
+   55 schemes carried a 10:1 or 100:1 split, clustered on three dates. Nothing
+   divided it out, so ICICI Prudential Overnight Fund — a fund that cannot
+   move 1% in a day — reported 14.8x over seven years, and every volatility,
+   drawdown and Sharpe built on those series was garbage.
+
+   `rescale_splits` brings a series onto one scale before anything reads it,
+   restricted to the ratios AMCs actually use. ICICI Overnight now reports
+   **5.18%/yr against Kotak Overnight's 5.16%** — two funds that were never
+   supposed to disagree. Discontinuities in `nav_adj` went **56 to 1**.
+
+   The one left is `INF174KA1DB4`, which drops 10.0727 to 0.0001 in a single
+   row. That is a clean power of ten and is NOT a split; it is a dying fund's
+   last row, and it stays visible as the defect it is.
 
 0. **`scheme_idcw` is empty; most IDCW returns are now derived instead.**
    9,187 of 19,598 schemes are `idcw_payout` or `idcw_reinvest` and the table
