@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from src.common.contracts.market import NavPoint
@@ -165,3 +166,36 @@ def test_max_drawdown_on_an_empty_series_raises() -> None:
 def test_confidence_boundaries(days: int, tier: str) -> None:
     """§8.2's thresholds, at the exact day they flip."""
     assert confidence_from_obs(days) == tier
+
+
+# --- risk-free rate, hand-entered ---------------------------------------------
+
+
+def test_the_rate_in_force_is_the_latest_on_or_before(tmp_path: Path) -> None:
+    """S13's source bot-blocks automated clients, so the rate arrives by hand.
+    A window is judged against the rate that applied when it started."""
+    from src.m0_data.config import risk_free_on
+
+    cfg = tmp_path / "rf.yaml"
+    cfg.write_text(
+        "observations:\n  2020-01-01: 5.0\n  2022-01-01: 4.0\n  2024-01-01: 7.0\n",
+        encoding="utf-8",
+    )
+
+    assert risk_free_on(date(2019, 12, 31), cfg) is None   # before any observation
+    assert risk_free_on(date(2020, 1, 1), cfg) == Decimal("5.0")
+    assert risk_free_on(date(2021, 6, 1), cfg) == Decimal("5.0")   # carried forward
+    assert risk_free_on(date(2024, 6, 1), cfg) == Decimal("7.0")
+
+
+def test_no_file_and_no_observations_are_both_just_empty(tmp_path: Path) -> None:
+    """The shipped state. Not an error: every other M2 figure is unaffected."""
+    from src.m0_data.config import risk_free_on, risk_free_rates
+
+    missing = tmp_path / "absent.yaml"
+    empty = tmp_path / "empty.yaml"
+    empty.write_text("observations: {}\n", encoding="utf-8")
+
+    assert risk_free_rates(missing) == []
+    assert risk_free_rates(empty) == []
+    assert risk_free_on(date(2024, 1, 1), empty) is None

@@ -1,0 +1,34 @@
+# Risk-free rate. MODULE_0.md §2.1 source S13, MODULE_2.md §8.1.
+#
+# HAND-ENTERED, like config/tax_rules.yaml, and for the same reason: this is a
+# number the project will not invent. S13 names RBI as the source and RBI
+# answers an automated client with HTTP 418 "Unauthorised Access" — a bot
+# check. README's rule is that nothing here defeats one, so this arrives the
+# way tax rates do: a person reads it and writes it down.
+#
+# WHERE TO GET IT
+#   RBI publishes the 91-day Treasury Bill cut-off yield in its weekly
+#   statistical supplement and its Database on Indian Economy, both readable
+#   in a browser. Use the 91-day implicit yield at cut-off, in percent a year.
+#
+# WHAT IT IS USED FOR
+#   Sharpe and Sortino only. Every other figure M2 produces — returns,
+#   volatility, drawdown, rolling returns — needs no risk-free rate and is
+#   unaffected by this file being empty.
+#
+# HOW IT IS READ
+#   The rate in force on a date is the latest observation ON OR BEFORE it. A
+#   window that starts before the earliest observation gets no Sharpe at all
+#   rather than one computed from a rate that was not yet on record: a ratio
+#   built on a guessed denominator is worse than a blank.
+#
+# Add rows as `YYYY-MM-DD: percent`, oldest first. Quarterly is plenty; the
+# 91-day yield does not move enough between auctions to matter to a Sharpe
+# ratio over a year.
+
+source: "RBI 91-day Treasury Bill, implicit yield at cut-off"
+
+observations: {}
+# observations:
+#   2024-01-05: 6.95
+#   2024-04-05: 6.98

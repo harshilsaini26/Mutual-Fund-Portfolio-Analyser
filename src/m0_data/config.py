@@ -7,6 +7,9 @@ Environment variables are read at call time, not at import: a test that points
 from __future__ import annotations
 
 import os
+from bisect import bisect_right
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +17,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCES_YAML = REPO_ROOT / "config" / "sources.yaml"
+RISK_FREE_YAML = REPO_ROOT / "config" / "risk_free.yaml"
 
 #: §13.2. `/data` is gitignored in full — it holds the raw archive and both
 #: warehouses, and none of it is source.
@@ -90,3 +94,35 @@ def source(source_id: str, path: Path = SOURCES_YAML) -> dict[str, Any]:
 #: import a two-element tuple, against a decision (V1-48) that load_holdings
 #: does too much at import to be worth importing.
 WORKBOOKS = (".xlsx", ".xls")
+
+
+def risk_free_rates(path: Path = RISK_FREE_YAML) -> list[tuple[date, Decimal]]:
+    """Hand-entered risk-free observations, oldest first. S13.
+
+    A list rather than a dict so `risk_free_on` can binary-search it, and
+    `Decimal` because a rate feeds a ratio that money is judged by
+    (invariant 1). Empty is the normal state, not an error: the file ships
+    without observations because RBI answers an automated client with a bot
+    check and this project does not defeat those.
+    """
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8") as fh:
+        loaded = yaml.safe_load(fh) or {}
+    observed = loaded.get("observations") or {}
+    return sorted(
+        (d if isinstance(d, date) else date.fromisoformat(str(d)), Decimal(str(v)))
+        for d, v in observed.items()
+    )
+
+
+def risk_free_on(when: date, path: Path = RISK_FREE_YAML) -> Decimal | None:
+    """The rate in force on `when`: the latest observation on or before it.
+
+    None before the first observation. A Sharpe built on a rate that was not
+    yet on record is a ratio with a guessed denominator, which is worse than
+    no ratio at all.
+    """
+    rates = risk_free_rates(path)
+    i = bisect_right([d for d, _ in rates], when) - 1
+    return rates[i][1] if i >= 0 else None

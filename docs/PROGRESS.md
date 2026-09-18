@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-18 · 1,185 tests passing
+**Last updated:** 2026-09-18 · 1,191 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -214,11 +214,19 @@ Ordered by what they cost.
    automatically as NAV history backfills; the derivation is already in place.
    A real **S14** is still what the 127 schemes with no Growth sibling need.
 
-   Three of those nine are why M2 stops where it does, and they map one to one
-   onto what it cannot compute: **S14** IDCW → understated returns for IDCW
-   plans, **S12** index levels (TRI) → no alpha, beta, tracking error or
-   capture, **S13** RBI T-bill yields → no Sharpe or Sortino. None of the three
-   is hard; all three are unfetched.
+   Of the three that bounded M2, two are now settled and one is not:
+
+   - **S14** IDCW — solved without a fetcher, from the Growth sibling. Above.
+   - **S13** risk-free rate — RBI answers an automated client with HTTP 418,
+     a bot check, and README's rule is that nothing here defeats one. So it
+     arrives the way tax rates do: `config/risk_free.yaml`, hand-entered,
+     dated and sourced. Sharpe and Sortino compute the moment it has a row.
+     It ships empty; the project will not invent a yield.
+   - **S12** index levels (TRI) — still open, and it is two problems, not one:
+     `benchmark_id` is populated on 0 of 19,598 schemes, so even a complete
+     TRI series would not say which index each fund is measured against. That
+     mapping lives in factsheets (S6/S7, both rated Hard, both unfetched), and
+     §9.4 refuses a PRI series for alpha. Do this last, or not at all.
 
 0. **`rebuild_weights` commits, so it cannot compose into a caller's
    transaction.** A job that loaded holdings and then rebuilt weights would

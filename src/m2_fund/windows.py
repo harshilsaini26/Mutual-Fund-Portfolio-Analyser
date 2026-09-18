@@ -28,12 +28,16 @@ from typing import NamedTuple
 
 from src.common.contracts.market import NavPoint
 from src.common.decimals import RATE_Q, annualise
+from src.m0_data.config import risk_free_on
 from src.m2_fund.risk import (
     Drawdown,
     annualised_vol,
     confidence_from_obs,
     daily_returns,
+    downside_deviation,
     max_drawdown,
+    sharpe,
+    sortino,
 )
 
 #: The fixed look-back windows, in years. `since_first_nav` is not here: its
@@ -107,6 +111,12 @@ class ReturnWindow:
     obs_count: int
     interpolated_pct: Decimal
     confidence: str
+    #: None when `config/risk_free.yaml` carries no observation on or before
+    #: this window's start. Genuinely optional now, unlike the fields left out
+    #: entirely for needing a benchmark that does not exist.
+    risk_free_pct: Decimal | None = None
+    sharpe: Decimal | None = None
+    sortino: Decimal | None = None
 
 
 def window_start(as_of: date, key: str) -> date:
@@ -148,17 +158,32 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
 
     growth = last.nav / first.nav
     filled = sum(1 for p in navs if p.is_interpolated)
+    rets = daily_returns(navs)
+    vol = annualised_vol(rets)
+    ann = annualise(growth, obs_days).quantize(RATE_Q)
+
+    # The rate in force when the window STARTED, not today's: a Sharpe over
+    # 2019-2022 judged against a 2026 yield is comparing a return to money
+    # that cost something different at the time.
+    rf = risk_free_on(first.nav_date)
 
     return ReturnWindow(
         window_key=window_key,
         return_cum=(growth - 1).quantize(RATE_Q),
-        return_ann=annualise(growth, obs_days).quantize(RATE_Q),
-        volatility_ann=annualised_vol(daily_returns(navs)),
+        return_ann=ann,
+        volatility_ann=vol,
         drawdown=max_drawdown(navs),
         obs_days=obs_days,
         obs_count=len(navs),
         interpolated_pct=(Decimal(filled) * 100 / Decimal(len(navs))).quantize(RATE_Q),
         confidence=confidence_from_obs(obs_days),
+        risk_free_pct=rf,
+        sharpe=sharpe(ann, vol, rf) if rf is not None else None,
+        sortino=(
+            sortino(ann, downside_deviation(rets), rf)
+            if rf is not None
+            else None
+        ),
     )
 
 

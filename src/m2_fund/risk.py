@@ -51,6 +51,48 @@ def annualised_vol(returns: list[Decimal]) -> Decimal:
     return (variance.sqrt() * TRADING_DAYS.sqrt()).quantize(RATE_Q)
 
 
+def downside_deviation(returns: list[Decimal], mar: Decimal = Decimal(0)) -> Decimal:
+    """Annualised deviation of returns BELOW `mar`, the minimum acceptable return.
+
+    Divided by the full observation count, not by the number of down days.
+    Dividing by the down-day count would make a fund that rarely falls look
+    MORE volatile than one that always does, which inverts the statistic.
+
+    Deleted once, for having no consumer: Sortino needs a risk-free rate and
+    none was on record. `config/risk_free.yaml` gives it one, so it is back
+    with something reading it.
+    """
+    n = len(returns)
+    if n < 2:
+        return Decimal(0)
+    shortfall = sum((min(r - mar, Decimal(0)) ** 2 for r in returns), Decimal(0)) / n
+    return (shortfall.sqrt() * TRADING_DAYS.sqrt()).quantize(RATE_Q)
+
+
+def sharpe(
+    return_ann: Decimal, volatility_ann: Decimal, rf_pct: Decimal
+) -> Decimal | None:
+    """Excess return per unit of total volatility. MODULE_2.md §8.1.
+
+    `rf_pct` is a percent a year as written in the config; the returns are
+    rates. None when there is no volatility to divide by -- a fund that never
+    moved has no risk-adjusted return, and dividing by zero would assert an
+    infinitely good one.
+    """
+    if volatility_ann <= 0:
+        return None
+    return ((return_ann - rf_pct / 100) / volatility_ann).quantize(RATE_Q)
+
+
+def sortino(
+    return_ann: Decimal, downside_ann: Decimal, rf_pct: Decimal
+) -> Decimal | None:
+    """Sharpe, but punishing only the falls. None when nothing fell."""
+    if downside_ann <= 0:
+        return None
+    return ((return_ann - rf_pct / 100) / downside_ann).quantize(RATE_Q)
+
+
 @dataclass(frozen=True)
 class Drawdown:
     """MODULE_2.md §8.3. `depth` is negative; zero means the fund never fell."""

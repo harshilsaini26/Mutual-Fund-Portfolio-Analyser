@@ -114,11 +114,66 @@ def test_no_benchmark_relative_field_is_carried_as_a_silent_none() -> None:
     w = compute_return_window(series(["100", "110"]), "1y")
     assert w is not None
     for absent in (
-        "alpha_ann", "beta", "tracking_error", "sharpe", "sortino",
-        "downside_dev_ann",   # only feeds sortino, which needs the missing rf
-        "bm_available", "rf_available",  # booleans with one reachable value
+        "alpha_ann", "beta", "tracking_error", "up_capture", "down_capture",
+        "bm_available",  # a boolean with one reachable value
     ):
         assert not hasattr(w, absent), f"{absent} is carried but can never be computed"
+
+
+def test_sharpe_is_none_when_no_rate_is_on_record() -> None:
+    """`config/risk_free.yaml` ships empty: RBI answers an automated client
+    with a bot check, so the rate arrives by hand or not at all. Optional
+    because it depends on that file, not absent like the benchmark fields."""
+    w = compute_return_window(series(["100", "110"]), "1y")
+    assert w is not None
+    assert w.risk_free_pct is None
+    assert w.sharpe is None and w.sortino is None
+
+
+def test_sharpe_appears_once_a_rate_is(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Excess return over volatility. With a 6% rate and a series that rose,
+    the ratio must be finite and signed the obvious way."""
+    import src.m2_fund.windows as mod
+
+    monkeypatch.setattr(mod, "risk_free_on", lambda _d: Decimal("6"))
+    w = compute_return_window(series([str(100 + i) for i in range(400)]), "1y")
+    assert w is not None
+    assert w.risk_free_pct == Decimal("6")
+    assert w.sharpe == ((w.return_ann - Decimal("0.06")) / w.volatility_ann).quantize(
+        Decimal("0.000001")
+    )
+    # Sortino punishes only the falls, and this series never falls, so it has
+    # no downside to divide by. None, not infinity.
+    assert w.sortino is None
+
+
+def test_sortino_needs_something_to_have_fallen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same series with real down days does produce one, and a fund that
+    fell less is scored better than Sharpe alone would say."""
+    import src.m2_fund.windows as mod
+
+    monkeypatch.setattr(mod, "risk_free_on", lambda _d: Decimal("6"))
+    jagged = [str(100 + i + (5 if i % 3 else 0)) for i in range(400)]
+    w = compute_return_window(series(jagged), "1y")
+    assert w is not None
+    assert w.sortino is not None
+    assert w.sharpe is not None
+
+
+def test_a_rate_with_no_volatility_to_divide_gives_no_sharpe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A fund that barely moved has no risk-adjusted return; dividing by zero
+    would assert an infinitely good one."""
+    import src.m2_fund.windows as mod
+
+    monkeypatch.setattr(mod, "risk_free_on", lambda _d: Decimal("6"))
+    w = compute_return_window(series(["100", "100", "100.000001"]), "1y")
+    assert w is not None
+    assert w.volatility_ann == Decimal(0)
+    assert w.sharpe is None
 
 
 def test_a_non_positive_nav_raises_rather_than_dividing() -> None:

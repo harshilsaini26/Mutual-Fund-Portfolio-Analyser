@@ -175,8 +175,24 @@ def main() -> None:
             print("  fetched. A filled series is a straight line, which has")
             print("  no variance, so its volatility reads low.")
 
-        print("\n  no benchmark on record: alpha, beta, tracking error and capture are")
-        print("  not computed. no risk-free series: Sharpe and Sortino are not computed.")
+        rated = [w for w in shown if w.sharpe is not None]
+        if rated:
+            print()
+            print(f"  {'risk-adjusted':16} {'sharpe':>9} {'sortino':>9}  {'rf':>6}")
+            print("  " + "-" * 46)
+            for w in rated:
+                so = f'{w.sortino:>9.2f}' if w.sortino is not None else f'{chr(45):>9}'
+                print(
+                    f"  {w.window_key:16} {w.sharpe:>9.2f} {so}"
+                    f"  {w.risk_free_pct:>5.2f}%"
+                )
+
+        print()
+        print("  no benchmark on record: alpha, beta, tracking error and")
+        print("  capture are not computed.")
+        if not rated:
+            print("  config/risk_free.yaml is empty, so no Sharpe or Sortino")
+            print("  either — add RBI 91-day T-bill yields there to get them.")
     finally:
         conn.close()
 
