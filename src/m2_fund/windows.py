@@ -6,12 +6,19 @@ rate. The risk-free side is on record: `config/risk_free.yaml` carries every
 downside deviation that feeds Sortino are all computed here, with the rate that
 produced them travelling beside as `risk_free_pct`.
 
-The benchmark side is not. `benchmark_id` is populated on 0 of 19,598 schemes,
-so alpha, beta, tracking error, information ratio and the capture ratios are
-absent rather than `None`: a field that is always `None` claims to be optional
-when it is in fact unavailable. Sharpe and Sortino ARE `None` for a window
-starting before 2011, and that is the other thing — the rate exists, this
-particular window is simply older than the record of it.
+The benchmark side is now on record too, for part of the warehouse. S12 loads
+NSE's total-return series and resolves 1,573 of 19,598 schemes to an index, so
+alpha, beta, tracking error, information ratio and the capture ratios are
+computed where a fund has a benchmark and left `None` where it does not. That
+is optionality of the ordinary kind, and it is why these fields exist at all
+now — a field that is ALWAYS `None` claims to be optional when it is in fact
+unavailable, which is what they were before an index series existed.
+
+Two different `None`s remain, and they mean different things. Sharpe is `None`
+for a window starting before 2011 because the risk-free record does not reach
+it. Beta is `None` for an active fund because nothing says which index it is
+measured against — its name does not carry one, and the disclosure that does is
+not loaded for every AMC.
 
 The three-window model of §3 — fund, manager, user — is not here either. There
 is no manager or tenure data, `inception_date` is empty for every scheme, and
@@ -34,13 +41,20 @@ from src.common.decimals import RATE_Q, annualise
 from src.m0_data.config import risk_free_on
 from src.m2_fund.risk import (
     Drawdown,
+    aligned,
+    alpha_annual,
     annualised_vol,
+    beta,
+    capture,
     confidence_from_obs,
     daily_returns,
     downside_deviation,
+    information_ratio,
     max_drawdown,
+    paired_returns,
     sharpe,
     sortino,
+    tracking_error,
 )
 
 #: The fixed look-back windows, in years. `since_first_nav` is not here: its
@@ -120,7 +134,74 @@ class ReturnWindow:
     risk_free_pct: Decimal | None = None
     sharpe: Decimal | None = None
     sortino: Decimal | None = None
+    #: All None unless the scheme has a `benchmark_id` AND that index has levels
+    #: over this window. 1,573 of 19,598 schemes carry one (S12), so these are
+    #: optional in the ordinary way -- not the "absent because unavailable"
+    #: case the module docstring describes.
+    benchmark_id: str | None = None
+    bench_return_ann: Decimal | None = None
+    beta: Decimal | None = None
+    tracking_error: Decimal | None = None
+    alpha_ann: Decimal | None = None
+    information_ratio: Decimal | None = None
+    up_capture: Decimal | None = None
+    down_capture: Decimal | None = None
 
+
+#: Below this many paired observations a beta is noise dressed as a number.
+#: About a month of trading days. §8.2's confidence tier describes how much to
+#: trust a figure; this is the floor under which there is no figure to trust.
+MIN_PAIRED_OBS = 20
+
+
+def _against(
+    navs: list[NavPoint],
+    benchmark: list[tuple[date, Decimal]] | None,
+    fund_ann: Decimal,
+    rf: Decimal | None,
+) -> dict[str, Decimal | None]:
+    """The benchmark-relative half of a window, or `{}` when there is none.
+
+    Empty rather than a dict of `None`s so the caller can tell "no benchmark"
+    from "a benchmark that produced nothing", and so `ReturnWindow`'s defaults
+    stay the single definition of absent.
+
+    Everything here is measured over the dates BOTH series priced. The
+    benchmark's own annualised return is taken across that intersection rather
+    than from the index's own endpoints, because a fund cannot be held
+    responsible for an index move on a day it did not trade.
+    """
+    if not benchmark:
+        return {}
+    common = aligned(navs, benchmark)
+    if len(common) < MIN_PAIRED_OBS:
+        return {}
+
+    fund_rets, bench_rets = paired_returns(navs, benchmark)
+    span = (common[-1][0] - common[0][0]).days
+    if span <= 0:
+        return {}
+
+    bench_ann = annualise(common[-1][2] / common[0][2], span).quantize(RATE_Q)
+    b = beta(fund_rets, bench_rets)
+    te = tracking_error(fund_rets, bench_rets)
+    return {
+        "bench_return_ann": bench_ann,
+        "beta": b,
+        "tracking_error": te,
+        # Jensen's alpha needs both a beta and a risk-free rate. Without either
+        # there is no alpha, rather than an alpha computed from an assumed one.
+        "alpha_ann": (
+            alpha_annual(fund_ann, bench_ann, b, rf)
+            if b is not None and rf is not None
+            else None
+        ),
+        "information_ratio": (
+            information_ratio(fund_ann, bench_ann, te) if te is not None else None
+        ),
+        "up_capture": capture(fund_rets, bench_rets, rising=True),
+        "down_capture": capture(fund_rets, bench_rets, rising=False),
+    }
 
 def window_start(as_of: date, key: str) -> date:
     """The start date of a fixed window ending at `as_of`.
@@ -136,7 +217,12 @@ def window_start(as_of: date, key: str) -> date:
         return as_of.replace(year=as_of.year - years, day=28)
 
 
-def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow | None:
+def compute_return_window(
+    navs: list[NavPoint],
+    window_key: str,
+    benchmark: list[tuple[date, Decimal]] | None = None,
+    benchmark_id: str | None = None,
+) -> ReturnWindow | None:
     """Assemble one window, or `None` when the series cannot support it.
 
     `None` rather than a zero-filled row: with fewer than two NAV points, or a
@@ -170,6 +256,8 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
     # that cost something different at the time.
     rf = risk_free_on(first.nav_date)
 
+    bench = _against(navs, benchmark, ann, rf)
+
     return ReturnWindow(
         window_key=window_key,
         return_cum=(growth - 1).quantize(RATE_Q),
@@ -187,6 +275,8 @@ def compute_return_window(navs: list[NavPoint], window_key: str) -> ReturnWindow
             if rf is not None
             else None
         ),
+        benchmark_id=benchmark_id if bench else None,
+        **bench,
     )
 
 

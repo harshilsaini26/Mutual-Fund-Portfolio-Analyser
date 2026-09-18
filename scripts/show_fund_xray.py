@@ -61,6 +61,30 @@ def line(w: ReturnWindow) -> str:
     )
 
 
+def benchmark_for(conn: sqlite3.Connection, scheme_id: str) -> tuple[str, str, list]:
+    """`(index_id, index_name, levels)` for a scheme, or `("", "", [])`.
+
+    Read here rather than through `WarehouseMarketDataProvider` because that
+    provider's `index_levels` belongs to S11/S12's own slice; this script is a
+    terminal report and reads what it needs. The SQL is the one exception this
+    file already makes for the warehouse it opens.
+    """
+    row = conn.execute(
+        "SELECT b.index_id, b.index_name FROM scheme s"
+        " JOIN benchmark_index b ON b.index_id = s.benchmark_id"
+        " WHERE s.scheme_id = ?",
+        (scheme_id,),
+    ).fetchone()
+    if row is None:
+        return "", "", []
+    levels = conn.execute(
+        "SELECT level_date, level FROM index_level"
+        " WHERE index_id = ? ORDER BY level_date",
+        (row[0],),
+    ).fetchall()
+    return str(row[0]), str(row[1]), [(r[0], r[1]) for r in levels]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--scheme", required=True, help="scheme_id (an ISIN)")
@@ -73,6 +97,7 @@ def main() -> None:
         conn.row_factory = sqlite3.Row
         md = WarehouseMarketDataProvider(conn)
         scheme_id = SchemeId(args.scheme)
+        index_id, index_name, levels = benchmark_for(conn, str(scheme_id))
 
         full = md.nav_series(scheme_id, date.min, date.today(), adjusted=True)
         if len(full) < 2:
@@ -132,13 +157,13 @@ def main() -> None:
             navs = md.nav_series(
                 scheme_id, window_start(as_of, key), as_of, adjusted=True
             )
-            w = compute_return_window(navs, key)
+            w = compute_return_window(navs, key, levels, index_id)
             short = f"  {key:16} insufficient history ({len(navs)} points)"
             print(line(w) if w else short)
             if w:
                 shown.append(w)
 
-        whole = compute_return_window(upto, "since_first_nav")
+        whole = compute_return_window(upto, "since_first_nav", levels, index_id)
         if whole:
             print(line(whole))
             shown.append(whole)
@@ -187,12 +212,35 @@ def main() -> None:
                     f"  {w.risk_free_pct:>5.2f}%"
                 )
 
-        print()
-        print("  no benchmark on record: alpha, beta, tracking error and")
-        print("  capture are not computed.")
+        versus = [w for w in shown if w.beta is not None]
+        if versus:
+            print()
+            print(f"  vs {index_name[:28]:28} {'bench':>8} {'beta':>6}"
+                  f" {'t.err':>7} {'alpha':>7} {'up':>6} {'down':>6}")
+            print("  " + "-" * 74)
+            for w in versus:
+                dash7, dash6 = f"{chr(45):>7}", f"{chr(45):>6}"
+                al = (f"{w.alpha_ann * 100:>6.2f}%"
+                      if w.alpha_ann is not None else dash7)
+                up = f"{w.up_capture:>6.2f}" if w.up_capture is not None else dash6
+                dn = f"{w.down_capture:>6.2f}" if w.down_capture is not None else dash6
+                te = (f"{w.tracking_error * 100:>6.2f}%"
+                      if w.tracking_error is not None else dash7)
+                print(
+                    f"  {w.window_key:31} {w.bench_return_ann * 100:>7.2f}%"
+                    f" {w.beta:>6.2f} {te} {al} {up} {dn}"
+                )
+        elif index_id:
+            print()
+            print(f"  benchmark {index_name} is on record but has no levels over")
+            print("  these windows -- python -m jobs.fetch_index --held")
+        else:
+            print()
+            print("  no benchmark on record for this scheme: alpha, beta, tracking")
+            print("  error and capture are not computed. 1,573 of 19,598 schemes")
+            print("  carry one; an active fund's name does not name its index.")
         if not rated:
-            print("  config/risk_free.yaml is empty, so no Sharpe or Sortino")
-            print("  either — add RBI 91-day T-bill yields there to get them.")
+            print("  config/risk_free.yaml carries no rate for these windows.")
     finally:
         conn.close()
 

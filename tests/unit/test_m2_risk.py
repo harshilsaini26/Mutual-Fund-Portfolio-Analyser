@@ -22,6 +22,7 @@ from src.common.contracts.market import NavPoint
 from src.common.decimals import RATE_Q, annualise
 from src.common.types import SchemeId
 from src.m2_fund.risk import (
+    TRADING_DAYS,
     annualised_vol,
     confidence_from_obs,
     daily_returns,
@@ -292,3 +293,139 @@ def test_sharpe_and_sortino_come_out_of_a_real_window() -> None:
     # It beat a 3.69% bill comfortably, and punishing only the falls flatters it.
     assert w.sharpe > 0
     assert w.sortino > w.sharpe
+
+
+# --- against a benchmark ------------------------------------------------------
+
+
+def levels(
+    values: list[str], *, start: date = START, step: int = 1
+) -> list[tuple[date, Decimal]]:
+    return [(start + timedelta(days=i * step), Decimal(v)) for i, v in enumerate(values)]
+
+
+def test_a_fund_that_is_the_index_has_beta_one_and_no_tracking_error() -> None:
+    """The defining case, and the one a sign error still looks plausible on."""
+    from src.m2_fund.risk import beta, paired_returns, tracking_error
+
+    navs = series(["100", "102", "99", "104", "103"])
+    index = levels(["500", "510", "495", "520", "515"])   # the same moves, scaled
+    fund, bench = paired_returns(navs, index)
+
+    assert beta(fund, bench) == Decimal("1.000000")
+    assert tracking_error(fund, bench) == Decimal("0.000000")
+
+
+def test_a_fund_that_moves_twice_as_hard_has_beta_two() -> None:
+    from src.m2_fund.risk import beta, paired_returns
+
+    index = levels(["100", "101", "99", "102"])
+    navs = series(["100", "102", "98", "104"])
+    fund, bench = paired_returns(navs, index)
+    got = beta(fund, bench)
+    assert got is not None
+    assert abs(got - Decimal(2)) < Decimal("0.05")
+
+
+def test_only_dates_both_series_priced_are_compared() -> None:
+    """A fund that did not price on a day the index fell would otherwise carry
+    the index's fall against its own previous move — tracking error it did not
+    have. The intersection is the comparison."""
+    from src.m2_fund.risk import aligned, paired_returns
+
+    navs = series(["100", "101", "102"])                       # 3 consecutive days
+    index = [(START, Decimal("50")), (START + timedelta(days=2), Decimal("52"))]
+
+    assert [d for d, _, _ in aligned(navs, index)] == [START, START + timedelta(days=2)]
+    fund, bench = paired_returns(navs, index)
+    assert len(fund) == len(bench) == 1
+
+
+def test_alpha_is_what_is_left_after_paying_for_the_market() -> None:
+    """`fund - (rf + beta*(bench - rf))`. A fund that returned exactly what its
+    beta entitled it to has zero alpha, however large the return."""
+    from src.m2_fund.risk import alpha_annual
+
+    # beta 1, so alpha is simply fund minus benchmark.
+    assert alpha_annual(Decimal("0.12"), Decimal("0.10"), Decimal(1), Decimal(6)) == (
+        Decimal("0.020000")
+    )
+    # beta 2 on a 10% benchmark over a 6% bill entitles it to 6 + 2*4 = 14%.
+    assert alpha_annual(Decimal("0.14"), Decimal("0.10"), Decimal(2), Decimal(6)) == (
+        Decimal("0.000000")
+    )
+
+
+def test_an_index_funds_alpha_is_about_minus_its_fee() -> None:
+    """The property that says the whole chain is wired correctly.
+
+    An index fund holds the index and charges a fee, so it must return the
+    index minus that fee: beta 1, tracking error near zero, and an alpha of
+    about minus the TER. Measured on ICICI Prudential Nifty 50 Index Fund
+    Direct against the real Nifty 50 TRI, alpha came out -0.23% to -0.33% over
+    1y/3y/5y against a published TER near 0.20% -- which is the arithmetic
+    here, on a series built to the same shape.
+    """
+    from src.m2_fund.risk import alpha_annual, beta, paired_returns, tracking_error
+
+    # The index compounds 0.05%/day; the fund does the same less a 0.20%/yr fee.
+    fee_daily = Decimal("0.002") / TRADING_DAYS
+    index_vals, fund_vals = [Decimal(1000)], [Decimal(100)]
+    for i in range(60):
+        move = Decimal("0.0005") if i % 3 else Decimal("-0.0004")
+        index_vals.append(index_vals[-1] * (1 + move))
+        fund_vals.append(fund_vals[-1] * (1 + move - fee_daily))
+
+    navs = series([str(v) for v in fund_vals])
+    index = levels([str(v) for v in index_vals])
+    fund, bench = paired_returns(navs, index)
+
+    got_beta, got_te = beta(fund, bench), tracking_error(fund, bench)
+    assert got_beta is not None and got_te is not None
+    assert abs(got_beta - 1) < Decimal("0.01")
+    assert got_te < Decimal("0.001")
+
+    span = (navs[-1].nav_date - navs[0].nav_date).days
+    fund_ann = annualise(navs[-1].nav / navs[0].nav, span)
+    bench_ann = annualise(index[-1][1] / index[0][1], span)
+    alpha = alpha_annual(fund_ann, bench_ann, Decimal(1), Decimal(6))
+    assert Decimal("-0.004") < alpha < Decimal("-0.001"), f"alpha {alpha} is not ~-0.2%"
+
+
+def test_capture_compounds_rather_than_averaging() -> None:
+    """A ratio of arithmetic means describes a portfolio nobody holds."""
+    from src.m2_fund.risk import capture
+
+    bench = [Decimal("0.02"), Decimal("-0.01"), Decimal("0.03"), Decimal("-0.02")]
+    half = [b / 2 for b in bench]
+    up = capture(half, bench, rising=True)
+    down = capture(half, bench, rising=False)
+    assert up is not None and down is not None
+    assert Decimal("0.45") < up < Decimal("0.55")
+    assert Decimal("0.45") < down < Decimal("0.55")
+
+
+def test_a_flat_benchmark_has_no_beta_rather_than_an_infinite_one() -> None:
+    from src.m2_fund.risk import beta
+
+    assert beta([Decimal("0.01")] * 5, [Decimal(0)] * 5) is None
+
+
+def test_a_window_with_too_little_overlap_reports_no_benchmark_fields() -> None:
+    """Below a month of paired days a beta is noise dressed as a number."""
+    from src.m2_fund.windows import compute_return_window
+
+    navs = series(["100", "101", "102", "103"])
+    w = compute_return_window(navs, "1y", levels(["50", "51", "52", "53"]), "NSE:X_TRI")
+    assert w is not None
+    assert w.beta is None and w.benchmark_id is None
+
+
+def test_a_window_with_no_benchmark_at_all_leaves_every_field_none() -> None:
+    from src.m2_fund.windows import compute_return_window
+
+    w = compute_return_window(series(["100", "110"]), "1y")
+    assert w is not None
+    for field in ("benchmark_id", "beta", "tracking_error", "alpha_ann",
+                  "up_capture", "down_capture", "information_ratio"):
+        assert getattr(w, field) is None, field

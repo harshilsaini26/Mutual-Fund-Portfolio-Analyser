@@ -163,3 +163,119 @@ def confidence_from_obs(obs_days: int) -> str:
     if obs_days >= 365:
         return "medium"
     return "low"
+
+
+def paired_returns(
+    navs: list[NavPoint], levels: list[tuple[date, Decimal]]
+) -> tuple[list[Decimal], list[Decimal]]:
+    """Fund and benchmark daily returns over the dates BOTH priced.
+
+    Every benchmark-relative statistic is a comparison of two series, and two
+    series compared on different days are not being compared at all. A fund
+    that did not price on a day the index fell would otherwise contribute the
+    index's fall against its own previous day's move -- which reads as tracking
+    error the fund did not have.
+
+    Returns are computed WITHIN the intersection, consecutively: if the fund
+    misses a Tuesday, Monday-to-Wednesday is one return on both sides rather
+    than a gap on one side and two steps on the other.
+    """
+    common = aligned(navs, levels)
+    fund = [cur[1] / prev[1] - 1 for prev, cur in pairwise(common)]
+    bench = [cur[2] / prev[2] - 1 for prev, cur in pairwise(common)]
+    return fund, bench
+
+
+def aligned(
+    navs: list[NavPoint], levels: list[tuple[date, Decimal]]
+) -> list[tuple[date, Decimal, Decimal]]:
+    """`(date, nav, level)` for every date both series priced, in order.
+
+    Separate from `paired_returns` because the benchmark's own return over the
+    window has to be measured across the SAME dates as the fund's. Taking it
+    from the index's first and last level instead would credit the fund with a
+    benchmark move on days it did not trade.
+    """
+    by_date = {level_date: level for level_date, level in levels}
+    return [
+        (p.nav_date, p.nav, by_date[p.nav_date]) for p in navs if p.nav_date in by_date
+    ]
+
+
+def beta(fund: list[Decimal], bench: list[Decimal]) -> Decimal | None:
+    """Sensitivity to the benchmark: cov(f, b) / var(b). MODULE_2.md §8.1.
+
+    None when the benchmark never moved, because dividing by zero variance
+    asserts an infinite sensitivity rather than an unknown one.
+    """
+    n = len(bench)
+    if n < 2 or len(fund) != n:
+        return None
+    mean_f = sum(fund, Decimal(0)) / n
+    mean_b = sum(bench, Decimal(0)) / n
+    var_b = sum(((b - mean_b) ** 2 for b in bench), Decimal(0)) / (n - 1)
+    if var_b <= 0:
+        return None
+    cov = sum(((f - mean_f) * (b - mean_b) for f, b in zip(fund, bench, strict=True)),
+              Decimal(0)) / (n - 1)
+    return (cov / var_b).quantize(RATE_Q)
+
+
+def tracking_error(fund: list[Decimal], bench: list[Decimal]) -> Decimal | None:
+    """Annualised standard deviation of the ACTIVE return, f - b. §8.1.
+
+    The number an index fund is actually judged on: how far it drifts from the
+    thing it promised to copy. Sample standard deviation and sqrt(252), for the
+    same reasons `annualised_vol` uses them.
+    """
+    n = len(fund)
+    if n < 2 or len(bench) != n:
+        return None
+    active = [f - b for f, b in zip(fund, bench, strict=True)]
+    mean = sum(active, Decimal(0)) / n
+    variance = sum(((a - mean) ** 2 for a in active), Decimal(0)) / (n - 1)
+    return (variance.sqrt() * TRADING_DAYS.sqrt()).quantize(RATE_Q)
+
+
+def alpha_annual(
+    return_ann: Decimal, bench_ann: Decimal, beta_value: Decimal, rf_pct: Decimal
+) -> Decimal:
+    """Jensen's alpha: the return left over once the market exposure is paid for.
+
+    `fund - (rf + beta * (bench - rf))`. Measured against a TOTAL RETURN index,
+    which is why §9.4 refuses a price series here: a PRI benchmark understates
+    `bench_ann` by its dividend yield and hands that difference straight to
+    alpha, as skill the manager did not have.
+    """
+    rf = rf_pct / 100
+    return (return_ann - (rf + beta_value * (bench_ann - rf))).quantize(RATE_Q)
+
+
+def information_ratio(
+    return_ann: Decimal, bench_ann: Decimal, tracking: Decimal
+) -> Decimal | None:
+    """Active return per unit of active risk. None when there is no drift."""
+    if tracking <= 0:
+        return None
+    return ((return_ann - bench_ann) / tracking).quantize(RATE_Q)
+
+
+def capture(fund: list[Decimal], bench: list[Decimal], *, rising: bool) -> Decimal | None:
+    """Share of the benchmark's move the fund captured, up or down. §8.1.
+
+    Compounded over the days the benchmark rose (or fell), not averaged: a
+    ratio of arithmetic means describes a portfolio nobody holds. Above 1 on
+    the up side and below 1 on the down side is the shape every fund claims.
+    """
+    picked = [
+        (f, b) for f, b in zip(fund, bench, strict=True) if (b > 0) is rising and b != 0
+    ]
+    if not picked:
+        return None
+    grow_f, grow_b = Decimal(1), Decimal(1)
+    for f, b in picked:
+        grow_f *= 1 + f
+        grow_b *= 1 + b
+    if grow_b == 1:
+        return None
+    return ((grow_f - 1) / (grow_b - 1)).quantize(RATE_Q)

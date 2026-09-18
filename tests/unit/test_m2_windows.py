@@ -109,16 +109,25 @@ def test_obs_count_and_obs_days_are_different_things() -> None:
 # --- what the data cannot support ------------------------------------------
 
 
-def test_no_benchmark_relative_field_is_carried_as_a_silent_none() -> None:
+def test_a_field_with_no_data_behind_it_is_still_not_carried() -> None:
     """A field that is always None claims to be optional when it is
-    unavailable. They are omitted until there is data behind them."""
+    unavailable, so it is omitted until there is data behind it.
+
+    Alpha, beta, tracking error and the captures WERE on this list. S12 put an
+    index series and 1,573 resolved schemes behind them, so they are now
+    carried and `None` only when a particular fund has no benchmark — which is
+    optionality of the ordinary kind. `bm_available` stays off: a boolean with
+    one reachable value answers a question nobody can ask differently.
+    """
     w = compute_return_window(series(["100", "110"]), "1y")
     assert w is not None
-    for absent in (
-        "alpha_ann", "beta", "tracking_error", "up_capture", "down_capture",
-        "bm_available",  # a boolean with one reachable value
-    ):
-        assert not hasattr(w, absent), f"{absent} is carried but can never be computed"
+    assert not hasattr(w, "bm_available")
+
+    # Carried, and None because this window was given no benchmark.
+    for optional in ("alpha_ann", "beta", "tracking_error", "up_capture",
+                     "down_capture", "information_ratio", "benchmark_id"):
+        assert hasattr(w, optional), f"{optional} is no longer carried"
+        assert getattr(w, optional) is None, optional
 
 
 def test_sharpe_is_none_for_a_window_older_than_the_record() -> None:
