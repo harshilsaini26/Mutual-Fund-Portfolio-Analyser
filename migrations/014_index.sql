@@ -39,10 +39,22 @@
 CREATE TABLE IF NOT EXISTS benchmark_index (
   index_id        TEXT PRIMARY KEY,        -- 'NSE:NIFTY_50_TRI'
   index_name      TEXT NOT NULL,           -- verbatim, as the provider prints it
+  -- The provider's OTHER spelling, where it publishes one. NSE's catalogue
+  -- gives every index both a long name and a trading name, and they are not
+  -- always the same words: `Nifty Private Bank` trades as `Nifty Pvt Bank`.
+  -- Both spellings turn up inside fund names, and `index_key` cannot bridge
+  -- Pvt/Private -- it normalises punctuation and case, not vocabulary. One
+  -- nullable column rather than an alias table, because NSE publishes exactly
+  -- two spellings and a third has never appeared; a wider vocabulary problem
+  -- would be `name_alias`'s shape, not this one's.
+  trading_name    TEXT,
   is_total_return INTEGER NOT NULL,        -- §9.4. No NULLs: see above.
   provider        TEXT,                    -- 'NSE Indices' | 'BSE'
   base_date       DATE,
   base_value      DECIMAL_TEXT,
+  -- NULL until levels arrive. A row here is an index we know EXISTS; levels
+  -- are a separate fact, and 259 catalogue entries against a handful of
+  -- backfilled series is the normal state, not a gap.
   first_seen      DATE,
   last_seen       DATE
 );

@@ -69,7 +69,11 @@ class StagedIndexLevel:
 def _rows(content: bytes) -> list[dict[str, Any]]:
     """The row list, out of whichever envelope this response used."""
     try:
-        payload: Any = json.loads(content)
+        # `utf-8-sig`, because this host does serve a byte-order mark: its
+        # `IndexMapping.json` carries one, and `json.loads` on raw bytes
+        # rejects a BOM outright. Decoding here costs nothing and stops a
+        # future BOM on this endpoint from reading as a corrupt response.
+        payload: Any = json.loads(content.decode("utf-8-sig"))
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ParseFailed(f"{PARSER_ID}: response is not JSON: {exc}") from exc
 

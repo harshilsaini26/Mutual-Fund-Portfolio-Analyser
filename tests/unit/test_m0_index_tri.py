@@ -21,10 +21,18 @@ from pathlib import Path
 import pytest
 from src.common.decimals import connect
 from src.m0_data.fetch.nifty_tri import TriChunk, query_date, year_chunks
-from src.m0_data.load import MixedIndexResponse, load_index_levels
+from src.m0_data.load import (
+    MixedIndexResponse,
+    load_index_catalogue,
+    load_index_levels,
+)
 from src.m0_data.normalise.index_id import index_id_for, index_key, is_composite
 from src.m0_data.parse.base import ParseFailed
 from src.m0_data.parse.index.nifty import StagedIndexLevel, parse_date, parse_tri
+from src.m0_data.resolve.benchmark import (
+    BenchmarkMatcher,
+    resolve_scheme_benchmarks,
+)
 
 from tests.conftest import migrated
 
@@ -260,9 +268,13 @@ def test_a_load_creates_the_index_and_its_levels(conn: sqlite3.Connection) -> No
     )
     assert (index_id, n) == ("NSE:NIFTY_50_TRI", 2)
 
-    meta = conn.execute("SELECT * FROM benchmark_index").fetchone()
-    assert meta[1] == "Nifty 50"          # verbatim, as the provider printed it
-    assert meta[2] == 1                   # is_total_return
+    # Named, not positional: a column added to the middle of the table should
+    # not be able to make this assert something else and still pass.
+    name, total_return = conn.execute(
+        "SELECT index_name, is_total_return FROM benchmark_index"
+    ).fetchone()
+    assert name == "Nifty 50"             # verbatim, as the provider printed it
+    assert total_return == 1
     levels = conn.execute(
         "SELECT level_date, level FROM index_level ORDER BY level_date"
     ).fetchall()
@@ -327,3 +339,151 @@ def test_a_price_series_cannot_land_on_the_total_return_id(
     assert tri != pri
     assert conn.execute("SELECT COUNT(*) FROM benchmark_index").fetchone()[0] == 2
     assert conn.execute("SELECT COUNT(*) FROM index_level").fetchone()[0] == 2
+
+
+# --- resolving a fund to an index --------------------------------------------
+
+
+CATALOGUE = [
+    ("Nifty 50", "Nifty 50"),
+    ("Nifty 500", "Nifty 500"),
+    ("Nifty Midcap 150", "Nifty Midcap 150"),
+    ("Nifty Private Bank", "Nifty Pvt Bank"),
+    ("Nifty Bank", "Nifty Bank"),
+    ("Nifty500 Momentum 50", "Nifty500 Momentum 50"),
+]
+
+
+@pytest.fixture
+def matcher() -> BenchmarkMatcher:
+    return BenchmarkMatcher(
+        [(index_id_for(long), long, trading) for long, trading in CATALOGUE]
+    )
+
+
+def test_the_longest_index_wins(matcher: BenchmarkMatcher) -> None:
+    """`NIFTY50` is a substring of `NIFTY500`. Shortest-first, or any order at
+    all, files every Nifty 500 fund under Nifty 50 — two different markets, and
+    the error is invisible in every number downstream."""
+    def named(text: str) -> str:
+        got = matcher.match(text)
+        assert got is not None, text
+        return got.index_name
+
+    assert named("UTI Nifty 500 Index Fund") == "Nifty 500"
+    assert named("UTI Nifty 50 Index Fund") == "Nifty 50"
+    assert named("Mirae Nifty500 Momentum 50 ETF") == "Nifty500 Momentum 50"
+
+
+def test_a_trading_name_resolves_to_the_long_name(matcher: BenchmarkMatcher) -> None:
+    """NSE publishes `Nifty Private Bank` as `Nifty Pvt Bank`, and funds use
+    both. `index_key` normalises punctuation, not vocabulary, so the second
+    spelling has to be carried rather than derived."""
+    got = matcher.match("ICICI Prudential Nifty Pvt Bank ETF")
+    assert got is not None
+    assert got.index_name == "Nifty Private Bank"
+    assert got.index_id == index_id_for("Nifty Private Bank")
+
+
+def test_an_active_fund_matches_nothing(matcher: BenchmarkMatcher) -> None:
+    """An active fund's name does not contain its benchmark, and inventing one
+    from the nearest word is how `Nifty Bank` claims every banking fund."""
+    for name in (
+        "SBI Banking & Financial Services Fund",
+        "Parag Parikh Flexi Cap Fund",
+        "HDFC Balanced Advantage Fund",
+    ):
+        assert matcher.match(name) is None, name
+
+
+def test_a_composite_benchmark_resolves_to_nothing(matcher: BenchmarkMatcher) -> None:
+    """Its first recognisable leg is not its benchmark. Invariant 5."""
+    assert matcher.match("85 % Nifty 500 TRI + 15% MSCI ACWI IT INDEX TRI") is None
+
+
+def test_the_basis_travels_with_the_match(matcher: BenchmarkMatcher) -> None:
+    """A reader deciding how much to trust an alpha wants to know whether the
+    benchmark was declared by the AMC or inferred from a name."""
+    inferred = matcher.match("UTI Nifty 50 Index Fund")
+    declared = matcher.match("Nifty 50", basis="declared")
+    assert inferred is not None and declared is not None
+    assert inferred.basis == "name"
+    assert declared.basis == "declared"
+
+
+def test_resolve_fills_only_the_empty_ones(conn: sqlite3.Connection) -> None:
+    """A benchmark an AMC declared is a fact; one inferred from a name is not.
+    The inference must never overwrite the fact — the precedence
+    `load_navs_where_absent` uses between a publisher and a mirror."""
+    load_index_catalogue(conn, CATALOGUE)
+    conn.executemany(
+        "INSERT INTO scheme (scheme_id, scheme_name, plan, option, benchmark_id)"
+        " VALUES (?,?,'direct','growth',?)",
+        [
+            ("A", "UTI Nifty 50 Index Fund", None),
+            ("B", "Parag Parikh Flexi Cap Fund", None),
+            ("C", "Some Fund", "NSE:NIFTY_500_TRI"),   # already declared
+        ],
+    )
+
+    counts = resolve_scheme_benchmarks(conn)
+    assert counts == {"considered": 2, "filled": 1}
+
+    got = dict(conn.execute("SELECT scheme_id, benchmark_id FROM scheme").fetchall())
+    assert got["A"] == "NSE:NIFTY_50_TRI"
+    assert got["B"] is None, "an active fund keeps NULL rather than a guess"
+    assert got["C"] == "NSE:NIFTY_500_TRI", "a declared benchmark was overwritten"
+
+
+def test_the_catalogue_registers_indices_without_levels(conn: sqlite3.Connection) -> None:
+    """259 registered against a handful backfilled is the normal state: a row
+    says the index EXISTS, `first_seen` says whether we hold any of it."""
+    assert load_index_catalogue(conn, CATALOGUE) == len(CATALOGUE)
+    rows = conn.execute(
+        "SELECT index_name, trading_name, is_total_return, first_seen"
+        " FROM benchmark_index ORDER BY index_name"
+    ).fetchall()
+    assert len(rows) == len(CATALOGUE)
+    assert all(r[2] == 1 for r in rows)
+    assert all(r[3] is None for r in rows), "no levels fetched, so no seen span"
+    assert conn.execute("SELECT COUNT(*) FROM index_level").fetchone()[0] == 0
+
+
+def test_refreshing_the_catalogue_does_not_erase_a_backfill(
+    conn: sqlite3.Connection,
+) -> None:
+    """The catalogue refresh runs on a different cadence from the backfill, so
+    it must not reset the span the backfill recorded."""
+    load_index_catalogue(conn, CATALOGUE)
+    load_index_levels(conn, staged("Nifty 50", [("2024-01-01", "100")]), "f1")
+    load_index_catalogue(conn, CATALOGUE)
+
+    first, last = conn.execute(
+        "SELECT first_seen, last_seen FROM benchmark_index WHERE index_name = 'Nifty 50'"
+    ).fetchone()
+    assert (str(first), str(last)) == ("2024-01-01", "2024-01-01")
+
+
+def test_one_index_spelled_two_ways_is_not_two_indices(conn: sqlite3.Connection) -> None:
+    """NSE mixes casing inside a single year's response: a 2011-2026 backfill of
+    Nifty 50 returns both `NIFTY 50` and `Nifty 50` in one payload. A guard that
+    compared raw strings refused that fetch outright — which is how this was
+    found. One index, two spellings, one key."""
+    mixed = staged("NIFTY 50", [("2024-01-01", "1")]) + staged(
+        "Nifty 50", [("2024-01-02", "2"), ("2024-01-03", "3")]
+    )
+    index_id, n = load_index_levels(conn, mixed, "f1")
+
+    assert (index_id, n) == ("NSE:NIFTY_50_TRI", 3)
+    # The majority spelling is stored, so the same bytes always give one name.
+    stored = conn.execute("SELECT index_name FROM benchmark_index").fetchone()[0]
+    assert stored == "Nifty 50"
+
+
+def test_two_real_indices_in_one_response_still_raise(conn: sqlite3.Connection) -> None:
+    """The guard must keep doing its job after being taught about casing."""
+    mixed = staged("Nifty 50", [("2024-01-01", "1")]) + staged(
+        "NIFTY MIDCAP 150", [("2024-01-01", "2")]
+    )
+    with pytest.raises(MixedIndexResponse, match="2 indices"):
+        load_index_levels(conn, mixed, "f1")

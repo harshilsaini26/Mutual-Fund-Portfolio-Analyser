@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from src.m0_data.normalise.index_id import index_id_for
+from src.m0_data.normalise.index_id import index_id_for, index_key
 from src.m0_data.normalise.instrument_class import (
     class_from_section,
     instrument_class,
@@ -205,13 +205,24 @@ def load_index_levels(
     if not staged:
         return None, 0
 
-    names = {s.index_name for s in staged}
-    if len(names) > 1:
+    # Compared on the KEY, not the raw string. NSE mixes casing inside a single
+    # year's response -- a 2011-2026 backfill of Nifty 50 comes back with both
+    # `NIFTY 50` and `Nifty 50` in one payload. Those are one index, and a
+    # guard that compares raw strings refuses a correct fetch. What it must
+    # still refuse is two genuinely different indices, which differ by key.
+    by_key: dict[str, list[str]] = defaultdict(list)
+    for s in staged:
+        by_key[index_key(s.index_name)].append(s.index_name)
+    if len(by_key) > 1:
         raise MixedIndexResponse(
-            f"one response carried {len(names)} indices: {sorted(names)}"
+            f"one response carried {len(by_key)} indices:"
+            f" {sorted({n for names in by_key.values() for n in names})}"
         )
 
-    name = names.pop()
+    # The most common spelling, ties broken alphabetically so the same archived
+    # bytes always store the same name (invariant 10).
+    spellings = next(iter(by_key.values()))
+    name = max(sorted(set(spellings)), key=spellings.count)
     index_id = index_id_for(name, provider=provider, is_total_return=is_total_return)
     first = min(s.level_date for s in staged)
     last = max(s.level_date for s in staged)
@@ -241,6 +252,42 @@ def load_index_levels(
             (index_id, s.level_date, s.level, source_file_id),
         )
     return index_id, len(staged)
+
+
+def load_index_catalogue(
+    conn: sqlite3.Connection,
+    entries: list[tuple[str, str]],
+    *,
+    provider: str = "NSE Indices",
+    is_total_return: bool = True,
+) -> int:
+    """Register indices that EXIST, before any levels are fetched for them.
+
+    `entries` is `(long_name, trading_name)` as NSE's `IndexMapping.json`
+    publishes them -- 259 of them, and they are what a fund's name is matched
+    against. A row here asserts the index exists and how its provider spells
+    it; whether we hold any of its levels is `first_seen`, which this does not
+    touch. Registering 259 and backfilling a handful is the intended state.
+
+    Never clobbers a seen-span, so running the catalogue refresh after a
+    backfill does not erase what the backfill recorded.
+    """
+    for long_name, trading_name in entries:
+        index_id = index_id_for(
+            long_name, provider=provider, is_total_return=is_total_return
+        )
+        conn.execute(
+            """
+            INSERT INTO benchmark_index
+                (index_id, index_name, trading_name, is_total_return, provider)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(index_id) DO UPDATE SET
+                index_name   = excluded.index_name,
+                trading_name = excluded.trading_name
+            """,
+            (index_id, long_name, trading_name or None, int(is_total_return), provider),
+        )
+    return len(entries)
 
 
 def load_parse_result(
