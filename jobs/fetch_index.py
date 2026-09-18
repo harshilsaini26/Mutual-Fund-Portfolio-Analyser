@@ -32,12 +32,19 @@ from src.m0_data.config import raw_root, source, warehouse_path
 from src.m0_data.fetch.base import (
     DomainRateLimiter,
     FetchCandidate,
+    FetchError,
     RobotsCache,
     archive,
     conditional_get,
 )
 from src.m0_data.fetch.nifty_tri import TRI_URL, TriChunk, year_chunks
-from src.m0_data.load import has_table, load_index_catalogue, load_index_levels
+from src.m0_data.load import (
+    MixedIndexResponse,
+    has_table,
+    load_index_catalogue,
+    load_index_levels,
+)
+from src.m0_data.parse.base import ParseFailed
 from src.m0_data.parse.index.nifty import PARSER_ID, PARSER_VERSION, parse_tri
 from src.m0_data.resolve.benchmark import BenchmarkMatcher, resolve_scheme_benchmarks
 
@@ -243,12 +250,40 @@ def main(argv: list[str] | None = None) -> int:
         wanted = held_indices(conn) if args.held else []
         if args.backfill:
             wanted = [args.backfill, *wanted]
+        # One index's failure costs that index, not the run. A 123-series
+        # backfill is ~70 minutes of polite requests, and letting a single
+        # unparseable response discard everything fetched after it is the same
+        # mistake `_expand_zips` made with a corrupt archive. The parser stays
+        # strict; isolation belongs in the batch loop.
+        failed: list[tuple[str, str]] = []
+        no_series: list[str] = []
         for name in wanted:
-            got = backfill(conn, name, start, end, cfg, polite)
+            try:
+                got = backfill(conn, name, start, end, cfg, polite)
+            except (ParseFailed, MixedIndexResponse, FetchError) as exc:
+                failed.append((name, f"{type(exc).__name__}: {exc}"))
+                print(f"  {name:38} FAILED  {type(exc).__name__}")
+                continue
+            if got["levels"] == 0:
+                no_series.append(name)
             print(f"  {name:38} {got['levels']:6} levels"
                   f"  ({got['empty_chunks']} empty years)")
+
         if wanted:
             print(f"backfill: {len(wanted)} index series, {start:%Y}..{end:%Y}")
+        if no_series:
+            # Not a failure. NSE publishes no total-return series for its G-Sec
+            # indices -- a bond index's level already carries accrued interest.
+            # Reported because "0 levels" and "request was wrong" look identical
+            # from here, and a reader should know which indices have nothing.
+            print(f"  {len(no_series)} with no TRI series at all: "
+                  f"{', '.join(no_series[:6])}"
+                  f"{' ...' if len(no_series) > 6 else ''}")
+        if failed:
+            print(f"  {len(failed)} FAILED:")
+            for name, why in failed:
+                print(f"    {name}: {why}")
+            return 1
     finally:
         conn.close()
     return 0

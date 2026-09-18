@@ -487,3 +487,27 @@ def test_two_real_indices_in_one_response_still_raise(conn: sqlite3.Connection) 
     )
     with pytest.raises(MixedIndexResponse, match="2 indices"):
         load_index_levels(conn, mixed, "f1")
+
+
+def test_a_placeholder_net_value_is_absent_not_a_failure() -> None:
+    """NSE writes `-` where an index has no net total return: `NIFTY Alpha
+    Low-Volatility 30` returns it on all 249 rows of 2024 while its gross TRI
+    is numeric throughout. This crashed a 123-index backfill on the second
+    index before it was handled."""
+    got = parse_tri(response([row("28 Mar 2024", "35425.55", net="-")]))
+    assert len(got) == 1
+    assert got[0].level == Decimal("35425.55")
+    assert got[0].net_level is None
+
+
+@pytest.mark.parametrize("placeholder", ["-", "--", "NA", "n.a.", "nil", " ", ""])
+def test_every_placeholder_spelling_reads_as_absent(placeholder: str) -> None:
+    got = parse_tri(response([row("28 Mar 2024", "1", net=placeholder)]))
+    assert got[0].net_level is None
+
+
+def test_a_placeholder_in_the_LEVEL_still_raises() -> None:
+    """Only an optional field may be absent. A day with no level is a hole in
+    the series, and a return computed across a hole does not complain."""
+    with pytest.raises(ParseFailed, match="unreadable"):
+        parse_tri(response([row("28 Mar 2024", "-")]))

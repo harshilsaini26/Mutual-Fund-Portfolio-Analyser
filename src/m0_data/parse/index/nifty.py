@@ -52,6 +52,19 @@ MONTHS = {
 #: endpoint, not a gap in the data, so it raises rather than being skipped.
 REQUIRED = ("Index Name", "Date", "TotalReturnsIndex")
 
+#: How NSE writes "this index has no such value". `NIFTY Alpha Low-Volatility
+#: 30` returns `'-'` in `NTR_Value` on all 249 rows of 2024 -- net total return
+#: is simply not published for it -- while its `TotalReturnsIndex` is numeric
+#: throughout. A placeholder means absent, and only an OPTIONAL field may be
+#: absent: a placeholder in `TotalReturnsIndex` is a day with no level, and
+#: that still raises, because a level series with a hole computes a return
+#: across it without complaining (invariant 4).
+PLACEHOLDERS = {"", "-", "--", "na", "n.a.", "nil", "null"}
+
+
+def _absent(raw: Any) -> bool:
+    return raw is None or str(raw).strip().lower() in PLACEHOLDERS
+
 
 @dataclass(frozen=True)
 class StagedIndexLevel:
@@ -145,9 +158,7 @@ def parse_tri(content: bytes, *, file_id: str = "") -> list[StagedIndexLevel]:
                 level_date=parse_date(str(row["Date"])),
                 level=_decimal(row["TotalReturnsIndex"], "TotalReturnsIndex", i),
                 net_level=(
-                    _decimal(net_raw, "NTR_Value", i)
-                    if net_raw not in (None, "")
-                    else None
+                    None if _absent(net_raw) else _decimal(net_raw, "NTR_Value", i)
                 ),
                 file_id=file_id,
                 row_number=i,
