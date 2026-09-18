@@ -30,8 +30,13 @@ SOURCE_OF_RECORD = "amc_direct"
 
 def current_holdings(
     conn: sqlite3.Connection, scheme_id: SchemeId, as_of: date
-) -> list[tuple[str, Decimal, str, Decimal | None]]:
-    """The current revision's holdings: (issuer_id, pct_normalised, class, qty).
+) -> list[tuple[str, Decimal, str, Decimal | None, str | None]]:
+    """The current revision's holdings: (issuer_id, pct, class, qty, isin).
+
+    `isin` is carried for one reason: on a `__MFUNIT__` row it names the fund
+    being held, and that is the only handle fund-of-funds expansion has. It
+    does not survive `materialise_weights` — `scheme_issuer_weight` has no
+    isin column — so anything nested has to happen before the collapse.
 
     Resolved to the share-class family first: a disclosure describes a scheme,
     not an ISIN, and Direct and Regular hold one pool of assets (V1-37).
@@ -46,9 +51,10 @@ def current_holdings(
     """
     source = SchemeId(disclosure_scheme_for(conn, str(scheme_id), as_of.isoformat()))
     return [
-        (r[0], r[1], r[2], r[3])
+        (r[0], r[1], r[2], r[3], r[4])
         for r in conn.execute(
-            "SELECT h.issuer_id, h.pct_normalised, h.instrument_class, h.quantity"
+            "SELECT h.issuer_id, h.pct_normalised, h.instrument_class, h.quantity,"
+            " h.isin"
             " FROM holding h"
             " JOIN holding_disclosure d"
             "   ON d.scheme_id = h.scheme_id AND d.as_of_date = h.as_of_date"
@@ -57,6 +63,97 @@ def current_holdings(
             (str(source), as_of),
         )
     ]
+
+
+#: MODULE_3.md §6.3 rule 1. Beyond this the remaining exposure is bucketed
+#: rather than expanded: real structures rarely nest deeper, and a longer chain
+#: usually means bad data rather than a real holding.
+MAX_FOF_DEPTH = 2
+
+#: The synthetic issuer a unit of another fund resolves to.
+MFUNIT = "__MFUNIT__"
+
+Holding = tuple[str, Decimal, str, Decimal | None, str | None]
+
+
+def expand_fund_units(
+    conn: sqlite3.Connection,
+    scheme_id: SchemeId,
+    as_of: date,
+    *,
+    visited: frozenset[str] = frozenset(),
+    depth: int = 0,
+) -> list[Holding]:
+    """This scheme's holdings with `__MFUNIT__` rows replaced by what they hold.
+
+    MODULE_3.md §6. A fund-of-funds reports one opaque block, and without this
+    the product does nothing at all for whoever holds one: of the 39 schemes
+    carrying a `__MFUNIT__` bucket, six are 99-100% units and contribute zero
+    real issuers.
+
+    **Weights, not amounts.** §6.2 threads rupee amounts through the engine.
+    Here the weights are materialised per scheme before `compute_lookthrough`
+    runs, so a sub-weight scaled by its parent's weight is the same operation,
+    scale-invariant, and the engine needs no change. A holding of weight `w`
+    is replaced by rows summing to `w`, so closure is untouched.
+
+    **No provider.** §6.2 calls `ltp.recursion_path()` and
+    `ltp.recursion_guard()`, which `LookThroughDataProvider` declares and
+    nothing implements -- its own docstring says "Slice Zero, Protocol stub".
+    Building one to reach two methods would add a fourth
+    single-implementation provider of the kind V1-60 deleted three of.
+    `visited` is the same cycle guard in one argument.
+
+    A unit stays bucketed, never guessed at, when any of these hold (§6.3, and
+    invariant 4 -- 17 of the 53 funds held as units are in this state):
+
+      - the row carries no ISIN, so there is nothing to resolve
+      - the depth cap is reached
+      - the target is already on the path, i.e. a cycle
+      - the target has no current disclosure of its own
+    """
+    rows = current_holdings(conn, scheme_id, as_of)
+    if depth >= MAX_FOF_DEPTH:
+        return rows
+
+    # Seeded with the scheme being expanded, so a fund holding ITSELF is
+    # caught by the same check as a longer cycle. Without it the self-holding
+    # expands one level before the guard sees it and reports 24% of its own
+    # equity twice over.
+    visited = visited | {str(scheme_id)}
+
+    out: list[Holding] = []
+    for row in rows:
+        issuer_id, pct, _klass, _qty, isin = row
+        if issuer_id != MFUNIT or not isin or isin in visited:
+            out.append(row)
+            continue
+
+        target = SchemeId(isin)
+        target_as_of = latest_as_of(conn, target)
+        if target_as_of is None:
+            out.append(row)
+            continue
+
+        inner = expand_fund_units(
+            conn,
+            target,
+            target_as_of,
+            visited=visited | {isin},
+            depth=depth + 1,
+        )
+        if not inner:
+            out.append(row)
+            continue
+
+        # Scaled by this holding's own weight, so the replacement sums to what
+        # it replaced. Quantity is dropped: units of the underlying fund are
+        # not units of its holdings, and carrying the inner count up would be
+        # a number with no meaning at this level.
+        for in_issuer, in_pct, in_klass, _in_qty, in_isin in inner:
+            out.append((in_issuer, in_pct * pct / 100, in_klass, None, in_isin))
+
+    return out
 
 
 def materialise_weights(
@@ -77,7 +174,7 @@ def materialise_weights(
     which is not built, and copying the disclosed weight into it would be a
     second basis that silently is not one.
     """
-    rows = current_holdings(conn, scheme_id, as_of)
+    rows = expand_fund_units(conn, scheme_id, as_of)
     if not rows:
         return 0
 
@@ -87,7 +184,7 @@ def materialise_weights(
     klass: dict[str, str] = {}
     largest: dict[str, tuple[Decimal, str]] = {}
 
-    for issuer_id, pct, instrument_class, qty in rows:
+    for issuer_id, pct, instrument_class, qty, _isin in rows:
         disclosed[issuer_id] += pct
         if qty is not None:
             quantity[issuer_id] += qty
