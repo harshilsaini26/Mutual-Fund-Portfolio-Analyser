@@ -174,10 +174,10 @@ def validate_disclosure(
             CheckResult("V2", None, INFO, "no AUM on record to reconcile against")
         )
 
-    # V3 — unresolved share. Warns rather than quarantines, and BLOCKS the
-    # look-through for this scheme: the holdings are still true, we just cannot
-    # say whose they are, so showing an exposure chart would be a lie of
-    # composition rather than of fact.
+    # V3 — unresolved share. Warns rather than quarantines, so it does NOT
+    # block the look-through: the holdings are still true, and the part we
+    # cannot attribute is carried as `__UNRESOLVED__` and reported as its own
+    # figure. Only a quarantine blocks (`weights.latest_disclosure`, V1-66).
     unresolved = sum(
         (abs(r.market_value) for r in rows if r.issuer_id == "__UNRESOLVED__"),
         Decimal(0),

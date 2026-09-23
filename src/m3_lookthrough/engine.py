@@ -278,9 +278,10 @@ def compute_lookthrough(
         )
     if undisclosed:
         caveats.append(
-            f"no disclosure for {len(undisclosed)} held scheme(s) "
-            f"({', '.join(str(s) for s in sorted(undisclosed))}); "
-            f"their value is shown as {NO_DISCLOSURE}"
+            f"no usable disclosure for {len(undisclosed)} held scheme(s) "
+            f"({', '.join(str(s) for s in sorted(undisclosed))}): none is "
+            f"loaded, or every one loaded failed its validation checks; their "
+            f"value is shown as {NO_DISCLOSURE}"
         )
 
     return LookThroughResult(

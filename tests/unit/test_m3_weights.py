@@ -184,6 +184,7 @@ def _disclose_at(
     tier: str,
     revision: int = 1,
     scheme_id: str = "S1",
+    status: str = "ok",
 ) -> None:
     """One current disclosure at a date, from a tier. Holdings are beside the
     point here — what is under test is which disclosure gets chosen."""
@@ -201,6 +202,7 @@ def _disclose_at(
         source_file_id=f"{tier}{as_of}",
         row_count=1,
         source_tier=tier,
+        validation_status=status,
         is_current=1,
     )
     conn.commit()
@@ -400,3 +402,49 @@ def test_the_dominant_class_does_not_depend_on_scan_order(
         "on an exact tie the class is decided by a total key, never by the"
         " order the rows happened to arrive in"
     )
+
+
+class TestAQuarantinedDisclosureIsNeverUsed:
+    """MODULE_3 §5.4 and §14.1: a quarantined disclosure is not usable for the
+    look-through. Nothing read `validation_status` (PROGRESS defect 3), so 17
+    disclosures that failed V2 still fed every figure."""
+
+    JULY = date(2026, 7, 31)
+    AUGUST = date(2026, 8, 31)
+
+    def test_a_quarantined_newest_yields_to_the_last_usable_one(
+        self, conn: sqlite3.Connection
+    ) -> None:
+        """Its age then shows as staleness, which is true; the failed
+        disclosure's figures would not have been."""
+        _disclose_at(conn, self.JULY, "amc_direct")
+        _disclose_at(conn, self.AUGUST, "amc_direct", status="quarantined")
+
+        assert latest_as_of(conn, SCHEME, on_or_before=self.AUGUST) == self.JULY
+
+    def test_a_warning_does_not_block(self, conn: sqlite3.Connection) -> None:
+        """Only quarantine-severity checks gate. V3 and V8 warn: the holdings
+        are still true, and what they flag is carried as its own figure."""
+        _disclose_at(conn, self.JULY, "amc_direct")
+        _disclose_at(conn, self.AUGUST, "amc_direct", status="warn")
+
+        assert latest_as_of(conn, SCHEME, on_or_before=self.AUGUST) == self.AUGUST
+
+    def test_with_nothing_usable_the_scheme_has_no_weights(
+        self, conn: sqlite3.Connection
+    ) -> None:
+        """No weights is what books a held scheme to __NO_DISCLOSURE__, with
+        the engine's caveat naming it."""
+        _issuer(conn, "A")
+        _disclose(conn, 1, [("A", "100", "equity")])
+        rebuild_weights(conn)  # usable at first: weights are materialised
+        conn.execute("UPDATE holding_disclosure SET validation_status = 'quarantined'")
+        conn.commit()
+
+        weights, _ = rebuild_weights(conn)
+        assert SCHEME not in weights
+        # And none left behind: a rebuild replaces the set, so the table must
+        # match what a rebuild from nothing would write (invariant 10).
+        assert not conn.execute(
+            "SELECT 1 FROM scheme_issuer_weight WHERE scheme_id = 'S1'"
+        ).fetchone()

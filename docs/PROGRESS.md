@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,412 tests passing
+**Last updated:** 2026-09-23 · 1,415 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -364,9 +364,12 @@ Ordered by what they cost.
 2. **Covered calls classify as `equity`.** 44 rows in ICICI Multi Asset with
    negative market values. A written option is a derivative; this is why that
    fund reports `warn`.
-3. **`checks.py:96` claims V3 blocks the look-through. Nothing does.** No module
-   reads `validation_status`. Either the block should exist or the comment
-   should not claim it.
+3. ~~**`checks.py:96` claims V3 blocks the look-through. Nothing does.**~~
+   **Closed 2026-09-23.** A quarantine now blocks, as MODULE_3 §5.4 specifies:
+   `latest_disclosure` never picks a quarantined disclosure, so a scheme uses
+   its last one that passed or, with none, shows as `__NO_DISCLOSURE__` with a
+   caveat naming it (V1-66). A warning — V3 among them — does not block, and
+   the comment now says so.
 4. ~~**A fund inside a fund is not looked through.**~~ **Closed 2026-09-18.**
    §6's recursion is built: a `__MFUNIT__` holding expands into the issuers of
    the fund it names, depth-capped at 2 and cycle-guarded. The opaque bucket
@@ -377,8 +380,8 @@ Ordered by what they cost.
 5. ~~**204 disclosures predate the AUM witness.**~~ **Closed 2026-09-23.** The
    reader-5 re-derive gave every AMC disclosure a new revision, and V2 ran on
    all of them. 17 fail it — 13 Kotak, 4 Nippon, portfolio totals 25% to 640%
-   off AMFI's quarterly-average AUM — and are now `quarantined`. Nothing reads
-   `validation_status` yet (defect 3), so the look-through still uses them.
+   off AMFI's quarterly-average AUM — and are now `quarantined`, which since
+   defect 3 closed means excluded: 16 schemes have no usable disclosure.
 6. **Four latent defects in the fetch and status layers.** `extra_headers` can
    override the User-Agent the robots check used; the retry loop replays POSTs;
    `jobs/status.py:standings` picks a parser from an unordered set when a house
@@ -416,9 +419,14 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Decide what a quarantined disclosure means.** 17 fail V2 now, and
-  nothing reads `validation_status` (defect 3), so they still feed the
-  look-through.
+- **Stop V2 quarantining young funds.** Quarantine now excludes a
+  disclosure, and several of the 16 schemes it excludes look like the check's
+  own false positives: a fund launched inside or just before the quarter AMFI
+  averaged is compared, at month-end, with an average that understates it
+  (Kotak Nifty Alpha Low Volatility 30 first priced 8 days before the quarter
+  closed: +641%). The established funds 80-177% off (Kotak Banking and PSU
+  Debt, Infrastructure & Economic Reform, Dynamic Term) look like real
+  mismatches and should stay out.
 - **Remember which indices have no series**, so a refresh stops asking NSE
   for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.

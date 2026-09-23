@@ -263,10 +263,17 @@ def latest_disclosure(
     caller's bound or the clock, which would make the answer a fact about when
     you asked rather than about the data (V1-47). Here rather than in the
     writers, because every reader goes through this query.
+
+    **A quarantined disclosure is never a candidate** (MODULE_3 §5.4, V1-66). It
+    failed a check that decides whether its numbers can be believed — V2's AUM
+    witness is how a 100x unit error is caught — so the scheme uses its last
+    disclosure that passed, whose age then shows as staleness, or none at all
+    and its value shows as `__NO_DISCLOSURE__`. A warning does not block.
     """
     sql = (
         "SELECT as_of_date, source_tier FROM holding_disclosure"
         " WHERE scheme_id = ? AND is_current = 1"
+        " AND validation_status <> 'quarantined'"
     )
     # Same family resolution as `current_holdings`, or a share class reports a
     # date and then returns no holdings.
@@ -340,6 +347,12 @@ def rebuild_weights(
         scheme_id = SchemeId(found_id)
         as_of = latest_as_of(conn, scheme_id)
         if as_of is None:
+            # Nothing usable: every current disclosure is quarantined (V1-66).
+            # Its old weights go too, or the set is not replaced and a reader
+            # that skips `latest_disclosure` finds the failed figures.
+            conn.execute(
+                "DELETE FROM scheme_issuer_weight WHERE scheme_id = ?", (found_id,)
+            )
             continue
         materialise_weights(conn, scheme_id, as_of)
         found = load_issuer_weights(conn, scheme_id, as_of)
