@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,332 tests passing
+**Last updated:** 2026-09-23 · 1,341 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -341,23 +341,31 @@ Ordered by what they cost.
    reads as "no benchmark". And a year that returns no levels is marked parsed
    rather than left `pending` — as is the index catalogue, a path the first
    fix missed and the warehouse, checked afterwards, showed up.
-9. **Every re-run of the S12 backfill re-archives what it already has.** NSE
-   stamps each response with a per-request `RequestNumber`, so the same year's
-   levels hash differently on every fetch and §3.1's content-addressed archive
-   never recognises a repeat. One full `--held` re-run stored 1,369 new files,
-   47 MB, of data already on disk, and made about 1,900 requests to get it.
-   `jobs/fetch_index.py` says a re-run "writes no new file"; for this endpoint
-   that is false. The warehouse is unaffected, since levels upsert. The fix is
-   to fetch only the years not yet loaded plus the current one, which would
-   also make a monthly refresh about 250 requests instead of 2,000.
+9. ~~**Every re-run of the S12 backfill re-archives what it already has.**~~
+   **Closed 2026-09-23.** NSE stamps each response with a per-request
+   `RequestNumber`, so the same year hashes differently on every fetch and
+   §3.1's content-addressed archive never recognised a repeat: one full re-run
+   stored 1,369 duplicate files, 47 MB. A run now skips every year before an
+   index's latest loaded one — those were fetched after they ended — and
+   re-fetches only that latest year, which may be partial, and anything later.
+   Checked live: Nifty 50 went from 16 requests to 1, and the archive grew by
+   one file of new data. `--full` still re-fetches everything, to pick up a
+   restated level.
+
+   A refresh of all 129 benchmarked indices now costs about 724 requests
+   instead of 2,064. This entry used to estimate 250, and that was wrong: 576
+   of the 724 go to the 36 indices NSE publishes no series for, which look
+   unfetched every time because nothing records "asked, got nothing". They add
+   nothing to the archive — an empty answer deduplicates — so what is left is
+   requests, not duplication. Removing it needs that record, which is a schema
+   change.
 
 ## Next
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Stop the S12 re-fetch from duplicating the archive** (defect 9) before
-  the next refresh — otherwise each one re-downloads fifteen years of every
-  index to change one.
+- **Remember which indices have no series**, so a refresh stops asking NSE
+  for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.
   Each also brings that house's declared benchmarks: run
   `python -m jobs.fetch_index --declared` after loading its disclosures.

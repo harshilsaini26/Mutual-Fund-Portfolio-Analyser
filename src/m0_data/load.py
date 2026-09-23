@@ -178,7 +178,7 @@ class MixedIndexResponse(ValueError):
     """One response carried levels for more than one index. S12."""
 
 
-def _registered_index(
+def registered_index(
     conn: sqlite3.Connection, key: str, is_total_return: bool
 ) -> str | None:
     """The registered index whose name or trading name has this key, if any.
@@ -259,7 +259,7 @@ def load_index_levels(
     # those into two ids. 54 of NSE's 259 names end in that word. Their keys
     # agree, so the key finds the registered row; only an index the catalogue
     # has never seen gets an id minted here.
-    index_id = _registered_index(conn, key, is_total_return) or index_id_for(
+    index_id = registered_index(conn, key, is_total_return) or index_id_for(
         name, provider=provider, is_total_return=is_total_return
     )
     first = min(s.level_date for s in staged)

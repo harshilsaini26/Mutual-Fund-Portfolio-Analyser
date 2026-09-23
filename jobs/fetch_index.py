@@ -21,13 +21,13 @@ benchmarked to, which is the difference between a handful of series and all
 259.
 
 Every response is archived by content hash before anything parses it (§5.2),
-and a re-run loads the same levels -- they upsert. It does NOT write no new
-file, though that is what content addressing usually buys: NSE stamps each
-response with a per-request `RequestNumber`, so the same year hashes
-differently every time and a full `--held` re-run archives a fresh copy of
-all of it -- 1,369 files, 47 MB, measured. PROGRESS.md defect 9. Until that is
-fixed, fetch new indices one at a time with `--backfill` rather than re-running
-`--held`.
+and levels upsert. Content addressing alone cannot stop a re-run duplicating
+the archive here: NSE stamps each response with a per-request `RequestNumber`,
+so the same year hashes differently every time, and a full `--held` re-run
+once stored 1,369 duplicate files, 47 MB. So a run skips the years already
+loaded (`still_needed`) and fetches only the latest loaded year onward, plus
+anything before an index's first level. `--full` fetches everything, to pick
+up a level NSE has restated.
 """
 
 from __future__ import annotations
@@ -56,6 +56,7 @@ from src.m0_data.load import (
     has_table,
     load_index_catalogue,
     load_index_levels,
+    registered_index,
 )
 from src.m0_data.normalise.index_id import index_key
 from src.m0_data.parse.base import ParseFailed
@@ -183,6 +184,39 @@ def fetch_catalogue(conn: Any, cfg: dict[str, Any], polite: _Polite) -> int:
     return loaded
 
 
+def still_needed(year: int, first_seen: date | None, last_seen: date | None) -> bool:
+    """Whether a calendar year of an index's series still has to be fetched.
+
+    A year before the one holding the latest loaded level is complete: it was
+    fetched in a run that already had data from a later year, so it was fetched
+    after it ended. The latest loaded year may be partial -- the run that loaded
+    it may have been mid-year -- so it is fetched again, with every year after.
+    Years before the first loaded level are fetched too, because nothing here
+    records whether an earlier run asked for them; for an index that launched
+    after 2011 they come back empty, which costs a request and no archive.
+
+    Re-fetching a complete year was defect 9. NSE stamps every response with a
+    per-request `RequestNumber`, so the same year hashes differently each time
+    and the content-addressed archive stored a fresh copy on every run: 1,369
+    files, 47 MB, for data already on disk.
+    """
+    if first_seen is None or last_seen is None:
+        return True
+    return year < first_seen.year or year >= last_seen.year
+
+
+def loaded_span(conn: Any, index_name: str) -> tuple[date | None, date | None]:
+    """`(first_seen, last_seen)` of the registered index this name keys to."""
+    index_id = registered_index(conn, index_key(index_name), True)
+    if index_id is None:
+        return None, None
+    row = conn.execute(
+        "SELECT first_seen, last_seen FROM benchmark_index WHERE index_id = ?",
+        (index_id,),
+    ).fetchone()
+    return (row[0], row[1]) if row else (None, None)
+
+
 def backfill(
     conn: Any,
     index_name: str,
@@ -190,11 +224,23 @@ def backfill(
     end: date,
     cfg: dict[str, Any],
     polite: _Polite,
+    *,
+    full: bool = False,
 ) -> dict[str, int]:
-    """Every level for one index over a range. One request per calendar year."""
+    """The levels one index is still missing over a range. One request a year.
+
+    `full` fetches every year regardless -- the way to pick up a level NSE has
+    restated in a year already loaded, which the incremental rule never
+    revisits.
+    """
     levels = 0
     empty = 0
+    skipped = 0
+    first_seen, last_seen = (None, None) if full else loaded_span(conn, index_name)
     for chunk in year_chunks(index_name, start, end):
+        if not still_needed(chunk.start.year, first_seen, last_seen):
+            skipped += 1
+            continue
         content = _post(chunk, cfg, polite)
         result, path = archive(
             content,
@@ -224,7 +270,7 @@ def backfill(
         )
         conn.commit()
         levels += n
-    return {"levels": levels, "empty_chunks": empty}
+    return {"levels": levels, "empty_chunks": empty, "skipped": skipped}
 
 
 def held_indices(conn: Any) -> list[str]:
@@ -352,6 +398,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="fetch TRI levels for one index, by its NSE name")
     parser.add_argument("--held", action="store_true",
                         help="backfill every index a scheme is benchmarked to")
+    parser.add_argument("--full", action="store_true",
+                        help="re-fetch years already loaded, to pick up a restatement")
     parser.add_argument("--from", dest="from_year", type=int, default=DEFAULT_FROM)
     parser.add_argument("--to", dest="to_year", type=int, default=date.today().year)
     args = parser.parse_args(argv)
@@ -417,15 +465,17 @@ def main(argv: list[str] | None = None) -> int:
         no_series: list[str] = []
         for name in wanted:
             try:
-                got = backfill(conn, name, start, end, cfg, polite)
+                got = backfill(conn, name, start, end, cfg, polite, full=args.full)
             except (ParseFailed, MixedIndexResponse, FetchError) as exc:
                 failed.append((name, f"{type(exc).__name__}: {exc}"))
                 print(f"  {name:38} FAILED  {type(exc).__name__}")
                 continue
-            if got["levels"] == 0:
+            # No series only if nothing was skipped either: a loaded index
+            # with nothing new also loads 0, and is not a debt index.
+            if got["levels"] == 0 and got["skipped"] == 0:
                 no_series.append(name)
             print(f"  {name:38} {got['levels']:6} levels"
-                  f"  ({got['empty_chunks']} empty years)")
+                  f"  ({got['empty_chunks']} empty, {got['skipped']} already loaded)")
 
         if wanted:
             print(f"backfill: {len(wanted)} index series, {start:%Y}..{end:%Y}")

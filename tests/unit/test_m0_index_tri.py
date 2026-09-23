@@ -608,7 +608,7 @@ def test_an_empty_year_is_marked_parsed_not_left_pending(
     monkeypatch.setattr(job, "_post", lambda chunk, cfg, polite: b"[]")
 
     got = job.backfill(conn, "Nifty 50", date(2010, 1, 1), date(2010, 12, 31), {}, None)  # type: ignore[arg-type]
-    assert got == {"levels": 0, "empty_chunks": 1}
+    assert got == {"levels": 0, "empty_chunks": 1, "skipped": 0}
     assert conn.execute("SELECT parse_status FROM raw_file").fetchall() == [("ok",)]
 
 
@@ -681,3 +681,94 @@ def test_the_catalogue_is_marked_parsed_too(
     cfg = {"user_agent": "ua", "timeout_connect": 1, "timeout_read": 1}
     assert job.fetch_catalogue(conn, cfg, polite) == 1
     assert conn.execute("SELECT parse_status FROM raw_file").fetchall() == [("ok",)]
+
+
+# --- defect 9: a re-run fetches only what it does not have --------------------
+
+
+@pytest.mark.parametrize(
+    ("year", "first", "last", "needed"),
+    [
+        (2015, None, None, True),                                  # never loaded
+        (2015, date(2011, 1, 3), date(2026, 9, 18), False),        # complete
+        (2025, date(2011, 1, 3), date(2026, 9, 18), False),        # complete
+        (2026, date(2011, 1, 3), date(2026, 9, 18), True),         # latest, partial
+        (2025, date(2011, 1, 3), date(2025, 6, 1), True),          # loaded mid-2025
+        (2014, date(2018, 3, 1), date(2026, 9, 18), True),         # before first level
+    ],
+)
+def test_which_years_are_still_needed(
+    year: int, first: date | None, last: date | None, needed: bool
+) -> None:
+    """A year before the latest loaded one was fetched after it ended, so it is
+    complete. The latest may have been loaded mid-year, so it is not."""
+    from jobs.fetch_index import still_needed
+
+    assert still_needed(year, first, last) is needed
+
+
+def _counting_post(calls: list[int]) -> object:
+    def post(chunk: TriChunk, cfg: object, polite: object) -> bytes:
+        calls.append(chunk.start.year)
+        return response([row(f"02 Jan {chunk.start.year}", "100")])
+    return post
+
+
+def test_a_rerun_fetches_only_the_latest_loaded_year(
+    conn: sqlite3.Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Defect 9. NSE's per-request `RequestNumber` makes every response unique,
+    so re-fetching a complete year archived a fresh copy of it: one full re-run
+    stored 1,369 duplicate files. A loaded index now costs one request, not 16."""
+    import jobs.fetch_index as job
+
+    load_index_levels(
+        conn, staged("Nifty 50", [("2011-01-03", "1"), ("2026-09-18", "2")]), "f0"
+    )
+    calls: list[int] = []
+    monkeypatch.setenv("MF_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setattr(job, "_post", _counting_post(calls))
+
+    got = job.backfill(conn, "Nifty 50", date(2011, 1, 1), date(2026, 12, 31), {}, None)  # type: ignore[arg-type]
+
+    assert calls == [2026]
+    assert got["skipped"] == 15
+
+
+def test_a_year_loaded_mid_way_is_finished_next_time(
+    conn: sqlite3.Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The trap in the obvious fix. "Skip any year with levels" would leave
+    June-December 2025 missing forever after a run in June 2025."""
+    import jobs.fetch_index as job
+
+    load_index_levels(
+        conn, staged("Nifty 50", [("2011-01-03", "1"), ("2025-06-02", "2")]), "f0"
+    )
+    calls: list[int] = []
+    monkeypatch.setenv("MF_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setattr(job, "_post", _counting_post(calls))
+
+    job.backfill(conn, "Nifty 50", date(2011, 1, 1), date(2026, 12, 31), {}, None)  # type: ignore[arg-type]
+
+    assert calls == [2025, 2026]
+
+
+def test_full_refetches_everything(
+    conn: sqlite3.Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The way to pick up a level NSE restated in a year already loaded."""
+    import jobs.fetch_index as job
+
+    load_index_levels(
+        conn, staged("Nifty 50", [("2011-01-03", "1"), ("2026-09-18", "2")]), "f0"
+    )
+    calls: list[int] = []
+    monkeypatch.setenv("MF_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setattr(job, "_post", _counting_post(calls))
+
+    got = job.backfill(
+        conn, "Nifty 50", date(2011, 1, 1), date(2026, 12, 31), {}, None, full=True  # type: ignore[arg-type]
+    )
+    assert calls == list(range(2011, 2027))
+    assert got["skipped"] == 0
