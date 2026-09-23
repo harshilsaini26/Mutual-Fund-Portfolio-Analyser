@@ -28,6 +28,15 @@ The gap between 192 schemes and 1,050 ISINs is V1-37: a disclosure describes a
 *scheme*, and every share class of that scheme — Direct, Regular, Growth, each
 IDCW variant — holds the identical portfolio.
 
+**Fund analytics:**
+
+| | |
+|---|---|
+| Schemes with a benchmark index | **1,819** — 129 indices, from fund names and from disclosures |
+| Benchmark indices with a total-return series | 93, 348,174 daily levels from 2011 |
+| **Schemes with alpha, beta, tracking error and capture** | **1,220**, 163 of them active funds |
+| Risk-free rate | every 91-day T-bill auction, 2011-04-06 to 2026-04-08 (772) |
+
 **All three reference funds are covered:**
 
 | | rows | unresolved |
@@ -134,6 +143,27 @@ percent from a portfolio through ordinary market movement; `basis` travels with
 the figure and V2 widens its tolerance to match. A 100x error still fails it by
 11,321%.
 
+## Benchmarks
+
+```bash
+python -m jobs.fetch_index --catalogue      # NSE's 259 indices, rarely changes
+python -m jobs.fetch_index --resolve        # index funds and ETFs, from their names
+python -m jobs.fetch_index --declared       # active funds, from their own disclosures
+python -m jobs.fetch_index --held           # total-return levels for every one in use
+python -m scripts.show_fund_xray --scheme INF179K01UT0
+```
+
+A benchmark comparison needs two things: which index a fund is measured
+against, and that index's total-return series. The first comes from a fund's
+name where the name carries it and from the fund's own monthly disclosure where
+it does not; where both answer, they have agreed on every one of 275 share
+classes. The second comes from NSE, one request per index per year, and a
+refresh fetches only what it does not already have.
+
+Only total-return series are used. A price index leaves out dividends, so a
+fund compared against one looks better than it is by roughly the index's
+dividend yield — about 1.3% a year on the Nifty 50.
+
 ## What is stale
 
 ```bash
@@ -174,11 +204,12 @@ than effort.
 M4 and M5 still have no code. All three previously had a package each —
 Protocols plus a fake per protocol, 2,416 lines — whose only importers were the
 two tests that checked each contract against its own fake. They were deleted on
-2026-09-16. The
-specification for all three is unchanged in `docs/`, which is where an unbuilt
-module belongs: a Protocol with one implementation, and that implementation a
-test double, is a placeholder with a type annotation, and it cost a compile, a
-typecheck and a lint on every commit to keep.
+2026-09-16. Their
+specifications are unchanged, kept with the other specs outside the public
+repository, which is where an unbuilt module belongs: a Protocol with one
+implementation, and that implementation a test double, is a placeholder with a
+type annotation, and it cost a compile, a typecheck and a lint on every commit
+to keep.
 
 ## What is not true yet
 
@@ -375,8 +406,9 @@ The coverage machinery is done. What is left is mostly not machinery:
 
 ## Reading this repository
 
-`docs/DECISIONS.md` is the useful file — append-only records of every
-departure from the spec, every defect the specs themselves contained, and what
-was decided instead — including the ones that were wrong and were corrected
-later. `PLAN.md` has the slices and their acceptance gates; `CLAUDE.md` has the
-ten invariants everything else defers to.
+`docs/CLAUDE.md` has the ten invariants everything else defers to, and
+`docs/ledger.md` and `docs/lookthrough.md` the extra rules for the two modules
+that carry the correctness gates. The module specifications, the build plan and
+the decision log are kept out of the public repository; the reasoning behind a
+change travels in its commit message instead, which is why those run long —
+including the ones that record a mistake and its correction.

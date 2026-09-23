@@ -4,23 +4,31 @@
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-Self-hosted look-through analytics for Indian mutual funds. It dissolves the funds you
-hold into the companies you actually own: how much of two funds is the same stock, how
-much of your money is one company bought twice, and how concentrated you really are once
-the wrappers come off.
+**See what your mutual funds actually own.**
 
-It runs on your machine. Your transactions never leave it.
+A self-hosted analytics workbench for Indian mutual fund investors. It looks through
+the funds you hold to the companies underneath, measures how much of your money is the
+same stock bought several times over, and judges each fund against the index it is
+supposed to beat — on your own machine, with your transactions encrypted and never sent
+anywhere.
 
 ---
 
 ## The problem
 
-Five equity funds look diversified. Opened up they are frequently one fund bought five
-times — the same twenty large caps in slightly different proportions, with five sets of
-fees. No factsheet tells you this, because a factsheet describes one fund and overlap is a
-property of the *set*.
+Five equity funds look like diversification. Opened up, they are often one portfolio
+bought five times — the same large caps in slightly different proportions, with five
+sets of fees. No factsheet shows this, because a factsheet describes one fund and
+overlap is a property of the *set*.
 
-On two real disclosures this codebase reports:
+And the numbers a fund reports about itself are hard to put side by side. Returns come
+over different periods in different documents, the benchmark is named in a scheme
+document few people read, and whether a fund manager earned the fee is rarely answered
+in the same place as what the fund costs.
+
+## What it answers
+
+**How much of my portfolio is the same money twice?** From two real disclosures:
 
 ```
 HDFC Flexi Cap  x  Nippon India Growth Mid Cap
@@ -28,285 +36,231 @@ HDFC Flexi Cap  x  Nippon India Growth Mid Cap
     duplicated     6.66% of the portfolio held through more than one fund
 ```
 
-That is the whole product in three numbers.
+**Did the fund earn its fee?** HDFC Flexi Cap against the NIFTY 500 total-return index
+its own disclosure names:
+
+```
+  risk-adjusted       sharpe   sortino      rf
+  1y                   -0.10     -0.14   5.51%
+  3y                    0.80      1.15   6.82%
+  5y                    1.13      1.61   3.29%
+
+  vs NSE:NIFTY_500_TRI    bench   beta   t.err   alpha     up   down
+  1y                      2.83%   0.86   3.85%   1.04%   0.82   0.89
+  3y                     11.67%   0.80   4.66%   5.70%   0.63   0.91
+  5y                     10.57%   0.85   4.56%   8.42%   0.63   0.97
+```
+
+**Is my index fund doing its one job?** An index fund should track its index and cost
+only its fee. ICICI Prudential Nifty 50 Index Fund, over 1, 3 and 5 years: beta 1.00,
+tracking error 0.03-0.05%, alpha -0.23% to -0.29% — the index, less a small fee, which
+is the only result an index fund should produce.
+
+**What have I actually made?** Every transaction from your consolidated account
+statement, lot by lot: XIRR, time-weighted return, realised and unrealised gains, and a
+reconciliation against the statement's own closing balance.
 
 ---
 
-## Why this isn't a spreadsheet
-
-Most of the engineering here is not the arithmetic. It is refusing to produce a number
-that looks right and is not.
-
-- **`Decimal` end to end**, floats only inside the XIRR solver. SQLite is the trap: a
-  column declared `DECIMAL` takes NUMERIC affinity and silently stores money as a float.
-  Every decimal column is `DECIMAL_TEXT`, enforced by a schema check. Three more cost a
-  defect each to find — `SUM()` coerces the *aggregate* to a float, `ORDER BY` sorts as
-  text so `"5000"` outranks `"25000"`, and any SQL arithmetic promotes through a REAL.
-- **Nothing is silently dropped.** Unidentifiable issuers become `__UNRESOLVED__`, funds
-  with no published portfolio `__NO_DISCLOSURE__`. Both stay visible, pinned outside the
-  top-N so tail aggregation cannot fold them away, and the unresolved percentage is a gate
-  criterion rather than a log line.
-- **Absent is not zero.** An uncomputed XIRR renders as an em dash, never `0.0%` — one is
-  an admission, the other a claim. Gini is `NULL` when a short position puts a negative
-  weight in the pool.
-- **Every parse reconciles against the file's own stated total.** A parser tuned to one
-  AMC over-counts another by 2.9x; no list of section labels catches that, arithmetic
-  does. More than 2% from the publisher's own figure refuses to load.
-- **Raise, don't clamp.** A redemption for more units than the book holds means a missing
-  statement, not a number to round down.
-
----
-
-## What it does
-
-```
-CAS statement (PDF)                    AMC disclosure files (XLSX)
-        |                                          |
-   parse, FIFO lots                        parse, reconcile, resolve
-   XIRR / TWRR                             to a company master
-   reconcile vs the                                |
-   statement's own balance                 issuer weights per scheme
-        |                                          |
-        +--------------- look-through -------------+
-                              |
-              exposure, overlap, concentration, duplication
-                              |
-                     six views in a browser
-```
-
-- **Ledger** — FIFO lots, realised/unrealised gains, §112A grandfathering, XIRR and TWRR.
-  Every folio reconciles against the statement's own closing balance, and a NAV
-  cross-check catches the Direct-vs-Regular mis-resolution that unit counts cannot.
-- **Disclosure parsing** — one configurable table reader, per-AMC configs, driven by header
-  text rather than column position.
-- **Look-through** — exposure by *issuer*, not ISIN, so a company's equity and its bonds
-  count once. Closure is asserted before any result returns: Σ exposures equals Σ position
-  values, or it raises.
-- **Views** — a local web UI with as-of date, staleness, coverage and unresolved share
-  under every chart, in a footer that cannot be switched off.
-
-### Honest status
-
-A working system, not a finished product.
+## Capabilities
 
 | | |
 |---|---|
-| AMC readers, each verified against a real published file | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
-| Plus a coverage tier | any fund Groww lists, at 19-23% unresolved against 0.00% from an AMC's own file |
-| Schemes with a loaded disclosure | 192, across 6 fund houses |
-| Modules built | M0 data, M1 ledger, M3 look-through, M6 views |
-| Partly built | M2 fund x-ray — return windows, risk stats, rolling returns, Sharpe/Sortino once `config/risk_free.yaml` has a rate; no benchmark, so no alpha or beta |
-| Not built | M4 risk, M5 market, tax engine |
-| Has anyone actually used it | **no** |
+| **Look-through** | Exposure by *company*, not by security, so an issuer's shares and bonds count once. Overlap, duplication, concentration (HHI and effective number of holdings), funds held inside other funds expanded to their own holdings, and the marginal contribution of each fund to the whole. |
+| **Fund x-ray** | Returns over 1, 3 and 5 years and since launch; volatility, drawdown and recovery; rolling-return distributions; Sharpe and Sortino against the 91-day T-bill rate in force when each window began; alpha, beta, tracking error, information ratio and up/down capture against a total-return benchmark. |
+| **Ledger** | CAS statement import, FIFO lots, §112A grandfathering, XIRR and TWRR, reconciled to the statement's closing units. |
+| **Views** | A local browser interface with CSV export. Every chart carries its as-of date, staleness, coverage and unresolved share, in a footer that cannot be switched off. |
 
-Five of the eleven portfolio views in the spec are deliberately *absent* rather than
-stubbed: each needs a module that does not exist, and a view that always renders empty is
-a broken feature pretending to be a data problem.
+### Coverage today
+
+| | |
+|---|---|
+| Schemes in the AMFI universe | 19,598 |
+| Schemes with a loaded portfolio | 192, answering for 1,050 share classes |
+| Fund houses read directly from their own files | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
+| Funds reachable through the aggregator tier | 1,973 |
+| Schemes with a benchmark index | 1,819 |
+| Schemes with full benchmark analytics | 1,220, 163 of them actively managed |
+
+[`docs/PROGRESS.md`](docs/PROGRESS.md) has the current figures, how each was measured,
+and the defects that are known and not yet fixed.
+
+---
+
+## Why the numbers can be trusted
+
+Most of the engineering is not the arithmetic. It is refusing to show a number that
+looks right and is not.
+
+- **Exact arithmetic, end to end.** Money, units, NAVs and weights are `Decimal`
+  throughout. SQLite silently turns a `DECIMAL` column into a float, sums text as float,
+  and sorts `"5000"` above `"25000"`; each of those is guarded, and each was found as a
+  defect first.
+- **Nothing disappears.** A holding that cannot be identified is shown as unresolved; a
+  fund with no published portfolio is shown as undisclosed. Both stay on screen, and the
+  unresolved share is a pass/fail criterion, not a log line.
+- **Absent is not zero.** A return that cannot be computed shows as a dash, never
+  `0.00%`. A fund with too short a history for a statistic gets no statistic.
+- **Every file is checked against itself.** Each disclosure is reconciled against the
+  total the fund house printed in it, and against AMFI's independent AUM figure; a 100x
+  unit error fails both.
+- **Benchmarks are total-return only.** A price index leaves out dividends and flatters
+  every fund compared against it by about 1.3% a year on the Nifty 50. Price series are
+  never used for alpha.
+- **Raise, don't round.** A redemption larger than the units held means a missing
+  statement, and the ledger stops rather than guessing.
+
+The ledger and the look-through engine are **mutation tested** — deliberate defects are
+injected and every one must be caught (26 of 26 and 35 of 35). A separate verifier
+recomputes the reference portfolio without importing any of the code it checks.
 
 ---
 
 ## Getting started
 
-Python 3.11+, plus SQLCipher for the encrypted ledger — `apt install libsqlcipher-dev` on
+Python 3.11+, and SQLCipher for the encrypted ledger: `apt install libsqlcipher-dev` on
 Debian/Ubuntu, `brew install sqlcipher` on macOS.
 
 ```bash
 git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
 cd Mutual-Fund-Portfolio-Analyser
-python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate    # Windows: .venv/Scripts/activate
 pip install -e ".[dev,cas]" -c requirements.lock
 ```
 
-`requirements.lock` pins the entire graph, transitive packages included; CI installs with
-it and fails if anything resolves that the lock does not mention. The extras are optional:
-`cas` for PDF import, `dev` for the checks below.
+`requirements.lock` pins the whole dependency graph, transitive packages included.
 
-### The gate
+### Load the market data
 
 ```bash
-python -m pytest -q                                   # 1,209 tests, ~80s, hermetic
-python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                        # strict, 184 files
-python -m scripts.verify_v0_ledger --check            # exits 1 on golden-file drift
+export MF_CONTACT_EMAIL=you@example.com         # sent as the From: header on every request
+
+python -m jobs.fetch_nav                        # today's NAVs, every scheme
+python -m jobs.build_entity_master              # AMFI's company list -> issuers
+python -m jobs.fetch_aum                        # scheme AUM, for the units check
+python -m jobs.fetch_index --catalogue --resolve --declared --held   # benchmarks
 ```
 
-No network, no data files. [CI](.github/workflows/ci.yml) runs exactly these on every push.
+### Add the funds you hold
 
-### Use it
-
-```bash
-export MF_CONTACT_EMAIL=you@example.com               # sent in From:, per RFC 7231
-
-python -m jobs.fetch_nav                              # today's NAVs, all schemes
-python -m jobs.build_entity_master                    # AMFI market-cap list -> issuers
-python -m jobs.fetch_aum                              # scheme AUM, which arms the units check
-python -m jobs.load_holdings --amc hdfc               # a disclosure, end to end
-
-python -m jobs.import_cas --file statement.pdf --user USER-01
-python -m jobs.serve                                  # browser UI on 127.0.0.1:8765
-
-python -m jobs.status                                 # what is stale, and the command to fix it
-```
-
-`jobs.status` is the one to run first on any day you are not sure what is out of
-date. Offline and instant: SEBI requires a monthly portfolio within ten days of
-month end, so it compares that date against what is loaded and prints the
-command that would close each gap. `--check` also asks the AMCs that can be
-asked.
-
-### Cover the funds you actually hold
-
-Some fund houses can be asked directly. A disclosure page that renders its file
-list in JavaScript is a page whose file list arrives as JSON, and those
-endpoints are neither authenticated nor challenged — so for those houses the
-download is a command:
+Kotak and ICICI publish through an interface that can be queried directly:
 
 ```bash
-python -m jobs.fetch_amc --amc kotak --list           # what is published, no download
-python -m jobs.fetch_amc --amc kotak --period 2026-08 # into data/inbox/
-```
-
-Nothing here defeats a bot check; it declines to visit the page that has one.
-
-For the rest, the fetch is still yours. Download your fund house's monthly
-portfolio workbook, drop it in `data/inbox/`, and:
-
-```bash
+python -m jobs.fetch_amc --amc kotak --period 2026-08
 python -m jobs.ingest_inbox
 ```
 
-It works out which house published the file, which scheme each sheet describes, and loads
-all of them — 86 schemes from one Kotak workbook, 91 from one Nippon. Every disclosure then
-covers all of that scheme's share classes, so Direct and Regular and every IDCW variant are
-answered by one file. A sheet it cannot identify with certainty is reported and skipped,
-never guessed at.
+For any other fund house, download its monthly portfolio workbook into `data/inbox/` and
+run `python -m jobs.ingest_inbox`. It identifies the fund house and every scheme in the
+file on its own — 88 schemes from one Kotak workbook, 91 from one Nippon — and skips,
+with a reason, any sheet it cannot identify with certainty.
+[`config/amc_disclosure_index.yaml`](config/amc_disclosure_index.yaml) links the
+disclosure page for all 52 AMCs.
 
-`config/amc_disclosure_index.yaml` has the disclosure page for all 52 AMCs, so finding the
-download is a link away.
-
-Holding a fund from an AMC nobody has written a reader for, there is a coverage
-tier that reads an aggregator's scheme page instead:
+For a fund from a house with no reader yet, the aggregator tier reads its public scheme
+page instead:
 
 ```bash
 python -m jobs.fetch_groww --scheme INF179K01UT0
 ```
 
-It reaches any fund Groww lists, and it is deliberately not a replacement: the
-page carries no ISIN column, which costs 19-23% of rows unresolved against
-0.00% from the same fund's own workbook, measured on one fund in one month. The
-range moves because the page's figure falls as the entity master grows and the
-workbook's does not — a name match improves with the master, an ISIN match was
-never waiting on it. A reader always prefers the AMC's file while that file is
-not itself stale.
+It reaches any fund Groww lists, at the cost of an ISIN column, so it resolves fewer
+holdings than a fund house's own file; that file is always preferred while it is current.
 
-Passwords are always prompted, never read from the environment. Every fetch is
-rate-limited per domain, respects `robots.txt`, uses conditional GET, and archives the raw
-bytes under their SHA-256 before anything parses them; re-running any job is safe.
+### Import your statement and look
 
-No statement to hand? `python -m scripts.show_lookthrough --equal 1000000` values every
-disclosed scheme equally so you can see the shape of the output. It labels itself
-`ILLUSTRATIVE — NOT your ledger` and refuses to persist.
+```bash
+python -m jobs.import_cas --file statement.pdf --user USER-01
+python -m jobs.serve                            # browser UI on 127.0.0.1:8765
+python -m scripts.show_fund_xray --scheme INF179K01UT0
+python -m jobs.status                           # what is stale, and the command that fixes it
+```
+
+No statement to hand? `python -m scripts.show_lookthrough --equal 1000000` weights every
+disclosed scheme equally to show the shape of the output. It labels itself illustrative
+and refuses to save anything.
 
 ### Configuration
-
-Five environment variables, all optional except the first when fetching. There is no
-`.env` loader — export them or prefix the command.
 
 | Variable | Default | What it does |
 |---|---|---|
 | `MF_CONTACT_EMAIL` | `unset@example.invalid` | `From:` header on every outbound request |
-| `MF_DATA_ROOT` | `./data` | where warehouse, ledger and raw archive live |
-| `MF_WAREHOUSE` | `$MF_DATA_ROOT/warehouse/canonical.db` | points at a specific warehouse file |
+| `MF_DATA_ROOT` | `./data` | where the warehouse, ledger and raw archive live |
+| `MF_WAREHOUSE` | `$MF_DATA_ROOT/warehouse/canonical.db` | a specific warehouse file |
 | `MF_LEDGER` | `$MF_DATA_ROOT/ledger/personal.db` | the encrypted personal ledger |
-| `MF_CAS_PASSWORD` | unset | the optional real-CAS test only; everything else prompts |
+| `MF_CAS_PASSWORD` | unset | the optional real-statement test only; everything else prompts |
 
 ---
 
-## Your data
+## Privacy and security
 
-**Zone B — the personal ledger.** Transactions, units, folios, positions. SQLCipher
-encrypted at rest and created `0600`; the connection helper *refuses to open it* without a
-key rather than quietly degrading. Gitignored since before the first import ever ran,
-because a secret committed once stays in history.
+**Your data stays yours.** Transactions, units and folios live in a SQLCipher-encrypted
+ledger, created readable only by you, which refuses to open without a key rather than
+falling back to plain text. Market data — NAVs, disclosures, indices — is public and kept
+separately. There is no account, no telemetry and no server beyond the one you start on
+your own machine; the single JavaScript library is vendored with a recorded checksum
+rather than loaded from a CDN.
 
-**Zone A — the warehouse.** NAVs, scheme and company master, published disclosures. All
-public information about funds, none of it about you.
+**Polite by construction.** Every request is rate-limited per site, respects
+`robots.txt`, identifies its operator, and is archived under its SHA-256 before anything
+reads it, so any job can be re-run safely. Nothing here defeats a CAPTCHA or bot check;
+where a site presents one, the project uses a published data interface or asks you to
+download the file.
 
-Nothing calls home. d3, the one JavaScript dependency, is vendored at a pinned version
-with a recorded `SHA256SUMS` rather than loaded from a CDN. No telemetry, no account, no
-server beyond the one you start on loopback.
-
-**The untrusted input is the disclosure files** — an instrument name in one reaches both a
-web page and a spreadsheet. Names are escaped before embedding in the page's JSON, cells a
-spreadsheet would execute as formulas are prefixed to stay text, and every response
-carries a CSP that blocks injected script even if the escaping regressed. Each is a
-regression test in `tests/unit/test_security.py`, written against a demonstrated exploit.
+**Untrusted input is treated as untrusted.** Disclosure files come from outside, so
+names are escaped before they reach a page, spreadsheet formulas are neutralised on
+export, archive members cannot write outside their folder, and every response carries a
+content security policy. Each of those is a regression test written against a
+demonstrated exploit.
 
 ---
 
-## Layout
+## Quality gate
 
-```
-src/common/           Decimal + SQLite discipline, frozen contracts, types
-src/m0_data/          fetch, parse, resolve, validate, load        (the warehouse)
-src/m1_ledger/        CAS parsing, FIFO lots, returns, reconcile   (your positions)
-src/m2_fund/          return windows, risk statistics       (fund x-ray)
-src/m3_lookthrough/   exposure, overlap, concentration, duplication, nested funds
-src/m6_views/         envelope, builders, formatting, export, API, templates
-jobs/   scripts/   migrations/   docs/   tests/
-tests/fakes/          fixture-backed test doubles, out of the shipped library
+```bash
+python -m pytest -q                             # 1,341 tests, hermetic, no network
+python -m ruff check src/ tests/ scripts/ jobs/
+python -m mypy                                  # strict
+python -m scripts.verify_v0_ledger --check      # the independent ledger verifier
 ```
 
-**One-way dependencies:** `M0 -> M1 -> M3 -> M6`, through Protocol interfaces, never
-reaching across a boundary with SQL. M2 hangs off M0 alone — it reads NAV through
-`MarketDataProvider` and writes no SQL of its own. M4 and M5 are specified in `docs/` and
-carry no code at all, rather than a package of empty contracts. The view layer performs no
-financial computation at all — a static check over the builders enforces it, because a
-number derived in a view is a second source of truth nobody can reconcile.
+[CI](.github/workflows/ci.yml) runs exactly these on every push.
 
-The ledger and look-through engine are **mutation tested** (M1 26/26, M3 35/35 killed) —
-they carry the correctness gates, and a suite never shown to catch a deliberate defect has
-not been shown to catch anything. A separate verifier recomputes the golden portfolio and
-imports nothing from `src/`, on purpose.
+## Architecture
 
-The same treatment found something the tests could not: deleting any one of the
-thirteen `conn.commit()` calls in `src/` used to leave the suite green, because
-a test that reads back on the connection that wrote sees uncommitted rows
-either way. Ten are now held by tests that assert through a second connection;
-the other three are `DROP`-only and their commits are measurably no-ops, which
-is said at the line rather than papered over with a test that cannot fail.
+```
+src/m0_data/          fetch, parse, resolve, validate, load     the market warehouse
+src/m1_ledger/        statement parsing, lots, returns          your positions
+src/m2_fund/          returns, risk, benchmark analytics        fund x-ray
+src/m3_lookthrough/   exposure, overlap, concentration          look-through
+src/m6_views/         browser UI, export, local API             views
+```
 
----
-
-## Documentation
-
-`docs/` holds the roughly 12,600-line specification this was built from — written before
-the code, one spec per module — plus:
-
-- **`PLAN.md`** — scope, the vertical slices, and the acceptance gate for each.
-- **`DECISIONS.md`** — append-only architecture decision records: every departure from
-  the spec, every defect the specs themselves contained, and what was decided instead. The
-  most useful file here if you want to know *why* anything is the way it is.
-- **`CLAUDE.md`** — the ten non-negotiable invariants and the working agreement.
-- **`PROGRESS.md`** — what is covered, what is not, and the defects that are
-  measured and still unfixed.
+Dependencies run one way, and modules talk through typed interfaces rather than
+reaching into each other's tables. The view layer computes nothing: a static check
+enforces it, because a figure derived in a view is a second answer nobody can
+reconcile. [`docs/CLAUDE.md`](docs/CLAUDE.md) sets out the ten invariants the rest of the
+code defers to.
 
 ---
+
+## Status
+
+A working system at an early stage, published as-is. The data pipeline, ledger,
+look-through and views are built; fund analytics are largely built; portfolio risk,
+market context and tax calculation are specified and not yet built.
+
+It has not yet been used with real money, including by its author. That is why every
+figure it shows carries its as-of date, coverage and staleness: so you can judge how far
+to rely on it. It is not investment advice, and it does not give any.
 
 ## Built with Claude
 
-Every line — specification, implementation, tests and decision log — was written with
-[Claude Code](https://claude.com/claude-code). The decision records double as a record of
-that: defects found in the specs by implementing them, passing tests that turned out to
-assert the wrong thing, and bugs the mutation harness found in freshly written fixes.
+The specification, implementation, tests and documentation were written with
+[Claude Code](https://claude.com/claude-code). The commit history records that work as
+it happened — including the defects the tests caught in freshly written code, and the
+estimates that turned out wrong and were corrected.
 
----
+## Licence
 
-## Status and licence
-
-Personal project, published as-is. Not investment advice, not audited, and not used in
-anger by anyone including its author. Every figure carries its own as-of date, staleness
-and coverage precisely so you can judge how much to trust it — which, for now, should be
-"not with money that matters".
-
-Licensed under the [MIT Licence](LICENSE).
+[MIT](LICENSE).
