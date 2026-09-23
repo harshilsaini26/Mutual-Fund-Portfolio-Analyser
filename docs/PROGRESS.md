@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,299 tests passing
+**Last updated:** 2026-09-23 · 1,332 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -246,26 +246,38 @@ Ordered by what they cost.
      quarterly sample is out by up to 4.50 percentage points at a window
      start: the cut-off went from 7.24% to 12.02% inside Q3 2013. Sharpe and
      Sortino compute for any window starting on or after 2011-04-06.
-   - **S12** index levels (TRI) — **partly closed.** Both halves exist now.
-     `benchmark_id` is set on **1,573** of 19,598 schemes (1,217 with NAV),
-     matched against NSE's own catalogue of 259 indices, and NSE's
-     total-return series loads through `jobs.fetch_index`. The mapping was
-     never only in factsheets — Kotak and Nippon print it in the S5
-     disclosures already fetched — but so far it is matched from scheme
-     names, which covers index funds and ETFs and not active funds, whose
-     names do not carry their benchmark.
+   - **S12** index levels (TRI) — **closed for everything NSE publishes.**
+     `benchmark_id` is set on **1,819** of 19,598 schemes (1,389 with NAV),
+     pointing at 129 indices, and **93 of those have a total-return series
+     loaded** — 348,174 levels from 2011. Alpha, beta, tracking error and
+     capture compute today for **1,220 schemes, 163 of them active funds.**
 
-     **23 of the 123 indices those schemes point at have levels loaded**, so
-     alpha, beta, tracking error and capture compute today for **439**
-     schemes with NAV. On ICICI Prudential Nifty 50 Index Fund Direct, over
-     1, 3 and 5 years, they come out at beta 1.00, tracking error 0.03–0.05%
-     and alpha of −0.23% to −0.29% — the index, minus a fee, which is the
-     only shape an index fund's alpha can take.
+     The mapping comes two ways. `--resolve` reads an index out of a fund's
+     name, which reaches index funds and ETFs. `--declared` reads the
+     benchmark an active fund's own disclosure states — Kotak, Nippon, HDFC
+     and PPFAS all print one — which reaches funds whose names do not carry
+     it. Where both gave an answer, on 275 share classes, they agreed every
+     time.
 
-     Two ceilings are not effort problems. NSE publishes no total-return
-     series for its G-Sec indices. And over half of all schemes are debt
-     funds, benchmarked mostly to CRISIL indices, which are not published
-     free.
+     Two funds show the result has the right shape. ICICI Prudential Nifty 50
+     Index Fund Direct, over 1, 3 and 5 years: beta 1.00, tracking error
+     0.03–0.05%, alpha −0.23% to −0.29% — the index minus a fee, which is the
+     only shape an index fund's alpha can take. HDFC Flexi Cap against the
+     NIFTY 500 TRI its disclosure names: beta 0.80–0.86, tracking error around
+     4–5%, and alpha of 5.70% over 3 years and 8.42% over 5 — an active fund
+     that has earned its fee.
+
+     Three ceilings are not effort problems. NSE publishes no total-return
+     series for its G-Sec, SDL or arbitrage indices — 36 of the 129. Over
+     half of all schemes are debt funds, benchmarked mostly to CRISIL
+     indices, which are not published free. And declared benchmarks exist
+     only for the five fund houses with a disclosure loaded.
+
+     One limitation is a modelling choice rather than a gap. A scheme has one
+     current benchmark, and a 5-year alpha is measured against it for the
+     whole window. SEBI moved many benchmarks in 2021, so for a fund that
+     changed, the pre-2021 part of a long window is compared against an
+     index it was not then measured against.
 
 0. ~~**For 54 of NSE's 259 indices, the catalogue and the level series mint
    different ids.**~~ **Closed 2026-09-23.** `index_id_for` keeps a trailing
@@ -327,17 +339,28 @@ Ordered by what they cost.
    Index levels are now refused when not positive, as NAVs are. A window with
    too little overlap keeps its `benchmark_id`, so "not enough data" no longer
    reads as "no benchmark". And a year that returns no levels is marked parsed
-   rather than left `pending`.
+   rather than left `pending` — as is the index catalogue, a path the first
+   fix missed and the warehouse, checked afterwards, showed up.
+9. **Every re-run of the S12 backfill re-archives what it already has.** NSE
+   stamps each response with a per-request `RequestNumber`, so the same year's
+   levels hash differently on every fetch and §3.1's content-addressed archive
+   never recognises a repeat. One full `--held` re-run stored 1,369 new files,
+   47 MB, of data already on disk, and made about 1,900 requests to get it.
+   `jobs/fetch_index.py` says a re-run "writes no new file"; for this endpoint
+   that is false. The warehouse is unaffected, since levels upsert. The fix is
+   to fetch only the years not yet loaded plus the current one, which would
+   also make a monthly refresh about 250 requests instead of 2,000.
 
 ## Next
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Finish the S12 backfill** — `python -m jobs.fetch_index --held`. About 70
-  minutes at NSE's rate limit, for the 100 benchmarked indices with no levels
-  yet; the debt indices among them will report no series, which is expected.
-- **Active funds' benchmarks** from the S5 disclosures that print them.
+- **Stop the S12 re-fetch from duplicating the archive** (defect 9) before
+  the next refresh — otherwise each one re-downloads fifteen years of every
+  index to change one.
 - **More discovery adapters**, one per house, as funds are actually held.
+  Each also brings that house's declared benchmarks: run
+  `python -m jobs.fetch_index --declared` after loading its disclosures.
 - **Run ICICI's ZIP end to end** — the expansion is built and tested, never
   run against a live file.
 - **The tax engine, M4 risk and M5 market.**

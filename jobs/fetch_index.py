@@ -20,9 +20,14 @@ worth running: it backfills only the indices some scheme is actually
 benchmarked to, which is the difference between a handful of series and all
 259.
 
-Read-only against the network in the sense that matters -- every response is
-archived by content hash before anything parses it (§5.2), so a re-run of a
-range already fetched writes no new file and loads the same levels.
+Every response is archived by content hash before anything parses it (§5.2),
+and a re-run loads the same levels -- they upsert. It does NOT write no new
+file, though that is what content addressing usually buys: NSE stamps each
+response with a per-request `RequestNumber`, so the same year hashes
+differently every time and a full `--held` re-run archives a fresh copy of
+all of it -- 1,369 files, 47 MB, measured. PROGRESS.md defect 9. Until that is
+fixed, fetch new indices one at a time with `--backfill` rather than re-running
+`--held`.
 """
 
 from __future__ import annotations
@@ -166,6 +171,14 @@ def fetch_catalogue(conn: Any, cfg: dict[str, Any], polite: _Polite) -> int:
         for e in entries
     ]
     loaded = load_index_catalogue(conn, pairs)
+    # Marked parsed, as `backfill` marks every chunk. Without this the
+    # catalogue stayed `pending` after a load that succeeded -- the same defect
+    # the review found in empty chunks, in the one path that fix missed.
+    conn.execute(
+        "UPDATE raw_file SET parse_status='ok', parser_id=?, parser_version=?,"
+        " parsed_at=? WHERE file_id=?",
+        ("index.nse_catalogue", "1", datetime.now(UTC), result.file_id),
+    )
     conn.commit()
     return loaded
 

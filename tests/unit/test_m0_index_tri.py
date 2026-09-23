@@ -656,3 +656,28 @@ def test_the_xray_script_holds_no_sql_as_its_docstring_says() -> None:
     assert "contains no SQL of its own" in source
     assert ".execute(" not in source
     assert "SELECT " not in source
+
+
+def test_the_catalogue_is_marked_parsed_too(
+    conn: sqlite3.Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fix #8 marked every TRI chunk parsed and missed the catalogue, which
+    stayed `pending` after a load that succeeded. Found by checking the
+    warehouse after the backfill rather than by the review."""
+    import json as json_mod
+    from types import SimpleNamespace
+
+    import jobs.fetch_index as job
+
+    body = json_mod.dumps(
+        [{"Trading_Index_Name": "Nifty 50", "Index_long_name": "Nifty 50"}]
+    ).encode("utf-8-sig")
+    monkeypatch.setenv("MF_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setattr(
+        job, "conditional_get", lambda *a, **k: SimpleNamespace(content=body)
+    )
+
+    polite = job._Polite(limiter=None, robots=None)  # type: ignore[arg-type]
+    cfg = {"user_agent": "ua", "timeout_connect": 1, "timeout_read": 1}
+    assert job.fetch_catalogue(conn, cfg, polite) == 1
+    assert conn.execute("SELECT parse_status FROM raw_file").fetchall() == [("ok",)]
