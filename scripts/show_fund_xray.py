@@ -3,8 +3,9 @@
     python -m scripts.show_fund_xray --scheme INF179K01UT0
     python -m scripts.show_fund_xray --scheme INF179K01UT0 --as-of 2026-03-31
 
-Reads adjusted NAV through `WarehouseMarketDataProvider`, so this script
-contains no SQL of its own (invariant 3) and M2 contains none either.
+The windows come from M2's `fund_windows`, the same call the fund page makes,
+so the terminal and the browser cannot disagree. This script only prints, and
+contains no SQL of its own (invariant 3).
 
 Read-only: it opens the warehouse, computes, prints, and writes nothing. M3's
 look-through materialises its weights because recomputing them costs a second;
@@ -20,7 +21,6 @@ the fund had been examined and found unremarkable.
 from __future__ import annotations
 
 import argparse
-import sqlite3
 from datetime import date
 from decimal import Decimal
 
@@ -29,12 +29,10 @@ from src.common.types import SchemeId
 from src.m0_data.config import warehouse_path
 from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
 from src.m2_fund.windows import (
-    MIN_DISTINCT_NAVS,
-    WINDOW_YEARS,
+    NothingToCompute,
     ReturnWindow,
-    compute_return_window,
+    fund_windows,
     rolling_returns,
-    window_start,
 )
 
 
@@ -69,88 +67,30 @@ def main() -> None:
 
     conn = connect(warehouse_path())
     try:
-        # The provider reads rows by column name, as jobs/import_cas.py does.
-        conn.row_factory = sqlite3.Row
         md = WarehouseMarketDataProvider(conn)
-        scheme_id = SchemeId(args.scheme)
-        index_id = md.benchmark_for(scheme_id)
-
-        full = md.nav_series(scheme_id, date.min, date.today(), adjusted=True)
-        if len(full) < 2:
-            print(f"{args.scheme}: {len(full)} NAV points — nothing to compute.")
-            print("Load history first:")
-            print(f"  python -m jobs.backfill_scheme_nav --scheme {args.scheme}")
+        as_of = date.fromisoformat(args.as_of) if args.as_of else date.today()
+        try:
+            fw = fund_windows(md, SchemeId(args.scheme), as_of)
+        except NothingToCompute as e:
+            print(f"FUND X-RAY  {args.scheme}   as of {as_of}")
+            print(f"  {e}")
             return
+        upto, index_id = fw.navs, fw.benchmark_id
 
-        as_of = date.fromisoformat(args.as_of) if args.as_of else full[-1].nav_date
-        # One slice, used by every figure below. Rolling returns once took
-        # `full`, so --as-of moved the table and not the distribution.
-        upto = [p for p in full if p.nav_date <= as_of]
-        # Through the provider, one level per NAV date. A benchmark comparison
-        # pairs same-day prices, so a level on a day the fund did not price is
-        # never used and never needs reading.
-        levels = [
-            (p.nav_date, level)
-            for p in upto
-            if index_id and (level := md.index_level(index_id, p.nav_date)) is not None
-        ]
-
-        print(f"FUND X-RAY  {args.scheme}   as of {as_of}")
-
-        # Before the IDCW guard, because an as-of that predates the series
-        # leaves `upto` empty and that is not an IDCW plan -- it is a date
-        # with no data behind it. The guard below would otherwise diagnose a
-        # Growth fund as one whose distributions are unloaded.
-        if len(upto) < 2:
-            print(f"  {len(upto)} NAV points on or before {as_of}, of"
-                  f" {len(full):,} from {full[0].nav_date} to {full[-1].nav_date}.")
-            print("  Nothing to compute: pick a later --as-of.")
-            return
-
+        print(f"FUND X-RAY  {args.scheme}   as of {upto[-1].nav_date}")
         print(
             f"  adjusted NAV, {len(upto):,} points"
             f" from {upto[0].nav_date} to {upto[-1].nav_date}"
         )
-
-        # A series that does not move is not a fund that made nothing. It is an
-        # IDCW plan whose distributions are not on record: `scheme_idcw` is
-        # empty, so `nav_adj` equals raw NAV and the entire return -- which was
-        # paid out rather than accrued -- is invisible. 4,595 of the 15,006
-        # schemes with NAV are IDCW options, so this is not a rare shape.
-        # Printing 0.00% for them would be a confident wrong answer.
-        if len({p.nav for p in upto}) < MIN_DISTINCT_NAVS:
-            distinct = len({p.nav for p in upto})
-            plural = "" if distinct == 1 else "s"
-            print()
-            print(f"  NAV takes {distinct} distinct value{plural} across the"
-                  f" {len(upto):,} points to {as_of},")
-            print("  so no return can be read from it.")
-            print()
-            print("  This is an IDCW plan whose distributions are not loaded:")
-            print("  scheme_idcw is empty, so nav_adj == nav and the return that")
-            print("  was paid out does not appear. Refusing to report 0.00%.")
-            return
-
         print()
         print(f"  {'window':16} {'ann':>9} {'cumulative':>9} {'vol':>9} {'max dd':>9}"
               f"  {'obs':>5}  {'conf':<6} drawdown")
         print("  " + "-" * 86)
 
-        shown: list[ReturnWindow] = []
-        for key in WINDOW_YEARS:
-            navs = md.nav_series(
-                scheme_id, window_start(as_of, key), as_of, adjusted=True
-            )
-            w = compute_return_window(navs, key, levels, index_id)
-            short = f"  {key:16} insufficient history ({len(navs)} points)"
-            print(line(w) if w else short)
-            if w:
-                shown.append(w)
-
-        whole = compute_return_window(upto, "since_first_nav", levels, index_id)
-        if whole:
-            print(line(whole))
-            shown.append(whole)
+        for key, w in fw.windows.items():
+            print(line(w) if w else f"  {key:16} insufficient history")
+        shown = [w for w in fw.windows.values() if w]
+        whole = fw.windows["since_first_nav"]
 
         if whole and whole.drawdown.depth < 0:
             # The dates are what make the depth checkable against market

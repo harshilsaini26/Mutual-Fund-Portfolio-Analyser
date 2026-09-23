@@ -101,7 +101,7 @@
         gate — but the fields it has no answer for say so.
       #}
       <div>
-        <dt>Holdings as of</dt>
+        <dt>Data as of</dt>
         <dd>
           {%- if env.state.value == 'ok' %}{{ env.data_as_of | fmt_date }}
           <span class="staleness">({{ env.staleness_days | fmt_staleness }})</span>

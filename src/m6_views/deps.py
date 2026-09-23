@@ -6,8 +6,8 @@ generic has to construct any of them: the caller needs to know which builder
 wants which providers, and that knowledge ends up as a branch in the router.
 
 One object instead. Every builder takes `Deps` and reaches for what it needs.
-Adding M2's `SchemeCharacteristics` later is a field here and a line in whichever
-builders use it — not a new constructor signature and another branch.
+`market` arrived that way for the fund page: a field here and a line in the one
+builder that uses it — not a new constructor signature and another branch.
 
 `ledger` is exposed alongside the providers for exactly one purpose: §14.1's
 version probes, which read `computed_at` and `rebuilt_at` to decide whether a
@@ -22,6 +22,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
+from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
 from src.m1_ledger.providers.position import SqlitePositionProvider
 from src.m3_lookthrough.providers.sqlite import SqliteLookThroughProvider
 
@@ -30,13 +31,15 @@ from src.m3_lookthrough.providers.sqlite import SqliteLookThroughProvider
 class Deps:
     """The providers a view may read, and nothing else.
 
-    M2, M4 and M5 are absent because they do not exist. When they land they
+    M4 and M5 are absent because they do not exist. When they land they
     arrive as fields here, and the views that cannot be built until then stay
-    unregistered rather than stubbed — `registry.py` says why.
+    unregistered rather than stubbed — `registry.py` says why. M2 is functions
+    over `market`, so it needs no field of its own.
     """
 
     lookthrough: SqliteLookThroughProvider
     positions: SqlitePositionProvider
+    market: WarehouseMarketDataProvider
     ledger: sqlite3.Connection | None = None
 
     @classmethod
@@ -47,6 +50,7 @@ class Deps:
         return cls(
             lookthrough=SqliteLookThroughProvider(ledger, warehouse),
             positions=SqlitePositionProvider(ledger),
+            market=WarehouseMarketDataProvider(warehouse),
             ledger=ledger,
         )
 

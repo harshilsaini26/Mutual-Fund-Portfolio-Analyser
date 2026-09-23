@@ -6,10 +6,10 @@
   One view, one page, one URL. §12.1: every view is linkable, bookmarkable and
   shareable, which costs nothing now and is painful to retrofit.
 
-  Drill-DOWN is not built: §12.2's targets are `company_page`, `sector_detail`,
-  `fund_xray_header` and `overlap_detail`, none of which exist because none of M2
-  or M5 does. The routing is here; the destinations are not, and a link to a
-  screen that does not exist is worse than no link.
+  Drill-DOWN is built for one of §12.2's four targets: Holdings links each
+  scheme to `fund_xray_header`. `company_page`, `sector_detail` and
+  `overlap_detail` do not exist yet, and a link to a screen that does not exist
+  is worse than no link.
 #}
 {% block content %}
 {% call vc.view_container(env) %}

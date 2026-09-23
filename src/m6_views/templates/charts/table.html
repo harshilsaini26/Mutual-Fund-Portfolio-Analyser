@@ -1,5 +1,7 @@
 {#
-  Table — `fund_list`.
+  Table — `fund_list` and `fund_xray_header`. The reconciliation marker is
+  `fund_list`'s: a row without a `reconciled` key is not a folio and is never
+  marked.
 
   **Reconciliation status is a property of the row, not of the page.**
   `MODULE_1.md` §12.1: a folio that failed reconciliation is degraded beside the
@@ -11,6 +13,9 @@
   greyscale, to a screen reader, and to the roughly one in twelve men who cannot
   separate the obvious hues.
 #}
+{% if env.payload.definition %}
+<p class="definition">{{ env.payload.definition }}</p>
+{% endif %}
 <div class="table-wrap" data-chart="table">
 <table>
   <thead>
@@ -22,13 +27,15 @@
   </thead>
   <tbody>
     {% for row in env.payload.rows %}
-    <tr class="{{ 'row--unreconciled' if not row.reconciled else '' }}">
+    <tr class="{{ 'row--unreconciled' if row.reconciled is defined and not row.reconciled else '' }}">
       {% for column in env.payload.columns %}
       <td class="col--{{ column.kind }}">
-        {% if column.key == 'confidence' %}
+        {% if column.key == 'confidence' and row.reconciled is defined %}
           {{ row[column.key] }}{% if not row.reconciled %}
           <abbr class="flag" title="This folio did not reconcile against the statement's own closing balance.">!</abbr>
           {% endif %}
+        {% elif column.key == 'scheme_id' %}
+          <a href="/view/fund_xray_header{{ qs }}&amp;scope_id={{ row.scheme_id | urlencode }}">{{ row.scheme_id }}</a>
         {% else %}
           {{ {'value': row[column.key], 'kind': column.kind} | fmt_cell }}
         {% endif %}

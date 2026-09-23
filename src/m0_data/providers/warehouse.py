@@ -148,7 +148,7 @@ class WarehouseMarketDataProvider:
         so a caller can see the staleness rather than infer it.
         """
         column = "nav_adj" if adjusted else "nav"
-        row = self.conn.execute(
+        row = self._execute(
             f"SELECT nav_date, {column} AS v FROM nav_daily "
             "WHERE scheme_id = ? AND nav_date <= ? AND v IS NOT NULL "
             "ORDER BY nav_date DESC LIMIT 1",
@@ -172,7 +172,7 @@ class WarehouseMarketDataProvider:
     ) -> list[NavPoint]:
         """Adjusted by default: return math on raw NAV is wrong for IDCW plans."""
         column = "nav_adj" if adjusted else "nav"
-        rows = self.conn.execute(
+        rows = self._execute(
             f"SELECT nav_date, {column} AS v, is_interpolated FROM nav_daily "
             "WHERE scheme_id = ? AND nav_date BETWEEN ? AND ? AND v IS NOT NULL "
             "ORDER BY nav_date",
@@ -191,7 +191,7 @@ class WarehouseMarketDataProvider:
     def idcw_events(
         self, scheme_id: SchemeId, start: date, end: date
     ) -> list[IdcwEvent]:
-        rows = self.conn.execute(
+        rows = self._execute(
             "SELECT record_date, amount_per_unit FROM scheme_idcw "
             "WHERE scheme_id = ? AND record_date BETWEEN ? AND ? ORDER BY record_date",
             (str(scheme_id), start, end),
@@ -268,7 +268,7 @@ class WarehouseMarketDataProvider:
         understates the benchmark by its dividend yield and hands that to
         alpha, so the level is withheld and the comparison cannot be made.
         """
-        row = self.conn.execute(
+        row = self._execute(
             "SELECT l.level FROM index_level l"
             " JOIN benchmark_index b ON b.index_id = l.index_id"
             " WHERE l.index_id = ? AND l.level_date = ? AND b.is_total_return = 1",
@@ -278,12 +278,23 @@ class WarehouseMarketDataProvider:
 
     # --- internals ---------------------------------------------------------
 
+    def _execute(self, sql: str, params: tuple[object, ...]) -> sqlite3.Cursor:
+        """Every query, on a cursor that returns rows by name.
+
+        Rows are read by column name throughout, and the app opens the
+        warehouse with plain tuples. Setting it on the cursor rather than the
+        connection leaves every other reader of that connection as it was.
+        """
+        cur = self.conn.cursor()
+        cur.row_factory = sqlite3.Row
+        return cur.execute(sql, params)
+
     def _scheme_row(self, sql: str, params: tuple[str, ...]) -> sqlite3.Row | None:
-        row: sqlite3.Row | None = self.conn.execute(sql, params).fetchone()
+        row: sqlite3.Row | None = self._execute(sql, params).fetchone()
         return row
 
     def _scheme_rows(self, sql: str, params: tuple[str, ...]) -> list[sqlite3.Row]:
-        return self.conn.execute(sql, params).fetchall()
+        return self._execute(sql, params).fetchall()
 
 
 def _as_date(value: object) -> date:

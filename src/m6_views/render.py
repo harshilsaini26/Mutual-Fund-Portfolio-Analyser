@@ -111,6 +111,10 @@ def _fmt_value(tile: dict[str, Any], compact: bool) -> str:
         return format_pct(Decimal(str(value)))
     if kind == "return_ann":
         return format_pct(Decimal(str(value)) * 100, signed=True) + " p.a."
+    if kind == "fraction":  # M2's figures are fractions: 0.0842 -> 8.42%
+        return format_pct(Decimal(str(value)) * 100, precision=2)
+    if kind == "ratio":
+        return f"{Decimal(str(value)):.2f}"
     if kind in ("units", "nav"):
         return f"{Decimal(str(value)):,.4f}".rstrip("0").rstrip(".")
     if kind == "date":

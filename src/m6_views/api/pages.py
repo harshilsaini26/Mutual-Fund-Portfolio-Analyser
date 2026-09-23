@@ -11,11 +11,12 @@ on the rendered HTML — every `[data-chart]` element must be a descendant of a
 `section.view`. Testing the output rather than the source means the rule survives
 a refactor that moves the templates around.
 
-Two things are deliberately absent. **Drill-down** (§12.2) has targets —
-`company_page`, `sector_detail`, `fund_xray_header`, `overlap_detail` — and none
-of them exists, because none of M2 or M5 does. The per-view URLs are here so
-every view is linkable and bookmarkable (§12.1: "costs nothing at the start and
-is painful to retrofit"); the links into screens that do not exist are not.
+Two things are mostly absent. **Drill-down** (§12.2) has four targets, and
+one exists: Holdings links each scheme to `fund_xray_header`, scoped by
+`scope_id`. `company_page`, `sector_detail` and `overlap_detail` wait on data
+not loaded yet. The per-view URLs are here so every view is linkable and
+bookmarkable (§12.1: "costs nothing at the start and is painful to retrofit");
+links into screens that do not exist are not.
 **Display preferences** (§4.3's `user_display_pref`) are not built either; the
 defaults are §9's.
 """
@@ -104,11 +105,14 @@ def make_router(
     router = APIRouter()
     engine = templates()
 
-    def _scope(user_id: str, as_of: str | None) -> Scope:
+    def _scope(
+        user_id: str, as_of: str | None, scope_id: str | None = None
+    ) -> Scope:
         return Scope(
             user_id=UserId(user_id),
             as_of=date.fromisoformat(as_of) if as_of else date.today(),
             scope_type="portfolio",
+            scope_id=scope_id,
         )
 
     def _shell(user_id: str, as_of: str | None, active: str) -> dict[str, Any]:
@@ -152,6 +156,7 @@ def make_router(
         as_of: str | None = Query(None),
         top_n: int | None = Query(None),
         scope: str | None = Query(None),
+        scope_id: str | None = Query(None),
     ) -> Any:
         if view_id not in VIEW_REGISTRY:
             return HTMLResponse(
@@ -173,7 +178,7 @@ def make_router(
             params["scope"] = scope
         # Named apart from the `scope` query parameter, which is the exposure
         # pool ("equity", "all") and not an analysis scope at all.
-        view_scope = _scope(user_id, as_of)
+        view_scope = _scope(user_id, as_of, scope_id)
         env = build(view_id, view_scope, params, ledger, warehouse)
         return engine.TemplateResponse(
             request,

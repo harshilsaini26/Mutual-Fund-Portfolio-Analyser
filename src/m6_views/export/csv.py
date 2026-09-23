@@ -41,7 +41,7 @@ def provenance_header(env: ViewEnvelope, full: bool = False) -> list[str]:
         f"# View: {env.view_id}",
         f"# Question: {env.question}",
         f"# As of: {env.as_of.isoformat()}",
-        f"# Holdings as of: {format_date(env.data_as_of)}"
+        f"# Data as of: {format_date(env.data_as_of)}"
         f" ({env.staleness_days} days old)",
         f"# Coverage: {format_pct(env.coverage_pct)} of portfolio value"
         f" | Unresolved: {format_pct(env.unresolved_pct)}"

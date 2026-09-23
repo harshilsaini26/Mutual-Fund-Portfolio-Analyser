@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,355 tests passing
+**Last updated:** 2026-09-23 · 1,370 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -153,6 +153,11 @@ python -m jobs.fetch_index --held           # total-return levels for every one 
 python -m scripts.show_fund_xray --scheme INF179K01UT0
 ```
 
+The same figures are on the fund page, `/view/fund_xray_header?scope_id=<ISIN>`,
+linked from every scheme in Holdings. The page and the script both call M2's
+`fund_windows`, so they cannot disagree; checked against HDFC Flexi Cap, they
+match to the digit (5y alpha 8.42%, beta 0.85).
+
 A benchmark comparison needs two things: which index a fund is measured
 against, and that index's total-return series. The first comes from a fund's
 name where the name carries it and from the fund's own monthly disclosure where
@@ -187,7 +192,7 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M0 data** | built — fetch, parse, resolve, validate, load |
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication, nested funds, marginal contribution |
-| **M6 views** | built — six views, CSV export, loopback API |
+| **M6 views** | built — seven views (six portfolio, one fund), CSV export, loopback API |
 | M2 fund x-ray | partly built — return windows, risk statistics, rolling returns, Sharpe and Sortino, and alpha, beta, tracking error and capture against a total-return index |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
@@ -218,9 +223,10 @@ to keep.
   it, and the answer for now is "not with money that matters".
 - **47 of 52 AMCs have no disclosure loaded.** The machinery to load one is
   built; the files have not been downloaded.
-- **Five of the eleven specified portfolio views are absent**, deliberately —
-  each needs a module that does not exist, and a view that always renders empty
-  is a broken feature pretending to be a data problem.
+- **Four of the eleven specified views are absent**, deliberately — each needs
+  data that is not loaded, and a view that always renders empty is a broken
+  feature pretending to be a data problem. The fund page landed on 2026-09-23;
+  marginal contribution and a size profile are buildable from data in hand.
 - **Nothing runs end to end against a real ledger in CI.** Zone B needs a key,
   and the golden-file verifier covers the arithmetic instead.
 
@@ -395,6 +401,9 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is mostly not machinery:
 
+- **Two views the data already supports:** marginal contribution
+  (`m3_lookthrough/marginal.py` exists; its provider method is not wired) and
+  a size profile (AMFI's large/mid/small list is loaded).
 - **Remember which indices have no series**, so a refresh stops asking NSE
   for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.

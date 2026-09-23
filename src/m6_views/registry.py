@@ -9,11 +9,11 @@ nothing routes to. §5.3 calls a mismatch a deployment error.
 documentation: §2.3 says *"if the question can't be stated in a sentence, the
 view shouldn't exist"*, and a view without one cannot be constructed.
 
-**Only the views that can be built are here** — six of §8.1's eleven. The other
-five need M2 or M5 and are ABSENT rather than registered with a stub returning
-empty: an absent view is an honest gap the consistency check enforces, where a
-registered one that always returns `empty` is a broken feature pretending to be
-a data problem.
+**Only the views that can be built are here** — seven of §8.1's eleven. The
+other four need data not yet loaded (M5's sectors among it) and are ABSENT
+rather than registered with a stub returning empty: an absent view is an
+honest gap the consistency check enforces, where a registered one that always
+returns `empty` is a broken feature pretending to be a data problem.
 """
 
 from __future__ import annotations
@@ -124,6 +124,16 @@ VIEW_DEFS: dict[str, ViewDef] = {
         requires_fields=["m1.positions"],
         drill_targets={"scheme": "lookthrough_sankey"},
         sort_order=60,
+    ),
+    "fund_xray_header": ViewDef(
+        view_id="fund_xray_header",
+        view_name="Fund x-ray",
+        module_source="m2",
+        question="How has this fund done, and against what?",
+        chart_type="table",
+        default_scope="scheme",
+        requires_fields=["m2.fund_windows"],
+        sort_order=70,
     ),
 }
 

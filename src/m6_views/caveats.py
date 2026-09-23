@@ -46,10 +46,10 @@ class Quality(Protocol):
     """
 
     @property
-    def coverage_pct(self) -> Decimal: ...
+    def coverage_pct(self) -> Decimal | None: ...  # None: not applicable (a fund)
 
     @property
-    def unresolved_pct(self) -> Decimal: ...
+    def unresolved_pct(self) -> Decimal | None: ...
 
     @property
     def worst_staleness_days(self) -> int | None: ...
@@ -99,12 +99,15 @@ def assemble_caveats(
             out.append(
                 f"{dated}{staleness} days old. Funds disclose monthly."
             )
-        if quality.coverage_pct < COVERAGE_WARN_PCT:
+        if quality.coverage_pct is not None and quality.coverage_pct < COVERAGE_WARN_PCT:
             out.append(
                 f"{format_pct(quality.coverage_pct)} of your portfolio has "
                 f"current holdings data. The rest is shown as unclassified."
             )
-        if quality.unresolved_pct > UNRESOLVED_WARN_PCT:
+        if (
+            quality.unresolved_pct is not None
+            and quality.unresolved_pct > UNRESOLVED_WARN_PCT
+        ):
             out.append(
                 f"{format_pct(quality.unresolved_pct)} of your exposure could "
                 f"not be identified to a company; it is shown as a separate "

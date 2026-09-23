@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
@@ -126,6 +126,18 @@ def client(tmp_path: Path) -> TestClient:
         "INSERT OR REPLACE INTO issuer (issuer_id, canonical_name, is_listed)"
         " VALUES ('ACME', 'Acme Industries Ltd.', 1)"
     )
+    # A NAV series for S1, so the fund page has something to show.
+    warehouse.execute(
+        "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"
+        " VALUES ('S1', 'Fund one', 'direct', 'growth')"
+    )
+    warehouse.executemany(
+        "INSERT INTO nav_daily (scheme_id, nav_date, nav, nav_adj) VALUES (?,?,?,?)",
+        [
+            ("S1", AS_OF - timedelta(days=i), Decimal(100 - i), Decimal(100 - i))
+            for i in range(60)
+        ],
+    )
     warehouse.commit()
     seed_view_definitions(warehouse)
 
@@ -167,10 +179,12 @@ def client(tmp_path: Path) -> TestClient:
 
 
 QS = f"?user_id={USER}&as_of={AS_OF.isoformat()}"
+#: Views scoped to one entity rather than the portfolio, and the entity.
+SCOPED = {"fund_xray_header": "&scope_id=S1"}
 
 
 def page(client: TestClient, view_id: str) -> str:
-    response = client.get(f"/view/{view_id}{QS}")
+    response = client.get(f"/view/{view_id}{QS}{SCOPED.get(view_id, '')}")
     assert response.status_code == 200, view_id
     # Named rather than returned straight through. Starlette 1.6 widened
     # TestClient's response type to `Any` while it carries both httpx and
@@ -221,7 +235,7 @@ def test_every_view_renders_its_as_of_staleness_and_coverage(
     assert footer, f"{view_id} has no provenance footer"
     body = footer.group(1)
     assert "As of" in body
-    assert "Holdings as of" in body
+    assert "Data as of" in body
     assert "Coverage" in body
     assert "Unresolved" in body
     # A date, rendered per §9.4 — never MM/DD or DD/MM.
@@ -241,6 +255,13 @@ def test_every_view_offers_its_csv(client: TestClient, view_id: str) -> None:
     """§2.5: an export on every view — a trust feature and an escape hatch,
     signalling the data is not trapped in this UI."""
     assert f"/api/export/{view_id}.csv" in page(client, view_id)
+
+
+def test_holdings_link_each_scheme_to_its_fund_page(client: TestClient) -> None:
+    """§12.2's one built drill-down. Escaped: `&amp;` inside the attribute."""
+    html = page(client, "fund_list")
+    assert f'href="/view/fund_xray_header?user_id={USER}&amp;as_of=' in html
+    assert "&amp;scope_id=S1" in html
 
 
 def test_a_staleness_figure_is_rendered_in_words(client: TestClient) -> None:
@@ -424,7 +445,7 @@ def test_an_empty_panel_does_not_claim_its_data_is_current(
     footer = re.search(r'<footer class="view__footer">(.*?)</footer>', html, re.S)
     assert footer
     # The footer still renders — that is the gate — but says nothing it cannot.
-    assert "Holdings as of" in footer.group(1)
+    assert "Data as of" in footer.group(1)
     assert "(today)" not in footer.group(1)
     assert "days old" not in footer.group(1)
 

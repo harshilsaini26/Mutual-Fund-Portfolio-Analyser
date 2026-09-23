@@ -38,7 +38,9 @@ from typing import NamedTuple
 
 from src.common.contracts.market import NavPoint
 from src.common.decimals import RATE_Q, annualise
+from src.common.types import IndexId, SchemeId
 from src.m0_data.config import risk_free_on
+from src.m0_data.providers.market_data import MarketDataProvider
 from src.m2_fund.risk import (
     Drawdown,
     aligned,
@@ -351,4 +353,80 @@ def rolling_returns(
         pct_positive=(
             Decimal(sum(1 for r in rets if r > 0)) * 100 / len(rets)
         ).quantize(RATE_Q),
+    )
+
+
+class NothingToCompute(ValueError):
+    """The series holds no return to read. The message says why, and what
+    loads the data that would -- it is shown to the user as it stands."""
+
+
+@dataclass(frozen=True)
+class FundWindows:
+    """Every window for one scheme on one date: the fund page and the CLI.
+
+    `windows` keeps a key for every window, `None` where the history cannot
+    support it, so a short-history fund shows its gaps rather than fewer rows
+    -- which would read as a fund examined and found unremarkable.
+    """
+
+    navs: list[NavPoint]  # adjusted, on or before as_of
+    benchmark_id: IndexId | None
+    windows: dict[str, ReturnWindow | None]
+    staleness_days: int
+    confidence: str  # the weakest window's: MODULE_6 §14.1 rule 3
+
+
+def fund_windows(
+    md: MarketDataProvider, scheme_id: SchemeId, as_of: date
+) -> FundWindows:
+    """Windows ending at the last NAV on or before `as_of`."""
+    navs = md.nav_series(scheme_id, date.min, as_of, adjusted=True)
+    if len(navs) < 2:
+        raise NothingToCompute(
+            f"{len(navs)} NAV points for {scheme_id} on or before {as_of}, so "
+            f"there is nothing to compute. Load its history with "
+            f"python -m jobs.backfill_scheme_nav --scheme {scheme_id}"
+        )
+    # A flat line is not a fund that made nothing: it is an IDCW plan whose
+    # distributions are not on record, so nav_adj == nav and the return that
+    # was paid out is invisible. 4,595 of 15,006 schemes with NAV are IDCW.
+    if len({p.nav for p in navs}) < MIN_DISTINCT_NAVS:
+        raise NothingToCompute(
+            f"NAV for {scheme_id} takes one value across {len(navs):,} points, "
+            f"so no return can be read from it. This is an IDCW plan whose "
+            f"distributions are not loaded: the return paid out does not "
+            f"appear. The Growth option of the same fund carries it."
+        )
+
+    end = navs[-1].nav_date
+    index_id = md.benchmark_for(scheme_id)
+    # One level per NAV date: a comparison pairs same-day prices, so a level
+    # on a day the fund did not price is never used.
+    # ponytail: one query per NAV date; a range read if a page is ever slow.
+    levels = [
+        (p.nav_date, level)
+        for p in navs
+        if index_id and (level := md.index_level(index_id, p.nav_date)) is not None
+    ]
+    windows: dict[str, ReturnWindow | None] = {
+        key: compute_return_window(
+            [p for p in navs if p.nav_date >= window_start(end, key)],
+            key, levels, index_id,
+        )
+        for key in WINDOW_YEARS
+    }
+    windows["since_first_nav"] = compute_return_window(
+        navs, "since_first_nav", levels, index_id
+    )
+    tiers = ["low", "medium", "high"]
+    return FundWindows(
+        navs=navs,
+        benchmark_id=index_id,
+        windows=windows,
+        staleness_days=(as_of - end).days,
+        confidence=min(
+            (w.confidence for w in windows.values() if w),
+            key=tiers.index, default="low",
+        ),
     )

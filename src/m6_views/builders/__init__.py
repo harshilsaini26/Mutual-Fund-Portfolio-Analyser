@@ -8,6 +8,7 @@ a screen nobody is looking at yet.
 
 from __future__ import annotations
 
+from src.m6_views.builders.fund import xray  # noqa: F401
 from src.m6_views.builders.portfolio import (  # noqa: F401
     concentration,
     duplication,
