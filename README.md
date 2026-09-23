@@ -218,7 +218,7 @@ demonstrated exploit.
 ## Quality gate
 
 ```bash
-python -m pytest -q                             # 1,341 tests, hermetic, no network
+python -m pytest -q                             # 1,355 tests, hermetic, no network
 python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                  # strict
 python -m scripts.verify_v0_ledger --check      # the independent ledger verifier
