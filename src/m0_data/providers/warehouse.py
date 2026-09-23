@@ -258,8 +258,23 @@ class WarehouseMarketDataProvider:
         return IndexId(row["benchmark_id"]) if row and row["benchmark_id"] else None
 
     def index_level(self, index_id: IndexId, on: date) -> Decimal | None:
-        """Index data is S11/S12 and belongs to V1 — OPEN-03. Nothing to read yet."""
-        return None
+        """The level `index_id` published ON `on`, or None. S12.
+
+        Exact date, never carried forward. A benchmark comparison pairs
+        same-day prices, and a level carried over a holiday reads as a day the
+        index did not move -- tracking error the fund never had.
+
+        None for a price-return index (invariant 7). A comparison against PRI
+        understates the benchmark by its dividend yield and hands that to
+        alpha, so the level is withheld and the comparison cannot be made.
+        """
+        row = self.conn.execute(
+            "SELECT l.level FROM index_level l"
+            " JOIN benchmark_index b ON b.index_id = l.index_id"
+            " WHERE l.index_id = ? AND l.level_date = ? AND b.is_total_return = 1",
+            (str(index_id), on),
+        ).fetchone()
+        return Decimal(str(row[0])) if row else None
 
     # --- internals ---------------------------------------------------------
 

@@ -44,6 +44,7 @@ from src.m0_data.load import (
     load_index_catalogue,
     load_index_levels,
 )
+from src.m0_data.normalise.index_id import index_key
 from src.m0_data.parse.base import ParseFailed
 from src.m0_data.parse.index.nifty import PARSER_ID, PARSER_VERSION, parse_tri
 from src.m0_data.resolve.benchmark import BenchmarkMatcher, resolve_scheme_benchmarks
@@ -177,13 +178,17 @@ def backfill(
         _record(conn, result, path, TRI_URL)
 
         staged = parse_tri(content, file_id=str(result.file_id))
-        if not staged:
+        n = 0
+        if staged:
+            _, n = load_index_levels(conn, staged, str(result.file_id))
+        else:
             # A year before the index existed. Not an error, and NOT silent:
             # an empty response is exactly what a malformed request also
             # returns, so the count is reported rather than shrugged off.
             empty += 1
-            continue
-        _, n = load_index_levels(conn, staged, str(result.file_id))
+        # Marked parsed either way. An empty response parsed cleanly and holds
+        # nothing; left `pending`, it is a file any retry job re-finds on every
+        # run and can never clear, since re-parsing yields the same nothing.
         conn.execute(
             "UPDATE raw_file SET parse_status='ok', parser_id=?, parser_version=?,"
             " parsed_at=? WHERE file_id=?",
@@ -195,7 +200,7 @@ def backfill(
 
 
 def held_indices(conn: Any) -> list[str]:
-    """The indices some scheme is actually benchmarked to, newest names first.
+    """The indices some scheme is actually benchmarked to, in name order.
 
     The whole catalogue is 259 series and fifteen years each; what a reader
     needs is the ones a fund in this warehouse points at.
@@ -207,6 +212,22 @@ def held_indices(conn: Any) -> list[str]:
         " ORDER BY b.index_name"
     ).fetchall()
     return [str(r[0]) for r in rows]
+
+
+def one_per_index(names: list[str]) -> list[str]:
+    """Each index once, first spelling kept, order preserved.
+
+    Decided by key, not by string. `--backfill X --held` listed X twice
+    whenever a scheme is benchmarked to X -- 16 wasted requests and a summary
+    counting 124 series for 123 -- and a casing difference is the same index.
+    """
+    seen: set[str] = set()
+    unique: list[str] = []
+    for name in names:
+        if (key := index_key(name)) not in seen:
+            seen.add(key)
+            unique.append(name)
+    return unique
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -225,6 +246,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if not any((args.catalogue, args.resolve, args.backfill, args.held)):
         parser.error("nothing to do: pass --catalogue, --resolve, --backfill or --held")
+
+    # Checked here, not left to `year_chunks`. Its ValueError is outside the
+    # per-index isolation below, so a mistyped year used to kill the run with a
+    # traceback before the first request. `end` is clamped to today, so a
+    # `--from` in the future is caught by the same comparison.
+    start = date(args.from_year, 1, 1)
+    end = min(date(args.to_year, 12, 31), date.today())
+    if (args.backfill or args.held) and start > end:
+        parser.error(f"--from {args.from_year} is after --to {args.to_year} or today")
 
     cfg = source(SOURCE_ID)
     polite = _polite(cfg)
@@ -245,11 +275,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"resolve: {counts['filled']} of {counts['considered']} schemes"
                   f" matched against {len(matcher)} index spellings")
 
-        start = date(args.from_year, 1, 1)
-        end = min(date(args.to_year, 12, 31), date.today())
-        wanted = held_indices(conn) if args.held else []
-        if args.backfill:
-            wanted = [args.backfill, *wanted]
+        names = [args.backfill] if args.backfill else []
+        wanted = one_per_index(names + (held_indices(conn) if args.held else []))
         # One index's failure costs that index, not the run. A 123-series
         # backfill is ~70 minutes of polite requests, and letting a single
         # unparseable response discard everything fetched after it is the same

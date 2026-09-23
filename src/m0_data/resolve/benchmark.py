@@ -50,7 +50,13 @@ class Benchmark:
 
 
 class Ambiguous(ValueError):
-    """The text names more than one index. S12: refuse rather than pick."""
+    """The text names more than one index. S12: refuse rather than pick.
+
+    Raised by `load._registered_index` when a level series' name keys to two
+    registered indices. NSE's catalogue has no such pair today; the raise is
+    what keeps a future one from silently filing a series under the wrong
+    index.
+    """
 
 
 class BenchmarkMatcher:

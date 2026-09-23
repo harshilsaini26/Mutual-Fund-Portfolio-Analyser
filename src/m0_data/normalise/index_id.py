@@ -117,6 +117,14 @@ def index_id_for(
 
     Built from the provider's own spelling, never from a fund's, so the id does
     not change the day an AMC writes the name differently.
+
+    Called ONCE per index, by whoever registers it first -- normally the
+    catalogue. It keeps a trailing "Index" where `index_key` strips it, so two
+    spellings of one index can mint two ids; `load_index_levels` therefore
+    resolves an incoming series to the registered row by key and mints only
+    for an index nothing has registered. Changing this function to strip the
+    word too would re-mint 54 existing ids and orphan the schemes pointing at
+    them.
     """
     prefix = PROVIDERS.get(provider, provider.upper().replace(" ", "_"))
     base, _ = strip_tri(name)

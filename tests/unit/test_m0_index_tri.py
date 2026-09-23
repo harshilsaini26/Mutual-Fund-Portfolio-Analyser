@@ -511,3 +511,148 @@ def test_a_placeholder_in_the_LEVEL_still_raises() -> None:
     the series, and a return computed across a hole does not complain."""
     with pytest.raises(ParseFailed, match="unreadable"):
         parse_tri(response([row("28 Mar 2024", "-")]))
+
+
+# --- review fixes -------------------------------------------------------------
+
+
+def test_a_series_attaches_to_the_catalogue_row_it_keys_to(
+    conn: sqlite3.Connection,
+) -> None:
+    """54 of NSE's 259 catalogue names end in "Index". `index_id_for` keeps the
+    word and `index_key` strips it, so a level series whose provider name leaves
+    it off used to mint a SECOND id: levels on one row, every scheme pointing at
+    the other, and every benchmark statistic silently None. The trading name is
+    set equal to the long name here so only the trailing-word rule connects
+    them."""
+    load_index_catalogue(conn, [("Nifty 1D Rate Index", "Nifty 1D Rate Index")])
+    registered = index_id_for("Nifty 1D Rate Index")
+    assert index_id_for("Nifty 1D Rate") != registered, "the premise: minting diverges"
+
+    index_id, n = load_index_levels(
+        conn, staged("Nifty 1D Rate", [("2024-01-01", "100")]), "f1"
+    )
+    assert (index_id, n) == (registered, 1)
+    assert conn.execute("SELECT COUNT(*) FROM benchmark_index").fetchone()[0] == 1
+
+
+def test_the_catalogues_spelling_survives_a_level_load(conn: sqlite3.Connection) -> None:
+    """NSE's level endpoint answers `NIFTY Alpha Low-Volatility 30` for the index
+    its catalogue calls `NIFTY ALPHA LOW-VOLATILITY 30`. The catalogue is the
+    provider's canonical name; a response's casing that day must not replace
+    it."""
+    canonical = "NIFTY ALPHA LOW-VOLATILITY 30"
+    load_index_catalogue(conn, [(canonical, canonical)])
+    load_index_levels(
+        conn, staged("NIFTY Alpha Low-Volatility 30", [("2024-01-01", "1")]), "f1"
+    )
+    stored = conn.execute("SELECT index_name FROM benchmark_index").fetchone()[0]
+    assert stored == canonical
+
+
+def test_a_name_keying_to_two_registered_indices_raises(conn: sqlite3.Connection) -> None:
+    """Filing a series under the wrong one of two is the silent mis-assignment
+    the key lookup exists to prevent. NSE's catalogue has no such pair today."""
+    from src.m0_data.resolve.benchmark import Ambiguous
+
+    conn.executemany(
+        "INSERT INTO benchmark_index (index_id, index_name, is_total_return)"
+        " VALUES (?, ?, 1)",
+        [("NSE:A_TRI", "Nifty 50"), ("NSE:B_TRI", "NIFTY 50")],
+    )
+    with pytest.raises(Ambiguous, match="2 registered"):
+        load_index_levels(conn, staged("Nifty 50", [("2024-01-01", "1")]), "f1")
+
+
+def test_one_per_index_keeps_the_first_spelling_and_the_order() -> None:
+    """`--backfill X --held` listed X twice whenever a scheme pointed at X --
+    16 wasted requests, and a summary counting 124 series for 123."""
+    from jobs.fetch_index import one_per_index
+
+    assert one_per_index(["Nifty 50", "Nifty Bank", "NIFTY 50", "Nifty 50 TRI"]) == [
+        "Nifty 50",
+        "Nifty Bank",
+    ]
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--held", "--from", "2026", "--to", "2011"],
+        ["--backfill", "Nifty 50", "--from", "2099"],   # after today
+    ],
+)
+def test_a_backwards_range_is_refused_before_anything_runs(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`year_chunks` raised ValueError from outside the per-index isolation, so
+    a mistyped year killed the run with a traceback. Now it is an operator
+    error, refused before the warehouse is even opened."""
+    from jobs.fetch_index import main
+
+    with pytest.raises(SystemExit) as exc:
+        main(argv)
+    assert exc.value.code == 2
+    assert "is after" in capsys.readouterr().err
+
+
+def test_an_empty_year_is_marked_parsed_not_left_pending(
+    conn: sqlite3.Connection, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty response parsed cleanly and holds nothing. Left `pending`, it is
+    a file any retry job re-finds on every run and can never clear -- 4 of them
+    were already in the warehouse when this was found."""
+    import jobs.fetch_index as job
+
+    monkeypatch.setenv("MF_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setattr(job, "_post", lambda chunk, cfg, polite: b"[]")
+
+    got = job.backfill(conn, "Nifty 50", date(2010, 1, 1), date(2010, 12, 31), {}, None)  # type: ignore[arg-type]
+    assert got == {"levels": 0, "empty_chunks": 1}
+    assert conn.execute("SELECT parse_status FROM raw_file").fetchall() == [("ok",)]
+
+
+def test_the_provider_reads_a_level_on_its_exact_date_only(
+    conn: sqlite3.Connection,
+) -> None:
+    """A comparison pairs same-day prices. A level carried over a holiday reads
+    as a day the index did not move -- tracking error the fund never had."""
+    from src.common.types import IndexId
+    from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
+
+    load_index_levels(
+        conn, staged("Nifty 50", [("2024-01-01", "100"), ("2024-01-03", "102")]), "f1"
+    )
+    conn.row_factory = sqlite3.Row
+    md = WarehouseMarketDataProvider(conn)
+    index_id = IndexId("NSE:NIFTY_50_TRI")
+
+    assert md.index_level(index_id, date(2024, 1, 1)) == Decimal("100")
+    assert md.index_level(index_id, date(2024, 1, 2)) is None
+    assert md.index_level(index_id, date(2024, 1, 3)) == Decimal("102")
+
+
+def test_the_provider_withholds_a_price_return_level(conn: sqlite3.Connection) -> None:
+    """Invariant 7: suppress the comparison when `is_total_return` is false. A
+    PRI benchmark understates the index by its dividend yield and hands that to
+    alpha, so the level is never handed out."""
+    from src.common.types import IndexId
+    from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
+
+    load_index_levels(
+        conn, staged("Nifty 50", [("2024-01-01", "21725")]), "f1", is_total_return=False
+    )
+    conn.row_factory = sqlite3.Row
+    md = WarehouseMarketDataProvider(conn)
+    assert md.index_level(IndexId("NSE:NIFTY_50_PRI"), date(2024, 1, 1)) is None
+
+
+def test_the_xray_script_holds_no_sql_as_its_docstring_says() -> None:
+    """Its docstring says it "contains no SQL of its own (invariant 3)". The S12
+    change added two queries beneath that sentence. The benchmark is read through
+    the provider now; this keeps the sentence true."""
+    script = Path(__file__).resolve().parents[2] / "scripts" / "show_fund_xray.py"
+    source = script.read_text(encoding="utf-8")
+    assert "contains no SQL of its own" in source
+    assert ".execute(" not in source
+    assert "SELECT " not in source

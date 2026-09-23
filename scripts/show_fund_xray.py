@@ -61,30 +61,6 @@ def line(w: ReturnWindow) -> str:
     )
 
 
-def benchmark_for(conn: sqlite3.Connection, scheme_id: str) -> tuple[str, str, list]:
-    """`(index_id, index_name, levels)` for a scheme, or `("", "", [])`.
-
-    Read here rather than through `WarehouseMarketDataProvider` because that
-    provider's `index_levels` belongs to S11/S12's own slice; this script is a
-    terminal report and reads what it needs. The SQL is the one exception this
-    file already makes for the warehouse it opens.
-    """
-    row = conn.execute(
-        "SELECT b.index_id, b.index_name FROM scheme s"
-        " JOIN benchmark_index b ON b.index_id = s.benchmark_id"
-        " WHERE s.scheme_id = ?",
-        (scheme_id,),
-    ).fetchone()
-    if row is None:
-        return "", "", []
-    levels = conn.execute(
-        "SELECT level_date, level FROM index_level"
-        " WHERE index_id = ? ORDER BY level_date",
-        (row[0],),
-    ).fetchall()
-    return str(row[0]), str(row[1]), [(r[0], r[1]) for r in levels]
-
-
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--scheme", required=True, help="scheme_id (an ISIN)")
@@ -97,7 +73,7 @@ def main() -> None:
         conn.row_factory = sqlite3.Row
         md = WarehouseMarketDataProvider(conn)
         scheme_id = SchemeId(args.scheme)
-        index_id, index_name, levels = benchmark_for(conn, str(scheme_id))
+        index_id = md.benchmark_for(scheme_id)
 
         full = md.nav_series(scheme_id, date.min, date.today(), adjusted=True)
         if len(full) < 2:
@@ -110,6 +86,14 @@ def main() -> None:
         # One slice, used by every figure below. Rolling returns once took
         # `full`, so --as-of moved the table and not the distribution.
         upto = [p for p in full if p.nav_date <= as_of]
+        # Through the provider, one level per NAV date. A benchmark comparison
+        # pairs same-day prices, so a level on a day the fund did not price is
+        # never used and never needs reading.
+        levels = [
+            (p.nav_date, level)
+            for p in upto
+            if index_id and (level := md.index_level(index_id, p.nav_date)) is not None
+        ]
 
         print(f"FUND X-RAY  {args.scheme}   as of {as_of}")
 
@@ -215,7 +199,7 @@ def main() -> None:
         versus = [w for w in shown if w.beta is not None]
         if versus:
             print()
-            print(f"  vs {index_name[:28]:28} {'bench':>8} {'beta':>6}"
+            print(f"  vs {str(index_id)[:28]:28} {'bench':>8} {'beta':>6}"
                   f" {'t.err':>7} {'alpha':>7} {'up':>6} {'down':>6}")
             print("  " + "-" * 74)
             for w in versus:
@@ -226,14 +210,14 @@ def main() -> None:
                 dn = f"{w.down_capture:>6.2f}" if w.down_capture is not None else dash6
                 te = (f"{w.tracking_error * 100:>6.2f}%"
                       if w.tracking_error is not None else dash7)
-                print(
-                    f"  {w.window_key:31} {w.bench_return_ann * 100:>7.2f}%"
-                    f" {w.beta:>6.2f} {te} {al} {up} {dn}"
-                )
+                bm = (f"{w.bench_return_ann * 100:>7.2f}%"
+                      if w.bench_return_ann is not None else f"{chr(45):>8}")
+                print(f"  {w.window_key:31} {bm} {w.beta:>6.2f} {te} {al} {up} {dn}")
         elif index_id:
             print()
-            print(f"  benchmark {index_name} is on record but has no levels over")
-            print("  these windows -- python -m jobs.fetch_index --held")
+            print(f"  benchmark {index_id} is on record, but too little of its")
+            print("  series overlaps these windows to compare against --")
+            print("  python -m jobs.fetch_index --held")
         else:
             print()
             print("  no benchmark on record for this scheme: alpha, beta, tracking")

@@ -411,14 +411,20 @@ def test_a_flat_benchmark_has_no_beta_rather_than_an_infinite_one() -> None:
     assert beta([Decimal("0.01")] * 5, [Decimal(0)] * 5) is None
 
 
-def test_a_window_with_too_little_overlap_reports_no_benchmark_fields() -> None:
-    """Below a month of paired days a beta is noise dressed as a number."""
+def test_too_little_overlap_keeps_the_benchmark_and_computes_nothing() -> None:
+    """Below a month of paired days a beta is noise dressed as a number, so none
+    is reported -- but the scheme still HAS a benchmark, and the id says so.
+
+    This asserted `benchmark_id is None` until review. It had pinned the defect:
+    "too little data" read exactly the same as "no benchmark at all".
+    """
     from src.m2_fund.windows import compute_return_window
 
     navs = series(["100", "101", "102", "103"])
     w = compute_return_window(navs, "1y", levels(["50", "51", "52", "53"]), "NSE:X_TRI")
     assert w is not None
-    assert w.beta is None and w.benchmark_id is None
+    assert w.beta is None and w.tracking_error is None
+    assert w.benchmark_id == "NSE:X_TRI"
 
 
 def test_a_window_with_no_benchmark_at_all_leaves_every_field_none() -> None:
@@ -429,3 +435,53 @@ def test_a_window_with_no_benchmark_at_all_leaves_every_field_none() -> None:
     for field in ("benchmark_id", "beta", "tracking_error", "alpha_ann",
                   "up_capture", "down_capture", "information_ratio"):
         assert getattr(w, field) is None, field
+
+
+# --- review fixes: the benchmark path ------------------------------------------
+
+
+@pytest.mark.parametrize("bad", ["0", "-5"])
+def test_a_non_positive_benchmark_level_raises_naming_the_index(bad: str) -> None:
+    """NAVs were validated and index levels were not, though the same arithmetic
+    divides by both. A zero level was a bare ZeroDivisionError naming nothing;
+    a negative one was a return that looked like a number. Invariant 5."""
+    from src.m2_fund.windows import NonPositiveLevel, compute_return_window
+
+    navs = series([str(100 + i) for i in range(30)])
+    values = [str(1000 + i) for i in range(30)]
+    values[10] = bad
+    with pytest.raises(NonPositiveLevel, match="NSE:X_TRI"):
+        compute_return_window(navs, "1y", levels(values), "NSE:X_TRI")
+
+
+def test_returns_of_an_aligned_series_is_what_paired_returns_gives() -> None:
+    """`_against` now builds the intersection once and reuses it. The two
+    routes to a pair of return series must agree exactly."""
+    from src.m2_fund.risk import aligned, paired_returns, returns_of
+
+    navs = series(["100", "102", "99", "104"])
+    index = levels(["500", "510", "495", "520"])
+    assert returns_of(aligned(navs, index)) == paired_returns(navs, index)
+
+
+def test_capture_treats_a_mismatched_pair_as_its_siblings_do() -> None:
+    """`beta` and `tracking_error` gave None for mismatched lengths and `capture`
+    raised. A caller guarding on one was unprotected calling the next."""
+    from src.m2_fund.risk import beta, capture, tracking_error
+
+    fund, bench = [Decimal("0.01")] * 3, [Decimal("0.01")] * 2
+    assert beta(fund, bench) is None
+    assert tracking_error(fund, bench) is None
+    assert capture(fund, bench, rising=True) is None
+    assert capture(fund, bench, rising=False) is None
+
+
+def test_capture_survives_a_zero_denominator_no_market_produces() -> None:
+    """Two falling-day returns of -200% multiply back to exactly 1, so the
+    denominator is zero. The review called this guard unreachable; working the
+    fix showed otherwise, and this pins the case that reaches it. No real price
+    series gets here -- levels are validated positive upstream."""
+    from src.m2_fund.risk import capture
+
+    falls = [Decimal("-2"), Decimal("-2")]
+    assert capture([Decimal("-0.5"), Decimal("-0.5")], falls, rising=False) is None

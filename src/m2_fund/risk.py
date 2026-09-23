@@ -180,7 +180,18 @@ def paired_returns(
     misses a Tuesday, Monday-to-Wednesday is one return on both sides rather
     than a gap on one side and two steps on the other.
     """
-    common = aligned(navs, levels)
+    return returns_of(aligned(navs, levels))
+
+
+def returns_of(
+    common: list[tuple[date, Decimal, Decimal]],
+) -> tuple[list[Decimal], list[Decimal]]:
+    """Fund and benchmark returns from a series `aligned` already built.
+
+    Split out so a caller that needs the aligned series for something else --
+    `_against` takes the benchmark's own return from its endpoints -- builds
+    the intersection once rather than twice over a 3,895-level series.
+    """
     fund = [cur[1] / prev[1] - 1 for prev, cur in pairwise(common)]
     bench = [cur[2] / prev[2] - 1 for prev, cur in pairwise(common)]
     return fund, bench
@@ -266,7 +277,13 @@ def capture(fund: list[Decimal], bench: list[Decimal], *, rising: bool) -> Decim
     Compounded over the days the benchmark rose (or fell), not averaged: a
     ratio of arithmetic means describes a portfolio nobody holds. Above 1 on
     the up side and below 1 on the down side is the shape every fund claims.
+
+    Mismatched lengths give None, as they do for `beta` and `tracking_error`:
+    three siblings taking the same pair must agree on what a malformed one
+    means, or a caller guarding on one is unprotected calling the next.
     """
+    if len(fund) != len(bench):
+        return None
     picked = [
         (f, b) for f, b in zip(fund, bench, strict=True) if (b > 0) is rising and b != 0
     ]
@@ -276,6 +293,11 @@ def capture(fund: list[Decimal], bench: list[Decimal], *, rising: bool) -> Decim
     for f, b in picked:
         grow_f *= 1 + f
         grow_b *= 1 + b
+    # Reachable, though by no real price series. A falling-day return below
+    # -100% makes its factor negative, and two such factors multiply back to
+    # exactly 1: (1 - 2) * (1 - 2). That is a zero denominator. `_against`
+    # rejects non-positive levels before any of this runs, so it fires only
+    # when this is called directly with data no market produces.
     if grow_b == 1:
         return None
     return ((grow_f - 1) / (grow_b - 1)).quantize(RATE_Q)

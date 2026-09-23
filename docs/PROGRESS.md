@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,284 tests passing
+**Last updated:** 2026-09-23 · 1,299 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -267,14 +267,14 @@ Ordered by what they cost.
      funds, benchmarked mostly to CRISIL indices, which are not published
      free.
 
-0. **For 54 of NSE's 259 indices, the catalogue and the level series mint
-   different ids.** `index_id_for` keeps a trailing "Index" in a name and
-   `index_key` strips it. A scheme is matched to the catalogue's
-   `…_INDEX_TRI`, while a level series whose provider name leaves the word off
-   loads under `…_TRI` — a second row that no scheme points at. Every benchmark
-   statistic for those funds is then `None`, and nothing raises. It has not
-   fired yet — none of the 23 indices loaded so far has such a name — and it
-   has to be fixed before the rest of the backfill runs.
+0. ~~**For 54 of NSE's 259 indices, the catalogue and the level series mint
+   different ids.**~~ **Closed 2026-09-23.** `index_id_for` keeps a trailing
+   "Index" that `index_key` strips, so a level series whose name left the word
+   off minted a second id that no scheme pointed at. The catalogue now mints an
+   id once, and a level series attaches to the registered row by key; a key
+   matching two rows raises. It never fired: every benchmarked index with such
+   a name is a debt index, and NSE publishes no TRI for those. Only a manual
+   `--backfill` of one could have reached it.
 
 0. **`rebuild_weights` commits, so it cannot compose into a caller's
    transaction.** A job that loaded holdings and then rebuilt weights would
@@ -323,20 +323,19 @@ Ordered by what they cost.
 7. **`data_only=True` returns None for a workbook Excel never cached.** Would
    reproduce V1-36's silent row-drop. Not observed; worth a loud check when a
    file of that shape appears.
-8. **Three latent defects in S12's benchmark path.** Index levels are never
-   checked for being positive, where NAVs are; a zero level would raise a bare
-   division error from inside M2 naming nothing. A window with too little
-   overlap drops its `benchmark_id`, so "not enough data" reads the same as
-   "no benchmark". And a year that returns no levels leaves its archived
-   response marked unparsed, where a retry job would find it forever.
+8. ~~**Three latent defects in S12's benchmark path.**~~ **Closed 2026-09-23.**
+   Index levels are now refused when not positive, as NAVs are. A window with
+   too little overlap keeps its `benchmark_id`, so "not enough data" no longer
+   reads as "no benchmark". And a year that returns no levels is marked parsed
+   rather than left `pending`.
 
 ## Next
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Fix the index-id divergence, then finish the S12 backfill** —
-  `python -m jobs.fetch_index --held`. About 70 minutes at NSE's rate limit,
-  and it has to come after the fix or it writes rows that need cleaning up.
+- **Finish the S12 backfill** — `python -m jobs.fetch_index --held`. About 70
+  minutes at NSE's rate limit, for the 100 benchmarked indices with no levels
+  yet; the debt indices among them will report no series, which is expected.
 - **Active funds' benchmarks** from the S5 disclosures that print them.
 - **More discovery adapters**, one per house, as funds are actually held.
 - **Run ICICI's ZIP end to end** — the expansion is built and tested, never

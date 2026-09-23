@@ -29,6 +29,7 @@ from src.m0_data.parse.holdings.base import READER_VERSION
 from src.m0_data.parse.index.nifty import StagedIndexLevel
 from src.m0_data.parse.mcap.amfi import McapParseResult
 from src.m0_data.parse.nav.amfi import AmfiParseResult, StagedNav, StagedScheme
+from src.m0_data.resolve.benchmark import Ambiguous
 from src.m0_data.resolve.cascade import RESOLVER_VERSION, resolve
 
 
@@ -177,6 +178,33 @@ class MixedIndexResponse(ValueError):
     """One response carried levels for more than one index. S12."""
 
 
+def _registered_index(
+    conn: sqlite3.Connection, key: str, is_total_return: bool
+) -> str | None:
+    """The registered index whose name or trading name has this key, if any.
+
+    Exact key equality, not the matcher's longest-substring search: this is
+    identity, and a level series either IS a registered index or is new.
+    Two rows sharing a key raises rather than picking one -- the real catalogue
+    has no such pair today, and filing a series under the wrong one of two
+    would be the silent mis-assignment this function exists to prevent.
+    """
+    if not key:
+        return None
+    hits = {
+        str(index_id)
+        for index_id, name, trading in conn.execute(
+            "SELECT index_id, index_name, trading_name FROM benchmark_index"
+            " WHERE is_total_return = ?",
+            (int(is_total_return),),
+        )
+        if key in (index_key(name), index_key(trading or ""))
+    }
+    if len(hits) > 1:
+        raise Ambiguous(f"{key!r} matches {len(hits)} registered indices: {sorted(hits)}")
+    return hits.pop() if hits else None
+
+
 def load_index_levels(
     conn: sqlite3.Connection,
     staged: list[StagedIndexLevel],
@@ -221,19 +249,31 @@ def load_index_levels(
 
     # The most common spelling, ties broken alphabetically so the same archived
     # bytes always store the same name (invariant 10).
-    spellings = next(iter(by_key.values()))
+    key, spellings = next(iter(by_key.items()))
     name = max(sorted(set(spellings)), key=spellings.count)
-    index_id = index_id_for(name, provider=provider, is_total_return=is_total_return)
+
+    # The catalogue mints an index's id once, and levels ATTACH to it. Minting
+    # again from the response's own spelling is how one index became two rows:
+    # the catalogue says `Nifty 1D Rate Index`, a level series may say `Nifty
+    # 1D Rate`, and `index_id_for` -- which keeps a trailing "Index" -- turns
+    # those into two ids. 54 of NSE's 259 names end in that word. Their keys
+    # agree, so the key finds the registered row; only an index the catalogue
+    # has never seen gets an id minted here.
+    index_id = _registered_index(conn, key, is_total_return) or index_id_for(
+        name, provider=provider, is_total_return=is_total_return
+    )
     first = min(s.level_date for s in staged)
     last = max(s.level_date for s in staged)
 
+    # `index_name` is NOT updated on conflict. An existing row's name is the
+    # catalogue's -- the provider's canonical spelling -- and a level response
+    # prints whatever casing it likes that day.
     conn.execute(
         """
         INSERT INTO benchmark_index
             (index_id, index_name, is_total_return, provider, first_seen, last_seen)
         VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(index_id) DO UPDATE SET
-            index_name = excluded.index_name,
             first_seen = MIN(COALESCE(benchmark_index.first_seen, excluded.first_seen),
                              excluded.first_seen),
             last_seen  = MAX(COALESCE(benchmark_index.last_seen, excluded.last_seen),

@@ -51,7 +51,7 @@ from src.m2_fund.risk import (
     downside_deviation,
     information_ratio,
     max_drawdown,
-    paired_returns,
+    returns_of,
     sharpe,
     sortino,
     tracking_error,
@@ -134,10 +134,12 @@ class ReturnWindow:
     risk_free_pct: Decimal | None = None
     sharpe: Decimal | None = None
     sortino: Decimal | None = None
-    #: All None unless the scheme has a `benchmark_id` AND that index has levels
-    #: over this window. 1,573 of 19,598 schemes carry one (S12), so these are
-    #: optional in the ordinary way -- not the "absent because unavailable"
-    #: case the module docstring describes.
+    #: `benchmark_id` is set whenever the scheme has a benchmark. The statistics
+    #: below it are None unless that index also overlaps this window by at
+    #: least `MIN_PAIRED_OBS` days -- so an id with no beta means "too little
+    #: data", and no id means "no benchmark". 1,573 of 19,598 schemes carry one
+    #: (S12), so these are optional in the ordinary way, not the "absent
+    #: because unavailable" case the module docstring describes.
     benchmark_id: str | None = None
     bench_return_ann: Decimal | None = None
     beta: Decimal | None = None
@@ -154,11 +156,22 @@ class ReturnWindow:
 MIN_PAIRED_OBS = 20
 
 
+class NonPositiveLevel(ValueError):
+    """An index level at or below zero. Invariant 5, as `NonPositiveNav` is.
+
+    A zero level makes the paired-return arithmetic a bare ZeroDivisionError
+    naming nothing, and a negative one produces a return that looks like a
+    number. `migrations/014_index.sql` has no CHECK on `level`, so this is
+    where the series is refused.
+    """
+
+
 def _against(
     navs: list[NavPoint],
     benchmark: list[tuple[date, Decimal]] | None,
     fund_ann: Decimal,
     rf: Decimal | None,
+    benchmark_id: str | None = None,
 ) -> dict[str, Decimal | None]:
     """The benchmark-relative half of a window, or `{}` when there is none.
 
@@ -176,8 +189,16 @@ def _against(
     common = aligned(navs, benchmark)
     if len(common) < MIN_PAIRED_OBS:
         return {}
+    # Only the levels actually divided by are checked -- the list passed in is
+    # the index's whole history, and re-validating 3,895 levels on each of four
+    # windows buys nothing the arithmetic needs.
+    for level_date, _, level in common:
+        if level <= 0:
+            raise NonPositiveLevel(
+                f"{benchmark_id or 'benchmark'} priced {level} on {level_date}"
+            )
 
-    fund_rets, bench_rets = paired_returns(navs, benchmark)
+    fund_rets, bench_rets = returns_of(common)
     span = (common[-1][0] - common[0][0]).days
     if span <= 0:
         return {}
@@ -256,7 +277,7 @@ def compute_return_window(
     # that cost something different at the time.
     rf = risk_free_on(first.nav_date)
 
-    bench = _against(navs, benchmark, ann, rf)
+    bench = _against(navs, benchmark, ann, rf, benchmark_id)
 
     return ReturnWindow(
         window_key=window_key,
@@ -275,7 +296,10 @@ def compute_return_window(
             if rf is not None
             else None
         ),
-        benchmark_id=benchmark_id if bench else None,
+        # The scheme's benchmark whether or not this window had enough overlap
+        # to compare against it. Dropping it when the statistics come out empty
+        # made "too little data" read the same as "no benchmark at all".
+        benchmark_id=benchmark_id or None,
         **bench,
     )
 
