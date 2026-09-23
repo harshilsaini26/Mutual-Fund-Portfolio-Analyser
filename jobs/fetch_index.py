@@ -3,9 +3,15 @@
 Three things, because they are three different cadences:
 
     python -m jobs.fetch_index --catalogue     # 259 indices, rarely changes
-    python -m jobs.fetch_index --resolve       # fills scheme.benchmark_id
+    python -m jobs.fetch_index --resolve       # benchmark_id from fund names
+    python -m jobs.fetch_index --declared      # benchmark_id from disclosures
     python -m jobs.fetch_index --backfill "Nifty 50" --from 2011 --to 2026
     python -m jobs.fetch_index --held --from 2011   # every index a fund needs
+
+`--resolve` reaches index funds and ETFs, whose names carry their index.
+`--declared` reaches active funds, whose names do not, by reading the
+benchmark each archived disclosure states. It wins where the two disagree:
+a stated benchmark is a fact, a name is an inference.
 
 `--catalogue` and `--resolve` are cheap and offline-ish; `--backfill` is the
 expensive one. NSE caps a request at one calendar year, so fifteen years is
@@ -23,8 +29,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Any
 
 from src.common.decimals import connect
@@ -46,8 +54,15 @@ from src.m0_data.load import (
 )
 from src.m0_data.normalise.index_id import index_key
 from src.m0_data.parse.base import ParseFailed
+from src.m0_data.parse.holdings.benchmark import declared_benchmarks
 from src.m0_data.parse.index.nifty import PARSER_ID, PARSER_VERSION, parse_tri
-from src.m0_data.resolve.benchmark import BenchmarkMatcher, resolve_scheme_benchmarks
+from src.m0_data.resolve.benchmark import (
+    Benchmark,
+    BenchmarkMatcher,
+    apply_declared,
+    resolve_declared,
+    resolve_scheme_benchmarks,
+)
 
 SOURCE_ID = "S12"
 
@@ -214,6 +229,88 @@ def held_indices(conn: Any) -> list[str]:
     return [str(r[0]) for r in rows]
 
 
+def plan_declared(
+    conn: Any, matcher: BenchmarkMatcher
+) -> tuple[dict[tuple[str, str], Benchmark], Counter[str], list[str]]:
+    """Every archived disclosure's stated benchmark, resolved, newest per family.
+
+    Returns `(plan, tally, conflicts)`. Writes nothing -- `apply_declared` does
+    -- so a run can be measured before it changes a row.
+
+    Sheets are identified to a scheme family by `discover_sheets`, the same
+    path `ingest_inbox` loads them through; this adds no second way of deciding
+    which fund a sheet describes. A family appears in every archived
+    disclosure of it, and the newest statement is the one that stands: SEBI
+    moved benchmarks in 2021, and an old disclosure's is not the current one.
+    """
+    # Imported here: `jobs.load_holdings` pulls openpyxl and the whole parser
+    # registry in at import (V1-48), and no other flag of this job needs them.
+    import openpyxl
+
+    from jobs.ingest_inbox import _amc_for
+    from jobs.load_holdings import discover_sheets
+
+    files = conn.execute(
+        "SELECT storage_path FROM raw_file"
+        " WHERE source_id LIKE 'S5:%' AND storage_path LIKE '%.xlsx'"
+    ).fetchall()
+    tally: Counter[str] = Counter()
+    found: dict[tuple[str, str], list[tuple[date, Benchmark]]] = defaultdict(list)
+    for (storage_path,) in files:
+        path = Path(storage_path)
+        if not path.exists():
+            tally["archived file missing"] += 1
+            continue
+        # Detected from the file, never read off the archive tag. The tag is
+        # `S5:nippon` where Nippon's schemes are filed under `nippon_india`, so
+        # trusting it looked every Nippon sheet up under a fund house with no
+        # schemes: 107 sheets stating a benchmark, 0 identified. `_amc_for` is
+        # what `ingest_inbox` itself uses, so this cannot disagree with how the
+        # disclosure was loaded.
+        amc, _, _ = _amc_for(conn, path)
+        if not amc:
+            tally["fund house not identified"] += 1
+            continue
+        entries, refusals = discover_sheets(conn, path, amc)
+        tally["sheet not identified"] += len(refusals)
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+        try:
+            for entry in entries:
+                sheet = workbook[entry["sheet"]]
+                rows = [list(r) for r in sheet.iter_rows(values_only=True)]
+                bm, reason = resolve_declared(declared_benchmarks(rows), matcher)
+                tally[reason] += 1
+                if bm is not None:
+                    found[(entry["amc_id"], entry["family"])].append((entry["as_of"], bm))
+        finally:
+            workbook.close()
+
+    plan, conflicts = newest_per_family(found)
+    return plan, tally, conflicts
+
+
+def newest_per_family(
+    found: dict[tuple[str, str], list[tuple[date, Benchmark]]],
+) -> tuple[dict[tuple[str, str], Benchmark], list[str]]:
+    """The benchmark each family's newest disclosure states.
+
+    Older disclosures lose: SEBI moved many schemes' benchmarks in 2021, and a
+    2019 sheet's is not the one in force. Two sheets of the newest date that
+    disagree are a conflict and the family is left out of the plan -- picking
+    either is a guess, so it keeps whatever it already had.
+    """
+    plan: dict[tuple[str, str], Benchmark] = {}
+    conflicts: list[str] = []
+    for family, stated in found.items():
+        newest = max(when for when, _ in stated)
+        current = {b.index_id: b for when, b in stated if when == newest}
+        if len(current) > 1:
+            conflicts.append(f"{family[1]}: {sorted(current)}")
+            continue
+        plan[family] = next(iter(current.values()))
+    return plan, conflicts
+
+
 def one_per_index(names: list[str]) -> list[str]:
     """Each index once, first spelling kept, order preserved.
 
@@ -236,6 +333,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="register the indices NSE publishes")
     parser.add_argument("--resolve", action="store_true",
                         help="fill scheme.benchmark_id from each scheme's name")
+    parser.add_argument("--declared", action="store_true",
+                        help="fill scheme.benchmark_id from what disclosures state")
     parser.add_argument("--backfill", metavar="INDEX",
                         help="fetch TRI levels for one index, by its NSE name")
     parser.add_argument("--held", action="store_true",
@@ -244,8 +343,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--to", dest="to_year", type=int, default=date.today().year)
     args = parser.parse_args(argv)
 
-    if not any((args.catalogue, args.resolve, args.backfill, args.held)):
-        parser.error("nothing to do: pass --catalogue, --resolve, --backfill or --held")
+    if not any((args.catalogue, args.resolve, args.declared, args.backfill, args.held)):
+        parser.error(
+            "nothing to do: pass --catalogue, --resolve, --declared, --backfill or --held"
+        )
 
     # Checked here, not left to `year_chunks`. Its ValueError is outside the
     # per-index isolation below, so a mistyped year used to kill the run with a
@@ -274,6 +375,23 @@ def main(argv: list[str] | None = None) -> int:
             conn.commit()
             print(f"resolve: {counts['filled']} of {counts['considered']} schemes"
                   f" matched against {len(matcher)} index spellings")
+
+        # Before the backfill below, so an index only a disclosure names is in
+        # `held_indices` by the time `--held` asks for it.
+        if args.declared:
+            plan, tally, conflicts = plan_declared(
+                conn, BenchmarkMatcher.from_warehouse(conn)
+            )
+            written = apply_declared(conn, plan)
+            conn.commit()
+            print(f"declared: {len(plan)} families resolved;"
+                  f" {written['schemes']} share classes"
+                  f" ({written['was_null']} new, {written['changed']} replacing an"
+                  f" inferred one, {written['unchanged']} already agreed)")
+            for reason, n in tally.most_common():
+                print(f"    {n:5}  {reason}")
+            for conflict in conflicts:
+                print(f"    conflict  {conflict}")
 
         names = [args.backfill] if args.backfill else []
         wanted = one_per_index(names + (held_indices(conn) if args.held else []))

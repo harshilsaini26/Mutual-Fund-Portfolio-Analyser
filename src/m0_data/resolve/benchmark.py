@@ -111,6 +111,22 @@ class BenchmarkMatcher:
                 return Benchmark(index_id=index_id, index_name=name, basis=basis)
         return None
 
+    def exact(self, text: str, *, basis: str = "declared") -> Benchmark | None:
+        """The catalogue index this text IS, by key equality, or None.
+
+        For text that names an index outright -- a disclosure's benchmark
+        row -- containment is the wrong test. `match` looks for an index
+        inside a fund's name, and inside `Nifty Liquid Index A-I` it finds
+        `Nifty Liquid Index`: a different index, and the plausible kind of
+        wrong. Equality is identity; containment is recognition.
+        """
+        if is_composite(text):
+            return None
+        hit = self._by_key.get(index_key(text))
+        if hit is None:
+            return None
+        return Benchmark(index_id=hit[0], index_name=hit[1], basis=basis)
+
 
 def resolve_scheme_benchmarks(
     conn: sqlite3.Connection, matcher: BenchmarkMatcher | None = None
@@ -142,3 +158,72 @@ def resolve_scheme_benchmarks(
         )
         filled += 1
     return {"considered": len(rows), "filled": filled}
+
+
+def resolve_declared(
+    texts: list[str], matcher: BenchmarkMatcher
+) -> tuple[Benchmark | None, str]:
+    """What a disclosure's stated benchmarks resolve to, and why if nothing.
+
+    Returns `(benchmark, reason)`. The reasons are the tally a run reports:
+    `declared` for a resolved index, and otherwise the specific refusal.
+
+    Strict on purpose. Every distinct text on the sheet must resolve to the
+    same one index: a sheet stating an NSE index beside a CRISIL one has not
+    said which is its primary, and using the one we happen to recognise is
+    choosing for the AMC. No archived sheet states two today, so this costs
+    nothing now and stops a guess later (invariant 5).
+    """
+    distinct = list(dict.fromkeys(texts))
+    if not distinct:
+        return None, "none stated"
+    if any(is_composite(t) for t in distinct):
+        return None, "composite"
+    resolved = [matcher.exact(t) for t in distinct]
+    if any(b is None for b in resolved):
+        # CRISIL and BSE indices, a gold or silver price: real benchmarks,
+        # just not ones NSE publishes a total-return series for.
+        return None, "not an NSE index"
+    ids = {b.index_id for b in resolved if b is not None}
+    if len(ids) > 1:
+        return None, "states two indices"
+    return resolved[0], "declared"
+
+
+def apply_declared(
+    conn: sqlite3.Connection, plan: dict[tuple[str, str], Benchmark]
+) -> dict[str, int]:
+    """Write each family's declared benchmark onto every share class in it.
+
+    `plan` maps `(amc_id, scheme_family)` to its benchmark. The whole family,
+    because a disclosure describes a scheme and every share class of it holds
+    the identical portfolio (V1-37) -- so Direct, Regular and each IDCW
+    variant are measured against the same index.
+
+    Overwrites a name-inferred benchmark. That is the precedence
+    `resolve_scheme_benchmarks` was written for: a benchmark the AMC stated is
+    a fact, one read out of a fund's name is an inference, and the inference
+    only ever fills a NULL. Running this after `--resolve` or before it gives
+    the same result.
+    """
+    counts = {"families": 0, "schemes": 0, "was_null": 0, "changed": 0, "unchanged": 0}
+    for (amc_id, family), bm in plan.items():
+        rows = conn.execute(
+            "SELECT scheme_id, benchmark_id FROM scheme"
+            " WHERE scheme_family = ? AND amc_id = ?",
+            (family, amc_id),
+        ).fetchall()
+        if not rows:
+            continue
+        counts["families"] += 1
+        for scheme_id, current in rows:
+            counts["schemes"] += 1
+            if current == bm.index_id:
+                counts["unchanged"] += 1
+                continue
+            counts["was_null" if current is None else "changed"] += 1
+            conn.execute(
+                "UPDATE scheme SET benchmark_id = ? WHERE scheme_id = ?",
+                (bm.index_id, scheme_id),
+            )
+    return counts

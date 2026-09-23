@@ -254,6 +254,9 @@ def discover_sheets(
             "parser": parser.parser_id,
             "matched_by": match.method,
             "family": match.family,
+            # A family can appear in several archived disclosures; a caller
+            # wanting the current statement of anything needs the newest.
+            "as_of": parsed[name].as_of_date,
         })
     return entries, refusals
 
