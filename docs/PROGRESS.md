@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,403 tests passing
+**Last updated:** 2026-09-23 · 1,412 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -337,16 +337,19 @@ Ordered by what they cost.
    surfacing its stale rows, because `materialise_weights` returns 0 without
    deleting.
 
-0. **Most debt holdings are classed as `equity`.** Of 11,639 current holding
-   rows only 649 are `debt`; 18.0% of all equity-classed weight sits on ISINs
-   whose security code is not equity shares (`INE…07/08` bonds, `14` commercial
-   paper, `16` certificates of deposit) in Kotak, Nippon, ICICI and PPFAS files
-   among others, the rating often landing in `reported_sector`. Every equity-scoped figure
-   inherits it: concentration's equity pool, `overlap_equity_pct`, marginal
-   HHI, and the size profile, where a bank's CD counts as large-cap equity. An
-   all-equity portfolio barely moves (0.5% in a four-fund check); one holding a
-   liquid or hybrid fund does. Found 2026-09-23 building the size profile. The
-   fix is at parse time, not in each consumer.
+0. ~~**Most debt holdings are classed as `equity`.**~~ **Closed 2026-09-23.**
+   18.0% of all equity-classed weight sat on bond, CP and CD ISINs, so every
+   equity-scoped figure (concentration, `overlap_equity_pct`, marginal HHI, the
+   size profile) counted debt as equity. Two causes in the shared reader: debt
+   headings it did not know (`Certificate of Deposit`, `Commercial Paper`,
+   `Non Convertible Debentures`) fell back to equity, and Kotak's listing-status
+   heading (`Listed/Awaiting listing…`) replaced the instrument heading above it
+   and read as equity. Fixed at parse time (reader 5), plus one precedence rule:
+   a row whose own name resolved to cash is cash under a borrowed heading.
+   All 204 AMC disclosures re-derived as new revisions: 2,759 rows moved
+   (2,491 to debt, 178 to cash), no equity share (`INE…01`) left equity, and
+   the debt share of equity weight fell to 0.22% — Kotak's REITs, which Kotak
+   itself files under equity. The aggregator page re-derives on its next fetch.
 0. **`scheme_aum` retracts by DELETE, because it has no revision.** V1-54 scoped the
    delete to one quarter, but invariant 2 forbids even an `UPDATE` of a fact row and
    this table deletes them. The fix is `revision`/`is_current` as every other fact
@@ -371,10 +374,11 @@ Ordered by what they cost.
    What remains bucketed is honest: 17 of the 53 funds held as units have no
    disclosure of their own, and a unit staged without an ISIN (the aggregator
    tier) has nothing to resolve against.
-5. **204 disclosures predate the AUM witness.** V2 runs now (V1-49) and
-   `scheme_aum` covers 99.5% of schemes with a disclosure, but rows loaded
-   before the table existed keep `aum_reported` NULL and record V2 as "did not
-   run". They pick it up on their next revision; nothing back-fills a fact row.
+5. ~~**204 disclosures predate the AUM witness.**~~ **Closed 2026-09-23.** The
+   reader-5 re-derive gave every AMC disclosure a new revision, and V2 ran on
+   all of them. 17 fail it — 13 Kotak, 4 Nippon, portfolio totals 25% to 640%
+   off AMFI's quarterly-average AUM — and are now `quarantined`. Nothing reads
+   `validation_status` yet (defect 3), so the look-through still uses them.
 6. **Four latent defects in the fetch and status layers.** `extra_headers` can
    override the User-Agent the robots check used; the retry loop replays POSTs;
    `jobs/status.py:standings` picks a parser from an unordered set when a house
@@ -412,9 +416,9 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Class debt holdings as debt.** The defect at the top of the list below
-  skews every equity-only figure for a portfolio that holds a debt or hybrid
-  fund.
+- **Decide what a quarantined disclosure means.** 17 fail V2 now, and
+  nothing reads `validation_status` (defect 3), so they still feed the
+  look-through.
 - **Remember which indices have no series**, so a refresh stops asking NSE
   for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.

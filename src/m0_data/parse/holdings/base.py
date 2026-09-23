@@ -160,7 +160,29 @@ HEADER_SCAN_ROWS = 6
 #: re-parses the disclosures the old rule got wrong (V1-36).
 #:
 #: Bump on any change that would read an already-loaded file differently.
-READER_VERSION = "4"
+#: 5: a listing-status heading nests under the instrument heading above it.
+READER_VERSION = "5"
+
+#: A heading that says how a security trades, not what it is. Kotak prints
+#: `Debentures and Bonds`, then `Listed/Awaiting listing on Stock Exchange`
+#: beneath it; kept as the whole section, the second heading's "listed" read as
+#: equity and every Kotak bond, CP and CD was classed equity with it.
+LISTING_STATUS = re.compile(r"^\s*(listed|unlisted|privately placed|awaiting)", re.I)
+
+#: Between a heading and the listing status nested under it.
+NEST = " :: "
+
+
+def nest(section: str | None, label: str) -> str:
+    """The section a row sits in once `label` is read.
+
+    A listing status qualifies the instrument heading above it rather than
+    replacing it, so the type survives for `instrument_class`; a sibling status
+    replaces the previous one. Any other heading replaces the section outright.
+    """
+    if section and LISTING_STATUS.match(label):
+        return f"{section.split(NEST)[0]}{NEST}{label}"
+    return label
 
 #: How close a candidate subtotal must sit to the sum of the rows beneath it
 #: before it is read as their total rather than as a position of its own. One
@@ -366,8 +388,8 @@ def _stage_row(
         after_total = True
     if kind == "blank":
         return section, after_total
-    if kind == "section_header":
-        section = (name or isin).strip() or section
+    if kind == "section_header" and (name or isin).strip():
+        section = nest(section, (name or isin).strip())
     if kind == "unknown":
         # §6.4: staged and surfaced, never discarded. An unrecognised row in a
         # disclosure is a holding we may be missing.
@@ -522,7 +544,7 @@ def _assign_section(
         return
     for position in range(offset + 1, last + 1):
         index = positions[position]
-        staged[index] = replace(staged[index], section=label)
+        staged[index] = replace(staged[index], section=nest(staged[index].section, label))
 
 
 def classify_row(

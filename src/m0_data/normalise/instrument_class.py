@@ -30,6 +30,11 @@ from __future__ import annotations
 #: **Order is load-bearing.** `derivative` precedes `cash` so `Repo Future`
 #: reads as the contract it is, and `cash` precedes `debt` so `Cash Margin`
 #: does not become a bond. Reordering these is a behaviour change.
+#:
+#: **An unmatched heading falls back to equity**, so every debt heading an AMC
+#: prints has to be here. `Certificate of Deposit`, `Commercial Paper`,
+#: `Non Convertible Debentures` and `Government Dated Securities` were not, and
+#: 18.0% of all equity-classed weight turned out to be bonds, CPs and CDs.
 CLASS_BY_SECTION: tuple[tuple[str, str], ...] = (
     ("option", "derivative"),
     ("future", "derivative"),
@@ -40,12 +45,20 @@ CLASS_BY_SECTION: tuple[tuple[str, str], ...] = (
     ("cash", "cash"),
     ("net current asset", "cash"),
     ("margin", "cash"),
-    ("government securit", "debt"),
+    ("government", "debt"),
+    ("treasury bill", "debt"),
     ("money market", "debt"),
+    ("certificate of deposit", "debt"),
+    ("commercial paper", "debt"),
+    ("debenture", "debt"),
+    ("floating rate", "debt"),
     ("debt", "debt"),
     ("bond", "debt"),
     ("reit", "other"),
     ("invit", "other"),
+    ("infrastructure investment trust", "other"),
+    ("preference share", "other"),
+    ("alternative investment", "other"),
     ("mutual fund", "mfunit"),
     ("equity", "equity"),
     ("listed", "equity"),
@@ -86,8 +99,19 @@ def class_from_section(section: str | None) -> str | None:
 
 
 def instrument_class(section: str | None, issuer_id: str) -> str:
-    """Section first, then the synthetic issuer, then equity."""
+    """Section first, then the synthetic issuer, then equity.
+
+    Except for cash. TREPS and net current assets usually trail a disclosure
+    under no heading of their own, so they carry whichever heading came last —
+    `Units of an Alternative Investment Fund`, `Treasury Bills` — and read as
+    that. A row whose own name resolved to cash is cash, unless its heading is
+    a derivative one: `Repo Future` resolves to `__TREPS__` by name and is
+    still the contract.
+    """
     from_section = class_from_section(section)
+    from_issuer = CLASS_BY_ISSUER.get(issuer_id)
+    if from_issuer == "cash" and from_section != "derivative":
+        return "cash"
     if from_section is not None:
         return from_section
-    return CLASS_BY_ISSUER.get(issuer_id, "equity")
+    return from_issuer or "equity"

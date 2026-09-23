@@ -41,6 +41,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from src.m0_data.normalise.instrument_class import instrument_class
 from src.m0_data.normalise.numbers import CoercionError, to_decimal
 from src.m0_data.normalise.units import (
     UNIT_MULTIPLIER,
@@ -58,6 +59,7 @@ from src.m0_data.parse.holdings.base import (
     TOTAL_TOLERANCE_PCT,
     _as_on_date,
     classify_row,
+    nest,
     reconciliation_error,
 )
 from src.m0_data.parse.holdings.hdfc import HdfcHoldingsParser
@@ -871,7 +873,12 @@ def test_a_demoted_section_labels_its_rows_with_the_innermost_name(
     hdfc_bank = next(
         r for r in icici_real.securities if r.isin_raw == "INE040A01034"
     )
-    assert hdfc_bank.section == "Listed / Awaiting Listing On Stock Exchanges"
+    # The listing status is innermost, and it qualifies the instrument heading
+    # above it rather than replacing it (READER_VERSION 5).
+    assert hdfc_bank.section == (
+        "Equity & Equity Related Instruments (Note -1) :: "
+        "Listed / Awaiting Listing On Stock Exchanges"
+    )
 
 
 def test_the_real_file_keeps_the_holdings_it_should(
@@ -994,6 +1001,7 @@ def test_icici_rows_inherit_the_section_their_subtotal_names(
     equities = [s for s in icici.securities if s.isin_raw]
     assert equities
     assert {s.section for s in equities} == {
+        "Equity & Equity Related Instruments (Note -1) :: "
         "Listed / Awaiting Listing On Stock Exchanges"
     }
     # The cash rows sit under no heading in this sheet, and are left to resolve
@@ -1205,3 +1213,85 @@ def test_a_file_that_states_no_total_reports_the_check_as_absent() -> None:
     """An absent check is reported as absent, never as a pass."""
     empty = HoldingsParseResult()
     assert reconciliation_error(empty) is None
+
+
+# --- instrument class: debt is not equity ------------------------------------
+
+#: Indian ISIN security codes (characters 8-9) that are unambiguously debt:
+#: debentures, bonds, commercial paper, certificates of deposit. The test's
+#: oracle only -- the reader classes by the sheet's own headings.
+DEBT_CODES = {"07", "08", "14", "16", "D6"}
+
+
+def _debt_rows(result: HoldingsParseResult) -> list[StagedHolding]:
+    return [
+        s for s in result.securities
+        if (isin := s.isin_raw or "").startswith("INE") and isin[7:9] in DEBT_CODES
+    ]
+
+
+@pytest.mark.parametrize("fixture", ["ppfas", "icici_real"])
+def test_every_bond_cp_and_cd_in_a_real_file_classes_as_debt(
+    fixture: str, request: pytest.FixtureRequest
+) -> None:
+    """18.0% of equity-classed weight was bonds, CPs and CDs: `Certificate of
+    Deposit`, `Commercial Paper` and `Non Convertible Debentures` matched no
+    heading, and an unmatched heading falls back to equity."""
+    rows = _debt_rows(request.getfixturevalue(fixture))
+    assert rows, "the fixture no longer exercises the path"
+    wrong = {
+        (s.isin_raw, s.section) for s in rows
+        if instrument_class(s.section, "") != "debt"
+    }
+    assert not wrong
+
+
+def test_a_listing_status_qualifies_the_heading_above_it() -> None:
+    """Kotak's sequence, verbatim. Kept alone, the status's "listed" read as
+    equity for every bond, CP and CD Kotak holds."""
+    cp = nest(
+        "Money Market Instruments", "Commercial Paper (CP)/Certificate of Deposits (CD)"
+    )
+    unlisted = nest(cp, "Privately placed / Unlisted")
+    listed = nest(unlisted, "Listed/Awaiting listing on Stock Exchange")
+
+    assert listed == (
+        "Commercial Paper (CP)/Certificate of Deposits (CD) :: "
+        "Listed/Awaiting listing on Stock Exchange"
+    ), "a sibling status replaces the previous one, not stacks on it"
+    assert instrument_class(unlisted, "") == instrument_class(listed, "") == "debt"
+    assert instrument_class(
+        nest("Equity & Equity related", "Listed/Awaiting listing on Stock Exchange"), ""
+    ) == "equity"
+
+
+def test_kotak_overseas_fund_units_are_units_not_equity(
+    kotak: HoldingsParseResult,
+) -> None:
+    """The same nesting, in the real Kotak Pioneer sheet: an overseas fund held
+    as units sits under `Listed/Awaiting listing`, and read alone that made it
+    equity rather than a fund to look through."""
+    unit = next(s for s in kotak.securities if s.isin_raw == "IE00B53SZB19")
+    assert instrument_class(unit.section, "") == "mfunit"
+
+
+@pytest.mark.parametrize(
+    ("section", "issuer", "expected"),
+    [
+        # Trailing cash under the last heading seen: its own identity wins.
+        ("Units of an Alternative Investment Fund (AIF)", "__TREPS__", "cash"),
+        ("Treasury Bills", "__RECV__", "cash"),
+        # A derivative heading still wins: `Repo Future` resolves to __TREPS__.
+        ("Stock Futures", "__TREPS__", "derivative"),
+        # And a real issuer is still classed by its heading.
+        ("Units of an Alternative Investment Fund (AIF)", "DISC:INE0ABC", "other"),
+        ("Infrastructure Investment Trusts :: Listed/Awaiting listing", "X", "other"),
+    ],
+)
+def test_cash_is_cash_under_a_borrowed_heading(
+    section: str, issuer: str, expected: str
+) -> None:
+    """Adding debt headings made a stale one decisive: ICICI's TREPS, printed
+    after its AIF block, read as `other`, and Kotak's after `Treasury Bills` as
+    debt. Before, the stale heading matched nothing and the issuer answered."""
+    assert instrument_class(section, issuer) == expected
