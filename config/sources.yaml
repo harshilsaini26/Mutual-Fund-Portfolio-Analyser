@@ -29,11 +29,23 @@ sources:
     url: "https://www.amfiindia.com/spages/NAVAll.txt"
     parser: nav.amfi
     verified_on: 2026-09-05
-    # This one file is also §2.1's S2 (scheme master): it carries scheme code,
-    # both ISINs, name, plan, option, NAV and date, with AMC and SEBI category
-    # from the section context lines. There is no separate S2 fetch in V0.
-    # DECISIONS V0-20.
+    # This one file lists every scheme: scheme code, both ISINs, name, plan,
+    # option, NAV and date, with AMC and SEBI category from the section context
+    # lines (DECISIONS V0-20). What it lacks -- the fund a share class belongs
+    # to, and when it launched -- comes from S2.
     provides: [nav_daily, scheme, amc]
+
+  S2:
+    name: amfi_scheme_master
+    kind: fixed_url
+    url: "https://portal.amfiindia.com/DownloadSchemeData_Po.aspx?mf=0"
+    parser: scheme_master.amfi
+    verified_on: 2026-09-23
+    # One row per share class. "Scheme Name" names the FUND, identically for
+    # every plan of it, which the share-class name alone could not recover for
+    # older schemes; "Launch Date" is when it launched. Refreshed by
+    # `jobs.fetch_nav` on every run, so it needs no command of its own.
+    provides: [scheme.fund_name, scheme.inception_date]
 
   S6:
     name: mfapi_scheme_nav

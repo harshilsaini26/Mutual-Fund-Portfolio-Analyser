@@ -429,6 +429,29 @@ def load_mcap(
     return counts
 
 
+def load_scheme_master(
+    conn: sqlite3.Connection, parsed: dict[str, tuple[str, date | None]]
+) -> int:
+    """Each known scheme's fund name and launch date, from AMFI's master (S2).
+
+    Only schemes NAVAll already lists: the master describes a scheme, it does
+    not create one. `scheme` is the dimension `derive_scheme_families` already
+    rewrites on every run, so an update is its ordinary state, not a fact
+    being revised.
+    """
+    known = {r[0] for r in conn.execute("SELECT scheme_id FROM scheme")}
+    rows = [
+        (fund, launched, isin)
+        for isin, (fund, launched) in parsed.items()
+        if isin in known
+    ]
+    conn.executemany(
+        "UPDATE scheme SET fund_name = ?, inception_date = ? WHERE scheme_id = ?",
+        rows,
+    )
+    return len(rows)
+
+
 # --- holdings (MODULE_0.md §4.6) --------------------------------------------
 
 

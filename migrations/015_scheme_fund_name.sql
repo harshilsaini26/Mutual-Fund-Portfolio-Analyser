@@ -1,0 +1,12 @@
+-- `scheme.fund_name`: AMFI's name for the FUND, shared by every one of its plans.
+--
+-- From AMFI's scheme master (sources.yaml S2), whose "Scheme Name" column names
+-- a fund once for all its share classes. `scheme_family` was derived from the
+-- share-class name alone, and older schemes carry plan words inside it
+-- (`Kotak Banking and PSU Debt Direct - Growth`), so one fund split into
+-- families and a Direct holder was served none of the portfolio its Regular
+-- sibling disclosed. `derive_scheme_families` keys on this when it is known.
+--
+-- Nullable: 676 of 18,777 ISINs are not in the master, and those keep the
+-- name-derived key.
+ALTER TABLE scheme ADD COLUMN fund_name TEXT;

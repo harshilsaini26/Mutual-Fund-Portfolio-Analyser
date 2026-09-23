@@ -29,12 +29,15 @@ def derive_scheme_families(conn: sqlite3.Connection) -> dict[str, int]:
     that joins an incoherent family loses it.
     """
     rows = conn.execute(
-        "SELECT scheme_id, scheme_name, amc_id, sebi_category FROM scheme"
+        "SELECT scheme_id, scheme_name, amc_id, sebi_category, fund_name FROM scheme"
     ).fetchall()
 
     grouped: dict[tuple[str, str], list[tuple[str, str | None]]] = defaultdict(list)
-    for scheme_id, scheme_name, amc_id, category in rows:
-        key = family_key(str(scheme_name))
+    for scheme_id, scheme_name, amc_id, category, fund_name in rows:
+        # AMFI's own name for the fund when its master lists the scheme: the
+        # share-class name alone split older funds whose plan words sit inside
+        # it (`Kotak Banking and PSU Debt Direct - Growth`).
+        key = family_key(str(fund_name or scheme_name))
         if not key:
             continue
         grouped[(str(amc_id), key)].append((str(scheme_id), category))

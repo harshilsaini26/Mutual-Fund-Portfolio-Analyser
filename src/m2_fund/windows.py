@@ -21,10 +21,10 @@ measured against — its name does not carry one, and the disclosure that does i
 not loaded for every AMC.
 
 The three-window model of §3 — fund, manager, user — is not here either. There
-is no manager or tenure data, `inception_date` is empty for every scheme, and
-W_user needs the Zone B ledger. What remains is the fund window, and the
-longest one is named `since_first_nav` rather than `inception` because the
-inception date is exactly the thing we do not have.
+is no manager or tenure data, and W_user needs the Zone B ledger. What remains
+is the fund window. The longest is `since_first_nav`, not `since_inception`:
+the launch date is known now (AMFI's scheme master, S2), but the NAV history
+held can start after it, and the window is only as long as the prices are.
 """
 
 from __future__ import annotations
@@ -375,6 +375,7 @@ class FundWindows:
     windows: dict[str, ReturnWindow | None]
     staleness_days: int
     confidence: str  # the weakest window's: MODULE_6 §14.1 rule 3
+    inception: date | None = None  # launch date, from AMFI's scheme master
 
 
 def fund_windows(
@@ -429,4 +430,5 @@ def fund_windows(
             (w.confidence for w in windows.values() if w),
             key=tiers.index, default="low",
         ),
+        inception=md.inception(scheme_id),
     )

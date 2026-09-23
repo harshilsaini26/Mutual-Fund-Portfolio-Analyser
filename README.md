@@ -76,7 +76,7 @@ reconciliation against the statement's own closing balance.
 | | |
 |---|---|
 | Schemes in the AMFI universe | 19,598 |
-| Schemes with a loaded portfolio | 192, answering for 1,050 share classes |
+| Schemes with a loaded portfolio | 192, answering for 1,099 share classes |
 | Fund houses read directly from their own files | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
 | Funds reachable through the aggregator tier | 1,973 |
 | Schemes with a benchmark index | 1,819 |
@@ -222,7 +222,7 @@ known vulnerabilities.
 ## Quality gate
 
 ```bash
-python -m pytest -q                             # 1,434 tests, hermetic, no network
+python -m pytest -q                             # 1,442 tests, hermetic, no network
 python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                  # strict
 python -m scripts.verify_v0_ledger --check      # the independent ledger verifier

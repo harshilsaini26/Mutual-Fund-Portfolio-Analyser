@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from src.common.decimals import connect
-from src.common.types import SchemeId
+from src.common.types import IssuerId, SchemeId
 from src.m3_lookthrough.engine import assert_weights_sum_to_100
 from src.m3_lookthrough.weights import (
     latest_as_of,
@@ -23,6 +23,7 @@ from src.m3_lookthrough.weights import (
     load_issuer_weights,
     materialise_weights,
     rebuild_weights,
+    served,
 )
 
 from tests.conftest import migrated, reopen
@@ -448,3 +449,59 @@ class TestAQuarantinedDisclosureIsNeverUsed:
         assert not conn.execute(
             "SELECT 1 FROM scheme_issuer_weight WHERE scheme_id = 'S1'"
         ).fetchone()
+
+
+class TestAHeldShareClassIsServedItsFundsWeights:
+    """V1-37 served a share class its family's disclosure in the LOOKUP, but
+    weights are keyed by the share class that disclosed and the engine reads
+    them by the one held -- so a holder of HDFC Flexi Cap Regular, disclosed
+    against its Direct plan, was booked 100% to __NO_DISCLOSURE__."""
+
+    def _family(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            "UPDATE scheme SET amc_id='hdfc', scheme_family='f' WHERE scheme_id='S1'"
+        )
+        conn.execute(
+            "INSERT INTO scheme (scheme_id, scheme_name, plan, option, amc_id,"
+            " scheme_family) VALUES ('S1R','Test Regular','regular','growth','hdfc','f')"
+        )
+        conn.execute(
+            "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"
+            " VALUES ('LONE','Another fund','direct','growth')"
+        )
+        _issuer(conn, "A")
+        _disclose(conn, 1, [("A", "100", "equity")])
+
+    def test_the_regular_plan_gets_the_direct_plans_weights(
+        self, conn: sqlite3.Connection
+    ) -> None:
+        self._family(conn)
+        weights, as_ofs = rebuild_weights(conn)
+        assert SchemeId("S1R") not in weights  # the defect: keyed by discloser
+
+        weights, as_ofs = served(conn, weights, as_ofs, [SchemeId("S1R")])
+        assert weights[SchemeId("S1R")] == weights[SCHEME]
+        assert as_ofs[SchemeId("S1R")] == AS_OF
+
+    def test_a_fund_with_no_disclosure_in_its_family_stays_undisclosed(
+        self, conn: sqlite3.Connection
+    ) -> None:
+        self._family(conn)
+        weights, _ = served(conn, *rebuild_weights(conn), [SchemeId("LONE")])
+        assert SchemeId("LONE") not in weights
+
+
+def test_overlap_is_paired_among_the_funds_held_not_all_disclosed() -> None:
+    """"Am I paying twice?" is about my funds. Pairing every disclosed scheme
+    stored ~15,000 pairs for a real ledger; `--equal` hid it, since there every
+    disclosed fund is held."""
+    from scripts.show_lookthrough import _overlap_pairs
+    from src.m3_lookthrough.engine import IssuerWeight, Position
+
+    w = [IssuerWeight(IssuerId("A"), Decimal(100), "equity")]
+    weights = {SchemeId(s): w for s in ("H1", "H2", "OTHER")}
+    as_ofs = {s: AS_OF for s in weights}
+    held = [Position(SchemeId("H1"), Decimal(1)), Position(SchemeId("H2"), Decimal(1))]
+
+    pairs = _overlap_pairs(weights, as_ofs, held)
+    assert [(str(o.scheme_a), str(o.scheme_b)) for o in pairs] == [("H1", "H2")]

@@ -20,6 +20,7 @@ from src.m6_views.builder import Scope
 from src.m6_views.compose import ok_envelope
 from src.m6_views.deps import Deps
 from src.m6_views.envelope import ViewEnvelope
+from src.m6_views.format import format_date
 from src.m6_views.registry import VIEW_DEFS, register
 from src.m6_views.states import empty_envelope
 
@@ -125,6 +126,7 @@ class FundXrayBuilder:
                     f" {len(fw.navs):,} points from {fw.navs[0].nav_date}"
                     f" to {fw.navs[-1].nav_date}. Benchmark:"
                     f" {fw.benchmark_id or 'none on record'}."
+                    + (f" Launched {format_date(fw.inception)}." if fw.inception else "")
                 ),
             },
             quality=_Quality(fw.staleness_days, fw.confidence, []),

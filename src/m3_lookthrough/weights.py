@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
@@ -360,4 +361,25 @@ def rebuild_weights(
             weights[scheme_id] = found
             as_ofs[scheme_id] = as_of
     conn.commit()
+    return weights, as_ofs
+
+
+def served(
+    conn: sqlite3.Connection,
+    weights: dict[SchemeId, list[IssuerWeight]],
+    as_ofs: dict[SchemeId, date],
+    held: Iterable[SchemeId],
+) -> tuple[dict[SchemeId, list[IssuerWeight]], dict[SchemeId, date]]:
+    """`rebuild_weights`'s result, plus each held share class its fund's weights.
+
+    Weights are keyed by the share class that DISCLOSED; the engine reads them
+    by the one HELD. So V1-37's family reached the lookup but never a holder: a
+    Regular plan of a fund disclosed against its Direct plan -- HDFC Flexi Cap
+    among them -- was booked entirely to `__NO_DISCLOSURE__`.
+    """
+    weights, as_ofs = dict(weights), dict(as_ofs)
+    for scheme_id in held:
+        source = SchemeId(disclosure_scheme_for(conn, str(scheme_id)))
+        if scheme_id not in weights and source in weights:
+            weights[scheme_id], as_ofs[scheme_id] = weights[source], as_ofs[source]
     return weights, as_ofs

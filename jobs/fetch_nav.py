@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import subprocess
 import uuid
 from datetime import UTC, date, datetime
@@ -34,8 +35,9 @@ from src.m0_data.fetch.base import (
     archive,
     conditional_get,
 )
-from src.m0_data.load import load_parse_result
+from src.m0_data.load import load_parse_result, load_scheme_master
 from src.m0_data.parse.nav.amfi import PARSER_ID, PARSER_VERSION, parse_navall
+from src.m0_data.parse.scheme_master import parse_scheme_master
 from src.m0_data.schema.apply import apply_migrations
 
 SOURCE_ID = "S1"
@@ -72,6 +74,9 @@ def run(dry_run: bool = False) -> dict[str, object]:
 
     summary: dict[str, object] = {"run_id": run_id}
     try:
+        # Before the NAV fetch, which returns early on a 304: daily either way.
+        if not dry_run:
+            summary["scheme_master"] = _refresh_scheme_master(conn)
         prior = conn.execute(
             "SELECT http_etag, http_last_mod FROM raw_file WHERE source_id = ? "
             "ORDER BY fetched_at DESC LIMIT 1",
@@ -159,6 +164,54 @@ def run(dry_run: bool = False) -> dict[str, object]:
         raise
     finally:
         conn.close()
+
+
+def _refresh_scheme_master(conn: sqlite3.Connection) -> object:
+    """AMFI's scheme master (S2): each scheme's fund and launch date, and the
+    share-class families rebuilt on them.
+
+    Enrichment, not prices, so a failure is reported in the summary and the NAV
+    load goes ahead. Archived first like every fetch here; unchanged bytes are
+    recognised by hash and not stored twice.
+    """
+    cfg = source("S2")
+    try:
+        response = conditional_get(
+            cfg["url"],
+            user_agent=cfg["user_agent"],
+            timeout_connect=cfg["timeout_connect"],
+            timeout_read=cfg["timeout_read"],
+            retries=cfg["retries"],
+            backoff_base=cfg["backoff_base_sec"],
+            backoff_cap=cfg["backoff_cap_sec"],
+            limiter=DomainRateLimiter(cfg["rate_limit_per_sec"], cfg["burst"]),
+            robots=RobotsCache() if cfg.get("respect_robots") else None,
+            from_email=str(cfg.get("from_email") or "") or None,
+        )
+        response.raise_for_status()
+        result, path = archive(
+            response.content,
+            FetchCandidate(url=cfg["url"], source_id="S2"),
+            response.headers.get("content-type"),
+            raw_root(),
+            lambda fid: _archived(conn, fid),
+        )
+        if path is not None:
+            conn.execute(
+                "INSERT INTO raw_file (file_id, source_id, url, as_of_date, fetched_at,"
+                " byte_size, storage_path, parse_status, parser_id, parsed_at)"
+                " VALUES (?,?,?,?,?,?,?, 'ok', 'scheme_master.amfi', ?)",
+                (result.file_id, "S2", cfg["url"], date.today(), datetime.now(UTC),
+                 result.byte_size, str(path), datetime.now(UTC)),
+            )
+        parsed = parse_scheme_master(response.content.decode("utf-8"))
+        schemes = load_scheme_master(conn, parsed)
+        families = derive_scheme_families(conn)
+        conn.commit()
+        return {"schemes": schemes, "families": families["families"]}
+    except Exception as exc:  # enrichment: it must not stop the prices
+        conn.rollback()
+        return f"failed, prices still loaded: {type(exc).__name__}: {exc}"
 
 
 def _archived(conn: object, file_id: str) -> bool:

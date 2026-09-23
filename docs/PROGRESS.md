@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,434 tests passing
+**Last updated:** 2026-09-23 · 1,442 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -18,15 +18,20 @@ re-measured rather than trusted.
 |---|---|
 | Schemes in the AMFI universe | 19,598 |
 | Schemes with a loaded portfolio | **192** |
-| **ISINs a look-through can answer for** | **1,050** |
+| **ISINs a look-through can answer for** | **1,099** |
 | Holding rows | 10,976 |
 | AMC formats with a parser | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
 | **AMCs that fetch themselves** | **2** — Kotak, ICICI |
 | **Schemes reachable without one** | **1,973**, via the coverage tier |
 
-The gap between 192 schemes and 1,050 ISINs is V1-37: a disclosure describes a
+The gap between 192 schemes and 1,099 ISINs is V1-37: a disclosure describes a
 *scheme*, and every share class of that scheme — Direct, Regular, Growth, each
-IDCW variant — holds the identical portfolio.
+IDCW variant — holds the identical portfolio. Which share classes make one fund
+comes from AMFI's own scheme master since 2026-09-23 (V1-68), refreshed by
+`jobs.fetch_nav`; the name-trimming rule it replaced split older funds, and 49
+share classes had no portfolio they were owed. Until the same day a HELD share
+class was never served its fund's disclosure at all -- only the lookup was --
+so a holder of HDFC Flexi Cap Regular saw 100% `__NO_DISCLOSURE__`.
 
 **Fund analytics:**
 
@@ -427,13 +432,10 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Join the share classes AMFI lists per plan.** Older Kotak schemes carry
-  plan words inside the name (`Kotak Banking and PSU Debt Direct - Growth`,
-  `… - Standard Plan-Growth`), which `family_key` keeps, so one fund splits into
-  two to four families. The Direct plan then gets no disclosure its Regular
-  sibling has, and V2's witness is one plan's AUM (2,018 Cr against a 4,991 Cr
-  portfolio; 5,074 Cr summed across the plans). A change to which share classes
-  are served which portfolio, so it needs its own coherence check.
+- **Covered calls and state development loans**, the next two data fixes
+  found in the 2026-09-23 research: ICICI names its written calls "(Covered
+  call)", and an SDL's ISIN carries its state's code, observed one-to-one
+  against the state each fund house names.
 - **Remember which indices have no series**, so a refresh stops asking NSE
   for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.

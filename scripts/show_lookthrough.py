@@ -44,7 +44,7 @@ from src.m3_lookthrough.persist_metrics import (
     save_marginal,
     save_overlap,
 )
-from src.m3_lookthrough.weights import rebuild_weights
+from src.m3_lookthrough.weights import rebuild_weights, served
 
 TOP_N = 20
 
@@ -65,6 +65,11 @@ def main() -> None:
         raise SystemExit(
             "no positions. Import a CAS, or pass --equal 100000 to see the shape."
         )
+    # A held share class reads its fund's weights, which are keyed by whichever
+    # sibling disclosed them (V1-37).
+    weights_by_scheme, as_of_by_scheme = served(
+        conn, weights_by_scheme, as_of_by_scheme, [p.scheme_id for p in positions]
+    )
 
     as_of = max(as_of_by_scheme.values()) if as_of_by_scheme else date.today()
     result = compute_lookthrough(positions, weights_by_scheme, as_of)
@@ -174,7 +179,9 @@ def _overlap_pairs(
     in. A scheme absent from `values` gives None rather than zero.
     """
     values = {p.scheme_id: p.value_inr for p in positions}
-    schemes = sorted(weights_by_scheme)
+    # The funds HELD, not every one disclosed: for a real ledger the latter
+    # stored ~15,000 pairs, which `--equal` hid by holding everything.
+    schemes = sorted(s for s in values if s in weights_by_scheme)
     if len(schemes) < 2:
         return []
     pairs = [
