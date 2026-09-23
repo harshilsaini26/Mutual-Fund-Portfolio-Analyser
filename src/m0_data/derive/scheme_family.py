@@ -75,10 +75,14 @@ def disclosure_scheme_for(
     same one. They hold the same portfolio, so which is picked does not change
     a number — but it does change `holding.scheme_id`, and a figure that moves
     between rebuilds is indistinguishable from a figure that is wrong.
+
+    A quarantined disclosure does not count, here or among the siblings
+    (V1-66): a share class whose own failed while a sibling's passed is served
+    the sibling's, since they hold the same portfolio.
     """
     own = conn.execute(
         "SELECT 1 FROM holding_disclosure WHERE scheme_id = ? AND is_current = 1"
-        " LIMIT 1",
+        " AND validation_status <> 'quarantined' LIMIT 1",
         (scheme_id,),
     ).fetchone()
     if own:
@@ -94,6 +98,7 @@ def disclosure_scheme_for(
         "SELECT s.scheme_id, max(d.as_of_date) AS latest"
         " FROM scheme s JOIN holding_disclosure d"
         "   ON d.scheme_id = s.scheme_id AND d.is_current = 1"
+        "   AND d.validation_status <> 'quarantined'"
         " WHERE s.amc_id = ? AND s.scheme_family = ?"
     )
     params: list[object] = [family[0], family[1]]

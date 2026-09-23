@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterator
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -371,6 +371,39 @@ def test_a_sibling_share_class_is_served_the_scheme_s_disclosure(
     assert disclosure_scheme_for(conn, "INF179K01UT0") == "INF179K01UT0"
     # Its Regular sibling is served the same disclosure.
     assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01UT0"
+
+
+def test_a_quarantined_share_class_is_served_a_sibling_that_passed(
+    conn: sqlite3.Connection,
+) -> None:
+    """V1-66 made a quarantined disclosure unusable, but this lookup still
+    counted it: a share class whose own disclosure was quarantined answered for
+    itself, and got no portfolio at all while its sibling's passed. They hold
+    the same portfolio, so the sibling's is the right one to serve."""
+    rows, header = _payload()
+    # The quarantined one is the NEWER, so the sibling ordering alone would
+    # pick it: both filters are under test, not just the first.
+    load_holdings(conn, "INF179K01UT0", AS_OF + timedelta(days=31), rows, header,
+                  "file-a")
+    load_holdings(conn, "INF179K01608", AS_OF, rows, header, "file-b")
+    for scheme_id, name, plan in (
+        ("INF179K01UT0", "HDFC Flexi Cap Fund - Growth Option - Direct Plan", "direct"),
+        ("INF179K01608", "HDFC Flexi Cap Fund - Growth Plan", "regular"),
+    ):
+        conn.execute(
+            "INSERT OR REPLACE INTO scheme (scheme_id, scheme_name, plan, option,"
+            " amc_id, status, scheme_family) VALUES (?,?,?,'growth','hdfc',"
+            " 'active', ?)",
+            (scheme_id, name, plan, family_key(name)),
+        )
+    conn.execute(
+        "UPDATE holding_disclosure SET validation_status = 'quarantined'"
+        " WHERE scheme_id = 'INF179K01UT0'"
+    )
+    conn.commit()
+
+    assert disclosure_scheme_for(conn, "INF179K01UT0") == "INF179K01608"
+    assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01608"
 
 
 def test_a_scheme_with_no_family_behaves_exactly_as_before(
