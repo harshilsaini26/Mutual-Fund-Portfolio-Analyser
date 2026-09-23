@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-18 · 1,209 tests passing
+**Last updated:** 2026-09-23 · 1,284 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -17,14 +17,14 @@ re-measured rather than trusted.
 | | |
 |---|---|
 | Schemes in the AMFI universe | 19,598 |
-| Schemes with a loaded portfolio | **183** |
-| **ISINs a look-through can answer for** | **991** |
-| Holding rows | 10,300 |
+| Schemes with a loaded portfolio | **192** |
+| **ISINs a look-through can answer for** | **1,050** |
+| Holding rows | 10,976 |
 | AMC formats with a parser | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
 | **AMCs that fetch themselves** | **2** — Kotak, ICICI |
 | **Schemes reachable without one** | **1,973**, via the coverage tier |
 
-The gap between 183 schemes and 991 ISINs is V1-37: a disclosure describes a
+The gap between 192 schemes and 1,050 ISINs is V1-37: a disclosure describes a
 *scheme*, and every share class of that scheme — Direct, Regular, Growth, each
 IDCW variant — holds the identical portfolio.
 
@@ -34,17 +34,17 @@ IDCW variant — holds the identical portfolio.
 |---|---|---|
 | HDFC Flexi Cap | 83 | **0.00%** |
 | Kotak Pioneer | 55 | **0.00%** |
-| ICICI Multi Asset | 290 | 1.79% |
+| ICICI Multi Asset | 290 | 4.20% |
 
 PPFAS Flexi Cap, the fifth fund with a disclosure, is also at **0.00%**.
 
-Disclosure quality across all 183: **111 `ok`, 72 `warn`, 0 quarantined.** Most
+Disclosure quality across all 192: **109 `ok`, 83 `warn`, 0 quarantined.** Most
 warnings are V8 (a negative value on something not classified as a derivative —
 the covered-call defect below). No parse is being stored that disagrees with
 the file it came from.
 
-Unresolved across the whole warehouse is **1.80%** of value, down from 14% at
-the start of the day.
+Unresolved across the whole warehouse is **2.30%** of value, measured over each
+scheme's newest disclosure.
 
 ## How to add a fund
 
@@ -106,8 +106,11 @@ the data. **21 schemes loaded from a file nobody touched.**
 
 Those listings are also archives, which the coverage tier is not: Kotak's runs
 to **April 2013**, 70 monthly disclosures, so a fund loaded this way can be
-backfilled. ICICI still publishes one 25 MB ZIP of ~146 workbooks and §6.5's
-member staging is not built, so a human still extracts the member.
+backfilled. ICICI publishes one 25 MB ZIP of ~146 workbooks, and
+`jobs.ingest_inbox` now expands a ZIP into its workbooks itself — flattened,
+guarded against a member path escaping the inbox, never overwriting a file
+already there. That path is tested but has not yet been run against a live
+ICICI file.
 
 The other 50 AMCs are one adapter each. The house you hold is the one worth
 writing, and everything else has the coverage tier above.
@@ -155,16 +158,18 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication, nested funds, marginal contribution |
 | **M6 views** | built — six views, CSV export, loopback API |
-| M2 fund x-ray | partly built — return windows, risk statistics and rolling returns from NAV |
+| M2 fund x-ray | partly built — return windows, risk statistics, rolling returns, Sharpe and Sortino, and alpha, beta, tracking error and capture against a total-return index |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
 | Tax engine | not built; rates live in a human-verified config and are never invented |
 
-M2 was rebuilt on 2026-09-16 as two files and no SQL: §8's return windows
-and the risk statistics that need neither a benchmark nor a risk-free rate,
-reading NAV through the `MarketDataProvider` that already existed. The rest of
-its spec — the three-window model, peer ranks, the manager dossier, turnover —
-is blocked on data rather than effort.
+M2 was rebuilt on 2026-09-16 as two files and no SQL, reading NAV through the
+`MarketDataProvider` that already existed. Its risk-free rate (S13) and its
+index series (S12) have since landed, so the benchmark- and rate-dependent
+statistics compute wherever that data reaches — the S13 and S12 entries under
+the defects below say how far that is. The rest of its spec — the three-window
+model, peer ranks, the manager dossier, turnover — is blocked on data rather
+than effort.
 
 M4 and M5 still have no code. All three previously had a package each —
 Protocols plus a fake per protocol, 2,416 lines — whose only importers were the
@@ -229,19 +234,47 @@ Ordered by what they cost.
    automatically as NAV history backfills; the derivation is already in place.
    A real **S14** is still what the 127 schemes with no Growth sibling need.
 
-   Of the three that bounded M2, two are now settled and one is not:
+   Of the three that bounded M2, all three now produce numbers — one of them
+   only partly:
 
    - **S14** IDCW — solved without a fetcher, from the Growth sibling. Above.
-   - **S13** risk-free rate — RBI answers an automated client with HTTP 418,
-     a bot check, and README's rule is that nothing here defeats one. So it
-     arrives the way tax rates do: `config/risk_free.yaml`, hand-entered,
-     dated and sourced. Sharpe and Sortino compute the moment it has a row.
-     It ships empty; the project will not invent a yield.
-   - **S12** index levels (TRI) — still open, and it is two problems, not one:
-     `benchmark_id` is populated on 0 of 19,598 schemes, so even a complete
-     TRI series would not say which index each fund is measured against. That
-     mapping lives in factsheets (S6/S7, both rated Hard, both unfetched), and
-     §9.4 refuses a PRI series for alpha. Do this last, or not at all.
+   - **S13** risk-free rate — **closed.** `rbi.org.in` answers an automated
+     client with HTTP 418, and nothing here defeats a bot check; but RBI's
+     statistics portal, `dbie.rbihub.in`, serves the same auction table to an
+     ordinary request. `config/risk_free.yaml` holds all **772** 91-day T-bill
+     auction yields from 2011-04-06 to 2026-04-08 — every auction, because a
+     quarterly sample is out by up to 4.50 percentage points at a window
+     start: the cut-off went from 7.24% to 12.02% inside Q3 2013. Sharpe and
+     Sortino compute for any window starting on or after 2011-04-06.
+   - **S12** index levels (TRI) — **partly closed.** Both halves exist now.
+     `benchmark_id` is set on **1,573** of 19,598 schemes (1,217 with NAV),
+     matched against NSE's own catalogue of 259 indices, and NSE's
+     total-return series loads through `jobs.fetch_index`. The mapping was
+     never only in factsheets — Kotak and Nippon print it in the S5
+     disclosures already fetched — but so far it is matched from scheme
+     names, which covers index funds and ETFs and not active funds, whose
+     names do not carry their benchmark.
+
+     **23 of the 123 indices those schemes point at have levels loaded**, so
+     alpha, beta, tracking error and capture compute today for **439**
+     schemes with NAV. On ICICI Prudential Nifty 50 Index Fund Direct, over
+     1, 3 and 5 years, they come out at beta 1.00, tracking error 0.03–0.05%
+     and alpha of −0.23% to −0.29% — the index, minus a fee, which is the
+     only shape an index fund's alpha can take.
+
+     Two ceilings are not effort problems. NSE publishes no total-return
+     series for its G-Sec indices. And over half of all schemes are debt
+     funds, benchmarked mostly to CRISIL indices, which are not published
+     free.
+
+0. **For 54 of NSE's 259 indices, the catalogue and the level series mint
+   different ids.** `index_id_for` keeps a trailing "Index" in a name and
+   `index_key` strips it. A scheme is matched to the catalogue's
+   `…_INDEX_TRI`, while a level series whose provider name leaves the word off
+   loads under `…_TRI` — a second row that no scheme points at. Every benchmark
+   statistic for those funds is then `None`, and nothing raises. It has not
+   fired yet — none of the 23 indices loaded so far has such a name — and it
+   has to be fixed before the rest of the backfill runs.
 
 0. **`rebuild_weights` commits, so it cannot compose into a caller's
    transaction.** A job that loaded holdings and then rebuilt weights would
@@ -290,14 +323,25 @@ Ordered by what they cost.
 7. **`data_only=True` returns None for a workbook Excel never cached.** Would
    reproduce V1-36's silent row-drop. Not observed; worth a loud check when a
    file of that shape appears.
+8. **Three latent defects in S12's benchmark path.** Index levels are never
+   checked for being positive, where NAVs are; a zero level would raise a bare
+   division error from inside M2 naming nothing. A window with too little
+   overlap drops its `benchmark_id`, so "not enough data" reads the same as
+   "no benchmark". And a year that returns no levels leaves its archived
+   response marked unparsed, where a retry job would find it forever.
 
 ## Next
 
-The coverage machinery is done. What is left is not machinery:
+The coverage machinery is done. What is left is mostly not machinery:
 
+- **Fix the index-id divergence, then finish the S12 backfill** —
+  `python -m jobs.fetch_index --held`. About 70 minutes at NSE's rate limit,
+  and it has to come after the fix or it writes rows that need cleaning up.
+- **Active funds' benchmarks** from the S5 disclosures that print them.
 - **More discovery adapters**, one per house, as funds are actually held.
-- **§6.5 member staging**, so ICICI's 25 MB ZIP stops needing a human.
-- **V2**: M2 fund x-ray, the tax engine, §10 nested look-through.
+- **Run ICICI's ZIP end to end** — the expansion is built and tested, never
+  run against a live file.
+- **The tax engine, M4 risk and M5 market.**
 
 ## Reading this repository
 
