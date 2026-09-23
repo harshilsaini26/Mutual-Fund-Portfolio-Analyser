@@ -1,4 +1,5 @@
-"""Storing §4.3's portfolio-level metrics: concentration, overlap, duplication.
+"""Storing §4.3's portfolio-level metrics: concentration, overlap, duplication,
+and §4.4's marginal contribution.
 
 Separate from `persist.py` because it stores a different kind of thing. That
 module writes the look-through itself — every issuer, every route to it, and the
@@ -28,6 +29,7 @@ from src.m3_lookthrough.concentration import Concentration
 from src.m3_lookthrough.duplication import Duplication
 from src.m3_lookthrough.overlap import Overlap
 from src.m3_lookthrough.persist import DISCLOSED
+from src.m3_lookthrough.providers.lookthrough import Marginal
 
 #: §8.1 computes each independently, and the answers differ: a portfolio can
 #: look diversified overall while its equity sleeve is not.
@@ -37,6 +39,14 @@ METRIC_TABLES = (
     "portfolio_concentration",
     "fund_overlap",
     "portfolio_duplication",
+    "fund_marginal_contribution",
+)
+
+#: `Marginal`'s fields in column order, so save and load cannot drift apart.
+_MARGINAL = (
+    "scheme_id", "position_inr", "new_issuers", "new_exposure_inr",
+    "new_exposure_pct", "hhi_with", "hhi_without", "hhi_delta",
+    "effective_n_delta", "style_shift_pp", "fee_cost_inr",
 )
 
 
@@ -244,8 +254,54 @@ def load_duplication(
     )
 
 
+def save_marginal(
+    conn: sqlite3.Connection,
+    user_id: UserId,
+    as_of: date,
+    marginals: list[Marginal],
+    weight_basis: str = DISCLOSED,
+    computed_at: str | None = None,
+) -> int:
+    """§4.4. One row per held scheme; the set is replaced, never merged."""
+    stamp = computed_at or datetime.now(UTC).isoformat()
+    _clear(conn, "fund_marginal_contribution", user_id, as_of, weight_basis)
+    conn.executemany(
+        f"INSERT INTO fund_marginal_contribution (user_id, as_of, weight_basis,"
+        f" {', '.join(_MARGINAL)}, computed_at)"
+        f" VALUES ({', '.join('?' * (len(_MARGINAL) + 4))})",
+        [
+            (
+                str(user_id), as_of.isoformat(), weight_basis,
+                *(str(m.scheme_id), *(getattr(m, f) for f in _MARGINAL[1:])),
+                stamp,
+            )
+            for m in marginals
+        ],
+    )
+    conn.commit()
+    return len(marginals)
+
+
+def load_marginals(
+    conn: sqlite3.Connection,
+    user_id: UserId,
+    as_of: date,
+    weight_basis: str = DISCLOSED,
+) -> list[Marginal]:
+    """Every stored row, by scheme."""
+    rows = conn.execute(
+        f"SELECT {', '.join(_MARGINAL)} FROM fund_marginal_contribution"
+        " WHERE user_id = ? AND as_of = ? AND weight_basis = ?",
+        (str(user_id), as_of.isoformat(), weight_basis),
+    ).fetchall()
+    return sorted(
+        (Marginal(**dict(zip(_MARGINAL, r, strict=True))) for r in rows),
+        key=lambda m: str(m.scheme_id),
+    )
+
+
 def drop_metrics(conn: sqlite3.Connection) -> None:
-    """Drop all three. `CLAUDE.md` invariant 10, same as `drop_lookthrough`.
+    """Drop every metric table. `CLAUDE.md` invariant 10, same as `drop_lookthrough`.
 
     A DROP rather than a DELETE: the claim is that these are reconstructible,
     and deleting rows leaves the schema standing and proves half of it.
@@ -270,8 +326,10 @@ __all__ = [
     "drop_metrics",
     "load_concentration",
     "load_duplication",
+    "load_marginals",
     "load_overlap",
     "save_concentration",
     "save_duplication",
+    "save_marginal",
     "save_overlap",
 ]

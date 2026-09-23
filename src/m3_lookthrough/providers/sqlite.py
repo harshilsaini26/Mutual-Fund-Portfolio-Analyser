@@ -46,6 +46,7 @@ from src.m3_lookthrough.overlap import Overlap as ComputedOverlap
 from src.m3_lookthrough.persist_metrics import (
     load_concentration,
     load_duplication,
+    load_marginals,
     load_overlap,
 )
 from src.m3_lookthrough.providers.lookthrough import (
@@ -70,13 +71,6 @@ _NOT_BUILT = {
         "fund redundancy needs 36-month return correlation and style distance "
         "from M2, which is not built. Pairwise overlap is available now via "
         "overlap_matrix()."
-    ),
-    "marginal": (
-        "marginal contribution is computed in m3_lookthrough.marginal, which "
-        "takes positions and weights; this provider holds persisted RESULTS "
-        "and has no path back to either. Wiring it needs the fund-detail view "
-        "that would call it, which is one of the five M6 views not built. "
-        "Only style_shift_pp and fee_cost_inr actually need M2."
     ),
     "tilts": (
         "portfolio tilt needs M5's canonical sector taxonomy, deferred in "
@@ -355,15 +349,29 @@ class SqliteLookThroughProvider:
             stored.max_funds_per_issuer,
         )
 
-    # --- not built yet -----------------------------------------------------
+    def marginals(self, user_id: UserId, as_of: date) -> list[Marginal]:
+        """§11, every held scheme, for M6's `marginal_contribution`.
 
-    def redundancy(self, user_id: UserId, as_of: date) -> list[Redundancy]:
-        raise NotImplementedError(_NOT_BUILT["redundancy"])
+        Off the protocol, as `duplication` is: the protocol declares one
+        scheme at a time, and the view asks about all of them.
+        """
+        return load_marginals(self._ledger, user_id, as_of)
 
     def marginal(
         self, user_id: UserId, as_of: date, scheme_id: SchemeId
     ) -> Marginal:
-        raise NotImplementedError(_NOT_BUILT["marginal"])
+        found = [m for m in self.marginals(user_id, as_of) if m.scheme_id == scheme_id]
+        if not found:
+            raise LookupError(
+                f"no marginal contribution for {scheme_id} on {as_of}; "
+                f"re-run python -m scripts.show_lookthrough"
+            )
+        return found[0]
+
+    # --- not built yet -----------------------------------------------------
+
+    def redundancy(self, user_id: UserId, as_of: date) -> list[Redundancy]:
+        raise NotImplementedError(_NOT_BUILT["redundancy"])
 
     def tilts(
         self,

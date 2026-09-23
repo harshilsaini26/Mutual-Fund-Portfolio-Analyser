@@ -13,6 +13,7 @@ from src.m6_views.builders.portfolio import (  # noqa: F401
     concentration,
     duplication,
     funds,
+    marginal,
     overlap,
     sankey,
     summary,

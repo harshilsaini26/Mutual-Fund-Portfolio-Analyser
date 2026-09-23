@@ -219,3 +219,29 @@ def test_dropping_the_only_fund_leaves_no_concentration_to_compare(
     assert m.effective_n_delta is None
     assert m.new_issuers == 3
     assert IssuerId("ALPHA")
+
+
+def test_a_fund_with_no_disclosure_adds_an_unknown_not_nothing(
+    portfolio: Portfolio,
+) -> None:
+    """DARK is held but has no disclosure, so the engine books it to
+    __NO_DISCLOSURE__ and the difference finds no new issuer. "Adds 0
+    companies" would be a confident wrong answer; what it adds is unknown."""
+    positions, weights = portfolio
+    held = [*positions, Position(SchemeId("DARK"), LOT)]
+    m = marginal_contribution(held, weights, AS_OF, SchemeId("DARK"))
+
+    assert m.position_inr == LOT
+    assert m.new_issuers is None
+    assert m.new_exposure_inr is None
+    assert m.hhi_delta is None
+
+
+def test_a_fund_held_in_two_folios_counts_both(portfolio: Portfolio) -> None:
+    """One scheme, two folios, two positions. The first alone understated
+    what the fund is worth to the portfolio by half."""
+    positions, weights = portfolio
+    held = [*positions, Position(SchemeId("GROWTH"), LOT)]
+    m = marginal_contribution(held, weights, AS_OF, SchemeId("GROWTH"))
+
+    assert m.position_inr == 2 * LOT

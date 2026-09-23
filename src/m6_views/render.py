@@ -115,6 +115,8 @@ def _fmt_value(tile: dict[str, Any], compact: bool) -> str:
         return format_pct(Decimal(str(value)) * 100, precision=2)
     if kind == "ratio":
         return f"{Decimal(str(value)):.2f}"
+    if kind == "metric":
+        return fmt_metric(Decimal(str(value)))
     if kind in ("units", "nav"):
         return f"{Decimal(str(value)):,.4f}".rstrip("0").rstrip(".")
     if kind == "date":

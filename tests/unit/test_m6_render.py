@@ -34,12 +34,14 @@ from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.concentration import concentration
 from src.m3_lookthrough.duplication import portfolio_duplication
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
+from src.m3_lookthrough.marginal import marginal_contribution
 from src.m3_lookthrough.overlap import pairwise_overlap
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m3_lookthrough.persist_metrics import (
     SCOPES,
     save_concentration,
     save_duplication,
+    save_marginal,
     save_overlap,
 )
 from src.m6_views.api.app import create_app
@@ -163,6 +165,10 @@ def client(tmp_path: Path) -> TestClient:
     save_duplication(
         ledger, UserId(USER), AS_OF,
         portfolio_duplication(result.contributions, result.summary.total_value_inr),
+    )
+    save_marginal(
+        ledger, UserId(USER), AS_OF,
+        [marginal_contribution(POSITIONS, WEIGHTS, AS_OF, s) for s in (S1, S2)],
     )
     ledger.execute(
         "INSERT INTO position (user_id, folio, scheme_id, as_of, units, nav,"

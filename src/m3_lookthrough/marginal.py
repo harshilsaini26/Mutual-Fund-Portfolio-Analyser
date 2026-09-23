@@ -49,8 +49,19 @@ def marginal_contribution(
     by design (V0-18). Both are already typed optional on `Marginal`, so this
     fills what exists rather than inventing the rest.
     """
-    held = next((p for p in positions if p.scheme_id == scheme_id), None)
-    position_inr = held.value_inr if held else Decimal(0)
+    # Summed: one scheme in two folios is two positions.
+    position_inr = sum(
+        (p.value_inr for p in positions if p.scheme_id == scheme_id), Decimal(0)
+    )
+    if scheme_id not in weights_by_scheme:
+        # No disclosure: the engine books it to __NO_DISCLOSURE__, so the
+        # difference finds no new issuer. What it adds is unknown, not nothing.
+        return Marginal(
+            scheme_id=scheme_id, position_inr=position_inr, new_issuers=None,
+            new_exposure_inr=None, new_exposure_pct=None, hhi_with=None,
+            hhi_without=None, hhi_delta=None, effective_n_delta=None,
+            style_shift_pp=None, fee_cost_inr=None,
+        )
 
     full = compute_lookthrough(positions, weights_by_scheme, as_of)
     rest = [p for p in positions if p.scheme_id != scheme_id]

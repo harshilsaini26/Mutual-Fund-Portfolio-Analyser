@@ -34,11 +34,14 @@ from src.m3_lookthrough.persist_metrics import (
     SCOPES,
     drop_metrics,
     load_duplication,
+    load_marginals,
     load_overlap,
     save_concentration,
     save_duplication,
+    save_marginal,
     save_overlap,
 )
+from src.m3_lookthrough.providers.lookthrough import Marginal
 
 from tests.conftest import reopen_ledger
 
@@ -382,6 +385,31 @@ def test_a_rerun_replaces_the_duplication_row(ledger: sqlite3.Connection) -> Non
     assert ledger.execute(
         "SELECT count(*) FROM portfolio_duplication"
     ).fetchone()[0] == 1
+
+
+def marginal(scheme: str, new_issuers: int | None) -> Marginal:
+    measured = None if new_issuers is None else Decimal("-0.012345")
+    return Marginal(
+        scheme_id=SchemeId(scheme), position_inr=Decimal("100000"),
+        new_issuers=new_issuers, new_exposure_inr=measured,
+        new_exposure_pct=measured, hhi_with=measured, hhi_without=measured,
+        hhi_delta=measured, effective_n_delta=measured,
+        style_shift_pp=None, fee_cost_inr=None,
+    )
+
+
+def test_marginals_round_trip_exactly(ledger: sqlite3.Connection) -> None:
+    """Decimal in, Decimal out, and an unknown stays None rather than 0."""
+    stored = [marginal("S1", 3), marginal("S2", None)]
+    save_marginal(ledger, USER, AS_OF, stored)
+    assert load_marginals(ledger, USER, AS_OF) == stored
+
+
+def test_a_rerun_replaces_the_marginal_set(ledger: sqlite3.Connection) -> None:
+    """A fund sold since the last run must not keep its row."""
+    save_marginal(ledger, USER, AS_OF, [marginal("S1", 3), marginal("S2", 1)])
+    save_marginal(ledger, USER, AS_OF, [marginal("S1", 2)])
+    assert load_marginals(ledger, USER, AS_OF) == [marginal("S1", 2)]
 
 
 def test_largest_issuer_pct_is_stored_as_the_top1_share(

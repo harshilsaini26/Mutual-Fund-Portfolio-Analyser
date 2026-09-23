@@ -34,12 +34,14 @@ from src.m3_lookthrough.engine import (
     Position,
     compute_lookthrough,
 )
+from src.m3_lookthrough.marginal import marginal_contribution
 from src.m3_lookthrough.overlap import Overlap, pairwise_overlap
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m3_lookthrough.persist_metrics import (
     SCOPES,
     save_concentration,
     save_duplication,
+    save_marginal,
     save_overlap,
 )
 from src.m3_lookthrough.weights import rebuild_weights
@@ -133,9 +135,19 @@ def main() -> None:
         )
         save_overlap(ledger, user, as_of, pairs)
         save_duplication(ledger, user, as_of, duplication)
+        # §11: one more look-through per held fund, without it. §11.2 puts
+        # that well under a second each at 5-15 funds.
+        marginals = save_marginal(
+            ledger, user, as_of,
+            [
+                marginal_contribution(positions, weights_by_scheme, as_of, s)
+                for s in sorted({p.scheme_id for p in positions})
+            ],
+        )
         print(
             f"\nstored {written} exposure rows, {scopes} concentration scopes,"
-            f" {len(pairs)} fund pairs and the duplication summary for {as_of}"
+            f" {len(pairs)} fund pairs, the duplication summary and {marginals}"
+            f" marginal contributions for {as_of}"
         )
     else:
         print("\nnot stored: --equal is illustrative, not your portfolio")

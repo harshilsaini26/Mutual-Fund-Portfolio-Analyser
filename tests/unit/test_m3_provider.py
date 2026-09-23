@@ -342,7 +342,6 @@ def test_concentration_raises_when_it_was_never_computed(  # type: ignore[no-unt
     "method,args,expected",
     [
         ("redundancy", (), "M2"),
-        ("marginal", (S1,), "M2"),
         ("sector_exposure", ("current",), "taxonomy"),
     ],
 )
