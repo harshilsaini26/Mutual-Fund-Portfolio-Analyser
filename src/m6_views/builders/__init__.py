@@ -16,6 +16,7 @@ from src.m6_views.builders.portfolio import (  # noqa: F401
     marginal,
     overlap,
     sankey,
+    size,
     summary,
 )
 from src.m6_views.registry import assert_registry_consistent

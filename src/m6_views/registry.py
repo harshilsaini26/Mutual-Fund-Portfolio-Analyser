@@ -9,8 +9,8 @@ nothing routes to. §5.3 calls a mismatch a deployment error.
 documentation: §2.3 says *"if the question can't be stated in a sentence, the
 view shouldn't exist"*, and a view without one cannot be constructed.
 
-**Only the views that can be built are here** — eight of §8.1's eleven. The
-other three need data not yet loaded (M5's sectors among it) and are ABSENT
+**Only the views that can be built are here** — nine of §8.1's eleven. The
+other two need M5's sector taxonomy and company data, and are ABSENT
 rather than registered with a stub returning empty: an absent view is an
 honest gap the consistency check enforces, where a registered one that always
 returns `empty` is a broken feature pretending to be a data problem.
@@ -113,6 +113,16 @@ VIEW_DEFS: dict[str, ViewDef] = {
         default_scope="portfolio",
         requires_fields=["m3.concentration", "m3.exposures"],
         sort_order=50,
+    ),
+    "mcap_allocation": ViewDef(
+        view_id="mcap_allocation",
+        view_name="Size profile",
+        module_source="m3",
+        question="What is my size profile?",
+        chart_type="table",
+        default_scope="portfolio",
+        requires_fields=["m3.tilts", "m3.summary"],
+        sort_order=55,
     ),
     "marginal_contribution": ViewDef(
         view_id="marginal_contribution",

@@ -60,6 +60,7 @@ from src.m3_lookthrough.providers.lookthrough import (
     Redundancy,
     Tilt,
 )
+from src.m3_lookthrough.tilts import mcap_tilts
 
 #: What each unimplemented method is waiting on. Raised rather than returned
 #: empty: a caller that gets `[]` from `tilts()` concludes the portfolio has no
@@ -73,8 +74,8 @@ _NOT_BUILT = {
         "overlap_matrix()."
     ),
     "tilts": (
-        "portfolio tilt needs M5's canonical sector taxonomy, deferred in "
-        "V1-03, and index_constituent for the benchmark comparison."
+        "only the mcap dimension is built. Sector and industry tilts need M5's "
+        "canonical sector taxonomy, deferred in V1-03."
     ),
     "sector_exposure": (
         "sector exposure needs M5's canonical sector taxonomy, deferred in "
@@ -380,7 +381,54 @@ class SqliteLookThroughProvider:
         dimension: str,
         basis: ClassificationBasis,
     ) -> list[Tilt]:
-        raise NotImplementedError(_NOT_BUILT["tilts"])
+        """§12, for `dimension="mcap"`: the size profile of equity exposure.
+
+        Computed on read rather than stored in §4.5's `portfolio_tilt`: it is
+        a sum over stored exposures under one AMFI list, cheap enough that a
+        table would only be a second copy to keep in step.
+        """
+        if dimension != "mcap":
+            raise NotImplementedError(_NOT_BUILT["tilts"])
+        held = self.exposures(user_id, as_of, scope="equity")
+        if not held:
+            return []
+        # §12.2 rule 2. CURRENT: the list in force on the date asked about.
+        # AS_OF_HOLDING: the one in force at the earliest disclosure the
+        # exposures came from.
+        on = (
+            as_of
+            if basis == ClassificationBasis.CURRENT
+            else min(e.holdings_as_of or as_of for e in held)
+        )
+        mcap_basis, buckets = self._amfi_mcap(on)
+        return mcap_tilts(
+            {e.issuer_id: e.exposure_inr for e in held}, buckets, basis, mcap_basis
+        )
+
+    def _amfi_mcap(self, on: date) -> tuple[date, dict[IssuerId, str]]:
+        """The ONE AMFI list in force on `on`, and its buckets (§12.2 rule 3).
+
+        In force means published on or before `on`: a list from later in the
+        year re-ranks companies with hindsight (invariant 6).
+        """
+        found = self._warehouse.execute(
+            "SELECT MAX(valid_from) FROM issuer_classification"
+            " WHERE taxonomy = 'amfi_mcap' AND valid_from <= ?",
+            (on.isoformat(),),
+        ).fetchone()[0]
+        if found is None:
+            raise LookupError(
+                f"no AMFI market-cap list is in force on {on}, so no size "
+                f"profile can be read. python -m jobs.build_entity_master "
+                f"loads AMFI's half-yearly lists."
+            )
+        listed = found if isinstance(found, date) else date.fromisoformat(str(found))
+        rows = self._warehouse.execute(
+            "SELECT issuer_id, value FROM issuer_classification"
+            " WHERE taxonomy = 'amfi_mcap' AND valid_from = ?",
+            (listed.isoformat(),),
+        ).fetchall()
+        return listed, {IssuerId(r[0]): str(r[1]) for r in rows}
 
     def sector_exposure(
         self, user_id: UserId, as_of: date, basis: ClassificationBasis

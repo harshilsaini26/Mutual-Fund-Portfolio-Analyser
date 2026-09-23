@@ -128,6 +128,12 @@ def client(tmp_path: Path) -> TestClient:
         "INSERT OR REPLACE INTO issuer (issuer_id, canonical_name, is_listed)"
         " VALUES ('ACME', 'Acme Industries Ltd.', 1)"
     )
+    # An AMFI list in force on AS_OF, so the size profile has one to use.
+    warehouse.executemany(
+        "INSERT INTO issuer_classification (issuer_id, taxonomy, value, valid_from)"
+        " VALUES (?, 'amfi_mcap', ?, '2026-06-30')",
+        [("ACME", "large"), ("BETA", "mid")],
+    )
     # A NAV series for S1, so the fund page has something to show.
     warehouse.execute(
         "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"

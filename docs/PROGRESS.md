@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,385 tests passing
+**Last updated:** 2026-09-23 · 1,403 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -192,7 +192,7 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M0 data** | built — fetch, parse, resolve, validate, load |
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication, nested funds, marginal contribution |
-| **M6 views** | built — eight views (seven portfolio, one fund), CSV export, loopback API |
+| **M6 views** | built — nine views (eight portfolio, one fund), CSV export, loopback API |
 | M2 fund x-ray | partly built — return windows, risk statistics, rolling returns, Sharpe and Sortino, and alpha, beta, tracking error and capture against a total-return index |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
@@ -223,11 +223,11 @@ to keep.
   it, and the answer for now is "not with money that matters".
 - **47 of 52 AMCs have no disclosure loaded.** The machinery to load one is
   built; the files have not been downloaded.
-- **Three of the eleven specified views are absent**, deliberately — each
-  needs data that is not loaded, and a view that always renders empty is a
-  broken feature pretending to be a data problem. The fund page and marginal
-  contribution landed on 2026-09-23; a size profile is buildable from data in
-  hand.
+- **Two of the eleven specified views are absent**, deliberately — sector
+  tilt and the holdings treemap need M5's sector taxonomy and company data,
+  and a view that always renders empty is a broken feature pretending to be a
+  data problem. The fund page, marginal contribution and the size profile
+  landed on 2026-09-23.
 - **Nothing runs end to end against a real ledger in CI.** Zone B needs a key,
   and the golden-file verifier covers the arithmetic instead.
 
@@ -337,6 +337,16 @@ Ordered by what they cost.
    surfacing its stale rows, because `materialise_weights` returns 0 without
    deleting.
 
+0. **Most debt holdings are classed as `equity`.** Of 11,639 current holding
+   rows only 649 are `debt`; 18.0% of all equity-classed weight sits on ISINs
+   whose security code is not equity shares (`INE…07/08` bonds, `14` commercial
+   paper, `16` certificates of deposit) in Kotak, Nippon, ICICI and PPFAS files
+   among others, the rating often landing in `reported_sector`. Every equity-scoped figure
+   inherits it: concentration's equity pool, `overlap_equity_pct`, marginal
+   HHI, and the size profile, where a bank's CD counts as large-cap equity. An
+   all-equity portfolio barely moves (0.5% in a four-fund check); one holding a
+   liquid or hybrid fund does. Found 2026-09-23 building the size profile. The
+   fix is at parse time, not in each consumer.
 0. **`scheme_aum` retracts by DELETE, because it has no revision.** V1-54 scoped the
    delete to one quarter, but invariant 2 forbids even an `UPDATE` of a fact row and
    this table deletes them. The fix is `revision`/`is_current` as every other fact
@@ -402,8 +412,9 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **A size profile**, the one view the data already supports: AMFI's
-  large/mid/small list is loaded.
+- **Class debt holdings as debt.** The defect at the top of the list below
+  skews every equity-only figure for a portfolio that holds a debt or hybrid
+  fund.
 - **Remember which indices have no series**, so a refresh stops asking NSE
   for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.
