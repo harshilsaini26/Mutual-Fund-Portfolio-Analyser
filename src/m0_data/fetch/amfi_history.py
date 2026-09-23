@@ -27,7 +27,25 @@ HISTORY_URL = "https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx"
 
 #: The date format AMFI's query parameters take, which is also the format its
 #: files print. Not ISO — passing ISO returns the HTML error page.
-QUERY_DATE = "%d-%b-%Y"
+#:
+#: Built from this table rather than `strftime("%d-%b-%Y")` because `%b`
+#: renders through `LC_TIME`: on a machine with a German locale `frmdt` would
+#: carry `01-Mrz-2024`, and per this module's own docstring a query AMFI cannot
+#: read comes back as HTTP 200 with an HTML error page — so nothing raises, the
+#: job records zero NAVs and reports success. Invariant 10 also wants the same
+#: archived bytes from any machine, and a request whose bytes vary by locale
+#: cannot deliver that. `fetch/nifty_tri.py` carries the same table for the
+#: same reason.
+MONTH_ABBR = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
+
+
+def query_date(when: date) -> str:
+    """`date(2018, 1, 31)` -> `'31-Jan-2018'`, locale-independently."""
+    return f"{when.day:02d}-{MONTH_ABBR[when.month - 1]}-{when.year}"
+
 
 #: 31-Jan-2018. Equity units acquired before this date use
 #: `max(actual, min(FMV_31Jan2018, sale_price))` as their cost basis, so
@@ -47,8 +65,8 @@ class HistoryChunk:
     @property
     def params(self) -> dict[str, str]:
         params = {
-            "frmdt": self.start.strftime(QUERY_DATE),
-            "todt": self.end.strftime(QUERY_DATE),
+            "frmdt": query_date(self.start),
+            "todt": query_date(self.end),
         }
         if self.amfi_amc_code:
             params["mf"] = self.amfi_amc_code

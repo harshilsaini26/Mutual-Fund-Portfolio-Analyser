@@ -7,6 +7,7 @@ one point in the project where they are cheap to enforce.
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import importlib
 import inspect
@@ -203,6 +204,78 @@ def test_dependency_direction_is_one_way() -> None:
                 violations.append(f"{name} (tier {own_tier}) imports {pkg} (tier {tier})")
 
     assert not violations, "upstream imports downstream: " + "; ".join(violations)
+
+
+def _code_strings(tree: ast.Module) -> list[str]:
+    """Every string literal except the docstrings.
+
+    Docstrings are exempt because the modules that avoid a token are the ones
+    that have to name it to explain why.
+    """
+    holders = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    docstrings = {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, holders)
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+        and isinstance(node.body[0].value.value, str)
+    }
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+    ]
+
+
+#: The layers where a date crosses the boundary between stored bytes and the
+#: warehouse: M0 archives and parses published files, M1 parses the user's own
+#: statements. `m6_views` is deliberately absent — its `strftime` calls render
+#: a date for a person to read, which is a display choice, not a fact anything
+#: is stored or rebuilt from.
+INGEST_PACKAGES = ("src.m0_data", "src.m1_ledger")
+
+
+@pytest.mark.parametrize("package", INGEST_PACKAGES)
+def test_no_month_name_crosses_the_locale(package: str) -> None:
+    """`CLAUDE.md` invariant 10, for every fetcher and parser that ingests.
+
+    `%b` and `%B` render and read through `LC_TIME`, and these are the layers
+    where that reaches stored data. Three distinct failures, all real before
+    the tables went in:
+
+    1.  A fetcher building its query with `strftime("%d-%b-%Y")` sends
+        `01-Mrz-2024` on a German machine. Both AMFI and niftyindices answer a
+        query they cannot read with a SUCCESS status and no rows, so the job
+        records nothing and REPORTS SUCCESS.
+    2.  An M0 parser using `strptime` refuses a file the same warehouse
+        archived itself, so the rebuild fails by geography.
+    3.  `cas/parse.py` calls its date reader from inside the state machine with
+        nothing catching it, so a German locale does not degrade the import —
+        it aborts it, and a statement that imports on one machine cannot be
+        imported on another.
+
+    The explicit month tables in `m0_data/normalise/numbers.py`,
+    `m0_data/parse/index/nifty.py`, the two M0 fetchers and `m1_ledger/cas/
+    parse.py` are what replace them. This is what stops the next source added
+    to either layer from reaching for `%b` again, which is the failure a
+    per-module test cannot cover.
+    """
+    module = importlib.import_module(package)
+    root = pathlib.Path(module.__file__ or "").parent
+    violations = [
+        f"{path.relative_to(root.parent)}: {text!r}"
+        for path in sorted(root.rglob("*.py"))
+        for text in _code_strings(ast.parse(path.read_text(encoding="utf-8")))
+        if "%b" in text or "%B" in text
+    ]
+    assert not violations, (
+        "a month name goes through LC_TIME; use an explicit table: "
+        + "; ".join(violations)
+    )
 
 
 def test_decimal_survives_the_boundary() -> None:

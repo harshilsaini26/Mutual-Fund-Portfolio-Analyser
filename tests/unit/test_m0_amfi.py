@@ -85,6 +85,25 @@ def test_a_malformed_number_raises_rather_than_returning_none() -> None:
         to_date("2026-09-04")  # AMFI publishes DD-MMM-YYYY, never ISO
 
 
+def test_the_nav_date_does_not_go_through_the_locale() -> None:
+    """`strptime`'s `%b` reads through `LC_TIME`, so a German locale would
+    raise on `31-Mar-2026` and the same archived file would parse on one
+    machine and be refused on another — invariant 10 forbids exactly that.
+
+    All twelve months, because only some of them differ: `Jan` and `Dec` read
+    the same in German, and a test that used only those would pass anywhere.
+    Asserted directly rather than by forcing a locale, which needs one that is
+    installed — `de_DE.UTF-8` is not present on Windows CI.
+    """
+    months = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    for number, name in enumerate(months, start=1):
+        assert to_date(f"01-{name}-2026") == date(2026, number, 1)
+    assert to_date("01-MAR-2026") == date(2026, 3, 1), "AMFI shouts some rows"
+    with pytest.raises(CoercionError):
+        to_date("01-Mrz-2026")  # a locale-rendered month is not AMFI's
+
+
 # --- §2.2 the file's actual shape -------------------------------------------
 
 

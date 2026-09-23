@@ -725,6 +725,26 @@ def test_the_basis_date_comes_from_the_filename() -> None:
         basis_date_from_name("AverageMarketCapitalization.xlsx")
 
 
+def test_the_basis_date_does_not_go_through_the_locale() -> None:
+    """The month is read from a table, not `%b`, which renders through
+    `LC_TIME`: on a German locale `30Jun2026` would raise and the archived
+    workbook would be refused by geography (invariant 10).
+
+    All twelve months, because only some of them differ. Asserted directly
+    rather than by forcing a locale — `setlocale` needs one that is installed,
+    and `de_DE.UTF-8` is not present on Windows CI.
+    """
+    months = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    for number, name in enumerate(months, start=1):
+        name_ = f"AverageMarketCapitalization28{name}2026.xlsx"
+        assert basis_date_from_name(name_) == date(2026, number, 28)
+    with pytest.raises(McapParseError, match="unknown month"):
+        basis_date_from_name("AverageMarketCapitalization30Mrz2026.xlsx")
+    with pytest.raises(McapParseError, match="impossible period end"):
+        basis_date_from_name("AverageMarketCapitalization31Jun2026.xlsx")
+
+
 def test_the_rank_and_average_columns_are_formulas_and_are_recomputed() -> None:
     """DECISIONS V1-02. Reading them yields formula text, not numbers.
 

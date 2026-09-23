@@ -56,6 +56,7 @@ from src.m0_data.parse.base import (
 )
 from src.m0_data.parse.holdings.base import (
     TOTAL_TOLERANCE_PCT,
+    _as_on_date,
     classify_row,
     reconciliation_error,
 )
@@ -928,6 +929,42 @@ def test_icici_states_its_as_on_date_month_first(icici: HoldingsParseResult) -> 
     the file would be refused for want of a date it states plainly in row 3.
     """
     assert icici.as_of_date == AS_OF
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Portfolio as on 31-Mar-2026", date(2026, 3, 31)),
+        ("Portfolio as on 31 March 2026", date(2026, 3, 31)),
+        ("Portfolio as on 1-Oct-2026", date(2026, 10, 1)),
+        ("Portfolio as on 31 DEC 2026", date(2026, 12, 31)),
+        ("Portfolio as on Mar 31,2026", date(2026, 3, 31)),
+        ("Portfolio as on March 31, 2026", date(2026, 3, 31)),
+        ("Portfolio as on 2026-03-31", date(2026, 3, 31)),
+    ],
+)
+def test_the_as_on_date_does_not_go_through_the_locale(
+    text: str, expected: date
+) -> None:
+    """§7.5 rule 1, every spelling the AMCs use, month by name and numeric.
+
+    `%b` and `%B` read through `LC_TIME`, so on a German locale every
+    month-name row here would go unread and the file would fall back to a
+    filename that ICICI does not date — a disclosure refused by geography.
+    Invariant 10 wants the same archive to rebuild the same warehouse anywhere.
+
+    March is the case that matters: German renders it `Mrz`, so a table-driven
+    reader and a locale-driven one agree on `Jan` and `Dec` and part here.
+    Asserted directly rather than by forcing a locale, which needs one that is
+    installed — `de_DE.UTF-8` is not present on Windows CI.
+    """
+    assert _as_on_date(text) == expected
+
+
+def test_a_locale_rendered_month_is_not_read_as_a_date() -> None:
+    """The table is the whole vocabulary: `Mrz` is not a month AMCs publish,
+    and reading it would mean the locale had leaked back in."""
+    assert _as_on_date("Portfolio as on 31-Mrz-2026") is None
 
 
 def test_icici_columns_are_found_by_header_not_position(
