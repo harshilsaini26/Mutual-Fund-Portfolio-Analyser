@@ -196,7 +196,8 @@ and refuses to save anything.
 
 **Your data stays yours.** Transactions, units and folios live in a SQLCipher-encrypted
 ledger, created readable only by you, which refuses to open without a key rather than
-falling back to plain text. Market data — NAVs, disclosures, indices — is public and kept
+falling back to plain text. A new ledger's key must be at least 12 characters and is typed
+twice. Market data — NAVs, disclosures, indices — is public and kept
 separately. There is no account, no telemetry and no server beyond the one you start on
 your own machine; the single JavaScript library is vendored with a recorded checksum
 rather than loaded from a CDN.
@@ -209,16 +210,19 @@ download the file.
 
 **Untrusted input is treated as untrusted.** Disclosure files come from outside, so
 names are escaped before they reach a page, spreadsheet formulas are neutralised on
-export, archive members cannot write outside their folder, and every response carries a
-content security policy. Each of those is a regression test written against a
-demonstrated exploit.
+export, archive members cannot write outside their folder or unpack past a size cap,
+workbook XML is parsed with `defusedxml`, and every response carries a content security
+policy. The local server answers only to `127.0.0.1` and `localhost`, so a web page cannot
+reach it by pointing its own domain there (DNS rebinding). Each of those is a regression
+test written against a demonstrated exploit, and CI audits every pinned dependency for
+known vulnerabilities.
 
 ---
 
 ## Quality gate
 
 ```bash
-python -m pytest -q                             # 1,415 tests, hermetic, no network
+python -m pytest -q                             # 1,426 tests, hermetic, no network
 python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                  # strict
 python -m scripts.verify_v0_ledger --check      # the independent ledger verifier

@@ -187,7 +187,8 @@ def client(tmp_path: Path) -> TestClient:
         ),
     )
     ledger.commit()
-    return TestClient(create_app(ledger, warehouse))
+    # A real browser's address. The app refuses any other Host header.
+    return TestClient(create_app(ledger, warehouse), base_url="http://127.0.0.1:8765")
 
 
 QS = f"?user_id={USER}&as_of={AS_OF.isoformat()}"

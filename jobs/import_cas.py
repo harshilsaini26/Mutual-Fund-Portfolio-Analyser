@@ -73,7 +73,7 @@ def run(
     db_path = ledger_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if not allow_unencrypted and key is None:
-        key = getpass.getpass("Zone B ledger key: ")
+        key = _ledger_key(exists=db_path.exists())
     ledger = connect_ledger(
         str(db_path), key=key, allow_unencrypted=allow_unencrypted
     )
@@ -120,6 +120,32 @@ def run(
     finally:
         ledger.close()
         market.conn.close()
+
+
+#: The shortest key a NEW ledger accepts. SQLCipher stretches the key, but a
+#: short one is still short against an offline copy of the file.
+MIN_KEY_LENGTH = 12
+
+
+def _ledger_key(exists: bool) -> str:
+    """The ledger key. A new ledger's is typed twice and must be long enough.
+
+    This is the only place a ledger is created -- `serve` and `show_lookthrough`
+    refuse when there is none -- so it is the only place a key is chosen. A typo
+    here encrypted the ledger under a key nobody knew, and `a` was accepted.
+    An existing ledger's key is whatever it was chosen as, so it is asked once.
+    """
+    key = getpass.getpass("Zone B ledger key: ")
+    if exists:
+        return key
+    if len(key) < MIN_KEY_LENGTH:
+        raise SystemExit(
+            f"a new ledger key needs at least {MIN_KEY_LENGTH} characters; "
+            f"nothing was created"
+        )
+    if getpass.getpass("Type it again: ") != key:
+        raise SystemExit("the two keys differ; nothing was created")
+    return key
 
 
 def _lines(path: Path, content: bytes, password: str | None) -> list[str]:

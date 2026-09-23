@@ -74,7 +74,8 @@ def _client(tmp_path: Path, issuer_name: str) -> TestClient:
         AS_OF,
     )
     save_lookthrough(ledger, UserId(USER), AS_OF, result, {S1: JULY})
-    return TestClient(create_app(ledger, warehouse))
+    # A real browser's address. The app refuses any other Host header.
+    return TestClient(create_app(ledger, warehouse), base_url="http://127.0.0.1:8765")
 
 
 QS = f"?user_id={USER}&as_of={AS_OF.isoformat()}"
@@ -207,6 +208,32 @@ def test_tightening_the_mode_never_breaks_the_open(tmp_path: Path) -> None:
 
 
 # --- response headers ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("path", ["/api/health", "/api/views/lookthrough_sankey", "/"])
+def test_a_rebound_hostname_is_refused(tmp_path: Path, path: str) -> None:
+    """DNS rebinding. An attacker points their own hostname at 127.0.0.1; the
+    browser then treats this API as same-origin with their page, which reads
+    the portfolio. Demonstrated in the audit of 2026-09-23: `Host:
+    attacker.example:8765` got a 200 and the holdings. The Host header is what
+    still says who the request was for."""
+    client = _client(tmp_path, "Acme Ltd.")
+    for host in ("attacker.example:8765", "127.0.0.1.attacker.example"):
+        assert client.get(f"{path}{QS}", headers={"Host": host}).status_code == 400
+    for host in ("127.0.0.1:8765", "localhost:8765"):
+        assert client.get(f"{path}{QS}", headers={"Host": host}).status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/api/views/lookthrough_sankey", "/view/fund_list"])
+def test_a_malformed_date_is_the_callers_error_not_a_crash(
+    tmp_path: Path, path: str
+) -> None:
+    """It was an unhandled ValueError: a 500, and without the security headers,
+    because the exception left the middleware before they were set."""
+    client = _client(tmp_path, "Acme Ltd.")
+    response = client.get(f"{path}?as_of=notadate")
+    assert response.status_code == 422
+    assert "content-security-policy" in response.headers
 
 
 @pytest.mark.parametrize("path", ["/", "/view/lookthrough_sankey", "/api/views"])
@@ -504,3 +531,61 @@ def test_a_legitimate_publisher_name_still_downloads(
     inbox = tmp_path / "inbox"
     for name in ("Monthly-Portfolio-Disclosure-August-2026.zip", "FAD_Aug2026.xlsx"):
         assert download(_hostile(name), CFG, inbox).name == name  # type: ignore[arg-type]
+
+
+def test_workbook_xml_is_parsed_defensively() -> None:
+    """Every disclosure is a downloaded workbook, and openpyxl parses its XML
+    with no guard against entity-expansion bombs unless `defusedxml` is
+    installed -- which it switches to on its own. Pinned since the 2026-09-23
+    audit, which found it present only by accident of the active environment."""
+    import openpyxl.xml
+
+    assert openpyxl.xml.DEFUSEDXML is True
+
+
+class TestANewLedgerKey:
+    """A new ledger's key was asked for once, at any length: a typo encrypted
+    the ledger under a key nobody knew, and `a` was accepted. SQLCipher
+    stretches the key, but a short key is still short against an offline copy
+    of the file. An existing ledger's key is asked for once, as before."""
+
+    @staticmethod
+    def _typed(monkeypatch: pytest.MonkeyPatch, *answers: str) -> list[str]:
+        asked: list[str] = []
+        replies = iter(answers)
+
+        def fake(prompt: str = "") -> str:
+            asked.append(prompt)
+            return next(replies)
+
+        monkeypatch.setattr("jobs.import_cas.getpass.getpass", fake)
+        return asked
+
+    def test_it_is_typed_twice_and_must_match(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from jobs.import_cas import _ledger_key
+
+        self._typed(monkeypatch, "correct horse battery", "correct horse batterY")
+        with pytest.raises(SystemExit, match="differ"):
+            _ledger_key(exists=False)
+
+        asked = self._typed(monkeypatch, "correct horse battery", "correct horse battery")
+        assert _ledger_key(exists=False) == "correct horse battery"
+        assert len(asked) == 2
+
+    def test_a_short_one_is_refused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from jobs.import_cas import MIN_KEY_LENGTH, _ledger_key
+
+        self._typed(monkeypatch, "a" * (MIN_KEY_LENGTH - 1))
+        with pytest.raises(SystemExit, match="at least"):
+            _ledger_key(exists=False)
+
+    def test_an_existing_ledger_is_asked_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from jobs.import_cas import _ledger_key
+
+        asked = self._typed(monkeypatch, "old-key")
+        assert _ledger_key(exists=True) == "old-key"
+        assert len(asked) == 1

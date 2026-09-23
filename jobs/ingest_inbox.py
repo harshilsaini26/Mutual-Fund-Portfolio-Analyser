@@ -89,6 +89,12 @@ def _amc_for(conn: Any, path: Path) -> tuple[str | None, dict[str, int], str]:
     return amc_id, tally, ""
 
 
+#: The largest a workbook may unpack to. `zf.read` holds the whole member in
+#: memory, so without this a few kilobytes of ZIP can unpack to gigabytes. The
+#: largest disclosure seen is 3.8 MB; this is generous on purpose.
+MAX_MEMBER_BYTES = 100_000_000
+
+
 def _expand_zips(folder: Path) -> int:
     """Flatten any ZIP in the inbox into loose workbooks beside it.
 
@@ -137,9 +143,15 @@ def _expand_zips(folder: Path) -> int:
         # would fail the same way. That one should stop the run.
         try:
             with zipfile.ZipFile(archive) as zf:
-                for member in zf.namelist():
-                    name = PureWindowsPath(member).name
+                for member in zf.infolist():
+                    name = PureWindowsPath(member.filename).name
                     if not name.lower().endswith(WORKBOOKS) or name.startswith("~$"):
+                        continue
+                    if member.file_size > MAX_MEMBER_BYTES:
+                        print(
+                            f"    SKIPPED {archive.name}: {name} unpacks to "
+                            f"{member.file_size:,} bytes, over {MAX_MEMBER_BYTES:,}"
+                        )
                         continue
                     target = folder / name
                     if not target.exists():

@@ -106,16 +106,16 @@ def make_router(
     engine = templates()
 
     def _scope(
-        user_id: str, as_of: str | None, scope_id: str | None = None
+        user_id: str, as_of: date | None, scope_id: str | None = None
     ) -> Scope:
         return Scope(
             user_id=UserId(user_id),
-            as_of=date.fromisoformat(as_of) if as_of else date.today(),
+            as_of=as_of or date.today(),
             scope_type="portfolio",
             scope_id=scope_id,
         )
 
-    def _shell(user_id: str, as_of: str | None, active: str) -> dict[str, Any]:
+    def _shell(user_id: str, as_of: date | None, active: str) -> dict[str, Any]:
         query = f"?user_id={user_id}"
         if as_of:
             query += f"&as_of={as_of}"
@@ -130,7 +130,7 @@ def make_router(
     async def landing(
         request: Request,
         user_id: str = Query("USER-01"),
-        as_of: str | None = Query(None),
+        as_of: date | None = None,
     ) -> Any:
         scope = _scope(user_id, as_of)
         envelopes: list[ViewEnvelope] = [
@@ -153,7 +153,7 @@ def make_router(
         request: Request,
         view_id: str,
         user_id: str = Query("USER-01"),
-        as_of: str | None = Query(None),
+        as_of: date | None = None,
         top_n: int | None = Query(None),
         scope: str | None = Query(None),
         scope_id: str | None = Query(None),

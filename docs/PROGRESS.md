@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,415 tests passing
+**Last updated:** 2026-09-23 · 1,426 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -228,6 +228,11 @@ to keep.
   and a view that always renders empty is a broken feature pretending to be a
   data problem. The fund page, marginal contribution and the size profile
   landed on 2026-09-23.
+- **The local server trusts anything on this machine.** It answers only to
+  `127.0.0.1` and `localhost` (the 2026-09-23 security audit closed DNS
+  rebinding), but it has no login: while `jobs.serve` runs, any process or
+  Windows account on the machine can read the decrypted portfolio. Accepted for
+  a single-user PC; a per-launch token is the fix if the machine is shared.
 - **Nothing runs end to end against a real ledger in CI.** Zone B needs a key,
   and the golden-file verifier covers the arithmetic instead.
 

@@ -32,6 +32,7 @@ from typing import Any
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from src.common.types import UserId
 from src.m6_views.api.pages import STATIC, make_router
@@ -53,6 +54,14 @@ DB_LOCK = threading.Lock()
 #: §15.3. Never widen this without the review §15.3 asks for.
 BIND_HOST = "127.0.0.1"
 BIND_PORT = 8765
+
+#: The only names this server answers to. Binding to loopback keeps other
+#: machines out; it does not keep out a web page. DNS rebinding points an
+#: attacker's own hostname at 127.0.0.1, and the browser then treats this API as
+#: same-origin with the attacker's page, which can read the portfolio. The
+#: request still says `Host: attacker.example`, so refusing every name but these
+#: closes it. Port is ignored by the check.
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 def build_view(
@@ -139,10 +148,14 @@ def create_app(
         response.headers.setdefault("X-Frame-Options", "DENY")
         return response
 
-    def _scope(user_id: str, as_of: str | None, scope_id: str | None) -> Scope:
+    # Added last, so it runs first: a rebound request is refused before any
+    # route or database is touched.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+    def _scope(user_id: str, as_of: date | None, scope_id: str | None) -> Scope:
         return Scope(
             user_id=UserId(user_id),
-            as_of=date.fromisoformat(as_of) if as_of else date.today(),
+            as_of=as_of or date.today(),
             scope_type="portfolio",
             scope_id=scope_id,
         )
@@ -162,7 +175,7 @@ def create_app(
     async def get_view(
         view_id: str,
         user_id: str = Query("USER-01"),
-        as_of: str | None = Query(None),
+        as_of: date | None = None,
         scope_id: str | None = Query(None),
         top_n: int | None = Query(None),
         scope: str | None = Query(None),
@@ -190,7 +203,7 @@ def create_app(
     async def export_csv(
         view_id: str,
         user_id: str = Query("USER-01"),
-        as_of: str | None = Query(None),
+        as_of: date | None = None,
         scope_id: str | None = Query(None),
         top_n: int | None = Query(None),
         scope: str | None = Query(None),
@@ -233,6 +246,7 @@ def create_app(
 
 
 __all__ = [
+    "ALLOWED_HOSTS",
     "BIND_HOST",
     "BIND_PORT",
     "build_view",

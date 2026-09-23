@@ -30,6 +30,11 @@ dependencies = [
     # Used throughout and previously undeclared, which V0-19 called out.
     "pyyaml==6.0.3",
     "openpyxl==3.1.5",
+    # Not imported here: openpyxl uses it when present, to parse workbook XML
+    # safely. Every disclosure is a downloaded file, so an entity-expansion
+    # bomb in one is the attack. Without this pin the guard depended on
+    # whichever environment happened to be active (security audit 2026-09-23).
+    "defusedxml==0.7.1",
     "httpx==0.28.1",
     # M6's API. Loopback-bound and single-user (MODULE_6 §15.3) — this is a
     # local server for one person, not a deployment.

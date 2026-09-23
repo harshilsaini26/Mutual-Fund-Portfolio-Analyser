@@ -15,6 +15,8 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 
+import jobs.ingest_inbox
+import pytest
 from jobs.ingest_inbox import _expand_zips
 
 
@@ -156,3 +158,21 @@ def test_an_unsupported_compression_costs_its_archive_not_the_batch(
 
     assert _expand_zips(tmp_path) == 1
     assert (tmp_path / "Good.xlsx").read_bytes() == b"ok"
+
+
+def test_a_member_too_large_unpacked_is_skipped_not_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A zip bomb: a few kilobytes that unpack to gigabytes, read whole into
+    memory by `zf.read`. The declared size is checked before any byte is
+    read -- and `zipfile` cannot be lied past, since it stops at the declared
+    size and then fails the CRC. Lowered here; the real cap is far above any
+    disclosure workbook (the largest seen is 3.8 MB)."""
+    monkeypatch.setattr(jobs.ingest_inbox, "MAX_MEMBER_BYTES", 1_000_000)
+    with zipfile.ZipFile(tmp_path / "m.zip", "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("Bomb.xlsx", bytes(2_000_000))  # 2 MB of zeros, ~2 KB packed
+        zf.writestr("Fund.xlsx", b"x")
+
+    assert _expand_zips(tmp_path) == 1
+    assert not (tmp_path / "Bomb.xlsx").exists()
+    assert (tmp_path / "Fund.xlsx").read_bytes() == b"x"
