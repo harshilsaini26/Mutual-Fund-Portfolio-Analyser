@@ -223,6 +223,37 @@ class TestV2FinallyRuns:
         error is 900% off and a 100x one 9,900%."""
         assert self._v2(Decimal("3144800000000"), BASIS)[0] is False
 
+    @pytest.mark.parametrize(
+        ("ratio", "why"),
+        [
+            ("7.4", "launched eight days before the averaged quarter closed"),
+            ("2.47", "the witness covers one plan of a fund AMFI lists per plan"),
+            ("0.33", "outflows since the quarter"),
+        ],
+    )
+    def test_a_quarterly_average_cannot_quarantine_what_is_not_a_units_error(
+        self, ratio: str, why: str
+    ) -> None:
+        """V1-67. Growth, a part-quarter average and a one-plan witness all move
+        a portfolio away from a quarterly average, and none is an error --
+        these are the real ratios behind the 17 quarantines of 2026-09-23.
+        Still recorded as a failed check; no longer blocking."""
+        passed, status = self._v2(self.AUM * Decimal(ratio), BASIS)
+        assert passed is False, why
+        assert status == "warn", why
+
+    @pytest.mark.parametrize("ratio", ["10", "0.1", "100", "0.01"])
+    def test_an_order_of_magnitude_still_quarantines(self, ratio: str) -> None:
+        """What a quarterly average CAN prove. Every scale confusion in an
+        Indian disclosure -- rupees, thousands, lakhs, crores -- is 100x or
+        more, so a factor of 10 catches each with an order to spare."""
+        assert self._v2(self.AUM * Decimal(ratio), BASIS)[1] == "quarantined"
+
+    def test_a_point_in_time_witness_is_still_strict(self) -> None:
+        """A month-end balance on the disclosure's own date has none of the
+        average's excuses, so 3% still quarantines there."""
+        assert self._v2(self.AUM * Decimal("1.25"), "point_in_time")[1] == "quarantined"
+
     def test_no_aum_still_records_a_check_that_did_not_run(self) -> None:
         """V1-48. Absent a witness V2 is `None`, not `True`."""
         rows = [HoldingRow(None, "equity", Decimal(100), Decimal(100), "I1")]

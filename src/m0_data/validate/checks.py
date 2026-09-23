@@ -39,6 +39,19 @@ AUM_TOLERANCE_PCT = Decimal(3)
 AUM_AVERAGE_TOLERANCE_PCT = Decimal(25)
 UNRESOLVED_MAX_PCT = Decimal(2)
 
+#: How far off a QUARTERLY AVERAGE must be before V2 may quarantine (V1-67).
+#:
+#: An average cannot tell an error from three things that are not one: growth
+#: since the quarter, a fund that existed for only part of it (Kotak Nifty Alpha
+#: Low Volatility 30 launched eight days before it closed: 7.4x), and a witness
+#: covering one plan of a fund AMFI lists per plan (Kotak Banking and PSU Debt:
+#: 2.5x; summed across its plans, -1.6%). All 17 quarantines of 2026-09-23 were
+#: one of these, within 7.4x. What an average CAN prove is a units error, and
+#: every scale confusion in an Indian disclosure -- rupees, thousands, lakhs,
+#: crores -- is 100x or more. So a factor of 10 quarantines; beyond the 25%
+#: tolerance but inside it, V2 fails as a warning, recorded but not blocking.
+UNITS_ERROR_RATIO = Decimal(10)
+
 
 #: Which tolerance V2 applies to which kind of AUM, as a table rather than a
 #: comparison against one literal. Written as `AVERAGE if basis ==
@@ -154,9 +167,15 @@ def validate_disclosure(
         witness = aum_basis
         if aum_as_of is not None:
             witness += f" as of {aum_as_of}, {age_days(aum_as_of, as_of)}d before"
+        # `tolerance_for` has already refused an unknown basis, so comparing
+        # the string here cannot fall through the way V1-51's did.
+        ratio = total_mv / aum_reported
+        conclusive = aum_basis != "quarterly_average" or not (
+            1 / UNITS_ERROR_RATIO < ratio < UNITS_ERROR_RATIO
+        )
         results.append(
             CheckResult(
-                "V2", drift <= tolerance, QUARANTINE,
+                "V2", drift <= tolerance, QUARANTINE if conclusive else WARN,
                 f"total market value within {tolerance}% of scheme AUM"
                 f" ({witness})",
                 f"{drift:.4f}%",

@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,426 tests passing
+**Last updated:** 2026-09-23 · 1,434 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -384,9 +384,12 @@ Ordered by what they cost.
    tier) has nothing to resolve against.
 5. ~~**204 disclosures predate the AUM witness.**~~ **Closed 2026-09-23.** The
    reader-5 re-derive gave every AMC disclosure a new revision, and V2 ran on
-   all of them. 17 fail it — 13 Kotak, 4 Nippon, portfolio totals 25% to 640%
-   off AMFI's quarterly-average AUM — and are now `quarantined`, which since
-   defect 3 closed means excluded: 16 schemes have no usable disclosure.
+   all of them. 17 fail it — 13 Kotak, 4 Nippon, 25% to 640% off AMFI's
+   quarterly-average AUM — and none is an error: each is growth, a fund that
+   existed for part of the averaged quarter, or a witness covering one plan of a
+   fund AMFI lists per plan. V2 against an average now quarantines only a
+   mismatch of 10x or more, the size of a units error, and warns below that
+   (V1-67); all 17 are `warn`, and all 192 disclosed schemes have weights.
 6. **Four latent defects in the fetch and status layers.** `extra_headers` can
    override the User-Agent the robots check used; the retry loop replays POSTs;
    `jobs/status.py:standings` picks a parser from an unordered set when a house
@@ -424,14 +427,13 @@ Ordered by what they cost.
 
 The coverage machinery is done. What is left is mostly not machinery:
 
-- **Stop V2 quarantining young funds.** Quarantine now excludes a
-  disclosure, and several of the 16 schemes it excludes look like the check's
-  own false positives: a fund launched inside or just before the quarter AMFI
-  averaged is compared, at month-end, with an average that understates it
-  (Kotak Nifty Alpha Low Volatility 30 first priced 8 days before the quarter
-  closed: +641%). The established funds 80-177% off (Kotak Banking and PSU
-  Debt, Infrastructure & Economic Reform, Dynamic Term) look like real
-  mismatches and should stay out.
+- **Join the share classes AMFI lists per plan.** Older Kotak schemes carry
+  plan words inside the name (`Kotak Banking and PSU Debt Direct - Growth`,
+  `… - Standard Plan-Growth`), which `family_key` keeps, so one fund splits into
+  two to four families. The Direct plan then gets no disclosure its Regular
+  sibling has, and V2's witness is one plan's AUM (2,018 Cr against a 4,991 Cr
+  portfolio; 5,074 Cr summed across the plans). A change to which share classes
+  are served which portfolio, so it needs its own coherence check.
 - **Remember which indices have no series**, so a refresh stops asking NSE
   for them — 576 of its 724 requests. Needs a small schema change.
 - **More discovery adapters**, one per house, as funds are actually held.

@@ -159,9 +159,12 @@ HEADER_SCAN_ROWS = 6
 #: `parser_id`. It is in `holding_disclosure`'s skip key, so fixing a rule
 #: re-parses the disclosures the old rule got wrong (V1-36).
 #:
-#: Bump on any change that would read an already-loaded file differently.
+#: Bump on any change that would read an already-loaded file differently --
+#: including how it is VALIDATED, since the stored `validation_status` is as much
+#: a product of the run as the rows are, and a fact row is never updated.
 #: 5: a listing-status heading nests under the instrument heading above it.
-READER_VERSION = "5"
+#: 6: V2 against a quarterly average quarantines only a units-scale mismatch.
+READER_VERSION = "6"
 
 #: A heading that says how a security trades, not what it is. Kotak prints
 #: `Debentures and Bonds`, then `Listed/Awaiting listing on Stock Exchange`
