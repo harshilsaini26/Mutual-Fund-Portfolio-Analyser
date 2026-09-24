@@ -118,8 +118,9 @@ def disclosed_scheme_ids(conn: sqlite3.Connection) -> list[str]:
     """Every scheme with a current disclosure, ORDERED.
 
     Three callers asked this question with the same SQL and three different
-    answers about order: `backfill_scheme_nav` sorted in SQL, `thin_warehouse`
-    sorted in Python, and `weights.rebuild_weights` did neither — so the
+    answers about order: `backfill_scheme_nav` sorted in SQL, a since-removed
+    warehouse-thinning script in Python, and `weights.rebuild_weights` did
+    neither — so the
     rebuild's iteration order was SQLite's, and it reaches the physical row
     order of `lookthrough_contribution`, which `engine.compute_lookthrough`
     appends to and never sorts. Invariant 10 wants a rebuild to reproduce

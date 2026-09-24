@@ -95,7 +95,7 @@ jobs:
           --requirement requirements.lock --no-deps --disable-pip
 
       - name: Lint
-        run: python -m ruff check src/ tests/ scripts/ jobs/
+        run: python -m ruff check .
 
       - name: Types
         run: python -m mypy

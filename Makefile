@@ -4,10 +4,8 @@ test:
 	python -m pytest
 
 test-fast:
-	python -m pytest tests/unit tests/property -q
+	python -m pytest tests/unit -q -x
 
 lint:
-	python -m ruff check src/ tests/
+	python -m ruff check .
 	python -m mypy
-
-# `make migrate` lands with the first migration (M0, V0.4).

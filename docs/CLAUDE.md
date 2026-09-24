@@ -71,11 +71,12 @@ migrations/       numbered, forward-only
 ## Commands
 
 ```bash
-make test          # full suite
-make test-fast     # unit + property only
-make lint          # ruff + mypy + descriptive-language lint
-make migrate       # apply migrations
+python start.py    # set up what is missing, refresh prices, open the portal
+make test          # full suite (the descriptive-language lint runs here)
+make test-fast     # unit tests, stop at the first failure
+make lint          # ruff + mypy
 python -m jobs.<name> [--as-of YYYY-MM-DD]
+# No migrate command: jobs.fetch_nav (the setup's first step) and jobs.serve apply them.
 ```
 
 ## Working agreement
