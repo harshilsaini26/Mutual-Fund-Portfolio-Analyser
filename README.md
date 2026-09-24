@@ -1,6 +1,6 @@
 # Mutual Fund Portfolio Analyser
 
-[![gate](https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser/actions/workflows/ci.yml/badge.svg)](https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser/actions/workflows/ci.yml)
+[![gate](https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io/actions/workflows/ci.yml/badge.svg)](https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io/actions/workflows/ci.yml)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
@@ -43,12 +43,13 @@ about 1.5 GB of disk for the market data. On Linux or macOS the encrypted ledger
 needs SQLCipher: `sudo apt install libsqlcipher-dev` or `brew install sqlcipher`.
 
 ```bash
-git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
-cd Mutual-Fund-Portfolio-Analyser
+git clone --single-branch https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io.git
+cd Mutual-Fund-Portfolio-Analyser.io
 python start.py
 ```
 
-(On macOS and some Linux systems the command is `python3`.)
+(On macOS and some Linux systems the command is `python3`. `--single-branch` skips the
+`gh-pages` branch, which holds the public site's files and is not needed to run it.)
 
 That one command does everything:
 
@@ -281,8 +282,8 @@ It carries AMFI's prices and fund houses' own disclosures, and nothing else:
 
 Nothing is published unless you run `--push`, and that needs push access to the
 repository. Turn Pages on once, under **Settings → Pages → Deploy from a branch →
-`gh-pages` / root**. The site then appears at
-`https://<user>.github.io/<repository>/`.
+`gh-pages` / root**. The site then appears at `https://<user>.github.io/<repository>/`;
+for this repository, <https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Analyser.io/>.
 
 ---
 
