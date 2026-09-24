@@ -438,15 +438,22 @@ def load_scheme_master(
     not create one. `scheme` is the dimension `derive_scheme_families` already
     rewrites on every run, so an update is its ordinary state, not a fact
     being revised.
+
+    A blank in this copy of the master keeps what an earlier copy supplied,
+    and a row is written only when something in it changes.
     """
     known = {r[0] for r in conn.execute("SELECT scheme_id FROM scheme")}
     rows = [
-        (fund, launched, isin)
+        (fund or None, launched, isin)
         for isin, (fund, launched) in parsed.items()
         if isin in known
     ]
     conn.executemany(
-        "UPDATE scheme SET fund_name = ?, inception_date = ? WHERE scheme_id = ?",
+        "UPDATE scheme SET fund_name = COALESCE(?1, fund_name),"
+        " inception_date = COALESCE(?2, inception_date)"
+        " WHERE scheme_id = ?3"
+        " AND (fund_name IS NOT COALESCE(?1, fund_name)"
+        "      OR inception_date IS NOT COALESCE(?2, inception_date))",
         rows,
     )
     return len(rows)

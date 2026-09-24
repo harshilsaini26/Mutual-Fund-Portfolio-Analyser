@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,442 tests passing
+**Last updated:** 2026-09-23 · 1,453 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -16,7 +16,7 @@ re-measured rather than trusted.
 
 | | |
 |---|---|
-| Schemes in the AMFI universe | 19,598 |
+| Schemes in the AMFI universe | 19,676 |
 | Schemes with a loaded portfolio | **192** |
 | **ISINs a look-through can answer for** | **1,099** |
 | Holding rows | 10,976 |
@@ -32,6 +32,14 @@ comes from AMFI's own scheme master since 2026-09-23 (V1-68), refreshed by
 share classes had no portfolio they were owed. Until the same day a HELD share
 class was never served its fund's disclosure at all -- only the lookup was --
 so a holder of HDFC Flexi Cap Regular saw 100% `__NO_DISCLOSURE__`.
+`rebuild_weights` now keys every share class itself, so the API and the terminal
+report cannot disagree about it, and each is served its fund's **newest** usable
+disclosure rather than an older one filed under its own ISIN.
+
+The master also carries each fund's launch date, now on 18,162 schemes and on
+the fund page. It needs no command: `jobs.fetch_nav` fetches it after the day's
+prices, and a failed fetch leaves the prices loaded and marks the run
+`partial`.
 
 **Fund analytics:**
 
@@ -48,16 +56,17 @@ so a holder of HDFC Flexi Cap Regular saw 100% `__NO_DISCLOSURE__`.
 |---|---|---|
 | HDFC Flexi Cap | 83 | **0.00%** |
 | Kotak Pioneer | 55 | **0.00%** |
-| ICICI Multi Asset | 290 | 4.20% |
+| ICICI Multi Asset | 290 | 1.79% |
 
 PPFAS Flexi Cap, the fifth fund with a disclosure, is also at **0.00%**.
 
-Disclosure quality across all 192: **109 `ok`, 83 `warn`, 0 quarantined.** Most
-warnings are V8 (a negative value on something not classified as a derivative —
-the covered-call defect below). No parse is being stored that disagrees with
-the file it came from.
+Disclosure quality across all 192: **101 `ok`, 91 `warn`, 0 quarantined.** Most
+warnings are V2 (a portfolio a quarter's growth away from AMFI's quarterly
+average AUM, V1-67) or V8 (a negative value on something not classified as a
+derivative — the covered-call defect below). No parse is being stored that
+disagrees with the file it came from.
 
-Unresolved across the whole warehouse is **2.30%** of value, measured over each
+Unresolved across the whole warehouse is **2.09%** of value, measured over each
 scheme's newest disclosure.
 
 ## How to add a fund
@@ -275,6 +284,13 @@ Ordered by what they cost.
    Verified on Kotak Liquid Daily-IDCW, whose full-series return went from
    **4.97% on raw NAV to 64.81% adjusted**.
 
+   The sibling is the **same plan's** Growth option since 2026-09-23. Until
+   then any Growth option of the fund would do, and 4,548 IDCW plans were
+   derived from the other plan's series, off by the gap between the two plans'
+   expense ratios. 202 still are: their own plan has no Growth option, and the
+   other plan's series is nearer the truth than raw NAV, which misses every
+   payout.
+
    Scope, stated honestly. 4,468 of the 4,595 IDCW schemes with NAV have such
    a sibling, but only **604** have more than one NAV row of their own — the
    rest are a single point, where no return exists to correct. Of those 604,
@@ -430,20 +446,33 @@ Ordered by what they cost.
 
 ## Next
 
-The coverage machinery is done. What is left is mostly not machinery:
+The coverage machinery is done. What is left is mostly not machinery. In
+order:
 
 - **Covered calls and state development loans**, the next two data fixes
   found in the 2026-09-23 research: ICICI names its written calls "(Covered
   call)", and an SDL's ISIN carries its state's code, observed one-to-one
-  against the state each fund house names.
-- **Remember which indices have no series**, so a refresh stops asking NSE
-  for them — 576 of its 724 requests. Needs a small schema change.
+  against the state each fund house names. The SDLs need one decision first:
+  the issuer name each state gets.
+- **The small internal defects above**: `rebuild_weights` committing, the
+  re-read, the four latent fetch defects and a loud `data_only` check.
+- **Two schema changes**: `scheme_aum` revisions, and remembering which
+  indices have no series, so a refresh stops asking NSE for them — 576 of its
+  724 requests.
+- **Expense ratios.** AMFI's TER page is backed by the same kind of JSON API
+  as its AUM data: Regular and Direct TER, daily, per fund house, back to
+  2018-19, keyed by the fund-level name the scheme master now supplies.
 - **More discovery adapters**, one per house, as funds are actually held.
   Each also brings that house's declared benchmarks: run
   `python -m jobs.fetch_index --declared` after loading its disclosures.
 - **Run ICICI's ZIP end to end** — the expansion is built and tested, never
   run against a live file.
 - **The tax engine, M4 risk and M5 market.**
+
+Two gaps have no free source and are deferred rather than planned: IDCW
+history for the 127 schemes with no Growth sibling (only each fund house or
+CAMS publishes it, scheme by scheme), and CRISIL's debt indices, which are
+licensed.
 
 ## Reading this repository
 

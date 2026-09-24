@@ -476,10 +476,8 @@ class TestAHeldShareClassIsServedItsFundsWeights:
         self, conn: sqlite3.Connection
     ) -> None:
         self._family(conn)
+        # From the rebuild itself, so no caller has to remember to ask.
         weights, as_ofs = rebuild_weights(conn)
-        assert SchemeId("S1R") not in weights  # the defect: keyed by discloser
-
-        weights, as_ofs = served(conn, weights, as_ofs, [SchemeId("S1R")])
         assert weights[SchemeId("S1R")] == weights[SCHEME]
         assert as_ofs[SchemeId("S1R")] == AS_OF
 
@@ -487,8 +485,10 @@ class TestAHeldShareClassIsServedItsFundsWeights:
         self, conn: sqlite3.Connection
     ) -> None:
         self._family(conn)
-        weights, _ = served(conn, *rebuild_weights(conn), [SchemeId("LONE")])
+        weights, _ = rebuild_weights(conn)
         assert SchemeId("LONE") not in weights
+        # And served() alone, given a scheme nothing discloses, adds nothing.
+        assert SchemeId("LONE") not in served(conn, weights, {}, [SchemeId("LONE")])[0]
 
 
 def test_overlap_is_paired_among_the_funds_held_not_all_disclosed() -> None:
@@ -505,3 +505,19 @@ def test_overlap_is_paired_among_the_funds_held_not_all_disclosed() -> None:
 
     pairs = _overlap_pairs(weights, as_ofs, held)
     assert [(str(o.scheme_a), str(o.scheme_b)) for o in pairs] == [("H1", "H2")]
+
+
+def test_overlap_values_a_scheme_held_in_two_folios_at_both() -> None:
+    """One scheme, two folios, two positions: the pair's rupee overlap used the
+    last folio's value alone."""
+    from scripts.show_lookthrough import _overlap_pairs
+    from src.m3_lookthrough.engine import IssuerWeight, Position
+
+    w = [IssuerWeight(IssuerId("A"), Decimal(100), "equity")]
+    weights = {SchemeId("H1"): w, SchemeId("H2"): w}
+    held = [Position(SchemeId("H1"), Decimal(2)), Position(SchemeId("H1"), Decimal(1)),
+            Position(SchemeId("H2"), Decimal(10))]
+
+    [pair] = _overlap_pairs(weights, {s: AS_OF for s in weights}, held)
+    assert pair.overlap_value_inr == Decimal(3)
+

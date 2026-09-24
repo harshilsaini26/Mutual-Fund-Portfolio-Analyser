@@ -361,7 +361,18 @@ def rebuild_weights(
             weights[scheme_id] = found
             as_ofs[scheme_id] = as_of
     conn.commit()
-    return weights, as_ofs
+    # Keyed as well by every share class a disclosure serves (V1-37), since the
+    # engine reads a holding by the one HELD: here, so no caller has to remember.
+    members = [
+        SchemeId(r[0])
+        for r in conn.execute(
+            "SELECT DISTINCT s.scheme_id FROM scheme s JOIN scheme d"
+            "   ON d.amc_id = s.amc_id AND d.scheme_family = s.scheme_family"
+            " JOIN holding_disclosure h ON h.scheme_id = d.scheme_id AND h.is_current = 1"
+            " ORDER BY s.scheme_id"
+        )
+    ]
+    return served(conn, weights, as_ofs, members)
 
 
 def served(

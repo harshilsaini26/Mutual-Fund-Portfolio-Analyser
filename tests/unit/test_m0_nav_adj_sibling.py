@@ -189,3 +189,26 @@ def test_a_gap_in_the_siblings_series_carries_the_last_ratio(
     build_nav_adj(conn, "D")
     assert adj(conn, "D") == [Decimal("50.000000"), Decimal("50.000000"),
                               Decimal("60.000000")]
+
+
+def test_the_sibling_is_the_same_plans_growth(conn: sqlite3.Connection) -> None:
+    """A family holds Direct and Regular together (V1-37), and one plan's TER is
+    not the other's: a Regular IDCW plan built from Direct Growth overstates its
+    return by the gap. `LIMIT 1` with no order picked the other plan for 4,548
+    IDCW plans, and could pick differently on a rebuild (invariant 10)."""
+    for sid, plan, option in (("DG", "direct", "growth"), ("RG", "regular", "growth"),
+                              ("RI", "regular", "idcw_payout")):
+        conn.execute(
+            "INSERT INTO scheme (scheme_id, scheme_name, plan, option, scheme_family)"
+            " VALUES (?,?,?,?,'F')",
+            (sid, sid, plan, option),
+        )
+    navs(conn, "DG", ["10", "11"])
+    navs(conn, "RG", ["10", "10.9"])
+    assert growth_sibling(conn, "RI") == "RG"
+
+    # With no Growth of its own plan, the other plan's still beats raw NAV,
+    # which misses every distribution.
+    conn.execute("DELETE FROM nav_daily WHERE scheme_id = 'RG'")
+    assert growth_sibling(conn, "RI") == "DG"
+

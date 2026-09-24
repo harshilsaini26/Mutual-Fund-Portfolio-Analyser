@@ -54,8 +54,12 @@ def derive_scheme_families(conn: sqlite3.Connection) -> dict[str, int]:
         assigned += len(members)
         updates.extend((key, sid) for sid, _c in members)
 
+    # Only the rows whose family changed: a daily run otherwise rewrote all
+    # 19,000-odd for the handful of new or moved share classes.
     conn.executemany(
-        "UPDATE scheme SET scheme_family = ? WHERE scheme_id = ?", updates
+        "UPDATE scheme SET scheme_family = ?1"
+        " WHERE scheme_id = ?2 AND scheme_family IS NOT ?1",
+        updates,
     )
     return {
         "schemes": len(rows),
@@ -70,8 +74,10 @@ def disclosure_scheme_for(
 ) -> str:
     """The scheme whose disclosure describes `scheme_id`'s portfolio.
 
-    Returns `scheme_id` itself when it has one, which is the ordinary case and
-    costs one indexed lookup. Otherwise the sibling share class that does.
+    The family's NEWEST usable disclosure, `scheme_id`'s own on a tie; a scheme
+    with no family answers for itself. Not own-first: when a fund's disclosure
+    moves to another share class -- as merged families make it do -- the old
+    one kept answering with last month's portfolio for good.
 
     **Deterministic by construction** (`CLAUDE.md` invariant 10): siblings are
     ordered by disclosure date and then by `scheme_id`, so a rebuild picks the
@@ -83,14 +89,6 @@ def disclosure_scheme_for(
     (V1-66): a share class whose own failed while a sibling's passed is served
     the sibling's, since they hold the same portfolio.
     """
-    own = conn.execute(
-        "SELECT 1 FROM holding_disclosure WHERE scheme_id = ? AND is_current = 1"
-        " AND validation_status <> 'quarantined' LIMIT 1",
-        (scheme_id,),
-    ).fetchone()
-    if own:
-        return scheme_id
-
     family = conn.execute(
         "SELECT amc_id, scheme_family FROM scheme WHERE scheme_id = ?", (scheme_id,)
     ).fetchone()
@@ -108,8 +106,11 @@ def disclosure_scheme_for(
     if on_or_before is not None:
         sql += " AND d.as_of_date <= ?"
         params.append(on_or_before)
-    sql += " GROUP BY s.scheme_id ORDER BY latest DESC, s.scheme_id ASC LIMIT 1"
-    row = conn.execute(sql, tuple(params)).fetchone()
+    sql += (
+        " GROUP BY s.scheme_id"
+        " ORDER BY latest DESC, s.scheme_id = ? DESC, s.scheme_id ASC LIMIT 1"
+    )
+    row = conn.execute(sql, (*params, scheme_id)).fetchone()
     return str(row[0]) if row else scheme_id
 
 

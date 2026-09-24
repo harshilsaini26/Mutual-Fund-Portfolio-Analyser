@@ -26,6 +26,7 @@ from decimal import Decimal
 from src.common.decimals import connect
 from src.common.types import SchemeId, UserId
 from src.m0_data.config import warehouse_path
+from src.m0_data.derive.scheme_family import disclosed_scheme_ids
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m3_lookthrough.concentration import concentration
 from src.m3_lookthrough.duplication import portfolio_duplication
@@ -44,7 +45,7 @@ from src.m3_lookthrough.persist_metrics import (
     save_marginal,
     save_overlap,
 )
-from src.m3_lookthrough.weights import rebuild_weights, served
+from src.m3_lookthrough.weights import rebuild_weights
 
 TOP_N = 20
 
@@ -59,19 +60,25 @@ def main() -> None:
 
     conn = connect(str(warehouse_path()))
     weights_by_scheme, as_of_by_scheme = rebuild_weights(conn)
+    # The disclosing schemes only: the weights are also keyed by every share
+    # class they serve, and `--equal` values each fund once, not once per plan.
+    disclosed = [
+        s for s in map(SchemeId, disclosed_scheme_ids(conn)) if s in weights_by_scheme
+    ]
 
-    positions, basis, ledger = _positions(args, weights_by_scheme)
+    positions, basis, ledger = _positions(args, disclosed)
     if not positions:
         raise SystemExit(
             "no positions. Import a CAS, or pass --equal 100000 to see the shape."
         )
-    # A held share class reads its fund's weights, which are keyed by whichever
-    # sibling disclosed them (V1-37).
-    weights_by_scheme, as_of_by_scheme = served(
-        conn, weights_by_scheme, as_of_by_scheme, [p.scheme_id for p in positions]
-    )
 
-    as_of = max(as_of_by_scheme.values()) if as_of_by_scheme else date.today()
+    # The newest disclosure behind what is HELD: an unrelated fund's later file
+    # must not date this portfolio.
+    as_of = max(
+        (as_of_by_scheme[p.scheme_id]
+         for p in positions if p.scheme_id in as_of_by_scheme),
+        default=date.today(),
+    )
     result = compute_lookthrough(positions, weights_by_scheme, as_of)
     summary = result.summary
     names = _issuer_names(conn, [str(e.issuer_id) for e in result.exposures[:TOP_N]])
@@ -178,7 +185,10 @@ def _overlap_pairs(
     — the same answer in rupees, which is the form the question is usually asked
     in. A scheme absent from `values` gives None rather than zero.
     """
-    values = {p.scheme_id: p.value_inr for p in positions}
+    # Summed: one scheme in two folios is two positions.
+    values: dict[SchemeId, Decimal] = {}
+    for p in positions:
+        values[p.scheme_id] = values.get(p.scheme_id, Decimal(0)) + p.value_inr
     # The funds HELD, not every one disclosed: for a real ledger the latter
     # stored ~15,000 pairs, which `--equal` hid by holding everything.
     schemes = sorted(s for s in values if s in weights_by_scheme)
@@ -216,7 +226,7 @@ def _print_overlap(pairs: list[Overlap]) -> None:
 
 def _positions(
     args: argparse.Namespace,
-    weights_by_scheme: dict[SchemeId, list[IssuerWeight]],
+    disclosed: list[SchemeId],
 ) -> tuple[list[Position], str, sqlite3.Connection | None]:
     """Positions, a label for them, and the ledger to store into — or None.
 
@@ -226,7 +236,7 @@ def _positions(
     if args.equal:
         value = Decimal(args.equal)
         return (
-            [Position(s, value) for s in weights_by_scheme],
+            [Position(s, value) for s in disclosed],
             f"ILLUSTRATIVE — every fund valued at Rs {value:,.2f}, NOT your ledger",
             None,
         )

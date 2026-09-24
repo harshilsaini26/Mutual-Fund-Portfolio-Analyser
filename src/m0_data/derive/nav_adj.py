@@ -103,6 +103,11 @@ def growth_sibling(conn: sqlite3.Connection, scheme_id: str) -> str | None:
     cash out instead of compounding it. That makes the Growth series a complete
     record of what the IDCW plan earned -- which is exactly what `nav_adj` is
     defined to be (§9.1, "IDCW-reinvested total return").
+
+    **The same plan's Growth**: a family holds Direct and Regular together, and
+    their TERs differ. Only when the plan has no Growth of its own is the other
+    plan's taken -- off by the TER gap, but raw NAV would miss every
+    distribution. Ordered, so a rebuild picks the same one (invariant 10).
     """
     row = conn.execute(
         "SELECT g.scheme_id FROM scheme s JOIN scheme g"
@@ -110,6 +115,7 @@ def growth_sibling(conn: sqlite3.Connection, scheme_id: str) -> str | None:
         " WHERE s.scheme_id = ? AND s.option LIKE 'idcw%'"
         "   AND s.scheme_family IS NOT NULL"
         "   AND EXISTS (SELECT 1 FROM nav_daily n WHERE n.scheme_id = g.scheme_id)"
+        " ORDER BY g.plan IS s.plan DESC, g.scheme_id"
         " LIMIT 1",
         (scheme_id,),
     ).fetchone()

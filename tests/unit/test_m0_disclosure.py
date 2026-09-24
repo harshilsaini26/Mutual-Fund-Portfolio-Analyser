@@ -406,6 +406,36 @@ def test_a_quarantined_share_class_is_served_a_sibling_that_passed(
     assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01608"
 
 
+def test_a_share_class_is_served_its_familys_newest_disclosure(
+    conn: sqlite3.Connection,
+) -> None:
+    """A disclosure filed under a different share class of the fund than last
+    month's -- which merged families cause (Kotak Banking and PSU Debt: FO3 in
+    July, KH7 in August) -- must not leave the old share class answering for
+    itself with July's portfolio forever. Newest wins; its own on a tie."""
+    rows, header = _payload()
+    load_holdings(conn, "INF179K01UT0", AS_OF, rows, header, "file-a")
+    load_holdings(conn, "INF179K01608", AS_OF + timedelta(days=31), rows, header,
+                  "file-b")
+    for scheme_id, name, plan in (
+        ("INF179K01UT0", "HDFC Flexi Cap Fund - Growth Option - Direct Plan", "direct"),
+        ("INF179K01608", "HDFC Flexi Cap Fund - Growth Plan", "regular"),
+    ):
+        conn.execute(
+            "INSERT OR REPLACE INTO scheme (scheme_id, scheme_name, plan, option,"
+            " amc_id, status, scheme_family) VALUES (?,?,?,'growth','hdfc',"
+            " 'active', ?)",
+            (scheme_id, name, plan, family_key(name)),
+        )
+    conn.commit()
+    assert disclosure_scheme_for(conn, "INF179K01UT0") == "INF179K01608"
+
+    load_holdings(conn, "INF179K01UT0", AS_OF + timedelta(days=31), rows, header,
+                  "file-a")
+    assert disclosure_scheme_for(conn, "INF179K01UT0") == "INF179K01UT0"
+    assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01608"
+
+
 def test_a_scheme_with_no_family_behaves_exactly_as_before(
     conn: sqlite3.Connection,
 ) -> None:

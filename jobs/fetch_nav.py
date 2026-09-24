@@ -23,7 +23,9 @@ import subprocess
 import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
+import httpx
 from src.common.decimals import connect
 from src.m0_data.config import raw_root, source, warehouse_path
 from src.m0_data.derive.nav_adj import build_all_nav_adj
@@ -74,32 +76,17 @@ def run(dry_run: bool = False) -> dict[str, object]:
 
     summary: dict[str, object] = {"run_id": run_id}
     try:
-        # Before the NAV fetch, which returns early on a 304: daily either way.
-        if not dry_run:
-            summary["scheme_master"] = _refresh_scheme_master(conn)
         prior = conn.execute(
             "SELECT http_etag, http_last_mod FROM raw_file WHERE source_id = ? "
             "ORDER BY fetched_at DESC LIMIT 1",
             (SOURCE_ID,),
         ).fetchone()
-
-        response = conditional_get(
-            cfg["url"],
-            user_agent=cfg["user_agent"],
-            etag=prior[0] if prior else None,
-            last_modified=prior[1] if prior else None,
-            timeout_connect=cfg["timeout_connect"],
-            timeout_read=cfg["timeout_read"],
-            retries=cfg["retries"],
-            backoff_base=cfg["backoff_base_sec"],
-            backoff_cap=cfg["backoff_cap_sec"],
-            limiter=DomainRateLimiter(cfg["rate_limit_per_sec"], cfg["burst"]),
-            robots=RobotsCache() if cfg.get("respect_robots") else None,
-        )
+        response = _get(cfg, *(prior or (None, None)))
 
         if response.status_code == 304:
-            summary |= {"status": "skipped", "reason": "304 not modified"}
-            _finish(conn, run_id, "skipped", summary)
+            status = "skipped" if _enrich(conn, summary) else "partial"
+            summary |= {"status": status, "reason": "304 not modified"}
+            _finish(conn, run_id, status, summary)
             return summary
         response.raise_for_status()
 
@@ -136,12 +123,13 @@ def run(dry_run: bool = False) -> dict[str, object]:
         text = _archived_text(conn, result.file_id)
         parsed = parse_navall(text.splitlines())
         counts = load_parse_result(conn, parsed, result.file_id, date.today())
+        # The prices stand whatever the enrichment below does.
+        conn.commit()
+        # After the load, so a scheme NAVAll lists for the first time today gets
+        # its fund and family now rather than tomorrow; and before `nav_adj`,
+        # which finds an IDCW plan's Growth sibling through the family.
+        enriched = _enrich(conn, summary)
         counts["nav_adj"] = build_all_nav_adj(conn)
-        # Share-class families, recomputed from the scheme master this load
-        # just refreshed (V1-37). A newly listed Regular plan joins its
-        # family here rather than waiting for someone to notice it is
-        # missing a portfolio it shares with its Direct sibling.
-        counts["scheme_family"] = derive_scheme_families(conn)["assigned"]
 
         conn.execute(
             "UPDATE raw_file SET parse_status='ok', parser_id=?, parser_version=?,"
@@ -149,7 +137,7 @@ def run(dry_run: bool = False) -> dict[str, object]:
             (PARSER_ID, PARSER_VERSION, datetime.now(UTC), result.file_id),
         )
         summary |= counts
-        status = "partial" if counts["warnings"] else "ok"
+        status = "partial" if counts["warnings"] or not enriched else "ok"
         _finish(conn, run_id, status, summary, counts)
         summary["status"] = status
         return summary
@@ -176,18 +164,9 @@ def _refresh_scheme_master(conn: sqlite3.Connection) -> object:
     """
     cfg = source("S2")
     try:
-        response = conditional_get(
-            cfg["url"],
-            user_agent=cfg["user_agent"],
-            timeout_connect=cfg["timeout_connect"],
-            timeout_read=cfg["timeout_read"],
-            retries=cfg["retries"],
-            backoff_base=cfg["backoff_base_sec"],
-            backoff_cap=cfg["backoff_cap_sec"],
-            limiter=DomainRateLimiter(cfg["rate_limit_per_sec"], cfg["burst"]),
-            robots=RobotsCache() if cfg.get("respect_robots") else None,
-            from_email=str(cfg.get("from_email") or "") or None,
-        )
+        # No conditional headers: the portal sends neither ETag nor
+        # Last-Modified, so there is nothing to revalidate against.
+        response = _get(cfg)
         response.raise_for_status()
         result, path = archive(
             response.content,
@@ -204,14 +183,45 @@ def _refresh_scheme_master(conn: sqlite3.Connection) -> object:
                 (result.file_id, "S2", cfg["url"], date.today(), datetime.now(UTC),
                  result.byte_size, str(path), datetime.now(UTC)),
             )
-        parsed = parse_scheme_master(response.content.decode("utf-8"))
-        schemes = load_scheme_master(conn, parsed)
-        families = derive_scheme_families(conn)
+        # Tolerant: a BOM or one mis-encoded fund name must not cost the file.
+        text = response.content.decode("utf-8-sig", errors="replace")
+        schemes = load_scheme_master(conn, parse_scheme_master(text))
         conn.commit()
-        return {"schemes": schemes, "families": families["families"]}
+        return {"schemes": schemes}
     except Exception as exc:  # enrichment: it must not stop the prices
         conn.rollback()
         return f"failed, prices still loaded: {type(exc).__name__}: {exc}"
+
+
+def _enrich(conn: sqlite3.Connection, summary: dict[str, object]) -> bool:
+    """The scheme master (S2), then the families built on it. False when the
+    master failed, so the run says `partial` rather than burying it in a
+    printed summary; the families are still derived from what is stored."""
+    summary["scheme_master"] = _refresh_scheme_master(conn)
+    summary["scheme_family"] = derive_scheme_families(conn)["assigned"]
+    conn.commit()
+    return not isinstance(summary["scheme_master"], str)
+
+
+def _get(
+    cfg: dict[str, Any], etag: str | None = None, last_modified: str | None = None
+) -> httpx.Response:
+    """One polite GET for either AMFI source: the same agent, `From:`, rate
+    limit, robots and retries, so a politeness fix is made once."""
+    return conditional_get(
+        cfg["url"],
+        user_agent=cfg["user_agent"],
+        etag=etag,
+        last_modified=last_modified,
+        timeout_connect=cfg["timeout_connect"],
+        timeout_read=cfg["timeout_read"],
+        retries=cfg["retries"],
+        backoff_base=cfg["backoff_base_sec"],
+        backoff_cap=cfg["backoff_cap_sec"],
+        limiter=DomainRateLimiter(cfg["rate_limit_per_sec"], cfg["burst"]),
+        robots=RobotsCache() if cfg.get("respect_robots") else None,
+        from_email=str(cfg.get("from_email") or "") or None,
+    )
 
 
 def _archived(conn: object, file_id: str) -> bool:
