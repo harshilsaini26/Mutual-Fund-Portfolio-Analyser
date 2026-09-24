@@ -1,0 +1,60 @@
+{#
+  The interface's icons: small inline SVGs, stroked in `currentColor` so they
+  take the text colour of whatever holds them, in either theme. Inline rather
+  than an icon font or a sprite file: the CSP allows `'self'` only, and a few
+  hundred bytes of path data needs no extra request. Decorative everywhere
+  (`aria-hidden`): every icon sits beside a word that says the same thing.
+#}
+{% macro i(name, cls="icon") -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+{%- if name == "home" -%}
+<path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/>
+{%- elif name == "gauge" -%}
+<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4.5-5"/><circle cx="12" cy="17" r="1"/>
+{%- elif name == "layers" -%}
+<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>
+{%- elif name == "overlap" -%}
+<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>
+{%- elif name == "copy" -%}
+<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>
+{%- elif name == "plus" -%}
+<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+{%- elif name == "pie" -%}
+<path d="M12 3v9h9"/><path d="M21 12a9 9 0 1 1-9-9"/>
+{%- elif name == "bars" -%}
+<path d="M5 20V11M12 20V4M19 20v-6"/>
+{%- elif name == "list" -%}
+<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>
+{%- elif name == "search" -%}
+<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/>
+{%- elif name == "menu" -%}
+<path d="M4 6h16M4 12h16M4 18h16"/>
+{%- elif name == "sun" -%}
+<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>
+{%- elif name == "moon" -%}
+<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>
+{%- elif name == "external" -%}
+<path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>
+{%- elif name == "check" -%}
+<path d="M5 12.5l4.5 4.5L19 7.5"/>
+{%- elif name == "arrow" -%}
+<path d="M5 12h14M13 6l6 6-6 6"/>
+{%- elif name == "growth" -%}
+<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>
+{%- elif name == "fall" -%}
+<path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/>
+{%- elif name == "wave" -%}
+<path d="M3 12c2-4.5 4-4.5 6 0s4 4.5 6 0 4-4.5 6 0"/>
+{%- elif name == "box" -%}
+<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>
+{%- elif name == "file" -%}
+<path d="M7 3h7l5 5v12.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5z"/><path d="M14 3v5h5"/>
+{%- elif name == "data" -%}
+<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>
+{%- elif name == "lock" -%}
+<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+{%- elif name == "logo" -%}
+<circle cx="10.5" cy="10.5" r="7.5"/><path d="M16 16l5 5"/><path d="M7.5 13.5v-2M10.5 13.5v-6M13.5 13.5v-4"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}

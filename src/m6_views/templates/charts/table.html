@@ -1,7 +1,7 @@
 {#
-  Table — `fund_list` and `fund_xray_header`. The reconciliation marker is
-  `fund_list`'s: a row without a `reconciled` key is not a folio and is never
-  marked.
+  Table — `fund_list`, `mcap_allocation`, `marginal_contribution` and
+  `fund_xray_header`. The reconciliation marker is `fund_list`'s: a row without
+  a `reconciled` key is not a folio and is never marked.
 
   **Reconciliation status is a property of the row, not of the page.**
   `MODULE_1.md` §12.1: a folio that failed reconciliation is degraded beside the
@@ -12,16 +12,24 @@
   that no distinction may be encoded by colour alone. It reads correctly in
   greyscale, to a screen reader, and to the roughly one in twelve men who cannot
   separate the obvious hues.
+
+  Headers sort in the browser (§16.4 allows sorting): on the value written into
+  `data-value` beside each figure, never on its formatted text. A column the
+  builder marks `bar` is a share of the whole, and draws a bar that long behind
+  its figure -- an SVG attribute, so the CSP's `style-src 'self'` holds
+  (DECISIONS V1-74).
 #}
 {% if env.payload.definition %}
 <p class="definition">{{ env.payload.definition }}</p>
 {% endif %}
 <div class="table-wrap" data-chart="table">
-<table>
+<table data-sortable>
   <thead>
     <tr>
       {% for column in env.payload.columns %}
-      <th scope="col" class="col--{{ column.kind }}">{{ column.label }}</th>
+      <th scope="col" class="col--{{ column.kind }}"><button type="button"
+          data-sort="{{ 'text' if column.kind == 'text' else ('value' if column.kind == 'date' else 'number') }}"
+          >{{ column.label }}</button></th>
       {% endfor %}
     </tr>
   </thead>
@@ -29,15 +37,20 @@
     {% for row in env.payload.rows %}
     <tr class="{{ 'row--unreconciled' if row.reconciled is defined and not row.reconciled else '' }}">
       {% for column in env.payload.columns %}
-      <td class="col--{{ column.kind }}">
+      {% set value = row[column.key] %}
+      <td class="col--{{ column.kind }}"{% if column.kind != 'text' and value is not none %} data-value="{{ value }}"{% endif %}>
         {% if column.key == 'confidence' and row.reconciled is defined %}
-          {{ row[column.key] }}{% if not row.reconciled %}
+          {{ value }}{% if not row.reconciled %}
           <abbr class="flag" title="This folio did not reconcile against the statement's own closing balance.">!</abbr>
           {% endif %}
         {% elif column.key == 'scheme_id' %}
           <a href="{{ root }}/fund/{{ row.scheme_id | urlencode }}{{ qs }}">{{ row.scheme_id }}</a>
+        {% elif column.bar and value is not none %}
+          <span class="bar-cell"><svg class="bar" viewBox="0 0 100 6" preserveAspectRatio="none"
+               aria-hidden="true" focusable="false"><rect class="bar__track" width="100" height="6" rx="3"/><rect
+               class="bar__fill" width="{{ value | bar_width }}" height="6" rx="3"/></svg><span>{{ {'value': value, 'kind': column.kind} | fmt_cell }}</span></span>
         {% else %}
-          {{ {'value': row[column.key], 'kind': column.kind} | fmt_cell }}
+          {{ {'value': value, 'kind': column.kind} | fmt_cell }}
         {% endif %}
       </td>
       {% endfor %}

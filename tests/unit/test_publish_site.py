@@ -198,3 +198,42 @@ def test_a_site_too_large_for_pages_stops_the_build() -> None:
     publish.check_budget(100, budget=100)
     with pytest.raises(publish.SiteTooLarge):
         publish.check_budget(101, budget=100)
+
+
+def test_the_front_page_lists_every_fund_in_one_table(site: Path) -> None:
+    """DECISIONS V1-74: a table of every published fund, sortable and narrowed
+    by category in the browser, and the grouped lists beneath for no script."""
+    index = (site / "index.html").read_text(encoding="utf-8")
+    assert "<table data-sortable data-filterable>" in index
+    assert index.count('<tr data-family="equity">') == 2
+    assert f'href="{BASE}/fund/{DIRECT}/"' in index
+    assert 'class="explorer__group"' in index
+    assert (site / "static" / "theme.js").exists()
+    # Three hundred days of prices span no fixed window: every return is a
+    # dash, never a figure for a period the history does not cover. The
+    # fixture has no fund size either, so that cell is the fourth dash.
+    row = re.search(r'<tr data-family="equity">(.*?)</tr>', index, re.S)
+    assert row is not None and "data-value=\"0." not in row.group(1)
+    assert row.group(1).count("—") == 4
+
+
+@pytest.mark.parametrize(("category", "family"), [
+    ("Equity Scheme - Flexi Cap Fund", "equity"),
+    ("Equity Schemes - Thematic Fund", "equity"),
+    ("Growth", "equity"),
+    ("ELSS", "equity"),
+    ("Debt Scheme - Gilt Fund", "debt"),
+    ("Income/Debt Oriented Schemes - Liquid Fund", "debt"),
+    ("Income", "debt"),
+    ("Hybrid Schemes - Arbitrage Fund", "hybrid"),
+    ("Solution Oriented Schemes ** - Retirement Fund", "solution"),
+    ("Other Scheme - Index Funds", "other"),
+    ("Exchange Traded Funds (ETFs) - Equity ETF", "other"),
+    ("Overseas Fund of Funds - Fund of Funds investing overseas", "other"),
+])
+def test_every_generation_of_category_name_finds_its_family(
+    category: str, family: str
+) -> None:
+    """AMFI's list mixes naming generations; the tiles must count them all, or a
+    legacy "Income" fund is filed under index funds and ETFs."""
+    assert publish.family_of(category) == family

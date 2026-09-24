@@ -116,6 +116,21 @@ def health_snapshot(
     }
 
 
+def latest_lookthrough(ledger: sqlite3.Connection, user_id: str) -> date | None:
+    """The newest date a look-through is stored for `user_id`, or None.
+
+    A portfolio page with no date in its URL shows this one (DECISIONS V1-74).
+    The look-through is dated by the newest disclosure behind the holdings, and
+    every provider matches its date exactly, so defaulting to today rendered an
+    empty dashboard for anyone whose look-through was not computed today.
+    """
+    with DB_LOCK:
+        row = ledger.execute(
+            "SELECT max(as_of) FROM portfolio_summary WHERE user_id = ?", (user_id,)
+        ).fetchone()
+    return date.fromisoformat(str(row[0])) if row and row[0] else None
+
+
 def _word(value: str | None) -> str:
     """A plan or option as a reader writes it; AMFI's "unknown" is left out."""
     return "" if not value or value == "unknown" else value.title()
@@ -190,6 +205,10 @@ def create_app(
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
     def _scope(user_id: str, as_of: date | None, scope_id: str | None) -> Scope:
+        # A fund is analysed as of today; a portfolio as of its newest
+        # stored look-through, since nothing else is stored to show.
+        if as_of is None and scope_id is None:
+            as_of = latest_lookthrough(ledger, user_id)
         return Scope(
             user_id=UserId(user_id),
             as_of=as_of or date.today(),
@@ -287,6 +306,7 @@ def create_app(
         make_router(
             ledger, warehouse, build_view, health_snapshot,
             lambda q: search_funds(warehouse, q),
+            lambda user_id: latest_lookthrough(ledger, user_id),
         )
     )
     return app

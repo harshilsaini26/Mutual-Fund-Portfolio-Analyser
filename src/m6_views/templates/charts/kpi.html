@@ -1,25 +1,32 @@
 {#
-  KPI grid — `portfolio_summary` and `duplication_summary`.
+  KPI tiles — `portfolio_summary` and `duplication_summary`.
 
   **Values are formatted server-side.** §16.4: the frontend receives chart-ready
   payloads and may not derive a figure. The `kind` on each tile says how to
   render it; `fmt_tile` dispatches on that in Python, so there is one place where
   a Decimal becomes a string and it is the place §9 specifies.
 
-  A `None` renders as an em dash (§9.3) and carries a title explaining why —
-  never a 0, which would be a claim. Most of this grid is em dashes today because
-  M1's returns engine and M2's fee data have not run, and that is the design
-  working rather than a gap being hidden.
+  The figures that exist lead; the ones nothing has computed yet follow in a
+  smaller row under a label saying so (DECISIONS V1-74). They stay on the page --
+  each an em dash with a title explaining why, never a 0, which would be a claim
+  (§9.3, and §4.4: absent is never hidden). Most of that row is M1's returns
+  engine and M2's fee data, which have not run.
 #}
+{% import "macros.html" as vc %}
+{% set shown = env.payload.tiles | rejectattr("value", "none") | list %}
+{% set absent = env.payload.tiles | selectattr("value", "none") | list %}
 <div class="kpi" data-chart="kpi">
-  {% for tile in env.payload.tiles %}
-  <div class="kpi__tile{% if tile.value is none %} kpi__tile--absent{% endif %}">
-    <dt>{{ tile.label }}</dt>
-    <dd {% if tile.value is none %}
-          title="Not computed yet — this figure comes from a module that has not run."
-        {% endif %}>{{ tile | fmt_tile }}</dd>
-  </div>
-  {% endfor %}
+  {% if shown %}
+  <dl class="tiles">
+    {% for tile in shown %}{{ vc.kpi_tile(tile) }}{% endfor %}
+  </dl>
+  {% endif %}
+  {% if absent %}
+  <p class="kpi__absent-note">Not computed yet</p>
+  <dl class="tiles tiles--absent">
+    {% for tile in absent %}{{ vc.kpi_tile(tile) }}{% endfor %}
+  </dl>
+  {% endif %}
 </div>
 {% if env.payload.definition %}
 <p class="definition">{{ env.payload.definition }}</p>

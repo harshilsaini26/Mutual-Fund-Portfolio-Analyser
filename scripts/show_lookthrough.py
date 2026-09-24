@@ -18,9 +18,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
-import itertools
 import sqlite3
-from datetime import date
 from decimal import Decimal
 
 from src.common.decimals import connect
@@ -29,22 +27,9 @@ from src.m0_data.config import warehouse_path
 from src.m0_data.derive.scheme_family import disclosed_scheme_ids
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m3_lookthrough.concentration import concentration
-from src.m3_lookthrough.duplication import portfolio_duplication
-from src.m3_lookthrough.engine import (
-    IssuerWeight,
-    Position,
-    compute_lookthrough,
-)
-from src.m3_lookthrough.marginal import marginal_contribution
-from src.m3_lookthrough.overlap import Overlap, pairwise_overlap
-from src.m3_lookthrough.persist import save_lookthrough
-from src.m3_lookthrough.persist_metrics import (
-    SCOPES,
-    save_concentration,
-    save_duplication,
-    save_marginal,
-    save_overlap,
-)
+from src.m3_lookthrough.engine import Position
+from src.m3_lookthrough.overlap import Overlap
+from src.m3_lookthrough.refresh import analyse, store
 from src.m3_lookthrough.weights import rebuild_weights
 
 TOP_N = 20
@@ -72,14 +57,9 @@ def main() -> None:
             "no positions. Import a CAS, or pass --equal 100000 to see the shape."
         )
 
-    # The newest disclosure behind what is HELD: an unrelated fund's later file
-    # must not date this portfolio.
-    as_of = max(
-        (as_of_by_scheme[p.scheme_id]
-         for p in positions if p.scheme_id in as_of_by_scheme),
-        default=date.today(),
-    )
-    result = compute_lookthrough(positions, weights_by_scheme, as_of)
+    # Dated by the newest disclosure behind what is HELD (`refresh.analyse`).
+    analysis = analyse(positions, weights_by_scheme, as_of_by_scheme)
+    as_of, result = analysis.as_of, analysis.result
     summary = result.summary
     names = _issuer_names(conn, [str(e.issuer_id) for e in result.exposures[:TOP_N]])
 
@@ -117,12 +97,10 @@ def main() -> None:
             # negative weight in the pool.
             f"gini {equity.gini if equity.gini is not None else '—'}"
         )
-    pairs = _overlap_pairs(weights_by_scheme, as_of_by_scheme, positions)
+    pairs = analysis.pairs
     _print_overlap(pairs)
 
-    duplication = portfolio_duplication(
-        result.contributions, summary.total_value_inr
-    )
+    duplication = analysis.duplication
     print(
         f"\nduplication: {duplication.duplicated_pct}% of the portfolio is a "
         f"company already held by another fund\n  Rs "
@@ -133,33 +111,17 @@ def main() -> None:
 
     if ledger is not None:
         # Persisted only for a real ledger. `--equal` is an illustration, and
-        # writing it into `lookthrough_exposure` would leave numbers that are
-        # not this portfolio sitting exactly where the portfolio's numbers
-        # belong — indistinguishable on the next read.
+        # writing it where the portfolio's numbers belong would leave numbers
+        # that are not this portfolio, indistinguishable on the next read.
         apply_ledger_schema(ledger)
-        user = UserId(args.user)
-        written = save_lookthrough(ledger, user, as_of, result, as_of_by_scheme)
-        # §4.3, beside §4.2's tables and under the same rule: these are derived,
-        # so a rebuild replaces the set rather than merging into it.
-        scopes = save_concentration(
-            ledger, user, as_of,
-            [concentration(result.exposures, s) for s in SCOPES],
-        )
-        save_overlap(ledger, user, as_of, pairs)
-        save_duplication(ledger, user, as_of, duplication)
-        # §11: one more look-through per held fund, without it. §11.2 puts
-        # that well under a second each at 5-15 funds.
-        marginals = save_marginal(
-            ledger, user, as_of,
-            [
-                marginal_contribution(positions, weights_by_scheme, as_of, s)
-                for s in sorted({p.scheme_id for p in positions})
-            ],
+        stored = store(
+            ledger, UserId(args.user), analysis, positions,
+            weights_by_scheme, as_of_by_scheme,
         )
         print(
-            f"\nstored {written} exposure rows, {scopes} concentration scopes,"
-            f" {len(pairs)} fund pairs, the duplication summary and {marginals}"
-            f" marginal contributions for {as_of}"
+            f"\nstored {stored['exposures']} exposure rows, {stored['scopes']}"
+            f" concentration scopes, {stored['pairs']} fund pairs, the duplication"
+            f" summary and {stored['marginals']} marginal contributions for {as_of}"
         )
     else:
         print("\nnot stored: --equal is illustrative, not your portfolio")
@@ -167,43 +129,6 @@ def main() -> None:
     for caveat in result.caveats:
         print(f"\n  ! {caveat}")
     print()
-
-
-def _overlap_pairs(
-    weights_by_scheme: dict[SchemeId, list[IssuerWeight]],
-    as_of_by_scheme: dict[SchemeId, date],
-    positions: list[Position],
-) -> list[Overlap]:
-    """§9.1. "How much of these two funds is the same thing?"
-
-    Usually the launch story: a portfolio of five large-cap funds tends to be
-    one fund bought five times. Keyed on issuer, never ISIN (§2.3), and
-    synthetics are dropped so two funds both holding cash do not read as
-    overlapping.
-
-    Position values are passed through so §4.3's `overlap_value_inr` is computed
-    — the same answer in rupees, which is the form the question is usually asked
-    in. A scheme absent from `values` gives None rather than zero.
-    """
-    # Summed: one scheme in two folios is two positions.
-    values: dict[SchemeId, Decimal] = {}
-    for p in positions:
-        values[p.scheme_id] = values.get(p.scheme_id, Decimal(0)) + p.value_inr
-    # The funds HELD, not every one disclosed: for a real ledger the latter
-    # stored ~15,000 pairs, which `--equal` hid by holding everything.
-    schemes = sorted(s for s in values if s in weights_by_scheme)
-    if len(schemes) < 2:
-        return []
-    pairs = [
-        pairwise_overlap(
-            a, b, as_of_by_scheme[a], as_of_by_scheme[b],
-            weights_by_scheme[a], weights_by_scheme[b],
-            value_a=values.get(a), value_b=values.get(b),
-        )
-        for a, b in itertools.combinations(schemes, 2)
-    ]
-    pairs.sort(key=lambda o: -o.overlap_pct)
-    return pairs
 
 
 def _print_overlap(pairs: list[Overlap]) -> None:

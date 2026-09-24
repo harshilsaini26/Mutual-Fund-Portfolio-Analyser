@@ -73,7 +73,9 @@ That one command does everything:
    | `history` | price history for the funds with a portfolio |
    | `index_levels` | benchmark levels from NSE: the slow one, about 70 minutes |
 
-4. **Opens the portal** at <http://127.0.0.1:8765> in your browser.
+4. **Opens the portal** at <http://127.0.0.1:8765> in your browser. It follows your
+   computer's dark or light setting; the sun and moon button in the top bar switches it.
+   Until you import a statement, its home page is a short setup checklist and a search box.
 
 If a step fails, the others still run and the next start tries it again. If you stop the
 first run part-way, the next `python start.py` resumes where it stopped.
@@ -101,8 +103,10 @@ Type any words of a fund's name into the search box at the top of any page, such
 `kotak small` or `parag flexi`. Every fund in AMFI's list has a page at `/fund/<ISIN>`,
 and each page leads with charts, each under one plain sentence:
 
-- **The fund at a glance:** its house, category, launch date and size, and three
-  findings: how it did against its benchmark, how steady it was, and its worst fall.
+- **The fund at a glance:** its house, category and plan, then a strip of figures:
+  returns over 1, 3 and 5 years (each beside its benchmark's, with a small chart of that
+  period's prices), its worst fall and how long it took to recover, volatility, and fund
+  size. Below the strip, how steady it has been across every three-year stretch.
 - **What ₹10,000 became**, against the benchmark with dividends reinvested, over 1, 3 or
   5 years or the whole record.
 - **Returns by period**, fund beside benchmark.
@@ -174,8 +178,9 @@ It ends with one summary line. These are the fields to check:
 | `unparsed_lines` | lines inside a fund's section that it could not read |
 | `status` | `ok`, or `partial` when either of the two above is not zero and needs a look |
 
-**Step 3. Look.** Run `python start.py` again. It asks for the ledger key, and your
-portfolio pages appear in the navigation:
+**Step 3. Look.** Run `python start.py` again and enter the ledger key when asked. The
+home page becomes your dashboard: the headline figures, what you own beneath the funds,
+and where your funds overlap. The sidebar lists every portfolio page:
 
 | Page | The question it answers |
 |---|---|
@@ -273,7 +278,9 @@ python -m http.server -d site 8000                      # then open http://127.0
 python -m jobs.publish_site --push                      # build and publish to gh-pages
 ```
 
-It carries AMFI's prices and fund houses' own disclosures, and nothing else:
+Its front page lists every published fund in one table you can sort by size or return
+and narrow by category. It carries AMFI's prices and fund houses' own disclosures, and
+nothing else:
 
 - **No benchmark comparisons.** NSE's index levels are licensed for personal use, so the
   public copy leaves them out and each page says so.
@@ -399,7 +406,7 @@ recomputes the reference portfolio without importing any of the code it checks.
 
 ```bash
 pip install -e ".[dev,cas]" -c requirements.lock   # inside .venv; start.py installs [cas] only
-python -m pytest -q                                # 1,516 tests, hermetic, no network
+python -m pytest -q                                # 1,541 tests, hermetic, no network
 python -m ruff check .
 python -m mypy                                     # strict
 python -m scripts.verify_v0_ledger --check         # the independent ledger verifier

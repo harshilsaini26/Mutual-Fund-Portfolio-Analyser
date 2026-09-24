@@ -495,8 +495,8 @@ def test_overlap_is_paired_among_the_funds_held_not_all_disclosed() -> None:
     """"Am I paying twice?" is about my funds. Pairing every disclosed scheme
     stored ~15,000 pairs for a real ledger; `--equal` hid it, since there every
     disclosed fund is held."""
-    from scripts.show_lookthrough import _overlap_pairs
     from src.m3_lookthrough.engine import IssuerWeight, Position
+    from src.m3_lookthrough.refresh import overlap_pairs as _overlap_pairs
 
     w = [IssuerWeight(IssuerId("A"), Decimal(100), "equity")]
     weights = {SchemeId(s): w for s in ("H1", "H2", "OTHER")}
@@ -510,8 +510,8 @@ def test_overlap_is_paired_among_the_funds_held_not_all_disclosed() -> None:
 def test_overlap_values_a_scheme_held_in_two_folios_at_both() -> None:
     """One scheme, two folios, two positions: the pair's rupee overlap used the
     last folio's value alone."""
-    from scripts.show_lookthrough import _overlap_pairs
     from src.m3_lookthrough.engine import IssuerWeight, Position
+    from src.m3_lookthrough.refresh import overlap_pairs as _overlap_pairs
 
     w = [IssuerWeight(IssuerId("A"), Decimal(100), "equity")]
     weights = {SchemeId("H1"): w, SchemeId("H2"): w}

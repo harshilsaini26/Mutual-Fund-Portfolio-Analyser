@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-24 · 1,512 tests passing
+**Last updated:** 2026-09-24 · 1,537 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -182,11 +182,23 @@ imported still gets every fund page -- the server starts on an empty ledger rath
 refusing. The README walks through the rest in order: looking up a fund, importing a
 statement, loading more funds' holdings, and keeping it current.
 
-**A public copy of the fund pages** -- 754 funds, 246 MB -- builds with
+**The portal was redesigned on 2026-09-24** (DECISIONS V1-74): a sidebar and a top bar
+with search, dark and light themes, KPI tiles, tables that sort, and a home page that is
+a setup checklist until a statement is imported and a dashboard of the three landing
+questions after. Two defects kept that dashboard from ever appearing and are fixed: an
+import now computes and stores the look-through itself (it used to take a separate
+terminal script), and a portfolio page with no date asks for the newest stored
+look-through rather than today's. A third was found beside them: a figure labelled
+"5 years" over four years of prices; a fixed window is now shown only when the prices
+span it.
+
+**A public copy of the fund pages** -- 754 funds -- builds with
 `python -m jobs.publish_site` and publishes to GitHub Pages with `--push`. It carries
 AMFI's prices and fund houses' own disclosures only: NSE's index levels are licensed for
 personal use, so benchmark comparisons stay in the self-hosted app, and the build never
-opens a personal ledger. Publishing is only ever the user's own command.
+opens a personal ledger. Publishing is only ever the user's own command. Its front
+page lists every published fund in one table, sortable by size and by 1-, 3- and 5-year
+return and narrowed by category, with no fund singled out.
 
 ## Looking up any fund
 
@@ -198,8 +210,9 @@ Every fund in AMFI's list has a page, `/fund/<ISIN>`, found by typing any words
 of its name (DECISIONS V1-70). It is pictures first, each with one plain
 sentence above it:
 
-- **the fund at a glance**: its name, house, category, launch date and size, and
-  three findings (against its benchmark, how steady, its worst fall);
+- **the fund at a glance**: its name, house, category and plan, a strip of figures
+  (returns over 1, 3 and 5 years beside the benchmark's, each with a sparkline; the worst
+  fall and its recovery; volatility; size), and how steady it has been;
 - **what Rs 10,000 became**, against the benchmark with dividends, over 1, 3 or
   5 years or everything on record; the period tabs redraw that chart alone;
 - **returns by period**, fund beside benchmark;
@@ -265,7 +278,7 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M0 data** | built — fetch, parse, resolve, validate, load |
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication, nested funds, marginal contribution |
-| **M6 views** | built — fifteen views (eight portfolio, seven on the fund page), interactive charts, fund search, CSV export, loopback API |
+| **M6 views** | built — fifteen views (eight portfolio, seven on the fund page) in a sidebar-and-dashboard layout with dark and light themes, interactive charts, fund search, sortable tables, CSV export, loopback API |
 | M2 fund x-ray | partly built — return windows, risk statistics, rolling returns, Sharpe and Sortino, and alpha, beta, tracking error and capture against a total-return index |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
@@ -322,6 +335,9 @@ went: `pdfplumber` decrypts a statement on its own.
 - **The first start blocks for about 70 minutes.** The portal opens only after
   the last setup step, NSE's index history, although every fund page works
   without it.
+- **No chart of the portfolio's value over time.** The dashboard answers where you
+  stand today; a "growth of your money" line needs a daily valuation, and M1 keeps
+  one `as_of`. It is not approximated.
 
 ## Known defects, measured and unfixed
 

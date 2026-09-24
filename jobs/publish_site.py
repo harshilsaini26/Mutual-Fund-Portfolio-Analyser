@@ -43,11 +43,12 @@ from typing import Any
 
 from src.common.contracts.market import IndexPoint
 from src.common.decimals import connect
-from src.common.types import IndexId, UserId
+from src.common.types import IndexId, SchemeId, UserId
 from src.m0_data.config import REPO_ROOT, warehouse_path
 from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m1_ledger.providers.position import SqlitePositionProvider
+from src.m2_fund.windows import spans
 from src.m3_lookthrough.providers.sqlite import SqliteLookThroughProvider
 from src.m6_views.api.pages import STATIC, fund_context, templates
 from src.m6_views.builder import Scope
@@ -55,6 +56,7 @@ from src.m6_views.builders import portfolio  # noqa: F401  — registers the bui
 from src.m6_views.deps import Deps
 from src.m6_views.envelope import ViewEnvelope
 from src.m6_views.export.csv import ENCODING, to_csv
+from src.m6_views.format import DASH, format_inr, format_pct
 from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY
 from src.m6_views.states import empty_envelope, error_envelope
 
@@ -66,7 +68,9 @@ PUBLIC_USER = UserId("PUBLIC")
 ISIN = re.compile(r"IN[A-Z0-9]{10}")
 #: What the public pages load. d3 draws only the portfolio Sankey, which the
 #: public copy does not have.
-STATIC_FILES = ("app.css", "app.js", "charts.js", "vendor/echarts.v6.1.0.min.js")
+STATIC_FILES = (
+    "app.css", "app.js", "charts.js", "theme.js", "vendor/echarts.v6.1.0.min.js",
+)
 #: A file only this job writes, so a rebuild can tell its own output from a
 #: directory it must not delete.
 MARKER = ".nojekyll"
@@ -76,6 +80,27 @@ AGGREGATOR_WITHHELD = (
     "rather than the fund house's own disclosure, so the public copy leaves them out."
 )
 NOT_BUILT = "This picture could not be built for the public copy."
+
+#: The front page's category tiles, in reading order: key, name, what is in it.
+FAMILIES = (
+    ("equity", "Equity", "Shares of listed companies"),
+    ("debt", "Debt", "Bonds, government securities and money-market paper"),
+    ("hybrid", "Hybrid", "Shares and bonds together"),
+    ("other", "Index funds, ETFs and more",
+     "Index funds, exchange-traded funds and funds of funds"),
+    ("solution", "Solution oriented", "Retirement and children's funds"),
+)
+#: How the part of a category before " - " begins, for each family. AMFI's list
+#: carries several generations of naming at once: "Equity Scheme" and "Equity
+#: Schemes", "Income/Debt Oriented Schemes", and pre-2018 categories that have
+#: no dash at all ("Income", "Growth", "ELSS").
+FAMILY_PREFIXES = (
+    ("equity", ("equity", "growth", "elss")),
+    ("debt", ("debt", "income", "money market", "gilt", "liquid")),
+    ("hybrid", ("hybrid", "balanced")),
+    ("solution", ("solution",)),
+)
+RETURN_WINDOWS = ("1y", "3y", "5y")
 
 
 class SiteTooLarge(RuntimeError):
@@ -147,6 +172,63 @@ def funds_to_publish(warehouse: Any) -> list[dict[str, str]]:
     return sorted((f for _, f in best.values()), key=lambda f: f["name"].lower())
 
 
+def family_of(category: str) -> str:
+    """The key of the scheme family a category belongs to; "other" for index
+    funds, ETFs, funds of funds and anything unnamed."""
+    head = category.partition(" - ")[0].strip().lower()
+    return next(
+        (key for key, starts in FAMILY_PREFIXES if head.startswith(starts)), "other"
+    )
+
+
+def _return_cell(value: Any) -> dict[str, Any]:
+    """One return in the front page's table: the figure as the reader sees it,
+    the value it sorts on, and its direction as a symbol as well as a colour
+    (§10.3). A window with too little history is a dash, never a zero."""
+    if value is None:
+        return {"value": "", "label": DASH, "tone": None, "symbol": None}
+    number = Decimal(str(value))
+    tone = "gain" if number > 0 else "loss" if number < 0 else None
+    return {
+        "value": str(number),
+        "label": format_pct(number * 100, precision=1, signed=True),
+        "tone": tone,
+        "symbol": {"gain": "▲", "loss": "▼"}.get(tone or ""),
+    }
+
+
+def explorer_row(
+    fund: dict[str, str], facts: Any, detail: ViewEnvelope | None
+) -> dict[str, Any]:
+    """One fund's row in the front page's table (DECISIONS V1-74).
+
+    Nothing new is computed: the returns are the fund page's own "every figure"
+    rows (`fund_xray_header`), and the size and house are the scheme facts its
+    header already shows. They are formatted here, in Python (§16.4).
+    """
+    windows: dict[str, Any] = {}
+    if detail is not None and detail.state.value == "ok":
+        # A column headed "5 years" shows only a window the prices span (`spans`).
+        windows = {
+            row["window_key"]: row.get("return_ann")
+            for row in detail.payload.get("rows", [])
+            if row["window_key"] in RETURN_WINDOWS
+            and row.get("obs_days") is not None
+            and spans(int(row["obs_days"]), row["window_key"])
+        }
+    size = facts.aum_inr if facts is not None else None
+    category = fund["category"]
+    return {
+        **fund,
+        "family": family_of(category),
+        "category_short": category.partition(" - ")[2] or category,
+        "house": (facts.amc_name if facts is not None else None) or "",
+        "size_value": str(size) if size is not None else "",
+        "size_label": format_inr(size, precision=0) if size is not None else DASH,
+        "returns": [_return_cell(windows.get(key)) for key in RETURN_WINDOWS],
+    }
+
+
 def _build(
     deps: Deps, view_id: str, scope: Scope, params: dict[str, Any]
 ) -> ViewEnvelope:
@@ -200,6 +282,10 @@ def build_site(
     engine = templates(root=base, static=True)
     shell = {"catalogue": [], "health": {}, "qs": "", "active": "", "built": today}
     funds = funds_to_publish(warehouse)
+    rows: list[dict[str, Any]] = []
+    houses: set[str] = set()
+    with_holdings = 0
+    prices_to: date | None = None
     for n, fund in enumerate(funds, start=1):
         sid = fund["scheme_id"]
         folder = out / "fund" / sid
@@ -213,16 +299,46 @@ def build_site(
             engine.get_template("fund.html").render({**shell, **context}),
             encoding="utf-8",
         )
+        # The front page's table and counts, from what this page just drew.
+        facts = deps.market.scheme_facts(SchemeId(sid))
+        rows.append(explorer_row(fund, facts, context["detail"]["env"]))
+        if facts is not None and facts.amc_name:
+            houses.add(facts.amc_name)
+        for panel in context["panels"]:
+            env = panel["env"]
+            if env.state.value != "ok":
+                continue
+            if env.view_id == "fund_portfolio":
+                with_holdings += 1
+            if env.view_id == "fund_header":
+                prices_to = max(prices_to or env.data_as_of, env.data_as_of)
         if n % 50 == 0:
             print(f"  {n:,} of {len(funds):,} fund pages")
 
     by_category: dict[str, list[dict[str, str]]] = defaultdict(list)
     for fund in funds:
         by_category[fund["category"]].append(fund)
+    counted: defaultdict[str, int] = defaultdict(int)
+    for row in rows:
+        counted[row["family"]] += 1
+    families = [
+        {"key": key, "name": name, "hint": hint, "count": counted[key]}
+        for key, name, hint in FAMILIES
+        if counted[key]
+    ]
     (out / "index.html").write_text(
-        engine.get_template("explorer.html").render(
-            {**shell, "categories": sorted(by_category.items()), "count": len(funds)}
-        ),
+        engine.get_template("explorer.html").render({
+            **shell,
+            "categories": sorted(by_category.items()),
+            "count": len(funds),
+            "funds": rows,
+            "families": families,
+            "stats": {
+                "houses": len(houses),
+                "holdings": with_holdings,
+                "prices_to": prices_to,
+            },
+        }),
         encoding="utf-8",
     )
     (out / "404.html").write_text(

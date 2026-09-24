@@ -16,6 +16,9 @@
  * Period tabs (`a[data-fragment]`) fetch one server-rendered panel and swap it
  * in place, so the headline, table, caveats and footer all change with the
  * chart. Without this file each tab is an ordinary link.
+ *
+ * Every colour is a token from app.css (DECISIONS V1-74), read when a chart is
+ * drawn, so a chart redraws in the new colours when the theme changes.
  */
 (function () {
   "use strict";
@@ -38,10 +41,28 @@
     var cats = [];
     for (var i = 1; i <= 8; i++) cats.push(token("--cat-" + i));
     return {
-      fund: token("--series-fund"), bench: token("--series-bench"),
-      ink: token("--ink"), soft: token("--ink-soft"), rule: token("--rule"),
-      bg: token("--bg"), others: token("--synthetic"), cats: cats,
+      fund: token("--accent"), bench: token("--bench"),
+      ink: token("--ink"), soft: token("--ink-soft"), faint: token("--ink-faint"),
+      rule: token("--line"), bg: token("--surface"), raised: token("--surface-2"),
+      others: token("--synthetic"), onCat: token("--on-cat"), decal: token("--decal"),
+      cats: cats,
     };
+  }
+
+  // A token's colour at an opacity: `#8b9cff` and 0.3 -> `rgba(139,156,255,0.3)`.
+  function alpha(hex, a) {
+    var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if (!m) return hex;
+    return "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," +
+      parseInt(m[3], 16) + "," + a + ")";
+  }
+
+  // The soft fill under a line, fading to nothing at the axis.
+  function fade(hex, top) {
+    return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: alpha(hex, top) },
+      { offset: 1, color: alpha(hex, 0) },
+    ]);
   }
 
   // §9.4: DD Mon YYYY, the same as every date the server prints.
@@ -68,8 +89,9 @@
       grid: { left: 8, right: 18, top: 40, bottom: 12, containLabel: true },
       legend: { top: 0, left: 0, textStyle: { color: p.ink }, itemGap: 18 },
       tooltip: {
-        renderMode: "richText", backgroundColor: p.bg, borderColor: p.rule,
-        textStyle: { color: p.ink },
+        renderMode: "richText", backgroundColor: p.raised, borderColor: p.rule,
+        borderWidth: 1, padding: [8, 12], textStyle: { color: p.ink, fontSize: 12 },
+        axisPointer: { lineStyle: { color: p.faint, type: "dashed" } },
       },
     };
   }
@@ -93,14 +115,15 @@
       o.xAxis = {
         type: "time",
         axisLine: { lineStyle: { color: p.rule } },
-        axisLabel: { color: p.soft, hideOverlap: true },
+        axisTick: { show: false },
+        axisLabel: { color: p.faint, hideOverlap: true },
         splitLine: { show: false },
       };
       o.yAxis = {
         type: "value",
         max: c.kind === "area" ? 0 : null,
-        axisLabel: { color: p.soft, formatter: ticks(c.y) },
-        splitLine: { lineStyle: { color: p.rule, type: "dashed" } },
+        axisLabel: { color: p.faint, formatter: ticks(c.y) },
+        splitLine: { lineStyle: { color: p.rule } },
       };
       o.dataZoom = [
         // The wheel scrolls the page; Ctrl+wheel, a pinch or the slider zooms.
@@ -108,7 +131,12 @@
         { type: "inside", zoomOnMouseWheel: "ctrl", moveOnMouseWheel: false,
           preventDefaultMouseMove: false },
         { type: "slider", height: 18, bottom: 6, borderColor: p.rule,
-          textStyle: { color: p.soft }, labelFormatter: function (v) { return day(v); } },
+          fillerColor: alpha(p.fund, 0.14), backgroundColor: "transparent",
+          handleStyle: { color: p.fund, borderColor: p.fund },
+          moveHandleStyle: { color: p.rule },
+          dataBackground: { lineStyle: { color: p.faint }, areaStyle: { color: p.rule } },
+          textStyle: { color: p.faint },
+          labelFormatter: function (v) { return day(v); } },
       ];
       o.series = c.series.map(function (s) {
         var fund = s.role === "fund";
@@ -124,7 +152,13 @@
             return { value: [pt[0], number(pt[1])], caption: pt[2] };
           }),
         };
-        if (filled) series.areaStyle = { opacity: fund ? 0.2 : 0.06, color: colour(s.role, p) };
+        // A soft fill under the fund's own line; none under the benchmark, and
+        // none where the chart is read against a zero line.
+        if (filled) {
+          series.areaStyle = { color: fade(colour(s.role, p), fund ? 0.32 : 0.08) };
+        } else if (fund && !c.zero_line) {
+          series.areaStyle = { color: fade(p.fund, 0.18) };
+        }
         if (fund && c.zero_line) {
           series.markLine = { silent: true, symbol: "none", label: { show: false },
                               lineStyle: { color: p.soft }, data: [{ yAxis: 0 }] };
@@ -155,10 +189,10 @@
           return it.seriesName + ": " + it.data.caption;
         })).join("\n");
       };
-      o.xAxis = { type: "category", data: c.categories,
-                  axisLabel: { color: p.ink }, axisLine: { lineStyle: { color: p.rule } } };
-      o.yAxis = { type: "value", axisLabel: { color: p.soft, formatter: ticks(c.y) },
-                  splitLine: { lineStyle: { color: p.rule, type: "dashed" } } };
+      o.xAxis = { type: "category", data: c.categories, axisTick: { show: false },
+                  axisLabel: { color: p.soft }, axisLine: { lineStyle: { color: p.rule } } };
+      o.yAxis = { type: "value", axisLabel: { color: p.faint, formatter: ticks(c.y) },
+                  splitLine: { lineStyle: { color: p.rule } } };
       o.series = c.series.map(function (s) {
         var bench = s.role === "benchmark";
         return {
@@ -170,7 +204,8 @@
             // §10.3: hatched as well as coloured.
             decal: bench ? { symbol: "rect", symbolSize: 1, dashArrayX: [1, 0],
                              dashArrayY: [2, 4], rotation: Math.PI / 4,
-                             color: "rgba(255,255,255,0.5)" } : null,
+                             color: p.decal } : null,
+            borderRadius: [4, 4, 0, 0],
           },
           data: s.values.map(function (v) {
             var n = number(v[0]);
@@ -228,9 +263,9 @@
         nodeClick: false,
         breadcrumb: { show: false },
         width: "100%", height: "100%", top: 0, left: 0,
-        label: { show: true, color: "#fff", overflow: "truncate", fontSize: 11,
+        label: { show: true, color: p.onCat, overflow: "truncate", fontSize: 11,
                  formatter: function (d) { return d.name + "\n" + d.data.caption; } },
-        itemStyle: { borderColor: p.bg, borderWidth: 1, gapWidth: 1 },
+        itemStyle: { borderColor: p.bg, borderWidth: 2, gapWidth: 2, borderRadius: 4 },
         data: c.cells.map(function (cell) {
           // A tile under 1% is too small to letter; its name is on hover.
           return { name: cell.name, value: number(cell.value), caption: cell.label,
@@ -256,7 +291,9 @@
       o.series = [{
         type: "bar",
         barMaxWidth: 18,
-        itemStyle: { color: p.fund, borderRadius: [0, 3, 3, 0] },
+        showBackground: true,
+        backgroundStyle: { color: p.raised, borderRadius: 4 },
+        itemStyle: { color: p.fund, borderRadius: 4 },
         label: { show: true, position: "right", color: p.ink,
                  formatter: function (d) { return d.data.caption; } },
         data: c.bars.map(function (b) { return { value: number(b.value), caption: b.label }; }),
@@ -336,7 +373,12 @@
       .catch(function () { window.location.assign(link.href); });
   });
 
+  // The theme follows the system unless the reader chose one; either change
+  // redraws every chart in the new colours.
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redrawAll);
+  new MutationObserver(redrawAll).observe(document.documentElement, {
+    attributes: true, attributeFilter: ["data-theme"],
+  });
   init(document);
   watch(document);
 })();

@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 {% import "macros.html" as vc %}
 {% block title %}{{ title }}{% endblock %}
+{% block body_attrs %}data-fund-id="{{ fund_id }}" data-fund-name="{{ title }}"{% endblock %}
 
 {#
   The fund page, `/fund/{isin}`. `registry.FUND_PAGE` in reading order: what
-  the fund is and three findings, then the pictures -- growth, returns, falls,
-  consistency, holdings -- and every figure in one table at the end, closed.
+  the fund is, its KPI strip and three findings, then the pictures -- growth,
+  returns, consistency, falls, holdings -- and every figure in one table at the
+  end, closed. On a wide screen returns and consistency sit side by side; every
+  other picture takes the full width, since each is read along a time axis
+  (DECISIONS V1-74).
 
   Each panel is its own envelope, so one that fails degrades alone (§4.9), and
   each carries its own provenance footer and export (§2.2, §2.5).
@@ -17,7 +21,8 @@
           labels = panel.labels,
           grid = panel.grid,
           curve_path = panel.curve_path,
-          payload_json = panel.payload_json %}
+          payload_json = panel.payload_json,
+          sparks = panel.sparks %}
   <div class="fund-page__panel fund-page__panel--{{ env.view_id }}">
     {% call vc.view_container(env, expanded=False, quiet=(env.view_id == 'fund_header')) %}
       {% include panel.chart_template %}
@@ -28,7 +33,7 @@
 {% if detail %}
 <details class="fund-page__detail">
   <summary>Every figure for this fund, in one table</summary>
-  {% with env = detail.env, payload_json = detail.payload_json %}
+  {% with env = detail.env, payload_json = detail.payload_json, sparks = detail.sparks %}
     {% call vc.view_container(env, expanded=False) %}
       {% include detail.chart_template %}
     {% endcall %}

@@ -456,6 +456,19 @@ def test_the_landing_surface_is_three_questions(client: TestClient) -> None:
     assert html.count('class="view view--') == 3
 
 
+def test_the_home_page_finds_a_look_through_from_an_earlier_day(
+    client: TestClient,
+) -> None:
+    """DECISIONS V1-74. The fixture's look-through is dated AS_OF, weeks back, and
+    a browser asks for `/` with no date. That used to mean today, which matched
+    nothing stored, so the dashboard rendered empty for anyone whose look-through
+    was not computed that same day."""
+    dated = client.get(f"/{QS}").text
+    undated = client.get(f"/?user_id={USER}").text
+    assert undated.count("data-chart=") == dated.count("data-chart=") >= 2
+    assert "placeholder--empty" not in undated
+
+
 def test_every_view_is_reachable(client: TestClient) -> None:
     """The portfolio's views from the nav; a fund's views on its page, where
     there is a fund for them to show."""
@@ -572,3 +585,44 @@ def test_a_populated_view_still_offers_a_working_export_link(
     client: TestClient,
 ) -> None:
     assert f"/api/export/fund_list.csv?user_id={USER}" in page(client, "fund_list")
+
+
+# --- the redesign: DECISIONS V1-74 --------------------------------------------
+
+
+def test_with_no_portfolio_the_home_page_is_the_setup_not_an_empty_dashboard(
+    tmp_path: Path,
+) -> None:
+    """No look-through stored: nothing of the reader's to chart. The page says
+    what to do and offers any fund, and draws no chart at all."""
+    from src.common.decimals import connect
+
+    warehouse_db = str(tmp_path / "bare.db")
+    migrated(warehouse_db)
+    ledger = connect_ledger(":memory:", allow_unencrypted=True, check_same_thread=False)
+    apply_ledger_schema(ledger)
+    app = create_app(ledger, connect(warehouse_db, check_same_thread=False))
+    html = TestClient(app, base_url="http://127.0.0.1:8765").get(f"/?user_id={USER}").text
+
+    assert "Welcome to Look-through" in html
+    assert "python -m jobs.import_cas" in html
+    assert "data-chart" not in html
+    assert 'class="view view--' not in html
+
+
+def test_the_fund_page_leads_with_its_figures(client: TestClient) -> None:
+    """A KPI strip under the fund's name: returns with a sparkline of the prices
+    behind each, and the benchmark's own figure beside the fund's."""
+    html = client.get("/fund/S1" + QS).text
+    assert "Return, 1 year" in html and "Return, 3 years" in html
+    assert html.count('class="kpi__spark"') >= 2
+    assert "<polyline points=" in html
+    assert "Benchmark " in html
+    # A figure the history cannot support is a dash with the reason, never a 0.
+    assert "Less than 5 years of prices on record" in html
+
+
+def test_the_sidebar_marks_where_the_reader_is(client: TestClient) -> None:
+    html = page(client, "fund_list")
+    assert re.search(r'href="/view/fund_list[^"]*"\s+aria-current="page"', html)
+    assert 'data-theme-toggle' in html and '/static/theme.js' in html

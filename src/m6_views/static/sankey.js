@@ -98,7 +98,7 @@
     .selectAll("g")
     .data(graph.nodes)
     .join("g")
-    .attr("class", function (d) { return "node node--" + d.kind; });
+    .attr("class", function (d) { return "node node--" + d.kind + " node--" + d.side; });
 
   node
     .append("rect")
@@ -106,17 +106,10 @@
     .attr("y", function (d) { return d.y0; })
     .attr("height", function (d) { return Math.max(1, d.y1 - d.y0); })
     .attr("width", function (d) { return d.x1 - d.x0; })
-    // The pattern is the redundant channel §10.3 requires: __UNRESOLVED__ must
-    // not be distinguishable from a company by colour alone.
-    .attr("fill", function (d) {
-      return d.kind === "synthetic"
-        ? "url(#hatch)"
-        : d.kind === "aggregate"
-        ? "#b9b9b9"
-        : d.side === "left"
-        ? "#0072B2"
-        : "#56B4E9";
-    })
+    // Fills come from the stylesheet (`.node--left`, `.node--right`,
+    // `.node--aggregate`, `.node--synthetic`), so they follow the theme. The
+    // hatch on synthetics is the redundant channel §10.3 requires:
+    // __UNRESOLVED__ must not be told from a company by colour alone.
     .append("title")
     .text(function (d) { return d.label; });
 
@@ -134,8 +127,8 @@
     .html(
       '<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse"' +
         ' patternTransform="rotate(45)">' +
-        '<rect width="6" height="6" fill="#d6d6d6"></rect>' +
-        '<line x1="0" y1="0" x2="0" y2="6" stroke="#8a8a8a" stroke-width="3"></line>' +
+        '<rect class="hatch__ground" width="6" height="6"></rect>' +
+        '<line class="hatch__stripe" x1="0" y1="0" x2="0" y2="6"></line>' +
         "</pattern>"
     );
 })();

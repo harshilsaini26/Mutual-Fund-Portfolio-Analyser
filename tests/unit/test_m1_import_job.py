@@ -131,6 +131,30 @@ def test_the_statement_reaches_the_ledger_and_everything_rebuilds(
         conn.close()
 
 
+def test_an_import_leaves_the_portfolio_pages_something_to_read(
+    warehouse: Path, statement: Path, ledger_db: Path
+) -> None:
+    """DECISIONS V1-74: the look-through is stored by the import itself.
+
+    It used to be stored only by `scripts.show_lookthrough`, so a user who
+    imported a statement and opened the portal found every portfolio page empty.
+    This fixture's warehouse has no disclosures, so every position lands in
+    `__NO_DISCLOSURE__` -- which is still a look-through, and still a page.
+    """
+    summary = run(statement, USER, AS_OF, key=KEY)
+
+    conn = _open(ledger_db)
+    try:
+        row = conn.execute(
+            "SELECT as_of FROM portfolio_summary WHERE user_id = ?", (str(USER),)
+        ).fetchone()
+        assert row is not None
+        assert str(row[0]) == summary["lookthrough_as_of"]
+        assert _count(conn, "lookthrough_exposure") > 0
+    finally:
+        conn.close()
+
+
 def test_ledger_path_is_where_the_job_wrote(
     warehouse: Path, statement: Path, ledger_db: Path
 ) -> None:

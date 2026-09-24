@@ -17,6 +17,8 @@
   macro without it.
 #}
 
+{% import "icons.html" as icon %}
+
 {% macro confidence_badge(confidence) -%}
   {#
     §7.2. Present but unobtrusive at every level — never hidden. §4.4 rules out a
@@ -78,7 +80,14 @@
     drawn twice.
   #}
   <header class="view__header{% if quiet %} view__header--quiet{% endif %}">
-    <h2 id="q-{{ env.view_id }}" {% if quiet %}class="sr-only"{% endif %}>{{ env.question }}</h2>
+    {% if quiet %}
+    <h2 id="q-{{ env.view_id }}" class="sr-only">{{ env.question }}</h2>
+    {% else %}
+    <div>
+      <p class="view__eyebrow">{{ icon.i(view_icons.get(env.view_id, "list")) }}{{ view_names.get(env.view_id, "") }}</p>
+      <h2 id="q-{{ env.view_id }}">{{ env.question }}</h2>
+    </div>
+    {% endif %}
     {{ confidence_badge(env.confidence) }}
   </header>
 
@@ -139,4 +148,27 @@
     </details>
   </footer>
 </section>
+{%- endmacro %}
+
+
+{% macro kpi_tile(tile, spark=None, why="Not computed yet — this figure comes from a module that has not run.") -%}
+{#
+  One KPI tile (DECISIONS V1-74): a label, the figure (formatted by `fmt_tile`,
+  §16.4), an optional context line with its symbol, and an optional sparkline
+  whose points `render.spark_points` scaled. A tone is never shown by colour
+  alone: the symbol (▲ ▼) and the words carry it too (§10.3).
+
+  A `None` renders as an em dash (§9.3) with a title saying why -- never a 0,
+  which would be a claim.
+#}
+<div class="kpi__tile{% if tile.value is none %} kpi__tile--absent{% endif %}{% if tile.tone %} kpi__tile--{{ tile.tone }}{% endif %}">
+  <dt>{{ tile.label }}</dt>
+  <dd class="kpi__value"{% if tile.value is none %} title="{{ tile.context or why }}"{% endif %}>{{ tile | fmt_tile }}</dd>
+  {% if tile.context %}
+  <dd class="kpi__context">{% if tile.symbol %}<span class="kpi__symbol" aria-hidden="true">{{ tile.symbol }}</span>{% endif %}<span>{{ tile.context }}</span></dd>
+  {% endif %}
+  {% if spark %}
+  <dd class="kpi__spark"><svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true" focusable="false"><polygon points="{{ spark.area }}"/><polyline points="{{ spark.line }}"/></svg></dd>
+  {% endif %}
+</div>
 {%- endmacro %}

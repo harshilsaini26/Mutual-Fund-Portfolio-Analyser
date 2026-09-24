@@ -38,9 +38,10 @@
     <text class="axis axis--row" x="{{ label.x }}" y="{{ label.y }}">{{ label.text }}</text>
     {% endfor %}
     {% for cell in grid.cells %}
-    <g class="cell {{ 'cell--unaligned' if not cell.aligned else '' }}">
+    {# The ramp's colours are CSS (`.cell--s0`..`.cell--s4`), so the fill and the
+       label on it change with the theme together. #}
+    <g class="cell cell--s{{ cell.step }}{{ ' cell--unaligned' if not cell.aligned else '' }}">
       <rect x="{{ cell.x }}" y="{{ cell.y }}" width="{{ grid.size }}" height="{{ grid.size }}"
-            fill="{{ cell.fill }}"
             stroke-dasharray="{{ '4 3' if not cell.aligned else '0' }}">
         <title>{{ cell.title }}</title>
       </rect>

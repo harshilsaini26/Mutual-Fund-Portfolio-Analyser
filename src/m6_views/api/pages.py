@@ -54,6 +54,25 @@ STATIC = Path(__file__).resolve().parent.parent / "static"
 #: ends "Resist adding a fourth." Everything else is one click away in the nav.
 LANDING = ("portfolio_summary", "lookthrough_sankey", "overlap_heatmap")
 
+#: The icon beside each view, in the sidebar and on its card (`icons.html`).
+VIEW_ICONS = {
+    "portfolio_summary": "gauge",
+    "lookthrough_sankey": "layers",
+    "overlap_heatmap": "overlap",
+    "duplication_summary": "copy",
+    "marginal_contribution": "plus",
+    "concentration_curve": "pie",
+    "mcap_allocation": "bars",
+    "fund_list": "list",
+    "fund_header": "box",
+    "fund_growth": "growth",
+    "fund_returns": "bars",
+    "fund_drawdown": "fall",
+    "fund_consistency": "wave",
+    "fund_portfolio": "box",
+    "fund_xray_header": "list",
+}
+
 #: A search is a few words; anything longer is not a query anyone typed.
 SEARCH_MAX_CHARS = 80
 
@@ -90,7 +109,12 @@ def templates(root: str = "", static: bool = False) -> Jinja2Templates:
     """
     engine = Jinja2Templates(directory=str(TEMPLATES))
     engine.env.filters.update(FILTERS)
-    engine.env.globals.update(root=root, static=static)
+    engine.env.globals.update(
+        root=root,
+        static=static,
+        view_names={view_id: view.view_name for view_id, view in VIEW_DEFS.items()},
+        view_icons=VIEW_ICONS,
+    )
     return engine
 
 
@@ -118,6 +142,8 @@ def fund_context(
     name = head.payload.get("name") if head.state.value == "ok" else None
     return {
         "title": name or scope.scope_id,
+        # For the page's `data-fund-id`: the recently-viewed list in app.js.
+        "fund_id": scope.scope_id,
         "panels": [safe_chart_context(env, scope) for env in envelopes],
         "detail": safe_chart_context(detail, scope),
         "chart_scripts": chart_scripts([*envelopes, detail], root),
@@ -151,6 +177,7 @@ def make_router(
     build: Any,
     health: Any,
     search: Any,
+    latest: Callable[[str], date | None] = lambda user_id: None,
 ) -> APIRouter:
     """`build` is `app.build_view` and `health` is `app.health_snapshot`, both
     passed in rather than imported.
@@ -167,6 +194,10 @@ def make_router(
     def _scope(
         user_id: str, as_of: date | None, scope_id: str | None = None
     ) -> Scope:
+        # A fund is analysed as of today; a portfolio as of its newest stored
+        # look-through (`app.latest_lookthrough`, DECISIONS V1-74).
+        if as_of is None and scope_id is None:
+            as_of = latest(user_id)
         return Scope(
             user_id=UserId(user_id),
             as_of=as_of or date.today(),
@@ -191,15 +222,22 @@ def make_router(
         user_id: str = Query("USER-01"),
         as_of: date | None = None,
     ) -> Any:
+        # No look-through stored and no date asked for: nothing to chart yet, so
+        # the page is the setup checklist and a way into any fund (V1-74).
+        has_portfolio = as_of is not None or latest(user_id) is not None
         scope = _scope(user_id, as_of)
         envelopes: list[ViewEnvelope] = [
             build(view_id, scope, {}, ledger, warehouse) for view_id in LANDING
-        ]
+        ] if has_portfolio else []
         return engine.TemplateResponse(
             request,
             "landing.html",
             {
-                **_shell(user_id, as_of, active=""),
+                **_shell(user_id, as_of, active="overview"),
+                "has_portfolio": has_portfolio,
+                "user_id": user_id,
+                "as_of_shown": scope.as_of,
+                "landing_ids": LANDING,
                 "panels": [safe_chart_context(env, scope) for env in envelopes],
                 "chart_scripts": chart_scripts(envelopes),
             },
@@ -256,7 +294,7 @@ def make_router(
             request,
             "search.html",
             {
-                **_shell(user_id, None, active=""),
+                **_shell(user_id, None, active="search"),
                 "query": q,
                 "hits": search(q) if q.strip() else [],
             },

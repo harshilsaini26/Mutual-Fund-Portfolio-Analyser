@@ -76,7 +76,8 @@ class SizeProfileBuilder:
             scope=scope,
             payload={
                 "columns": [
-                    {"key": k, "label": label, "kind": kind}
+                    # A share of the whole: the table draws it as a bar too.
+                    {"key": k, "label": label, "kind": kind, "bar": k == "exposure_pct"}
                     for k, label, kind in COLUMNS
                 ],
                 "rows": rows,

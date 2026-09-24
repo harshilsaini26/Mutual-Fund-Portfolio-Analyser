@@ -1,0 +1,75 @@
+{#
+  The home page before any portfolio exists (DECISIONS V1-74): what works now,
+  and the steps that fill in the rest. No chart and no `data-chart` -- there is
+  nothing of the reader's to draw, and an empty dashboard would read as broken.
+
+  The first step is ticked from `health`, the same freshness figures the sidebar
+  shows; the second cannot be done while this page shows, by definition.
+#}
+{% import "icons.html" as icon %}
+<div class="welcome">
+  <div class="welcome__intro">
+    <p class="eyebrow">Self-hosted · private to this machine</p>
+    <h1>Welcome to Look-through</h1>
+    <p class="lede">
+      See what your mutual funds actually own: the companies beneath each fund,
+      how much of your money is the same stock held more than once, and how each
+      fund has done against its benchmark. Any fund can be looked up now; your
+      own portfolio appears here after you import a statement.
+    </p>
+  </div>
+
+  <section class="card welcome__setup" aria-labelledby="setup-h">
+    <h2 id="setup-h">Get set up</h2>
+    <p class="card__sub">Run these from the project folder, with its environment active.</p>
+    <ol class="checklist">
+      {% set loaded = health.current_disclosures %}
+      <li class="checklist__item{{ ' is-done' if loaded else '' }}">
+        <span class="checklist__mark">{% if loaded %}{{ icon.i("check") }}<span class="sr-only">Done:</span>{% else %}1{% endif %}</span>
+        <div>
+          <p class="checklist__title">Market data</p>
+          {% if loaded %}
+          <p>Loaded: {{ loaded }} fund portfolio{{ '' if loaded == 1 else 's' }}{% if health.latest_disclosure %}, the newest dated {{ health.latest_disclosure | fmt_date }}{% endif %}.</p>
+          {% else %}
+          <p>Not loaded yet. The first run takes a few minutes, then about 70 more for the benchmark indices.</p>
+          <code class="command">python start.py</code>
+          {% endif %}
+        </div>
+      </li>
+      <li class="checklist__item">
+        <span class="checklist__mark">2</span>
+        <div>
+          <p class="checklist__title">Import your statement</p>
+          <p>A detailed CAS from CAMS, KFintech or MF Central. It asks for the
+            statement's password and a key for your encrypted ledger; the
+            portfolio pages fill in when it finishes.</p>
+          <code class="command">python -m jobs.import_cas --file statement.pdf --user {{ user_id }}</code>
+        </div>
+      </li>
+      <li class="checklist__item">
+        <span class="checklist__mark">3</span>
+        <div>
+          <p class="checklist__title">Keep holdings current</p>
+          <p>Lists each fund house whose disclosures are behind, with the command that fetches them.</p>
+          <code class="command">python -m jobs.status</code>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="card welcome__find" aria-labelledby="find-h">
+    <h2 id="find-h">Find a fund</h2>
+    <p class="card__sub">Every fund in AMFI's list has a page: growth, returns, falls, consistency and holdings.</p>
+    <form class="search search--hero" action="{{ root }}/search" method="get" role="search">
+      <label class="sr-only" for="q-home">Fund name, or part of it</label>
+      {{ icon.i("search", "icon search__icon") }}
+      <input id="q-home" name="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="for example: parag parikh flexi" data-suggest="/api/search">
+      <ul class="search__suggest" hidden></ul>
+    </form>
+    <div class="recent" data-recent hidden>
+      <h3>Recently viewed</h3>
+      <ul></ul>
+    </div>
+  </section>
+</div>

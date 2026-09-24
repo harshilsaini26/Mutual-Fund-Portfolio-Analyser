@@ -36,18 +36,18 @@
 </figure>
 {% endif %}
 
-<dl class="kpi kpi--inline">
-  <div class="kpi__tile"><dt>Companies</dt><dd>{{ env.payload.issuer_count }}</dd></div>
-  <div class="kpi__tile"><dt>HHI</dt><dd>{{ env.payload.hhi | fmt_metric }}</dd></div>
-  <div class="kpi__tile"><dt>Effective N</dt><dd>{{ env.payload.effective_n | fmt_metric }}</dd></div>
-  <div class="kpi__tile"><dt>Top 10</dt><dd>{{ env.payload.top10_pct | fmt_pct }}</dd></div>
+<dl class="tiles tiles--inline">
+  <div class="kpi__tile"><dt>Companies</dt><dd class="kpi__value">{{ env.payload.issuer_count }}</dd></div>
+  <div class="kpi__tile"><dt>HHI</dt><dd class="kpi__value">{{ env.payload.hhi | fmt_metric }}</dd></div>
+  <div class="kpi__tile"><dt>Effective N</dt><dd class="kpi__value">{{ env.payload.effective_n | fmt_metric }}</dd></div>
+  <div class="kpi__tile"><dt>Top 10</dt><dd class="kpi__value">{{ env.payload.top10_pct | fmt_pct }}</dd></div>
   {#
     Gini is nullable by design, not by omission — V1-21. An em dash here means
     the question does not apply to this pool, and the caveat above says why.
   #}
   <div class="kpi__tile{% if env.payload.gini is none %} kpi__tile--absent{% endif %}">
     <dt>Gini</dt>
-    <dd {% if env.payload.gini is none %}
+    <dd class="kpi__value" {% if env.payload.gini is none %}
           title="Undefined for a pool containing a negative net exposure."
         {% endif %}>{{ env.payload.gini | fmt_metric }}</dd>
   </div>

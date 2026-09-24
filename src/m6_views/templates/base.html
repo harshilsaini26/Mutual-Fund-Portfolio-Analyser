@@ -1,5 +1,5 @@
 {#
-  The shell. MODULE_6.md §16.
+  The shell. MODULE_6.md §16; the layout is DECISIONS V1-74.
 
   Server-rendered Jinja rather than React, per DECISIONS V1-23 — which overrides
   `PLAN.md` §9.10 and `MODULE_6.md` Appendix A. The reasoning behind the locked
@@ -11,11 +11,16 @@
   every load stops working offline and tells a third party when the user looks at
   their portfolio.
 
-  Two globals shape it (`pages.templates`): `root`, the URL prefix every link
-  carries, and `static`, set for the public copy on GitHub Pages
-  (DECISIONS V1-72). That copy has no server behind it: no portfolio, no search
-  API, no response headers -- so it carries its policy in a <meta> tag instead.
+  Two shells, one design. The app has a sidebar -- the portfolio's views and a
+  way to any fund -- and a top bar with search and the theme switch. The public
+  copy on GitHub Pages (`static`, DECISIONS V1-72) has only funds to navigate, so
+  it has the top bar alone, and carries its security policy in a <meta> tag
+  because Pages sends no headers.
+
+  `theme.js` runs in <head>, before anything is drawn, so a reader who chose the
+  light theme never sees a dark page flash first.
 #}
+{% import "icons.html" as icon %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -27,77 +32,122 @@
   <meta name="referrer" content="no-referrer">
   {% endif %}
   <title>{% block title %}Look-through{% endblock %}</title>
+  <script src="{{ root }}/static/theme.js"></script>
   <link rel="stylesheet" href="{{ root }}/static/app.css">
 </head>
-<body>
-<header class="masthead">
-  <div class="masthead__top">
-    <a class="brand" href="{{ root }}/">Look-through</a>
-    {#
-      Search is the way into any fund, held or not. Without JavaScript this is
-      an ordinary form -- to `/search` here, to the list of every fund on the
-      public copy; `static/app.js` adds suggestions as you type, from the API or,
-      with no server, from `search.json`.
-    #}
-    <form class="search" action="{{ root }}/{% if not static %}search{% endif %}"
-          method="get" role="search">
-      <label class="sr-only" for="q">Find a fund</label>
-      <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
-             placeholder="Find a fund by name"
-             {% if static %}data-index="{{ root }}/search.json"{% else %}data-suggest="/api/search"{% endif %}>
-      <ul class="search__suggest" hidden></ul>
-    </form>
-  </div>
-  {% if static %}
-  <p class="freshness public-note">
-    A public copy of the fund pages, built {{ built | fmt_date }} from AMFI's prices
-    and fund houses' own disclosures. Descriptive, not advice. Benchmark comparisons
-    and your own portfolio are in the
-    <a href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io">self-hosted app</a>.
-  </p>
-  {% else %}
-  <nav aria-label="Your portfolio">
-    <ul>
+<body class="{{ 'is-public' if static else 'is-app' }}" data-root="{{ root }}"
+      {% block body_attrs %}{% endblock %}>
+
+{% macro search_box() -%}
+{#
+  Search is the way into any fund, held or not. Without JavaScript this is an
+  ordinary form -- to `/search` here, to the list of every fund on the public
+  copy; `static/app.js` adds suggestions as you type, from the API or, with no
+  server, from `search.json`.
+#}
+<form class="search" action="{{ root }}/{% if not static %}search{% endif %}"
+      method="get" role="search">
+  <label class="sr-only" for="q">Find a fund</label>
+  {{ icon.i("search", "icon search__icon") }}
+  <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
+         placeholder="Find a fund by name"
+         {% if static %}data-index="{{ root }}/search.json"{% else %}data-suggest="/api/search"{% endif %}>
+  <ul class="search__suggest" hidden></ul>
+</form>
+{%- endmacro %}
+
+{% macro theme_toggle() -%}
+<button class="icon-button" type="button" data-theme-toggle
+        aria-label="Switch between the dark and light themes">
+  {{ icon.i("sun", "icon icon--sun") }}{{ icon.i("moon", "icon icon--moon") }}
+</button>
+{%- endmacro %}
+
+{% if static %}
+<header class="topbar topbar--public">
+  <a class="brand" href="{{ root }}/">{{ icon.i("logo", "icon brand__mark") }}<span>Look-through</span></a>
+  {{ search_box() }}
+  <a class="topbar__link" href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io">
+    <span>Self-hosted app</span>{{ icon.i("external") }}</a>
+  {{ theme_toggle() }}
+</header>
+<p class="public-note">
+  A public copy of the fund pages, built {{ built | fmt_date }} from AMFI's prices
+  and fund houses' own disclosures. Descriptive, not advice. Benchmark comparisons
+  and your own portfolio are in the
+  <a href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io">self-hosted app</a>.
+</p>
+{% else %}
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ root }}/{{ qs }}">{{ icon.i("logo", "icon brand__mark") }}<span>Look-through</span></a>
+    <nav class="sidenav" aria-label="Main">
+      <a class="sidenav__link" href="{{ root }}/{{ qs }}"
+         {% if active == 'overview' %}aria-current="page"{% endif %}>
+        {{ icon.i("home") }}<span>Overview</span></a>
       {#
         The portfolio's views. A fund's views live on its own page, reached by
         search or from a holding -- a link to one here would have no fund to show.
       #}
+      <p class="sidenav__group">Your portfolio</p>
       {% for view in catalogue if view.default_scope == 'portfolio' %}
-      <li><a href="{{ root }}/view/{{ view.view_id }}{{ qs }}"
-             {% if view.view_id == active %}aria-current="page"{% endif %}
-          >{{ view.view_name }}</a></li>
+      <a class="sidenav__link" href="{{ root }}/view/{{ view.view_id }}{{ qs }}"
+         {% if view.view_id == active %}aria-current="page"{% endif %}
+         title="{{ view.question }}">
+        {{ icon.i(view_icons.get(view.view_id, "list")) }}<span>{{ view.view_name }}</span></a>
       {% endfor %}
-    </ul>
-  </nav>
-  {#
-    §15.3: report freshness so the page can say "last updated" honestly rather
-    than implying the data is live. Nothing here is a live feed — every number
-    on this site is as old as the job that produced it, and saying so is the
-    whole design.
-  #}
-  <p class="freshness">
-    Look-through computed {{ health.lookthrough_computed_at | fmt_datetime }}
-    · {{ health.current_disclosures }} current disclosure{{ '' if health.current_disclosures == 1 else 's' }}
-    {%- if health.latest_disclosure %}, latest {{ health.latest_disclosure | fmt_date }}{% endif %}
-  </p>
-  {% endif %}
-</header>
-
-<main>
+      <p class="sidenav__group">Funds</p>
+      <a class="sidenav__link" href="{{ root }}/search"
+         {% if active == 'search' %}aria-current="page"{% endif %}>
+        {{ icon.i("search") }}<span>Find a fund</span></a>
+    </nav>
+    {#
+      §15.3: report freshness so the page can say "last updated" honestly rather
+      than implying the data is live. Nothing here is a live feed — every number
+      on this site is as old as the job that produced it, and saying so is the
+      whole design.
+    #}
+    <div class="sidebar__foot">
+      <p class="freshness">
+        {% if health.lookthrough_computed_at %}Look-through computed
+        {{ health.lookthrough_computed_at | fmt_datetime }}.{% else %}No look-through stored yet.{% endif %}
+        {{ health.current_disclosures }} current disclosure{{ '' if health.current_disclosures == 1 else 's' }}
+        {%- if health.latest_disclosure %}, latest {{ health.latest_disclosure | fmt_date }}{% endif %}.
+      </p>
+      <p class="sidebar__private">{{ icon.i("lock") }}<span>Nothing on this page left your machine.</span></p>
+    </div>
+  </aside>
+  <div class="shell__main">
+    <header class="topbar">
+      <button class="icon-button topbar__menu" type="button" data-sidebar-toggle
+              aria-controls="sidebar" aria-expanded="false" aria-label="Show the menu">
+        {{ icon.i("menu") }}</button>
+      {{ search_box() }}
+      {% if health.latest_disclosure %}
+      <span class="chip chip--quiet" title="The newest fund disclosure loaded">
+        Disclosures to {{ health.latest_disclosure | fmt_date }}</span>
+      {% endif %}
+      {{ theme_toggle() }}
+    </header>
+{% endif %}
+{#- One content block for both shells: Jinja allows a block once per template. -#}
+<main class="content{{ ' content--public' if static else '' }}">
 {% block content %}{% endblock %}
 </main>
-
 <footer class="colophon">
   <p>
     {% if static %}
     Built from public sources; every figure traces to an archived source file.
     No cookies, no tracking, and nothing loads from anywhere but this site.
     {% else %}
-    Self-hosted. Nothing on this page left your machine.
-    Every figure traces to an archived source file.
+    Self-hosted. Every figure traces to an archived source file. Descriptive, not advice.
     {% endif %}
   </p>
 </footer>
+{% if not static %}
+  </div>
+</div>
+{% endif %}
 <script src="{{ root }}/static/app.js" defer></script>
 {% block scripts %}{% endblock %}
 </body>

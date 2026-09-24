@@ -63,6 +63,22 @@ from src.m2_fund.risk import (
 #: start is a property of the series, not of the calendar.
 WINDOW_YEARS = {"1y": 1, "3y": 3, "5y": 5}
 
+#: A week: a window whose first price falls on the day after a holiday still
+#: spans its period.
+SPAN_SLACK_DAYS = 7
+
+
+def spans(obs_days: int, key: str) -> bool:
+    """Whether `obs_days` of prices cover the fixed window `key` (1y, 3y, 5y).
+
+    `compute_return_window` builds a window from whatever prices fall inside it,
+    so a fund with four years of history has a "5y" window four years long. That
+    is right in a table that prints each window's days, and wrong anywhere the
+    figure is labelled "5 years" (DECISIONS V1-74).
+    """
+    return obs_days + SPAN_SLACK_DAYS >= WINDOW_YEARS[key] * 365
+
+
 #: §9: below twelve windows the distribution says nothing worth printing.
 MIN_ROLLING_WINDOWS = 12
 

@@ -1,20 +1,38 @@
 {% extends "base.html" %}
 {% import "macros.html" as vc %}
-{% block title %}Your portfolio{% endblock %}
+{% import "icons.html" as icon %}
+{% block title %}{{ 'Your portfolio' if has_portfolio else 'Welcome' }}{% endblock %}
 
 {#
-  The landing surface. MODULE_6.md §16.5, following `PLAN.md` §5.10 on metric
-  walls: the default view answers **three** questions and everything else is one
-  click down.
+  The home page. Two states (DECISIONS V1-74):
 
-    1. Where do I stand?              portfolio_summary
-    2. What do I actually own?        lookthrough_sankey
+  **No portfolio yet** -- no look-through stored and no date asked for. There is
+  nothing to chart, so the page is what can be done: a setup checklist and a
+  way into any fund (`welcome.html`). Never an empty dashboard.
+
+  **A portfolio** -- MODULE_6.md §16.5, following `PLAN.md` §5.10 on metric
+  walls: the page answers **three** questions and everything else is one click
+  down.
+
+    1. Where do I stand?              portfolio_summary, as a KPI strip
+    2. What do I actually own?        lookthrough_sankey, the large card
     3. What's duplicated?             overlap_heatmap
 
-  §16.5 ends with "Resist adding a fourth." The nav above carries the other three
-  views; they are a click away and they are not here.
+  §16.5 ends with "Resist adding a fourth." The card beside the overlap is
+  navigation to the other views, not a fourth answer.
 #}
 {% block content %}
+{% if not has_portfolio %}
+  {% include "welcome.html" %}
+{% else %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Overview</p>
+    <h1>Your portfolio</h1>
+    <p>Look-through as of {{ as_of_shown | fmt_date }}.</p>
+  </div>
+</div>
+<div class="dash">
 {% for panel in panels %}
   {#
     Each panel is an independent envelope. `PLAN.md` §4.9: degrade one panel,
@@ -29,12 +47,33 @@
           labels = panel.labels,
           grid = panel.grid,
           curve_path = panel.curve_path,
-          payload_json = panel.payload_json %}
-    {% call vc.view_container(env, expanded=loop.first) %}
+          payload_json = panel.payload_json,
+          sparks = panel.sparks %}
+  <div class="dash__cell dash__cell--{{ env.view_id }}">
+    {#- Notes start closed here so the figures lead; each strip still shows its
+        count (§6.1 rule 5), and opens with a click. -#}
+    {% call vc.view_container(env, expanded=False) %}
       {% include panel.chart_template %}
     {% endcall %}
+  </div>
   {% endwith %}
 {% endfor %}
+  <nav class="dash__cell dash__cell--more card" aria-labelledby="more-h">
+    <h2 id="more-h">More about your portfolio</h2>
+    <p class="card__sub">Each page answers one question.</p>
+    <ul class="more">
+      {% for view in catalogue if view.default_scope == 'portfolio' and view.view_id not in landing_ids %}
+      <li><a href="{{ root }}/view/{{ view.view_id }}{{ qs }}">
+        <span class="more__icon">{{ icon.i(view_icons.get(view.view_id, "list")) }}</span>
+        <span><span class="more__name">{{ view.view_name }}</span>
+          <span class="more__question">{{ view.question }}</span></span>
+        {{ icon.i("arrow", "icon icon--arrow") }}
+      </a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}{{ chart_scripts | safe }}{% endblock %}

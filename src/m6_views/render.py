@@ -21,6 +21,7 @@ accessible table beneath the diagram.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -113,6 +114,8 @@ def _fmt_value(tile: dict[str, Any], compact: bool) -> str:
         return DASH
     if kind == "inr":
         return format_inr(Decimal(str(value)), compact=compact)
+    if kind == "inr_round":  # a fund's size: paise of a crore are noise
+        return format_inr(Decimal(str(value)), precision=0, compact=compact)
     if kind == "inr_signed":
         rendered = format_inr(abs(Decimal(str(value))), compact=compact)
         return f"+{rendered}" if Decimal(str(value)) >= 0 else f"-{rendered}"
@@ -153,7 +156,20 @@ def fmt_cell(tile: dict[str, Any]) -> str:
     return _fmt_value(tile, compact=False)
 
 
-FILTERS = {
+def bar_width(value: Any) -> str:
+    """A share-of-the-whole percentage as a bar's length, 0 to 100 units.
+
+    Geometry, not a figure: the cell prints the figure itself beside the bar.
+    Clamped, so a short position cannot draw backwards and nothing overruns.
+    """
+    if value is None:
+        return "0"
+    pct = min(max(Decimal(str(value)), Decimal(0)), Decimal(100))
+    return f"{pct:.2f}"
+
+
+FILTERS: dict[str, Callable[..., str]] = {
+    "bar_width": bar_width,
     "fmt_date": fmt_date,
     "fmt_datetime": fmt_datetime,
     "fmt_pct": fmt_pct,
@@ -222,7 +238,7 @@ def heatmap_grid(env: ViewEnvelope) -> dict[str, Any]:
                 "y": MARGIN_TOP + row * CELL,
                 "cx": MARGIN_LEFT + column * CELL + CELL // 2,
                 "cy": MARGIN_TOP + row * CELL + CELL // 2 + 4,
-                "fill": _ramp(pct),
+                "step": _step(pct),
                 "label": format_pct(pct, precision=0),
                 "aligned": bool(cell["aligned"]),
                 "title": _cell_title(cell, pct),
@@ -257,20 +273,18 @@ def _cell_title(cell: dict[str, Any], pct: Decimal) -> str:
     return base
 
 
-def _ramp(pct: Decimal) -> str:
-    """A five-step single-hue ramp. Steps rather than a continuum because the
-    eye cannot read a continuous scale off a small square anyway, and the text
-    label carries the precision."""
-    steps = [
-        (Decimal(5), "#eef3f8"),
-        (Decimal(15), "#cfe0ef"),
-        (Decimal(30), "#9ec4e0"),
-        (Decimal(50), "#5b9bd0"),
-    ]
-    for bound, colour in steps:
+def _step(pct: Decimal) -> int:
+    """Which of five steps of a single-hue ramp a cell takes, 0 to 4.
+
+    Steps rather than a continuum because the eye cannot read a continuous
+    scale off a small square anyway, and the text label carries the precision.
+    The colours live in `app.css` (`.cell--s0` ... `.cell--s4`), so the ramp and
+    the label on it follow the theme together.
+    """
+    for step, bound in enumerate((Decimal(5), Decimal(15), Decimal(30), Decimal(50))):
         if pct < bound:
-            return colour
-    return "#2b6ca8"
+            return step
+    return 4
 
 
 def lorenz_path(env: ViewEnvelope) -> str:
@@ -289,6 +303,41 @@ def lorenz_path(env: ViewEnvelope) -> str:
         y = 300 - Decimal(str(point["exposure_share"])) * 280
         commands.append(f"{'M' if i == 0 else 'L'}{x:.2f},{y:.2f}")
     return " ".join(commands)
+
+
+#: A sparkline's box, in SVG user units; the tile stretches it to fit.
+SPARK_W, SPARK_H = 120, 32
+
+
+def spark_points(values: list[Any]) -> dict[str, str]:
+    """A tile's sparkline as SVG `points`: the line, and the area under it.
+
+    Positions only: the tile prints its figure beside the line, so nothing here
+    is read as a number. Scaled to the series' own range, the way the Lorenz
+    curve is scaled into its box; an empty dict when there is no shape to draw.
+    """
+    if len(values) < 2:
+        return {}
+    numbers = [Decimal(str(v)) for v in values]
+    low, high = min(numbers), max(numbers)
+    spread = (high - low) or Decimal(1)
+    last = len(numbers) - 1
+    coords = []
+    for i, v in enumerate(numbers):
+        x = Decimal(SPARK_W) * i / last
+        y = (SPARK_H - 2) - (v - low) / spread * (SPARK_H - 4)
+        coords.append(f"{x:.1f},{y:.1f}")
+    line = " ".join(coords)
+    return {"line": line, "area": f"0,{SPARK_H} {line} {SPARK_W},{SPARK_H}"}
+
+
+def tile_sparks(env: ViewEnvelope) -> dict[str, dict[str, str]]:
+    """Every tile's sparkline, keyed by tile. Tiles without a series get none."""
+    return {
+        tile["key"]: drawn
+        for tile in env.payload.get("tiles", [])
+        if (drawn := spark_points(tile.get("spark") or []))
+    }
 
 
 def embeddable_json(payload: dict[str, Any]) -> str:
@@ -339,6 +388,7 @@ def chart_context(env: ViewEnvelope) -> dict[str, Any]:
         "grid": {},
         "curve_path": "",
         "payload_json": "{}",
+        "sparks": {},
     }
     if env.state.value != "ok":
         return context
@@ -346,6 +396,8 @@ def chart_context(env: ViewEnvelope) -> dict[str, Any]:
         context["grid"] = heatmap_grid(env)
     elif chart_type == "lorenz":
         context["curve_path"] = lorenz_path(env)
+    elif chart_type == "fundcard":
+        context["sparks"] = tile_sparks(env)
     elif chart_type == "echart":
         # Only what the drawing needs: positions and the labels the reader sees.
         # The table under the chart is rendered here, in Python, from `rows`.

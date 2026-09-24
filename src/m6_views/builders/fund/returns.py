@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.common.types import SchemeId
-from src.m2_fund.windows import NothingToCompute, ReturnWindow, fund_windows
+from src.m2_fund.windows import NothingToCompute, ReturnWindow, fund_windows, spans
 from src.m6_views.builder import Scope
 from src.m6_views.builders.fund.common import NO_FUND, FundQuality
 from src.m6_views.compose import ok_envelope
@@ -54,7 +54,12 @@ class FundReturnsBuilder:
         bench = facts.benchmark_name if facts else None
         since = f"Since {format_date(fw.navs[0].nav_date)}"
         labels = {**PERIODS, "since_first_nav": since}
-        shown = [(k, w) for k, w in fw.windows.items() if w is not None]
+        # A fixed window is shown only when the prices span it: "5 years" over
+        # four years of history is the whole history under the wrong name.
+        shown = [
+            (k, w) for k, w in fw.windows.items()
+            if w is not None and (k == "since_first_nav" or spans(w.obs_days, k))
+        ]
 
         fund_values: list[list[str | None]] = []
         bench_values: list[list[str | None]] = []
@@ -86,7 +91,7 @@ class FundReturnsBuilder:
             (
                 (k, found)
                 for k in ("5y", "3y", "1y")
-                if (found := fw.windows.get(k)) is not None and found.obs_days >= YEAR
+                if (found := fw.windows.get(k)) is not None and spans(found.obs_days, k)
             ),
             shown[-1],
         )

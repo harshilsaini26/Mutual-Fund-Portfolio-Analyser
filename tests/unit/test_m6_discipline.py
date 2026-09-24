@@ -187,6 +187,8 @@ def all_user_facing_strings(deps: Deps) -> list[str]:
             for key in ("tiles", "columns", "facts"):
                 for item in env.payload.get(key, []):
                     out.append(str(item.get("label", "")))
+                    # A tile's sentence under its figure (DECISIONS V1-74).
+                    out.append(str(item.get("context") or ""))
             for key in ("definition", "headline", "name", "subtitle"):
                 if key in env.payload:
                     out.append(str(env.payload[key]))
@@ -217,6 +219,49 @@ def test_no_prescriptive_language(populated: Deps) -> None:
         if re.search(pattern, text, re.I)
     ]
     assert not offences, f"prescriptive language: {offences}"
+
+
+TEMPLATES = Path(__file__).resolve().parents[2] / "src" / "m6_views" / "templates"
+
+
+def _template_text(source: str) -> str:
+    """What a reader could see of a template: comments, Jinja and tags removed."""
+    source = re.sub(r"\{#.*?#\}", " ", source, flags=re.S)
+    source = re.sub(r"\{[{%].*?[%}]\}", " ", source, flags=re.S)
+    return re.sub(r"<[^>]+>", " ", source)
+
+
+def test_no_prescriptive_language_in_the_templates() -> None:
+    """The builders' strings were linted; the pages' own copy was not, and the
+    redesign (DECISIONS V1-74) added a welcome page and a front page of it."""
+    offences = [
+        (path.name, pattern)
+        for path in sorted(TEMPLATES.rglob("*.html"))
+        for pattern in PRESCRIPTIVE_PATTERNS
+        if re.search(pattern, _template_text(path.read_text(encoding="utf-8")), re.I)
+    ]
+    assert not offences, f"prescriptive language in templates: {offences}"
+
+
+def test_no_template_carries_inline_style_or_script() -> None:
+    """The CSP is `script-src 'self'; style-src 'self'`: an inline style is
+    silently dropped and an inline handler never runs, so either is a page that
+    looks right in a test and wrong in a browser. Styling goes through classes,
+    and a bar's length through an SVG attribute (`table.html`)."""
+    forbidden = [
+        (r"\sstyle\s*=", "a style attribute"),
+        (r"<style", "a <style> element"),
+        (r"\son[a-z]+\s*=", "an inline event handler"),
+        (r"javascript:", "a javascript: URL"),
+    ]
+    found = [
+        (path.name, what)
+        for path in sorted(TEMPLATES.rglob("*.html"))
+        for pattern, what in forbidden
+        if re.search(pattern, re.sub(r"\{#.*?#\}", " ",
+                                     path.read_text(encoding="utf-8"), flags=re.S), re.I)
+    ]
+    assert not found, found
 
 
 def test_every_state_reason_names_something_actionable(tmp_path: Path) -> None:

@@ -1,15 +1,32 @@
 {#
   The top of a fund page: `fund_header`.
 
-  The fund's own name as the page heading, not its ISIN. The findings are
-  sentences, each with a symbol as well as a tone (▲ ahead, ▼ behind, ● a
-  fact), so none of them relies on colour (§10.3). The facts sit in a
-  definition list a screen reader reads as label and value.
+  The fund's own name as the page heading, not its ISIN; its house, category
+  and plan as chips. Then the KPI strip (DECISIONS V1-74): returns over one,
+  three and five years each beside the benchmark's own figure, the worst fall,
+  volatility and size, with a sparkline of the prices behind each return. The
+  findings are sentences, each with a symbol as well as a tone (▲ ahead,
+  ▼ behind, ● a fact), so none of them relies on colour (§10.3). The facts sit
+  in a definition list a screen reader reads as label and value.
 #}
+{% import "macros.html" as vc %}
 <div class="fundcard" data-chart="fundcard">
-  <h1 class="fundcard__name">{{ env.payload.name }}</h1>
-  <p class="fundcard__sub">{{ env.payload.subtitle }}
-    <span class="fundcard__isin">{{ env.payload.scheme_id }}</span></p>
+  <div>
+    <h1 class="fundcard__name">{{ env.payload.name }}</h1>
+    <ul class="fundcard__chips">
+      {% for part in env.payload.subtitle.split(" · ") if part %}
+      <li class="chip">{{ part }}</li>
+      {% endfor %}
+      <li class="chip chip--mono">{{ env.payload.scheme_id }}</li>
+    </ul>
+  </div>
+  {% if env.payload.tiles %}
+  <dl class="tiles">
+    {% for tile in env.payload.tiles %}
+    {{ vc.kpi_tile(tile, sparks.get(tile.key) if sparks else None) }}
+    {% endfor %}
+  </dl>
+  {% endif %}
   {% if env.payload.findings %}
   <ul class="findings">
     {% for f in env.payload.findings %}

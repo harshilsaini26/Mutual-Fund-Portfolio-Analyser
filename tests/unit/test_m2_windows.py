@@ -298,3 +298,14 @@ def test_a_gapped_series_still_reports_the_windows_it_can_fill() -> None:
     r = rolling_returns(dense, horizon_days=100, step_days=30)
     assert r is not None
     assert r.worst > 0
+
+
+def test_a_fixed_window_counts_only_when_the_prices_span_it() -> None:
+    """DECISIONS V1-74. A fund with four years of prices has a "5y" window four
+    years long; under a "5 years" label that is the whole history misnamed."""
+    from src.m2_fund.windows import spans
+
+    assert spans(1826, "5y")
+    assert spans(1822, "5y")  # its first price fell after a long weekend
+    assert not spans(1500, "5y")
+    assert spans(365, "1y") and not spans(300, "1y")

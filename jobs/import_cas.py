@@ -3,12 +3,16 @@
     python -m jobs.import_cas --file statement.pdf --user USER-01
     python -m jobs.import_cas --file statement.txt --user USER-01 --as-of 2026-09-04
 
-    decrypt -> parse -> resolve -> import -> save -> rebuild
+    decrypt -> parse -> resolve -> import -> save -> rebuild -> look through
 
-**Two databases, opened for different reasons.** Zone A is read only, for
-scheme resolution and NAVs; Zone B is written. They never share a connection,
-and the dependency runs the way invariant 3 requires: M1 reads M0, never the
-reverse.
+**Two databases, opened for different reasons.** Zone A is read for scheme
+resolution and NAVs, and its one derived weights table rebuilt for the
+look-through; Zone B is written. They never share a connection, and the
+dependency runs the way invariant 3 requires: M1 reads M0, never the reverse.
+
+**The look-through is stored here** (DECISIONS V1-74), through the same
+`m3_lookthrough.refresh` the terminal report uses. Until then only that report
+stored it, and an import left every portfolio page in the portal empty.
 
 **Idempotent.** `txn_id` is §5.6's deterministic hash so re-importing inserts
 nothing, and `import_id` derives from the file's sha256 so the `cas_import` row
@@ -42,6 +46,9 @@ from src.m1_ledger.cas import PARSER_VERSION, ImportReport, StagedTxn, import_ca
 from src.m1_ledger.cas.pdf import decrypt_and_extract, file_id
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m1_ledger.persist import rebuild, save_txns
+from src.m1_ledger.providers.position import SqlitePositionProvider
+from src.m3_lookthrough.engine import Position
+from src.m3_lookthrough.refresh import refresh
 
 
 def run(
@@ -105,6 +112,15 @@ def run(
                                                          effective))
         ledger.commit()
 
+        # M3 takes positions as values; it never reads M1's tables itself.
+        held = [
+            Position(row.scheme_id, row.market_value)
+            for row in SqlitePositionProvider(ledger).positions(user_id, effective)
+            if row.market_value is not None
+        ]
+        lookthrough = refresh(zone_a, ledger, user_id, held)
+        ledger.commit()
+
         return {
             "source_file_id": source_file_id[:12],
             "parsed": report.inserted + report.duplicate + report.unmatched,
@@ -116,6 +132,7 @@ def run(
             "as_of": str(effective),
             "lots": len(book.all_lots()),
             "consumptions": len(book.all_consumptions()),
+            "lookthrough_as_of": str(lookthrough.as_of),
         }
     finally:
         ledger.close()
