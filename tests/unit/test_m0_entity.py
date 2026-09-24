@@ -133,9 +133,9 @@ def test_names_fold_to_a_comparable_form(raw: str, expected: str) -> None:
     ],
 )
 def test_every_synthetic_row_has_a_bucket(name: str, bucket: str) -> None:
-    """§8.4: without these, subtotals and cash flood the review queue.
+    """§8.4: without these, subtotals and cash flood the unresolved rows.
 
-    A queue nobody can work through is a queue that stops being worked
+    A list nobody can work through is a list that stops being worked
     through, and then every unresolved holding stays unresolved.
     """
     assert match_synthetic(name) == bucket

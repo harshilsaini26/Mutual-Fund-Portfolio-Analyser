@@ -21,4 +21,5 @@ Full spec: `docs/MODULE_1.md`. This file covers only what must never be violated
 - **Reconciliation checks units AND value.** Value catches Direct-vs-Regular plan
   confusion, which unit reconciliation cannot see.
 - **`InsufficientUnits` raises.** It means a missing CAS period.
-- Never rebuild cashflows outside M1. They travel on `PositionContext`.
+- Never rebuild cashflows outside M1. `returns.build_cashflows` is the one place
+  they are built.

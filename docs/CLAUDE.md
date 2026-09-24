@@ -58,7 +58,7 @@ Violating any of these silently corrupts data. If a task seems to require it, st
 ```
 src/common/       Decimal utils, hashing, config, logging
 src/m0_data/      fetch, parse, resolve, validate, providers
-src/m1_ledger/    cas, lots, returns, tax, reconcile, handoff
+src/m1_ledger/    cas, lots, returns, tax, reconcile
 src/m2_fund/      style, holdings, performance, manager, peers, position
 src/m3_lookthrough/ engine, metrics, tilts, returns, quality
 src/m4_risk/      series, metrics, covariance, attribution, factors, stress

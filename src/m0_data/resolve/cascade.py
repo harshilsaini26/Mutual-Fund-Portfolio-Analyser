@@ -1,9 +1,9 @@
 """The resolution cascade. MODULE_0.md §8.2.
 
 Executed in order, first hit wins: known ISIN, synthetic rule, provisional ISIN,
-alias table, fuzzy name, then the review queue. §8.1 is why any of it exists —
-the exposure unit is the **issuer**, so every disclosed row must end up pointing
-at one.
+alias table, fuzzy name, then unresolved and flagged for review. §8.1 is why any
+of it exists — the exposure unit is the **issuer**, so every disclosed row must
+end up pointing at one.
 
 Four departures from §8.2, all recorded in DECISIONS V1-02 and V1-29:
 

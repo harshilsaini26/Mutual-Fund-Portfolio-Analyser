@@ -179,7 +179,8 @@ dependencies, market data from its public sources, and the portal open in the br
 The first run takes a few minutes plus about 70 for NSE's index history and resumes if
 interrupted; later starts refresh today's prices in seconds. A new user with no CAS
 imported still gets every fund page -- the server starts on an empty ledger rather than
-refusing.
+refusing. The README walks through the rest in order: looking up a fund, importing a
+statement, loading more funds' holdings, and keeping it current.
 
 **A public copy of the fund pages** -- 754 funds, 246 MB -- builds with
 `python -m jobs.publish_site` and publishes to GitHub Pages with `--push`. It carries
@@ -190,7 +191,7 @@ opens a personal ledger. Publishing is only ever the user's own command.
 ## Looking up any fund
 
 ```bash
-python -m jobs.serve     # then search for a fund by name at the top of any page
+python start.py     # then search for a fund by name at the top of any page
 ```
 
 Every fund in AMFI's list has a page, `/fund/<ISIN>`, found by typing any words
@@ -288,6 +289,13 @@ implementation, and that implementation a test double, is a placeholder with a
 type annotation, and it cost a compile, a typecheck and a lint on every commit
 to keep.
 
+A repository-wide audit on 2026-09-24 removed what was left of the same kind,
+4,061 lines in all (V1-73): contract types for M2, M4 and M5 that nothing
+constructed, M3's data-provider Protocol, M1's handoff to M2, the fakes behind
+them, and M0's integrity gate and review queue, which no job ever called.
+Queries only the tests asked moved from `src/` to `tests/helpers.py`, and `pypdf`
+went: `pdfplumber` decrypts a statement on its own.
+
 ## What is not true yet
 
 - **Nobody has used this.** Including its author. Every figure carries its own
@@ -307,6 +315,13 @@ to keep.
   a single-user PC; a per-launch token is the fix if the machine is shared.
 - **Nothing runs end to end against a real ledger in CI.** Zone B needs a key,
   and the golden-file verifier covers the arithmetic instead.
+- **Statement decryption changed on 2026-09-24 and has not met a real statement
+  since.** `pdfplumber` now decrypts on its own; two synthetic protected PDFs,
+  RC4 and AES-256, test the right and the wrong password, but no real CAS has
+  been imported through it yet.
+- **The first start blocks for about 70 minutes.** The portal opens only after
+  the last setup step, NSE's index history, although every fund page works
+  without it.
 
 ## Known defects, measured and unfixed
 
@@ -512,7 +527,13 @@ Ordered by what they cost.
 ## Next
 
 The coverage machinery is done; the work now is making it usable by someone
-who has never heard of a look-through. In order (the plan agreed 2026-09-24):
+who has never heard of a look-through.
+
+**Waiting on the owner:** the public copy is built and checked (754 funds,
+246 MB) and goes live once GitHub Pages is switched on for the `gh-pages` branch
+and `python -m jobs.publish_site --push` is run. Neither is automated.
+
+In order (the plan agreed 2026-09-24):
 
 - **Price history for every fund, loaded automatically.** One-time download
   of all ~1,800 active Direct Growth funds, kept current by the daily job;

@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ViewDef:
-    """§4.1's `view_definition` row, as code. The database copy is seeded from
-    this, never the other way round — the catalogue is a fact about the code."""
+    """§4.1's `view_definition` row, as code: the catalogue is a fact about the
+    code, so it lives nowhere else (DECISIONS V1-73 retired the database copy)."""
 
     view_id: str
     view_name: str

@@ -2,8 +2,8 @@
 
 A disclosure is not all securities. Subtotals, cash, TREPS, receivables,
 derivative margin and units of other schemes are a meaningful share of rows, and
-without these rules they flood the review queue — which then stops being
-reviewable.
+without these rules they would bury the genuinely unresolved holdings under rows
+nobody needs to review.
 
 These run FIRST in the cascade (§8.2 step 0), before ISIN.
 """

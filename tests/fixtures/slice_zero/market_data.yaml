@@ -1,5 +1,5 @@
-# Backs FakeMarketDataProvider (M0 §11) and the scheme-master half of
-# FakeFundDataProvider. Zone A data only — no personal ledger rows here.
+# Backs FakeMarketDataProvider (M0 §11). Zone A data only — no personal
+# ledger rows here.
 
 schemes:
   - scheme_id: HDFC-TOP100-DIR

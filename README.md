@@ -7,28 +7,9 @@
 **See what your mutual funds actually own.**
 
 A self-hosted analytics workbench for Indian mutual fund investors. It looks through
-the funds you hold to the companies underneath, measures how much of your money is the
-same stock bought several times over, and judges each fund against the index it is
-supposed to beat — on your own machine, with your transactions encrypted and never sent
-anywhere.
-
----
-
-## The problem
-
-Five equity funds look like diversification. Opened up, they are often one portfolio
-bought five times — the same large caps in slightly different proportions, with five
-sets of fees. No factsheet shows this, because a factsheet describes one fund and
-overlap is a property of the *set*.
-
-And the numbers a fund reports about itself are hard to put side by side. Returns come
-over different periods in different documents, the benchmark is named in a scheme
-document few people read, and whether a fund manager earned the fee is rarely answered
-in the same place as what the fund costs.
-
-## What it answers
-
-**How much of my portfolio is the same money twice?** From two real disclosures:
+the funds you hold to the companies underneath, shows how much of your money is the same
+stock bought several times over, and measures each fund against the index it is supposed
+to beat. It runs on your own machine; your transactions are encrypted and never leave it.
 
 ```
 HDFC Flexi Cap  x  Nippon India Growth Mid Cap
@@ -36,54 +17,332 @@ HDFC Flexi Cap  x  Nippon India Growth Mid Cap
     duplicated     6.66% of the portfolio held through more than one fund
 ```
 
-**Did the fund earn its fee?** HDFC Flexi Cap against the NIFTY 500 total-return index
-its own disclosure names:
+Five equity funds look like diversification. Opened up, they are often one portfolio
+bought five times, with five sets of fees. No factsheet shows this, because a factsheet
+describes one fund and overlap is a property of the set.
+
+---
+
+## Contents
+
+1. [Start it](#1-start-it)
+2. [Look up any fund](#2-look-up-any-fund)
+3. [Add your own portfolio](#3-add-your-own-portfolio)
+4. [Load more funds' holdings](#4-load-more-funds-holdings)
+5. [Keep it current](#5-keep-it-current)
+6. [Publish the public fund explorer](#6-publish-the-public-fund-explorer-optional)
+7. [Command reference](#command-reference) · [Troubleshooting](#troubleshooting) · [Configuration](#configuration)
+8. [Why the numbers can be trusted](#why-the-numbers-can-be-trusted) · [Privacy and security](#privacy-and-security) · [For developers](#for-developers)
+
+---
+
+## 1. Start it
+
+**You need** Python 3.11 or later, git, an internet connection for the first run, and
+about 1.5 GB of disk for the market data. On Linux or macOS the encrypted ledger also
+needs SQLCipher: `sudo apt install libsqlcipher-dev` or `brew install sqlcipher`.
+
+```bash
+git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
+cd Mutual-Fund-Portfolio-Analyser
+python start.py
+```
+
+(On macOS and some Linux systems the command is `python3`.)
+
+That one command does everything:
+
+1. **Makes a private Python environment** in `.venv` and installs the pinned
+   dependencies into it. This takes a minute or two, and happens again only when the
+   dependency list changes.
+2. **Asks once for your email.** It goes in the `From:` header of every request to AMFI,
+   NSE and fund houses, so they can reach whoever is fetching. It is kept in `data/`,
+   which is never committed.
+3. **Loads market data from its public sources.** Each step is below. The whole first
+   run takes a few minutes, plus about 70 for NSE's index history.
+
+   | Step | What it loads |
+   |---|---|
+   | `prices` | today's price for every fund, and AMFI's list of funds |
+   | `companies` | AMFI's list of listed companies by size |
+   | `fund_sizes` | each fund's size, from AMFI's quarterly averages |
+   | `kotak`, `icici` | those two fund houses' latest portfolio disclosures |
+   | `portfolios` | loads the disclosures just downloaded |
+   | `benchmarks` | which index each fund is measured against |
+   | `history` | price history for the funds with a portfolio |
+   | `index_levels` | benchmark levels from NSE: the slow one, about 70 minutes |
+
+4. **Opens the portal** at <http://127.0.0.1:8765> in your browser.
+
+If a step fails, the others still run and the next start tries it again. If you stop the
+first run part-way, the next `python start.py` resumes where it stopped.
+`python -m jobs.setup --list` shows which steps are done.
+
+**Every later start** is the same command, `python start.py`. It refreshes today's prices
+in seconds and opens the portal. Stop the portal with `Ctrl+C`.
+
+### Running the other commands
+
+`start.py` needs nothing activated. Every other command in this README runs inside the
+private environment, so activate it once per terminal:
+
+```bash
+source .venv/bin/activate          # macOS / Linux
+.venv\Scripts\activate             # Windows (Command Prompt or PowerShell)
+source .venv/Scripts/activate      # Windows (Git Bash)
+```
+
+---
+
+## 2. Look up any fund
+
+Type any words of a fund's name into the search box at the top of any page, such as
+`kotak small` or `parag flexi`. Every fund in AMFI's list has a page at `/fund/<ISIN>`,
+and each page leads with charts, each under one plain sentence:
+
+- **The fund at a glance:** its house, category, launch date and size, and three
+  findings: how it did against its benchmark, how steady it was, and its worst fall.
+- **What ₹10,000 became**, against the benchmark with dividends reinvested, over 1, 3 or
+  5 years or the whole record.
+- **Returns by period**, fund beside benchmark.
+- **Falls and recoveries:** how far below its last high the fund stood each day, and how
+  long it took to climb back.
+- **Consistency:** the return of every three-year stretch, not just the one that ends
+  today.
+- **What it owns:** an asset-mix ring, its largest holdings as a treemap, and bars by
+  company size and by sector.
+
+Charts respond to hover, zoom and a click on the legend. Every panel exports to CSV, and
+carries its as-of date, how stale its data is, and how much of it could not be resolved.
+
+A fund whose price history is not loaded yet says so on its page, with the command that
+loads it:
+
+```bash
+python -m jobs.backfill_scheme_nav --scheme <ISIN>
+```
+
+The same figures, as a table in the terminal:
+
+```bash
+python -m scripts.show_fund_xray --scheme INF179K01UT0
+```
 
 ```
-  risk-adjusted       sharpe   sortino      rf
-  1y                   -0.10     -0.14   5.51%
-  3y                    0.80      1.15   6.82%
-  5y                    1.13      1.61   3.29%
-
   vs NSE:NIFTY_500_TRI    bench   beta   t.err   alpha     up   down
   1y                      2.83%   0.86   3.85%   1.04%   0.82   0.89
   3y                     11.67%   0.80   4.66%   5.70%   0.63   0.91
   5y                     10.57%   0.85   4.56%   8.42%   0.63   0.97
 ```
 
-**Is my index fund doing its one job?** An index fund should track its index and cost
-only its fee. ICICI Prudential Nifty 50 Index Fund, over 1, 3 and 5 years: beta 1.00,
-tracking error 0.03-0.05%, alpha -0.23% to -0.29% — the index, less a small fee, which
-is the only result an index fund should produce.
+---
 
-**What have I actually made?** Every transaction from your consolidated account
-statement, lot by lot: XIRR, time-weighted return, realised and unrealised gains, and a
-reconciliation against the statement's own closing balance.
+## 3. Add your own portfolio
+
+Your portfolio comes from a **Consolidated Account Statement (CAS)**, the statement of
+every mutual fund transaction under your PAN.
+
+**Step 1. Get the statement.** Request a *detailed* CAS (with transactions, not the summary)
+from CAMS, KFintech or MF Central, for the period since your first investment. Any one of
+them covers every fund house. It arrives as a PDF protected by the password you chose when
+requesting it.
+
+**Step 2. Import it.** Stop the portal (`Ctrl+C`), activate the environment
+([above](#running-the-other-commands)), and run:
+
+```bash
+python -m jobs.import_cas --file path/to/statement.pdf --user USER-01
+```
+
+It asks for two things:
+
+1. **The statement's password.** It is used to open the file and is never stored.
+2. **A ledger key.** The prompt reads `Zone B ledger key`. Your transactions are kept in
+   an encrypted file, `data/ledger/personal.db`, and this key locks it. On the first
+   import you choose it: at least 12 characters, typed twice. After that you type the
+   same key each time. **There is no recovery:** the file cannot be opened without the
+   key, not even by this project.
+
+It ends with one summary line. These are the fields to check:
+
+| Field | What it means |
+|---|---|
+| `inserted` | new transactions saved |
+| `duplicate` | transactions already in the ledger (re-importing is safe) |
+| `unmatched` | transactions whose description it did not recognise; they are set aside, not saved |
+| `unparsed_lines` | lines inside a fund's section that it could not read |
+| `status` | `ok`, or `partial` when either of the two above is not zero and needs a look |
+
+**Step 3. Look.** Run `python start.py` again. It asks for the ledger key, and your
+portfolio pages appear in the navigation:
+
+| Page | The question it answers |
+|---|---|
+| Portfolio summary | Where do I stand? |
+| Look-through exposure | What do I actually own, beneath the funds? |
+| Fund overlap | Am I paying twice for the same thing? |
+| Duplication | How much of my money is doubled up? |
+| What each fund adds | What does each fund add? |
+| Concentration | How concentrated am I really? |
+| Size profile | What is my size profile? (large, mid and small cap, on AMFI's list at the time) |
+| Holdings | What do I hold? |
+
+Each fund in Holdings links to its fund page.
+
+**A new statement later?** Import it the same way. Transactions already in the ledger are
+recognised and skipped, so overlapping periods are fine.
+
+**No statement to hand?** This weights every fund with a loaded portfolio equally, to
+show what the output looks like. It labels itself illustrative and saves nothing:
+
+```bash
+python -m scripts.show_lookthrough --equal 1000000
+```
 
 ---
 
-## Capabilities
+## 4. Load more funds' holdings
 
-| | |
+Prices cover every fund from the start. **Holdings**, which the look-through, overlap and
+"what it owns" charts depend on, must be loaded per fund house. There are three ways, in
+order of preference.
+
+**Fund houses that publish through an interface: Kotak and ICICI.** The setup already
+fetches their latest disclosures. For another month:
+
+```bash
+python -m jobs.fetch_amc --amc kotak --list             # what is published
+python -m jobs.fetch_amc --amc kotak --period 2026-08
+python -m jobs.ingest_inbox
+```
+
+**Fund houses with a reader: HDFC, Nippon and PPFAS.** Download the house's monthly
+portfolio workbook from its website into `data/inbox/`, then run:
+
+```bash
+python -m jobs.ingest_inbox
+```
+
+It works out which fund house published the file and which fund each sheet describes.
+One Kotak workbook loads 88 funds and one Nippon workbook 91. A sheet it cannot identify
+with certainty is skipped with a reason, never guessed at.
+[`config/amc_disclosure_index.yaml`](config/amc_disclosure_index.yaml) links the
+disclosure page of all 52 fund houses.
+
+**Any other fund: the aggregator tier.** This reads the fund's public page on Groww. Find
+the fund's slug in `https://groww.in/mf-sitemap.xml`. It cannot be derived from the
+name, because Groww keeps the name a fund had before any rename.
+
+```bash
+python -m jobs.fetch_groww --slug <slug> --dry-run      # check it is the right fund
+python -m jobs.fetch_groww --slug <slug>
+```
+
+The Groww page carries no ISINs, so fewer holdings resolve than from a fund house's own
+file, and that file is always preferred while it is current.
+
+After loading a new fund house's disclosures, run `python -m jobs.fetch_index --declared`
+to pick up the benchmarks those disclosures name.
+
+---
+
+## 5. Keep it current
+
+| When | What to run |
 |---|---|
-| **Look-through** | Exposure by *company*, not by security, so an issuer's shares and bonds count once. Overlap, duplication, concentration (HHI and effective number of holdings), a large/mid/small size profile on AMFI's list in force at the time, funds held inside other funds expanded to their own holdings, and the marginal contribution of each fund to the whole. |
-| **Fund x-ray** | Returns over 1, 3 and 5 years and since launch; volatility, drawdown and recovery; rolling-return distributions; Sharpe and Sortino against the 91-day T-bill rate in force when each window began; alpha, beta, tracking error, information ratio and up/down capture against a total-return benchmark. On a fund page linked from your holdings, and in the terminal. |
-| **Ledger** | CAS statement import, FIFO lots, §112A grandfathering, XIRR and TWRR, reconciled to the statement's closing units. |
-| **Views** | A local browser interface: search any fund by name for a page of interactive charts (growth of Rs 10,000 against its benchmark, returns, falls, consistency, holdings), plus the portfolio views. CSV export everywhere. Every chart carries its as-of date, staleness, coverage and unresolved share, in a footer that cannot be switched off. |
+| Any day | `python start.py`, which refreshes today's prices before opening |
+| Monthly, after the 10th | new disclosures (step 4); SEBI gives fund houses ten days after month end |
+| After each new statement | `python -m jobs.import_cas ...` (step 3) |
+| To see what is out of date | `python -m jobs.status` |
 
-### Coverage today
+`jobs.status` lists, for each fund house, how many funds' disclosures are behind and by
+how many months, with the exact command that fixes each. Add `--check` to also ask Kotak
+and ICICI what they have published.
 
-| | |
+---
+
+## 6. Publish the public fund explorer (optional)
+
+A static copy of the fund pages, for anyone to browse on GitHub Pages without installing
+anything.
+
+```bash
+python -m jobs.publish_site --base ""                   # a local preview copy in site/
+python -m http.server -d site 8000                      # then open http://127.0.0.1:8000
+python -m jobs.publish_site --push                      # build and publish to gh-pages
+```
+
+It carries AMFI's prices and fund houses' own disclosures, and nothing else:
+
+- **No benchmark comparisons.** NSE's index levels are licensed for personal use, so the
+  public copy leaves them out and each page says so.
+- **No aggregator holdings.** Holdings read from Groww are left out, with a note.
+- **None of your data.** The build never opens your ledger.
+
+Nothing is published unless you run `--push`, and that needs push access to the
+repository. Turn Pages on once, under **Settings → Pages → Deploy from a branch →
+`gh-pages` / root**. The site then appears at
+`https://<user>.github.io/<repository>/`.
+
+---
+
+## Command reference
+
+| Command | What it does |
 |---|---|
-| Schemes in the AMFI universe | 19,676 |
-| Schemes with a loaded portfolio | 200, answering for 1,144 share classes |
-| Fund houses read directly from their own files | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
-| Funds reachable through the aggregator tier | 1,973 |
-| Schemes with a benchmark index | 1,819 |
-| Schemes with full benchmark analytics | 1,220, 163 of them actively managed |
+| `python start.py [--no-browser] [--port N]` | set up what is missing, refresh prices, open the portal |
+| `python -m jobs.setup --list` | the setup steps, and which are done |
+| `python -m jobs.setup --only <step>` | run one setup step again |
+| `python -m jobs.serve` | the portal alone, with no setup or refresh |
+| `python -m jobs.import_cas --file <pdf> --user USER-01` | import a CAS statement |
+| `python -m jobs.fetch_amc --amc kotak\|icici` | fetch a fund house's disclosure |
+| `python -m jobs.ingest_inbox` | load every workbook in `data/inbox/` |
+| `python -m jobs.fetch_groww --slug <slug>` | holdings from the aggregator tier |
+| `python -m jobs.backfill_scheme_nav --scheme <ISIN>` | one fund's full price history |
+| `python -m jobs.status [--check]` | what is stale, and the command that fixes it |
+| `python -m scripts.show_fund_xray --scheme <ISIN>` | one fund's statistics in the terminal |
+| `python -m scripts.show_lookthrough` | your look-through in the terminal |
+| `python -m jobs.publish_site [--push]` | build, or build and publish, the public copy |
 
-[`docs/PROGRESS.md`](docs/PROGRESS.md) has the current figures, how each was measured,
-and the defects that are known and not yet fixed.
+---
+
+## Troubleshooting
+
+**The first run is taking a long time.** The last step, `index_levels`, fetches NSE's
+history one index and one year at a time, within NSE's rate limit: about 70 minutes. The
+portal opens when it finishes. If you stop it, the next start resumes from that step.
+
+**A setup step failed.** The next `python start.py` retries it. Or run it alone to see
+the full error: `python -m jobs.setup --only <step>`.
+
+**Port 8765 is in use.** Use `python start.py --port 8766`.
+
+**"password rejected by the PDF".** That is the statement's password, the one you chose
+when requesting the CAS, not your ledger key.
+
+**I forgot my ledger key.** It cannot be recovered. Your statements are the record, so
+move `data/ledger/personal.db` somewhere else and import them again under a new key.
+
+**`sqlcipher3` fails to install on Linux or macOS.** Install the SQLCipher library first
+(see [Start it](#1-start-it)), then run `python start.py` again.
+
+**A fund page says a panel has no data.** The panel's own message names what is missing:
+usually its price history (`jobs.backfill_scheme_nav --scheme <ISIN>`) or its
+holdings (step 4).
+
+---
+
+## Configuration
+
+Nothing needs setting. These override the defaults:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `MF_CONTACT_EMAIL` | the email saved at first run | `From:` header on every outbound request |
+| `MF_DATA_ROOT` | `./data` | where the warehouse, ledger and raw archive live |
+| `MF_WAREHOUSE` | `$MF_DATA_ROOT/warehouse/canonical.db` | a specific market-data database |
+| `MF_LEDGER` | `$MF_DATA_ROOT/ledger/personal.db` | a specific encrypted ledger |
+| `MF_CAS_PASSWORD` | unset | the optional real-statement test only; everything else prompts |
 
 ---
 
@@ -92,208 +351,96 @@ and the defects that are known and not yet fixed.
 Most of the engineering is not the arithmetic. It is refusing to show a number that
 looks right and is not.
 
-- **Exact arithmetic, end to end.** Money, units, NAVs and weights are `Decimal`
-  throughout. SQLite silently turns a `DECIMAL` column into a float, sums text as float,
-  and sorts `"5000"` above `"25000"`; each of those is guarded, and each was found as a
-  defect first.
-- **Nothing disappears.** A holding that cannot be identified is shown as unresolved; a
-  fund with no published portfolio is shown as undisclosed. Both stay on screen, and the
-  unresolved share is a pass/fail criterion, not a log line.
+- **Exact arithmetic throughout.** Money, units, prices and weights are `Decimal` end to
+  end. SQLite silently turns a `DECIMAL` column into a float, sums text as float, and
+  sorts `"5000"` above `"25000"`. Each of those is guarded against, and each was found as
+  a defect first.
+- **Nothing disappears.** A holding that cannot be identified shows as unresolved. A fund
+  with no published portfolio shows as undisclosed. Both stay on screen.
 - **Absent is not zero.** A return that cannot be computed shows as a dash, never
   `0.00%`. A fund with too short a history for a statistic gets no statistic.
 - **Every file is checked against itself.** Each disclosure is reconciled against the
-  total the fund house printed in it, and against AMFI's independent AUM figure; a 100x
-  unit error fails both.
-- **Benchmarks are total-return only.** A price index leaves out dividends and flatters
-  every fund compared against it by about 1.3% a year on the Nifty 50. Price series are
-  never used for alpha.
-- **Raise, don't round.** A redemption larger than the units held means a missing
-  statement, and the ledger stops rather than guessing.
+  total the fund house printed in it, and against AMFI's independent size figure. A 100x
+  unit error fails both checks.
+- **Benchmarks include dividends.** A price index leaves dividends out, which flatters any
+  fund compared against it by about 1.3% a year on the Nifty 50. Price-only series are
+  never used.
+- **It stops rather than guesses.** A redemption larger than the units held means a
+  statement is missing, and the ledger stops rather than inventing the difference.
 
-The ledger and the look-through engine are **mutation tested** — deliberate defects are
-injected and every one must be caught (26 of 26 and 35 of 35). A separate verifier
+The ledger and the look-through engine are **mutation tested**: deliberate defects are
+injected, and every one must be caught (26 of 26 and 35 of 35). A separate verifier
 recomputes the reference portfolio without importing any of the code it checks.
-
----
-
-## Getting started
-
-```bash
-git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
-cd Mutual-Fund-Portfolio-Analyser
-python start.py
-```
-
-That is all of it. `start.py` makes a private Python environment in `.venv`, installs
-the pinned dependencies, loads market data from its public sources, and opens the portal
-at `http://127.0.0.1:8765`. The first run takes a few minutes, then about 70 more for
-NSE's index history, and resumes where it stopped if interrupted; later starts refresh
-today's prices in seconds. It asks once for an email to send as the `From:` header on
-its requests, and keeps it in `data/`, which is never committed.
-
-Search any fund by name straight away. Your own portfolio appears once you import a CAS
-statement (below). Needs Python 3.11+; on Linux or macOS the encrypted ledger may also
-need SQLCipher (`apt install libsqlcipher-dev`, `brew install sqlcipher`).
-
-### Doing it by hand
-
-```bash
-python -m venv .venv && source .venv/bin/activate    # Windows: .venv/Scripts/activate
-pip install -e ".[dev,cas]" -c requirements.lock
-python -m jobs.setup --list                          # what start.py runs, and what is done
-```
-
-`requirements.lock` pins the whole dependency graph, transitive packages included.
-
-### Load the market data
-
-```bash
-export MF_CONTACT_EMAIL=you@example.com         # sent as the From: header on every request
-
-python -m jobs.fetch_nav                        # today's NAVs, every scheme
-python -m jobs.build_entity_master              # AMFI's company list -> issuers
-python -m jobs.fetch_aum                        # scheme AUM, for the units check
-python -m jobs.fetch_index --catalogue --resolve --declared --held   # benchmarks
-```
-
-### Add the funds you hold
-
-Kotak and ICICI publish through an interface that can be queried directly:
-
-```bash
-python -m jobs.fetch_amc --amc kotak --period 2026-08
-python -m jobs.ingest_inbox
-```
-
-For any other fund house, download its monthly portfolio workbook into `data/inbox/` and
-run `python -m jobs.ingest_inbox`. It identifies the fund house and every scheme in the
-file on its own — 88 schemes from one Kotak workbook, 91 from one Nippon — and skips,
-with a reason, any sheet it cannot identify with certainty.
-[`config/amc_disclosure_index.yaml`](config/amc_disclosure_index.yaml) links the
-disclosure page for all 52 AMCs.
-
-For a fund from a house with no reader yet, the aggregator tier reads its public scheme
-page instead:
-
-```bash
-python -m jobs.fetch_groww --scheme INF179K01UT0
-```
-
-It reaches any fund Groww lists, at the cost of an ISIN column, so it resolves fewer
-holdings than a fund house's own file; that file is always preferred while it is current.
-
-### Import your statement and look
-
-```bash
-python -m jobs.import_cas --file statement.pdf --user USER-01
-python -m jobs.serve                            # browser UI on 127.0.0.1:8765
-python -m scripts.show_fund_xray --scheme INF179K01UT0
-python -m jobs.status                           # what is stale, and the command that fixes it
-```
-
-No statement to hand? `python -m scripts.show_lookthrough --equal 1000000` weights every
-disclosed scheme equally to show the shape of the output. It labels itself illustrative
-and refuses to save anything.
-
-### The public fund explorer
-
-```bash
-python -m jobs.publish_site            # build it into site/; nothing leaves the machine
-python -m jobs.publish_site --push     # publish it to the gh-pages branch
-```
-
-A static copy of the fund pages for GitHub Pages, served at
-`https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Analyser/` once Pages is set to
-deploy from the `gh-pages` branch (Settings → Pages). It carries AMFI's prices and fund
-houses' own disclosures, and nothing else: NSE's index levels are licensed for personal
-use, so benchmark comparisons stay in the self-hosted app, and the build opens no
-personal ledger at all. Nothing is published unless you run `--push`.
-
-### Configuration
-
-| Variable | Default | What it does |
-|---|---|---|
-| `MF_CONTACT_EMAIL` | `unset@example.invalid` | `From:` header on every outbound request |
-| `MF_DATA_ROOT` | `./data` | where the warehouse, ledger and raw archive live |
-| `MF_WAREHOUSE` | `$MF_DATA_ROOT/warehouse/canonical.db` | a specific warehouse file |
-| `MF_LEDGER` | `$MF_DATA_ROOT/ledger/personal.db` | the encrypted personal ledger |
-| `MF_CAS_PASSWORD` | unset | the optional real-statement test only; everything else prompts |
-
----
 
 ## Privacy and security
 
-**Your data stays yours.** Transactions, units and folios live in a SQLCipher-encrypted
-ledger, created readable only by you, which refuses to open without a key rather than
-falling back to plain text. A new ledger's key must be at least 12 characters and is typed
-twice. Market data — NAVs, disclosures, indices — is public and kept
-separately. There is no account, no telemetry and no server beyond the one you start on
-your own machine (the optional public explorer publishes fund-level public data only,
-and only when you run it); the single JavaScript library is vendored with a recorded checksum
-rather than loaded from a CDN.
-
-**Polite by construction.** Every request is rate-limited per site, respects
-`robots.txt`, identifies its operator, and is archived under its SHA-256 before anything
-reads it, so any job can be re-run safely. Nothing here defeats a CAPTCHA or bot check;
-where a site presents one, the project uses a published data interface or asks you to
-download the file.
-
-**Untrusted input is treated as untrusted.** Disclosure files come from outside, so
-names are escaped before they reach a page, spreadsheet formulas are neutralised on
-export, archive members cannot write outside their folder or unpack past a size cap,
-workbook XML is parsed with `defusedxml`, and every response carries a content security
-policy. The local server answers only to `127.0.0.1` and `localhost`, so a web page cannot
-reach it by pointing its own domain there (DNS rebinding). Each of those is a regression
-test written against a demonstrated exploit, and CI audits every pinned dependency for
-known vulnerabilities.
+- **Your data stays yours.** Transactions, units and folio numbers live in a
+  SQLCipher-encrypted ledger that refuses to open without its key, rather than falling
+  back to plain text. Market data is public and kept separately. There is no account,
+  no telemetry, and no server beyond the one you start on your own machine.
+- **Polite by construction.** Every request is rate-limited per site, respects
+  `robots.txt`, identifies its operator, and is archived under its SHA-256 hash before
+  anything reads it. Nothing here defeats a CAPTCHA or bot check. Where a site presents
+  one, the project uses a published data interface or asks you to download the file.
+- **Untrusted input is treated as untrusted.** Fund names are escaped before they reach a
+  page. Spreadsheet formulas are neutralised on export. Archives cannot write outside
+  their folder. Workbook XML is parsed with `defusedxml`. Every page carries a content
+  security policy. The local server answers only to `127.0.0.1` and `localhost`, which
+  closes DNS rebinding. Each of these is a regression test written against a demonstrated
+  exploit, and CI audits every pinned dependency for known vulnerabilities.
+- **One known limit.** The local server has no login. While it runs, any program or
+  account on the same computer can read your portfolio through it. That is fine on a
+  personal machine; do not run it on a shared one.
 
 ---
 
-## Quality gate
+## For developers
 
 ```bash
-python -m pytest -q                             # 1,516 tests, hermetic, no network
-python -m ruff check src/ tests/ scripts/ jobs/
-python -m mypy                                  # strict
-python -m scripts.verify_v0_ledger --check      # the independent ledger verifier
+pip install -e ".[dev,cas]" -c requirements.lock   # inside .venv; start.py installs [cas] only
+python -m pytest -q                                # 1,516 tests, hermetic, no network
+python -m ruff check .
+python -m mypy                                     # strict
+python -m scripts.verify_v0_ledger --check         # the independent ledger verifier
 ```
 
-[CI](.github/workflows/ci.yml) runs exactly these on every push.
-
-## Architecture
+[CI](.github/workflows/ci.yml) runs exactly these on every push. `requirements.lock` pins
+the whole dependency graph, transitive packages included, and is used as a pip
+constraints file.
 
 ```
+start.py              one-command setup and start
+jobs/                 command-line entry points: fetch, load, import, serve, publish
 src/m0_data/          fetch, parse, resolve, validate, load     the market warehouse
 src/m1_ledger/        statement parsing, lots, returns          your positions
 src/m2_fund/          returns, risk, benchmark analytics        fund x-ray
 src/m3_lookthrough/   exposure, overlap, concentration          look-through
-src/m6_views/         browser UI, export, local API             views
+src/m6_views/         pages, charts, export, local API          what you see
+migrations/           numbered, forward-only schema changes
 ```
 
-Dependencies run one way, and modules talk through typed interfaces rather than
-reaching into each other's tables. The view layer computes nothing: a static check
-enforces it, because a figure derived in a view is a second answer nobody can
-reconcile. [`docs/CLAUDE.md`](docs/CLAUDE.md) sets out the ten invariants the rest of the
-code defers to.
-
----
+Dependencies run one way, and modules talk through typed interfaces rather than reaching
+into each other's tables. The view layer computes nothing, and a static check enforces
+that. [`docs/CLAUDE.md`](docs/CLAUDE.md) sets out the ten invariants the rest of the code
+defers to, and [`docs/PROGRESS.md`](docs/PROGRESS.md) has current coverage, how each
+figure was measured, and the known defects.
 
 ## Status
 
-A working system at an early stage, published as-is. The data pipeline, ledger,
-look-through and views are built; fund analytics are largely built; portfolio risk,
-market context and tax calculation are specified and not yet built.
+A working system at an early stage, published as-is. Built so far: the data pipeline, the
+ledger, the look-through, fund analytics and the portal. Portfolio risk, market context
+and tax calculation are specified but not built.
 
 It has not yet been used with real money, including by its author. That is why every
-figure it shows carries its as-of date, coverage and staleness: so you can judge how far
-to rely on it. It is not investment advice, and it does not give any.
+figure carries its as-of date, coverage and staleness: so you can judge how far to rely
+on it. It is descriptive, not investment advice.
 
 ## Built with Claude
 
 The specification, implementation, tests and documentation were written with
 [Claude Code](https://claude.com/claude-code). The commit history records that work as
-it happened — including the defects the tests caught in freshly written code, and the
-estimates that turned out wrong and were corrected.
+it happened, including the defects the tests caught in freshly written code and the
+estimates that turned out wrong.
 
 ## Licence
 

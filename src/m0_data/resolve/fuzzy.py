@@ -21,8 +21,9 @@ be close, by Jaccard overlap. At `jaccard >= 0.7` the same sample produced ZERO
 wrong auto-accepts from 90 to 95, so §8.2's 92 stands — the number was never the
 problem (V1-02).
 
-Where either condition fails the row goes to the review queue: a guess wearing a
-confidence score is worse than an unresolved row a human can fix (V0-21).
+Where either condition fails the row stays unresolved, flagged for review: a
+guess wearing a confidence score is worse than an unresolved row a human can
+fix (V0-21).
 """
 
 from __future__ import annotations
@@ -113,8 +114,8 @@ def best_matches(
     """Top `limit` candidates as (normalised_name, issuer_id, score), best first.
 
     `candidates` maps a normalised issuer name to its `issuer_id`. Returned
-    even when every score is poor: §8.5's review queue stores the top five so a
-    human sees what was considered, and an empty candidate list tells them
+    even when every score is poor: the resolution carries them, so whoever
+    reviews it sees what was considered, and an empty candidate list tells them
     nothing about whether the matcher looked.
 
     Ties break on `issuer_id` so the ordering is deterministic — `CLAUDE.md`
