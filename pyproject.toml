@@ -51,7 +51,7 @@ dependencies = [
 # depending on them, and undeclared meant `pip install -e .` followed by
 # `python -m jobs.import_cas` failed with ImportError.
 [project.optional-dependencies]
-cas = ["pypdf==6.18.1", "pdfplumber==0.11.10"]
+cas = ["pdfplumber==0.11.10"]
 
 # The gate's own tooling. `pip install -e .` installs runtime dependencies only,
 # so without this group CI ran `python -m ruff` against an interpreter that had
@@ -119,7 +119,7 @@ ignore_missing_imports = true
 # them to import the ledger would fail every test run on a machine that has not
 # installed them. Neither ships type stubs.
 [[tool.mypy.overrides]]
-module = ["pypdf", "pypdf.*", "pdfplumber", "pdfplumber.*"]
+module = ["pdfplumber", "pdfplumber.*", "pdfminer", "pdfminer.*"]
 ignore_missing_imports = true
 
 # openpyxl ships no type stubs and `types-openpyxl` would be a dev dependency

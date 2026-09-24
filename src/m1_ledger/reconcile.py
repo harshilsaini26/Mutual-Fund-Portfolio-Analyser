@@ -81,15 +81,6 @@ class Reconciliation:
     nav_check: NavCrossCheck | None = None
 
 
-@dataclass(frozen=True)
-class GateResult:
-    """MODULE_1.md §11.3. V0 does not ship while `passed` is False."""
-
-    passed: bool
-    failures: list[Reconciliation]
-    excluded_scheme_ids: set[SchemeId]
-
-
 def diagnose(
     delta: Decimal, starts_at_zero: bool | None, txn_count: int
 ) -> list[str]:
@@ -316,21 +307,6 @@ def reconcile_all(
             )
         )
     return results
-
-
-def apply_gate(results: list[Reconciliation]) -> GateResult:
-    """MODULE_1.md §11.3.
-
-    A failing position is marked low confidence and EXCLUDED from every
-    portfolio aggregate. Including it with a caveat would let a known-wrong
-    number into a total that the user reads as authoritative.
-    """
-    failures = [r for r in results if r.status == "fail"]
-    return GateResult(
-        passed=not failures,
-        failures=failures,
-        excluded_scheme_ids={r.scheme_id for r in failures},
-    )
 
 
 def _latest_reported_balance(txns: list[Txn], as_of: date) -> Decimal | None:

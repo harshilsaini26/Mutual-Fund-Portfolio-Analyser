@@ -1,11 +1,9 @@
 """What M1 exposes for display. `MODULE_6.md` Appendix B, the M1 edge.
 
 `MODULE_6.md` §1.3 rule 2 forbids M6 from reading `position` directly, so this is
-the way in. It is deliberately **narrower than `handoff.PositionContext`**: that
-dataclass is the M1-to-M2 handoff and carries lots and cashflows, because M2
-needs them to compute. M6 computes nothing — it needs a row to put in a table —
-and loading every lot to render a holdings list would be reaching for data with
-no use.
+the way in. It carries no lots or cashflows: M6 computes nothing — it needs a
+row to put in a table — and loading every lot to render a holdings list would be
+reaching for data with no use.
 
 **Every column M1 has not filled comes back `None`, never zero.** `position` is
 written by `rebuild()` and several of its columns wait on engines that have not

@@ -15,7 +15,6 @@ the check's scope exactly "the view code" is worth more than the convenience.
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import UTC, date, datetime
 from typing import Any
 from urllib.parse import urlencode
@@ -24,7 +23,6 @@ from src.common.types import ViewState
 from src.m6_views.builder import Scope
 from src.m6_views.caveats import Quality, assemble_caveats
 from src.m6_views.envelope import ViewEnvelope
-from src.m6_views.hashing import upstream_hash
 from src.m6_views.registry import VIEW_DEFS
 
 
@@ -60,7 +58,6 @@ def ok_envelope(
     source_modules: list[str],
     row_count: int,
     params: dict[str, Any],
-    ledger: sqlite3.Connection | None = None,
     truncated: bool = False,
     extra_caveats: list[str] | None = None,
     basis: str | None = None,
@@ -98,9 +95,6 @@ def ok_envelope(
         truncated=truncated,
         computed_at=datetime.now(UTC),
         export_url=export_url(view_id, scope, params),
-        upstream_hash=upstream_hash(
-            view_id, scope, params, view.requires_fields, ledger
-        ),
     )
 
 

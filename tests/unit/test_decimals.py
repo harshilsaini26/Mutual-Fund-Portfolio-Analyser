@@ -22,13 +22,10 @@ from src.common.decimals import (
     UNSAFE_DECIMAL_TYPES,
     connect,
     dec,
-    quantise_money,
-    quantise_nav,
-    quantise_units,
 )
 from src.common.types import SchemeId
 
-from tests.fakes.m0 import FakeFundDataProvider, FakeMarketDataProvider
+from tests.fakes.m0 import FakeMarketDataProvider
 
 # NAVs and unit counts that no binary float can hold exactly. Every one is a
 # realistic figure: 6-decimal units are what a CAS actually prints.
@@ -204,10 +201,10 @@ def test_sip_accumulation_float_drifts_decimal_does_not() -> None:
 
 def test_quantisers_round_half_up() -> None:
     """ROUND_HALF_UP, not banker's rounding: .5 goes away from zero."""
-    assert quantise_units(Decimal("1.0000005")) == Decimal("1.000001")
-    assert quantise_units(Decimal("1.0000015")) == Decimal("1.000002")
-    assert quantise_money(Decimal("10.00005")) == Decimal("10.0001")
-    assert quantise_nav(Decimal("142.8391045")) == Decimal("142.839105")
+    assert Decimal("1.0000005").quantize(UNITS_Q) == Decimal("1.000001")
+    assert Decimal("1.0000015").quantize(UNITS_Q) == Decimal("1.000002")
+    assert Decimal("10.00005").quantize(MONEY_Q) == Decimal("10.0001")
+    assert Decimal("142.8391045").quantize(NAV_Q) == Decimal("142.839105")
 
 
 def test_none_survives_dec() -> None:
@@ -239,35 +236,6 @@ def test_fake_nav_round_trips_through_sqlite() -> None:
 
     assert back == point.nav == Decimal("142.839104")
     assert str(back) == "142.839104"
-
-
-def test_fake_holdings_weights_sum_exactly_to_100_after_round_trip() -> None:
-    """`pct_normalised` sums to exactly 100 — before and after storage.
-
-    MODULE_0.md §7.3 guarantees this, and every look-through figure depends on
-    it. In float this sum lands on 99.99999999999999 often enough to matter.
-    """
-    from datetime import date
-
-    provider = FakeFundDataProvider()
-    rows = provider.holdings(SchemeId("HDFC-TOP100-DIR"), date(2026, 7, 31))
-
-    with connect(":memory:") as conn:
-        _table(conn)
-        for r in rows:
-            conn.execute(
-                "INSERT INTO t VALUES (?, ?)", (str(r.row_number), r.pct_normalised)
-            )
-        stored = [row[0] for row in conn.execute("SELECT v FROM t").fetchall()]
-
-    assert all(isinstance(v, Decimal) for v in stored)
-    assert sum(stored, Decimal(0)) == Decimal("100.000000")
-
-    # The as-reported column deliberately does NOT sum to 100 (99.860 here), so
-    # any aggregation that reached for it instead would be visibly wrong.
-    raw = sum((r.pct_to_nav for r in rows if r.pct_to_nav is not None), Decimal(0))
-    assert raw == Decimal("99.860000")
-    assert raw != Decimal("100.000000")
 
 
 # --- SQL aggregation is the hole in the DECIMAL_TEXT discipline -------------

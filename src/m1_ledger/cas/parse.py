@@ -168,24 +168,6 @@ class CasContext:
     ) -> None:
         self.balances.append(BalanceMarker(folio, isin, kind, units, row_number))
 
-    def closing_balance(self, folio: str, isin: str) -> Decimal | None:
-        """The last closing balance printed for this folio-scheme."""
-        found = [
-            b
-            for b in self.balances
-            if b.folio == folio and b.scheme_raw_isin == isin and b.kind == "closing"
-        ]
-        return found[-1].units if found else None
-
-    def opening_balance(self, folio: str, isin: str) -> Decimal | None:
-        found = [
-            b
-            for b in self.balances
-            if b.folio == folio and b.scheme_raw_isin == isin and b.kind == "opening"
-        ]
-        return found[0].units if found else None
-
-
 def to_decimal(raw: str) -> Decimal | None:
     """Parse one printed column. §5.4's two number traps, together.
 

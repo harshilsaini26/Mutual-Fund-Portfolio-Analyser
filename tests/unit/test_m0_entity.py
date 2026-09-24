@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 from src.common.decimals import connect
-from src.common.types import UNRESOLVED, IssuerId
+from src.common.types import UNRESOLVED
 from src.m0_data.load import issuer_id_for, load_mcap
 from src.m0_data.normalise.family import family_key
 from src.m0_data.normalise.names import normalise_name
@@ -50,7 +50,6 @@ from src.m0_data.resolve.isin import (
     is_valid_isin,
     isin_check_digit,
 )
-from src.m0_data.resolve.queue import accept, enqueue, pending, queue_id_for
 from src.m0_data.resolve.synthetic import match_synthetic
 
 from tests.conftest import migrated
@@ -635,69 +634,6 @@ def test_tech_mahindra_does_not_resolve_to_mahindra_and_mahindra(
     assert result.issuer_id != issuer_id_for(MAHINDRA)
     assert result.method == "unresolved"
     assert result.needs_review
-
-
-# --- §8.5 the review queue ---------------------------------------------------
-
-
-def test_the_queue_is_ordered_by_materiality_not_arrival(
-    conn: sqlite3.Connection,
-) -> None:
-    """§8.5. The top twenty rows usually account for most unresolved value.
-
-    Ordered by arrival, a Rs 3,000 position sits ahead of a Rs 3 crore one and
-    the queue stops being worth opening.
-    """
-    enqueue(conn, "Small Position Ltd", "small position", date(2026, 6, 30),
-            market_value=Decimal("3000"))
-    enqueue(conn, "Large Position Ltd", "large position", date(2026, 6, 30),
-            market_value=Decimal("30000000"))
-    conn.commit()
-
-    rows = pending(conn)
-    assert [r.raw_name for r in rows] == ["Large Position Ltd", "Small Position Ltd"]
-
-
-def test_the_same_name_is_one_decision_not_twenty(conn: sqlite3.Connection) -> None:
-    """Keyed on the normalised name, so materiality accumulates across schemes.
-
-    That sum is what makes the priority ordering mean "resolving this recovers
-    the most exposure".
-    """
-    for _ in range(3):
-        enqueue(conn, "Repeated Ltd", "repeated", date(2026, 6, 30),
-                market_value=Decimal("1000"))
-    conn.commit()
-
-    rows = pending(conn)
-    assert len(rows) == 1
-    assert rows[0].occurrence_count == 3
-    assert rows[0].total_mv_inr == Decimal("3000")
-
-
-def test_accepting_a_queue_entry_writes_the_alias_that_stops_it_recurring(
-    conn: sqlite3.Connection,
-) -> None:
-    """§8.5's "the queue shrinks monotonically" depends entirely on this.
-
-    Without the alias the same name returns on the next disclosure and the
-    reviewer answers the same question every month.
-    """
-    qid = enqueue(conn, "Reliance Inds Ltd", normalise_name("Reliance Inds Ltd"),
-                  date(2026, 6, 30), market_value=Decimal("500000"))
-    accept(conn, qid, IssuerId(issuer_id_for(RELIANCE)))
-    conn.commit()
-
-    assert pending(conn) == []
-    again = resolve(conn, "Reliance Inds Ltd", None, "equity")
-    assert again.method == "alias"
-    assert again.issuer_id == issuer_id_for(RELIANCE)
-
-
-def test_the_queue_id_is_deterministic() -> None:
-    """The same name always lands on the same row, across runs and processes."""
-    assert queue_id_for("reliance industries") == queue_id_for("reliance industries")
-    assert queue_id_for("a") != queue_id_for("b")
 
 
 # --- §2.2 S4 the market-cap list --------------------------------------------

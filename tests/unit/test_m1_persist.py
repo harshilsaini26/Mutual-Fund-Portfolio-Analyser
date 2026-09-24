@@ -1,7 +1,7 @@
 """Zone B persistence. MODULE_1.md §4, `PLAN.md` §8.3 invariant 5.
 
 Invariant 5 — *"a full rebuild reproduces byte-identical derived tables"* — has
-until now been tested as two in-memory `LotBook.fingerprint()` calls. That
+until now been tested as two in-memory `fingerprint(book)` calls. That
 proves the engine is deterministic and nothing about the storage layer: it never
 dropped a table, never round-tripped a Decimal through SQLite, and never showed
 the derived rows are actually droppable. SZ-13 is the reason that gap matters —

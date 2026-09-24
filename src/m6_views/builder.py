@@ -32,14 +32,6 @@ class ViewBuilder(Protocol):
 
     view_id: str
 
-    def required_sources(self) -> list[str]:
-        """Provider methods this builder calls — drives `upstream_hash`.
-
-        Declared rather than inferred, so a cache key cannot silently go stale
-        when a builder starts reading a new source.
-        """
-        ...
-
     def build(self, scope: Scope, params: dict[str, Any]) -> ViewEnvelope:
         """Must return an envelope in every case, including failure.
 

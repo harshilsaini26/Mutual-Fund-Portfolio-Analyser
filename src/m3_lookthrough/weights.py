@@ -99,11 +99,8 @@ def expand_fund_units(
     is replaced by rows summing to `w`, so closure is untouched.
 
     **No provider.** §6.2 calls `ltp.recursion_path()` and
-    `ltp.recursion_guard()`, which `LookThroughDataProvider` declares and
-    nothing implements -- its own docstring says "Slice Zero, Protocol stub".
-    Building one to reach two methods would add a fourth
-    single-implementation provider of the kind V1-60 deleted three of.
-    `visited` is the same cycle guard in one argument.
+    `ltp.recursion_guard()` on a provider nothing ever implemented (V1-73
+    deleted its Protocol). `visited` is the same cycle guard in one argument.
 
     A unit stays bucketed, never guessed at, when any of these hold (§6.3, and
     invariant 4 -- 17 of the 53 funds held as units are in this state):

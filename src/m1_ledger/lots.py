@@ -233,36 +233,6 @@ class LotBook:
     def all_consumptions(self) -> list[Consumption]:
         return list(self.consumptions)
 
-    def consumptions_for(self, txn_ref: str) -> list[Consumption]:
-        return [
-            c
-            for c in sorted(self.consumptions, key=lambda x: x.sequence_in_txn)
-            if c.close_txn_ref == txn_ref
-        ]
-
-    def closing_txn_refs(self) -> list[str]:
-        return sorted({c.close_txn_ref for c in self.consumptions})
-
-    def total_units_remaining(self) -> Decimal:
-        return sum((lot.units_remaining for lot in self.lots), Decimal(0))
-
-    def cost_basis_remaining(self, scheme_id: str) -> Decimal:
-        """Cost of the units still held, after FIFO consumption.
-
-        This is what `Position.invested_net` wants. Summing purchase amounts
-        instead is the easy mistake: it counts money that has already been
-        redeemed or switched away, and drives the absolute return far negative
-        on any position that has been partly sold.
-        """
-        # Reads the tracked remainder rather than recomputing
-        # cost_per_unit * units_remaining, which is the drifting form V0-10
-        # removed from the allocation path. Recomputing it here would
-        # reintroduce the same error one query away from the fix.
-        return sum(
-            (lot.cost_remaining for lot in self.lots if lot.scheme_id == scheme_id),
-            Decimal(0),
-        )
-
     def units_remaining(self, scheme_id: str) -> Decimal:
         return sum(
             (lot.units_remaining for lot in self.lots if lot.scheme_id == scheme_id),
@@ -285,31 +255,6 @@ class LotBook:
             elif t.txn_type in CLOSING_TYPES:
                 total -= abs(t.units)
         return total
-
-    def fingerprint(self) -> str:
-        """Stable hash of the derived state.
-
-        PLAN.md §8.3 invariant 5 and CLAUDE.md invariant 10: a full rebuild must
-        reproduce byte-identical derived tables, which is what makes every
-        derived table droppable.
-        """
-        h = hashlib.sha256()
-        for lot in sorted(self.lots, key=lambda x: x.lot_id):
-            h.update(
-                f"{lot.lot_id}|{lot.acquisition_date}|{lot.book_date}|"
-                f"{lot.units_original}|{lot.units_remaining}|{lot.cost_total}|"
-                f"{lot.cost_per_unit}|{lot.origin}|{lot.is_closed}\n".encode()
-            )
-        for c in sorted(
-            self.consumptions, key=lambda x: (x.close_txn_id, x.sequence_in_txn)
-        ):
-            h.update(
-                f"{c.lot_id}|{c.close_txn_id}|{c.units_consumed}|{c.cost_allocated}|"
-                f"{c.proceeds_net}|{c.holding_days}|{c.gain_type}|{c.gain_amount}|"
-                f"{c.cost_basis_method}|{c.tax_class_at_sale}\n".encode()
-            )
-        return h.hexdigest()
-
 
 def _make_lot_id(t: Txn) -> str:
     """Derived from the transaction id, so a rebuild reproduces it exactly."""

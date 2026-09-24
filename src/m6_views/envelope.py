@@ -67,4 +67,3 @@ class ViewEnvelope:
     truncated: bool  # True when M6 aggregated an 'others' bucket
     computed_at: datetime
     export_url: str  # CSV on every view — a trust feature and an escape hatch
-    upstream_hash: str  # cache key; depends on deterministic provider ordering

@@ -43,9 +43,6 @@ class FundGrowthBuilder:
     def __init__(self, deps: Deps) -> None:
         self.market = deps.market
 
-    def required_sources(self) -> list[str]:
-        return VIEW_DEFS[VIEW_ID].requires_fields
-
     def build(self, scope: Scope, params: dict[str, Any]) -> ViewEnvelope:
         question = VIEW_DEFS[VIEW_ID].question
         if not scope.scope_id:

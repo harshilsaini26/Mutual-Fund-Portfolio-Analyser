@@ -31,8 +31,11 @@ from src.m1_ledger.cas.importer import (
     switch_proceeds,
 )
 from src.m1_ledger.cas.parse import parse_date
+from src.m1_ledger.cas.pdf import CasDecryptError, decrypt_and_extract
 from src.m1_ledger.lots import build_book
 from src.m1_ledger.txn import UnmappedTransactionType, drop_reversed
+
+from tests.helpers import closing_balance, opening_balance
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "cas" / "traps.txt"
 USER = UserId("USER-01")
@@ -107,8 +110,8 @@ def test_closing_balance_lines_are_not_transactions(
 ) -> None:
     """§5.4: they look like transactions and are consumed before TXN_RE."""
     assert not any("Closing" in s.desc_raw for s in staged)
-    assert ctx.closing_balance(FOLIO_1, HDFC_ISIN) == Decimal("159.090417")
-    assert ctx.closing_balance(FOLIO_1, HDBA_ISIN) == Decimal("109.144552")
+    assert closing_balance(ctx, FOLIO_1, HDFC_ISIN) == Decimal("159.090417")
+    assert closing_balance(ctx, FOLIO_1, HDBA_ISIN) == Decimal("109.144552")
 
 
 def test_the_opening_balance_is_captured(
@@ -120,8 +123,8 @@ def test_the_opening_balance_is_captured(
     existed before this period. Without it a short ledger and a parser bug look
     identical; with it, §11.2 can say `MISSING_EARLY_CAS` and mean it.
     """
-    assert ctx.opening_balance(FOLIO_1, HDFC_ISIN) == Decimal("120.500000")
-    assert ctx.opening_balance(FOLIO_1, HDBA_ISIN) == Decimal("0.000000")
+    assert opening_balance(ctx, FOLIO_1, HDFC_ISIN) == Decimal("120.500000")
+    assert opening_balance(ctx, FOLIO_1, HDBA_ISIN) == Decimal("0.000000")
 
 
 def test_indian_digit_grouping_is_read_by_stripping_commas() -> None:
@@ -633,8 +636,8 @@ def test_a_parsed_statement_reconciles_against_its_own_closing_balances() -> Non
     book = build_book(report.txns)
     for folio, isin in [(FOLIO_1, HDFC_ISIN), (FOLIO_1, HDBA_ISIN)]:
         scheme_id = SchemeId(str(_resolve_isin(isin)))
-        printed = report.ctx.closing_balance(folio, isin)
-        opening = report.ctx.opening_balance(folio, isin) or Decimal(0)
+        printed = closing_balance(report.ctx, folio, isin)
+        opening = opening_balance(report.ctx, folio, isin) or Decimal(0)
         assert printed is not None
 
         computed = sum(
@@ -674,13 +677,35 @@ def test_an_ignored_opening_balance_is_what_missing_early_cas_looks_like() -> No
         ),
         Decimal(0),
     )
-    printed = report.ctx.closing_balance(FOLIO_1, HDFC_ISIN)
+    printed = closing_balance(report.ctx, FOLIO_1, HDFC_ISIN)
     assert printed is not None
     assert printed - computed == Decimal("120.500000")
-    assert report.ctx.opening_balance(FOLIO_1, HDFC_ISIN) == printed - computed
+    assert opening_balance(report.ctx, FOLIO_1, HDFC_ISIN) == printed - computed
 
 
 def _resolve_isin(isin: str) -> SchemeId | None:
     return _resolve(
         StagedTxn(FOLIO_1, "", isin, date(2024, 1, 1), "", None, None, None, None, 0, "")
     )
+
+
+# --- pdf.py: pdfplumber decrypts on its own ----------------------------------
+
+ENCRYPTED = Path(__file__).resolve().parents[1] / "fixtures" / "encrypted"
+
+
+@pytest.mark.parametrize("name", ["statement_rc4.pdf", "statement_aes256.pdf"])
+def test_a_protected_statement_opens_with_its_password(name: str) -> None:
+    """Synthetic one-page files, password `fixture-pass`: RC4 and AES-256, the
+    oldest and newest schemes a statement may be protected with."""
+    pytest.importorskip("pdfplumber")
+    lines = decrypt_and_extract((ENCRYPTED / name).read_bytes(), "fixture-pass")
+    row = ["01-Apr-2024", "Purchase", "5,000.00", "34.912", "143.2150"]
+    assert row in [line.split() for line in lines]
+
+
+def test_a_wrong_password_is_a_decrypt_error() -> None:
+    """The module's own error, not a pdfminer internal a caller cannot name."""
+    pytest.importorskip("pdfplumber")
+    with pytest.raises(CasDecryptError):
+        decrypt_and_extract((ENCRYPTED / "statement_aes256.pdf").read_bytes(), "wrong")

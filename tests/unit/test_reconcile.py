@@ -21,7 +21,6 @@ from src.m1_ledger.lots import build_book
 from src.m1_ledger.reconcile import (
     UNIT_TOL,
     VALUE_TOL,
-    apply_gate,
     diagnose,
     nav_cross_check,
     reconcile,
@@ -30,6 +29,7 @@ from src.m1_ledger.reconcile import (
 from src.m1_ledger.txn import Txn, load_transactions
 
 from tests.fakes.loader import load_yaml
+from tests.helpers import apply_gate
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = SchemeId("INF179K01UT0")

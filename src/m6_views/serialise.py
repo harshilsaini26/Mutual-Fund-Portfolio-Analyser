@@ -74,7 +74,6 @@ def serialise(env: ViewEnvelope) -> dict[str, Any]:
             "row_count": env.row_count,
             "truncated": env.truncated,
             "export_url": env.export_url,
-            "upstream_hash": env.upstream_hash,
         },
     }
 

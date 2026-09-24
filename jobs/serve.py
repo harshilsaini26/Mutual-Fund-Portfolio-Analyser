@@ -35,7 +35,6 @@ from src.m0_data.config import warehouse_path
 from src.m0_data.schema.apply import apply_migrations
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger, ledger_path
 from src.m6_views.api.app import BIND_HOST, BIND_PORT, create_app
-from src.m6_views.registry import seed_view_definitions
 
 
 def open_ledger(
@@ -73,22 +72,14 @@ def main() -> None:
                         help="do not open the portal in the browser")
     args = parser.parse_args()
 
-    # Every other job in `jobs/` does this first, and this one needs it more
-    # than most: `view_definition` arrives in migration 006, and seeding the
-    # catalogue into a warehouse that predates it fails with "no such table" —
-    # which is what happened the first time this was run against the real one.
+    # First, as the loading jobs do: a warehouse from before the newest
+    # migration lacks tables the views read, and fails as "no such table".
     apply_migrations(str(warehouse_path()))
     warehouse = connect(str(warehouse_path()), check_same_thread=False)
     ledger, has_portfolio = open_ledger(ledger_path())
 
-    # §4.1: the catalogue is seeded from code on every start, so a view added or
-    # removed in `VIEW_DEFS` is reflected without a migration. The registry
-    # consistency check already ran at import of `builders`.
-    seeded = seed_view_definitions(warehouse)
-
     url = f"http://{BIND_HOST}:{args.port}/"
-    print(f"\n{seeded} views registered")
-    print(f"  {url}")
+    print(f"\n  {url}")
     if not has_portfolio:
         print(
             "  No portfolio yet: search any fund by name. To add yours:\n"

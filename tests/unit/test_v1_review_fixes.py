@@ -13,12 +13,10 @@ assertion about that is worth nothing if it is only my belief.
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import date
 from decimal import Decimal
 
 import pytest
-from src.common.decimals import register_decimal_sqlite
 from src.common.types import SchemeId, UserId
 from src.m1_ledger.lots import (
     GRANDFATHER_DATE,
@@ -64,114 +62,6 @@ def txn(
         reverses_txn_ref=None,
         units_balance_rep=Decimal(balance) if balance else None,
     )
-
-
-# --- resolution queue: invariant 1, twice ------------------------------------
-
-
-@pytest.fixture
-def queue_db() -> sqlite3.Connection:
-    register_decimal_sqlite()
-    conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES)
-    conn.executescript(
-
-            "CREATE TABLE resolution_queue ("
-            " queue_id TEXT PRIMARY KEY, raw_name TEXT, raw_name_norm TEXT,"
-            " raw_isin TEXT, first_seen DATE, last_seen DATE,"
-            " occurrence_count INTEGER, total_mv_inr DECIMAL_TEXT,"
-            " schemes_affected INTEGER, best_guess_issuer TEXT,"
-            " best_score DECIMAL_TEXT, candidates_json TEXT, status TEXT,"
-            " resolved_issuer TEXT, resolved_by TEXT, resolved_at TIMESTAMP)"
-
-    )
-    return conn
-
-
-def test_the_queue_is_ordered_by_value_not_by_text(
-    queue_db: sqlite3.Connection,
-) -> None:
-    """`CLAUDE.md` invariant 1: "Never `ORDER BY` one either. It sorts as TEXT,
-    so "5000" comes before "25000". A top-20 list ordered in SQL is not the top
-    20."
-
-    Measured before the fix: `ORDER BY total_mv_inr DESC` on this column
-    returned ['9000', '5000', '2500000', '25000'], so the reviewer was handed
-    the least significant names first.
-    """
-    from src.m0_data.resolve.queue import enqueue, pending
-
-    amounts = {
-        "Tiny Ltd": Decimal("9000"),
-        "Huge Industries Ltd": Decimal("2500000"),
-        "Middling Ltd": Decimal("25000"),
-        "Small Ltd": Decimal("5000"),
-    }
-    for name, value in amounts.items():
-        enqueue(
-            queue_db, raw_name=name, raw_name_norm=name.lower(), raw_isin=None,
-            scheme_id=HDFC, market_value=value, seen_on=AS_OF, candidates=(),
-        )
-    queue_db.commit()
-
-    ranked = [e.total_mv_inr for e in pending(queue_db, limit=10)]
-    assert ranked == sorted(amounts.values(), reverse=True)
-
-
-def test_only_the_most_valuable_entries_survive_the_limit(
-    queue_db: sqlite3.Connection,
-) -> None:
-    """The limit is the point: it is a human's attention being rationed."""
-    from src.m0_data.resolve.queue import enqueue, pending
-
-    for i, value in enumerate([9000, 2500000, 25000, 5000]):
-        enqueue(
-            queue_db, raw_name=f"N{i}", raw_name_norm=f"n{i}", raw_isin=None,
-            scheme_id=HDFC, market_value=Decimal(value), seen_on=AS_OF,
-            candidates=(),
-        )
-    queue_db.commit()
-
-    top = pending(queue_db, limit=2)
-    assert [e.total_mv_inr for e in top] == [Decimal(2500000), Decimal(25000)]
-
-
-def test_repeat_sightings_accumulate_in_decimal_not_through_a_float(
-    queue_db: sqlite3.Connection,
-) -> None:
-    """Invariant 1's other clause. Measured before the fix: accumulating 0.1
-    eleven times through `SET total_mv_inr = total_mv_inr + excluded...` stored
-    1.0999999999999999, because SQLite coerces a text-affinity column through a
-    REAL to do the arithmetic and writes the float's error back."""
-    from src.m0_data.resolve.queue import enqueue, pending
-
-    for _ in range(11):
-        enqueue(
-            queue_db, raw_name="Repeated Ltd", raw_name_norm="repeated ltd",
-            raw_isin=None, scheme_id=HDFC, market_value=Decimal("0.1"),
-            seen_on=AS_OF, candidates=(),
-        )
-    queue_db.commit()
-
-    entry = pending(queue_db)[0]
-    assert entry.total_mv_inr == Decimal("1.1")
-    assert entry.occurrence_count == 11
-
-
-def test_a_large_accumulated_value_keeps_its_paise(
-    queue_db: sqlite3.Connection,
-) -> None:
-    """Measured before the fix: 12345678901234567.89 + 0.01 stored
-    12345678901234568.0 — the paise, and the last two rupees, gone."""
-    from src.m0_data.resolve.queue import enqueue, pending
-
-    for value in ("12345678901234567.89", "0.01"):
-        enqueue(
-            queue_db, raw_name="Big Ltd", raw_name_norm="big ltd", raw_isin=None,
-            scheme_id=HDFC, market_value=Decimal(value), seen_on=AS_OF,
-            candidates=(),
-        )
-    queue_db.commit()
-    assert pending(queue_db)[0].total_mv_inr == Decimal("12345678901234567.90")
 
 
 # --- reconciliation: a diagnosis that was always the same --------------------

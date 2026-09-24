@@ -1,12 +1,11 @@
-"""`FakeMarketDataProvider` and `FakeFundDataProvider`.
+"""`FakeMarketDataProvider`.
 
-MODULE_0.md §11.5 and §14. Both read YAML fixtures, so M1's entire test suite
+MODULE_0.md §11.5 and §14. It reads YAML fixtures, so M1's entire test suite
 runs with zero database — `BUILD_ORDER.md` R1 step 2, and what makes V0.1
 (ledger on fixtures) possible before any of M0's ingestion exists.
 
 Lives under `tests/` rather than `src/`: a test double is not library code,
-and shipping one means every install carries it. M2, which §5.1 of its own
-spec pointed at `FakeFundDataProvider`, was never built.
+and shipping one means every install carries it.
 
 These fakes are deliberately strict. Where the real provider would raise on a
 missing scheme or an absent NAV, so does this one: a fake that returns a
@@ -20,22 +19,14 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
-from src.common.contracts.entity import Holding, MergerLink, SchemeRef
+from src.common.contracts.entity import MergerLink, SchemeRef
 from src.common.contracts.market import IdcwEvent, IndexPoint, NavPoint
-from src.common.contracts.quality import DisclosureQuality
-from src.common.contracts.scheme import ManagerRow, McapList, SchemeRow, Tenure, TerPoint
 from src.common.types import (
     Confidence,
     IndexId,
-    InstrumentClass,
     Isin,
-    IssuerId,
-    ManagerId,
-    McapBucket,
     Plan,
     SchemeId,
-    SourceFileId,
-    ValidationStatus,
 )
 
 from tests.fakes.loader import (
@@ -44,7 +35,6 @@ from tests.fakes.loader import (
     as_date,
     as_decimal,
     default_store,
-    fixture_key,
 )
 
 
@@ -299,255 +289,3 @@ class FakeMarketDataProvider:
                     IndexPoint(index_id=index_id, level_date=level_date, level=level)
                 )
         return sorted(out, key=lambda p: p.level_date)
-
-
-class FakeFundDataProvider(FakeMarketDataProvider):
-    """The holdings and classification surface, fixture-backed.
-
-    Written for M2, which was never built; it survives because M3's fake reads
-    holdings through it. Inherits NAV, TER and benchmark from
-    `FakeMarketDataProvider` and adds holdings, classification and manager.
-    """
-
-    def __init__(self, store: FixtureStore | None = None) -> None:
-        super().__init__(store)
-        self._h = self._store.section("holdings")
-
-    # --- holdings ----------------------------------------------------------
-
-    def holdings(self, scheme_id: SchemeId, as_of: date) -> list[Holding]:
-        by_scheme = (self._h.get("holdings") or {}).get(scheme_id)
-        if by_scheme is None:
-            raise FixtureError(f"no holdings block for {scheme_id!r}")
-        rows = fixture_key(by_scheme, as_of)
-        if rows is None:
-            raise FixtureError(f"no holdings for {scheme_id!r} on {as_of}")
-
-        out = []
-        for row in rows:
-            mv = as_decimal(row["market_value"])
-            pct_norm = as_decimal(row["pct_normalised"])
-            assert mv is not None and pct_norm is not None
-            out.append(
-                Holding(
-                    scheme_id=SchemeId(scheme_id),
-                    as_of_date=as_of,
-                    row_number=int(row["row_number"]),
-                    issuer_id=IssuerId(str(row["issuer_id"])),
-                    instrument_raw_name=str(row["instrument_raw_name"]),
-                    market_value=mv,
-                    pct_normalised=pct_norm,
-                    instrument_class=InstrumentClass(str(row["instrument_class"])),
-                    resolution_method=str(row["resolution_method"]),
-                    isin=Isin(str(row["isin"])) if row.get("isin") else None,
-                    quantity=as_decimal(row.get("quantity")),
-                    pct_to_nav=as_decimal(row.get("pct_to_nav")),
-                    credit_rating=row.get("credit_rating"),
-                    reported_sector=row.get("reported_sector"),
-                    yield_pct=as_decimal(row.get("yield_pct")),
-                    resolution_conf=as_decimal(row.get("resolution_conf")),
-                    revision=int(row.get("revision", 1)),
-                    source_file_id=SourceFileId(
-                        str(row.get("source_file_id", "fixture"))
-                    ),
-                )
-            )
-        return out
-
-    def disclosure_dates(
-        self,
-        scheme_id: SchemeId,
-        start: date | None = None,
-        end: date | None = None,
-    ) -> list[date]:
-        raw = (self._h.get("disclosure_dates") or {}).get(scheme_id) or []
-        dates = [d for d in (as_date(v) for v in raw) if d is not None]
-        if start:
-            dates = [d for d in dates if d >= start]
-        if end:
-            dates = [d for d in dates if d <= end]
-        return sorted(dates)
-
-    def disclosure_quality(self, scheme_id: SchemeId, as_of: date) -> DisclosureQuality:
-        by_scheme = (self._h.get("disclosure_quality") or {}).get(scheme_id)
-        row = fixture_key(by_scheme, as_of) if by_scheme else None
-        if row is None:
-            raise FixtureError(f"no disclosure quality for {scheme_id!r} on {as_of}")
-        holdings_as_of = as_date(as_of)
-        unresolved = as_decimal(row["unresolved_pct"])
-        residual = as_decimal(row["weight_residual"])
-        assert holdings_as_of is not None
-        assert unresolved is not None and residual is not None
-        return DisclosureQuality(
-            holdings_as_of=holdings_as_of,
-            unresolved_pct=unresolved,
-            weight_residual=residual,
-            validation_status=ValidationStatus(str(row["validation_status"])),
-            row_count=int(row["row_count"]),
-        )
-
-    def prev_disclosure(self, scheme_id: SchemeId, before: date) -> date | None:
-        earlier = [d for d in self.disclosure_dates(scheme_id) if d < before]
-        return max(earlier) if earlier else None
-
-    # --- classification ----------------------------------------------------
-
-    def mcap_list_as_of(self, on: date) -> McapList:
-        """The AMFI list in force on `on` — never today's list applied backwards.
-
-        Applying a later list retroactively produces phantom drift: the fixture
-        promotes one issuer between its two lists precisely so a test can catch
-        that.
-        """
-        candidates = []
-        for row in self._store.table("holdings", "mcap_lists"):
-            eff = as_date(row["effective_date"])
-            assert eff is not None
-            if eff <= on:
-                candidates.append((eff, row))
-        if not candidates:
-            raise FixtureError(f"no AMFI mcap list effective on or before {on}")
-
-        eff, row = max(candidates, key=lambda pair: pair[0])
-        buckets = {
-            IssuerId(k): McapBucket(str(v)) for k, v in (row["buckets"] or {}).items()
-        }
-        mcaps = {}
-        for k, v in (row["mcaps"] or {}).items():
-            value = as_decimal(v)
-            assert value is not None
-            mcaps[IssuerId(k)] = value
-        return McapList(effective_date=eff, buckets=buckets, mcaps=mcaps)
-
-    def sector_of(self, issuer_id: IssuerId, on: date) -> str | None:
-        found = (self._h.get("sectors") or {}).get(issuer_id)
-        return str(found) if found else None
-
-    def adjustment_factor(self, isin: Isin, frm: date, to: date) -> Decimal:
-        """Cumulative corporate-action factor. Defaults to 1, never to 0.
-
-        A 0 here would silently zero out a repriced holding.
-        """
-        rows = (self._h.get("adjustment_factors") or {}).get(isin) or []
-        factor = Decimal(1)
-        for row in rows:
-            row_frm = as_date(row["frm"])
-            row_to = as_date(row["to"])
-            assert row_frm is not None and row_to is not None
-            if frm <= row_frm and row_to <= to:
-                value = as_decimal(row["factor"])
-                assert value is not None
-                factor *= value
-        return factor
-
-    # --- index / rates -----------------------------------------------------
-
-    def risk_free(self, on: date) -> Decimal | None:
-        for row in self._store.table("market_data", "risk_free"):
-            if as_date(row["rate_date"]) == on:
-                return as_decimal(row["annual_rate"])
-        return None
-
-    # --- scheme attributes -------------------------------------------------
-
-    def scheme(self, scheme_id: SchemeId) -> SchemeRow:
-        row = self._scheme_row(scheme_id)
-        return SchemeRow(
-            scheme_id=SchemeId(str(row["scheme_id"])),
-            scheme_name=str(row["scheme_name"]),
-            plan=str(row["plan"]),
-            option=str(row["option"]),
-            status=str(row.get("status", "active")),
-            amfi_code=row.get("amfi_code"),
-            isin=row.get("isin"),
-            amc_id=row.get("amc_id"),
-            sebi_category=row.get("sebi_category"),
-            benchmark_id=row.get("benchmark_id"),
-            inception_date=as_date(row.get("inception_date")),
-            merged_into=SchemeId(str(row["merged_into"]))
-            if row.get("merged_into")
-            else None,
-            merger_date=as_date(row.get("merger_date")),
-            merger_ratio_num=int(row["merger_ratio_num"])
-            if row.get("merger_ratio_num")
-            else None,
-            merger_ratio_den=int(row["merger_ratio_den"])
-            if row.get("merger_ratio_den")
-            else None,
-        )
-
-    def ter_series(self, scheme_id: SchemeId) -> list[TerPoint]:
-        out = []
-        for row in self._ter_rows(scheme_id):
-            frm = as_date(row["valid_from"])
-            value = as_decimal(row["ter"])
-            assert frm is not None and value is not None
-            out.append(
-                TerPoint(
-                    scheme_id=SchemeId(scheme_id),
-                    valid_from=frm,
-                    ter=value,
-                    valid_to=as_date(row.get("valid_to")),
-                )
-            )
-        return sorted(out, key=lambda t: t.valid_from)
-
-    def aum(self, scheme_id: SchemeId, on: date) -> Decimal | None:
-        by_scheme = (self._md.get("aum") or {}).get(scheme_id)
-        return as_decimal(fixture_key(by_scheme, on)) if by_scheme else None
-
-    def schemes_in_category(
-        self, sebi_category: str, plan: Plan, as_of: date
-    ) -> list[SchemeId]:
-        """Peer groups never mix plans — Direct and Regular are not comparable."""
-        wanted = plan.value if isinstance(plan, Plan) else str(plan)
-        return [
-            SchemeId(str(row["scheme_id"]))
-            for row in self._schemes()
-            if row.get("sebi_category") == sebi_category
-            and row.get("plan") == wanted
-            and row.get("status") == "active"
-        ]
-
-    def category_universe_count(self, sebi_category: str, plan: Plan, as_of: date) -> int:
-        return len(self.schemes_in_category(sebi_category, plan, as_of))
-
-    # --- managers ----------------------------------------------------------
-
-    def tenures(self, scheme_id: SchemeId) -> list[Tenure]:
-        rows = (self._h.get("tenures") or {}).get(scheme_id) or []
-        out = []
-        for row in rows:
-            start = as_date(row["start_date"])
-            assert start is not None
-            out.append(
-                Tenure(
-                    scheme_id=SchemeId(scheme_id),
-                    manager_id=ManagerId(str(row["manager_id"])),
-                    start_date=start,
-                    confidence=str(row.get("confidence", "medium")),
-                    end_date=as_date(row.get("end_date")),
-                    role=row.get("role"),
-                )
-            )
-        return sorted(out, key=lambda t: t.start_date)
-
-    def manager_schemes(self, manager_id: ManagerId) -> list[Tenure]:
-        out: list[Tenure] = []
-        for scheme_id in self._h.get("tenures") or {}:
-            out.extend(
-                t for t in self.tenures(SchemeId(scheme_id)) if t.manager_id == manager_id
-            )
-        return out
-
-    def manager(self, manager_id: ManagerId) -> ManagerRow:
-        row = (self._h.get("managers") or {}).get(manager_id)
-        if row is None:
-            raise FixtureError(f"no manager {manager_id!r}")
-        return ManagerRow(
-            manager_id=ManagerId(manager_id),
-            full_name=str(row["full_name"]),
-            name_norm=str(row["name_norm"]),
-            qualifications=row.get("qualifications"),
-            experience_start_date=as_date(row.get("experience_start_date")),
-        )

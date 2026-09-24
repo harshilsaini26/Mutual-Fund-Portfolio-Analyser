@@ -24,12 +24,8 @@ CONTRACT_MODULES = [
     "src.common.contracts",
     "src.common.contracts.entity",
     "src.common.contracts.market",
-    "src.common.contracts.quality",
-    "src.common.contracts.scheme",
     "src.m0_data.providers.market_data",
-    "src.m1_ledger.handoff",
     "src.m3_lookthrough.providers.lookthrough",
-    "src.m3_lookthrough.providers.data",
     "src.m6_views.envelope",
     "src.m6_views.builder",
 ]
@@ -37,7 +33,6 @@ CONTRACT_MODULES = [
 PROTOCOLS = {
     "src.m0_data.providers.market_data": "MarketDataProvider",
     "src.m3_lookthrough.providers.lookthrough": "LookThroughProvider",
-    "src.m3_lookthrough.providers.data": "LookThroughDataProvider",
     "src.m6_views.builder": "ViewBuilder",
 }
 

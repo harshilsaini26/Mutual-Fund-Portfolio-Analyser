@@ -34,7 +34,6 @@ from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m6_views.api.app import create_app
-from src.m6_views.registry import seed_view_definitions
 
 from tests.conftest import migrated
 
@@ -62,7 +61,6 @@ def _client(tmp_path: Path, issuer_name: str) -> TestClient:
         ("EVIL", issuer_name),
     )
     warehouse.commit()
-    seed_view_definitions(warehouse)
 
     ledger = connect_ledger(
         str(tmp_path / "p.db"), key="test-key", check_same_thread=False
@@ -342,7 +340,7 @@ def test_every_third_party_import_is_declared() -> None:
         for spec in group:
             declared.add(re.split(r"[<>=~!\[ ]", spec, maxsplit=1)[0].lower())
 
-    for package in ("pypdf", "pdfplumber", "openpyxl", "httpx", "fastapi", "jinja2"):
+    for package in ("pdfplumber", "openpyxl", "httpx", "fastapi", "jinja2"):
         assert package in declared, f"{package} is imported but not declared"
 
 

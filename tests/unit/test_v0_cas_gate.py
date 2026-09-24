@@ -30,12 +30,21 @@ from scripts.build_v0_cas import ISINS
 from src.common.types import Isin, SchemeId, UserId
 from src.m1_ledger.cas import ImportReport, StagedTxn, import_cas
 from src.m1_ledger.lots import build_book
-from src.m1_ledger.reconcile import apply_gate, nav_cross_check, reconcile_all
+from src.m1_ledger.reconcile import nav_cross_check, reconcile_all
 from src.m1_ledger.returns import build_cashflows, npv, xirr
 from src.m1_ledger.txn import Txn, drop_reversed, load_transactions
 
 from tests.fakes.loader import FixtureStore, load_yaml
 from tests.fakes.m0 import FakeMarketDataProvider
+from tests.helpers import (
+    apply_gate,
+    closing_balance,
+    closing_txn_refs,
+    consumptions_for,
+    cost_basis_remaining,
+    fingerprint,
+    total_units_remaining,
+)
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 STATEMENT = FIXTURES / "cas_statement.txt"
@@ -451,7 +460,7 @@ def test_the_two_printed_balances_agree_with_each_other_and_with_the_ledger(
         scoped = [t for t in report.txns if str(t.scheme_id) == scheme_id]
         folio = scoped[0].folio
 
-        printed_closing = report.ctx.closing_balance(folio, isin)
+        printed_closing = closing_balance(report.ctx, folio, isin)
         last_running = max(
             scoped, key=lambda t: (t.txn_date, t.txn_seq, t.txn_ref)
         ).units_balance_rep
@@ -538,7 +547,7 @@ def _render(*, printed_gross: bool) -> list[str]:
 def test_gate_invariant_1_unit_conservation(report: ImportReport) -> None:
     """Sum of `lot.units_remaining` == sum of signed transaction units."""
     book = build_book(report.txns)
-    assert book.total_units_remaining() == book.signed_txn_units(report.txns)
+    assert total_units_remaining(book) == book.signed_txn_units(report.txns)
 
 
 def test_gate_invariant_2_cost_conservation(report: ImportReport) -> None:
@@ -559,8 +568,8 @@ def test_gate_invariant_2_cost_conservation(report: ImportReport) -> None:
 
 def test_gate_invariant_3_fifo_ordering_is_monotonic(report: ImportReport) -> None:
     book = build_book(report.txns)
-    for txn_ref in book.closing_txn_refs():
-        seq = [c.acquisition_date for c in book.consumptions_for(txn_ref)]
+    for txn_ref in closing_txn_refs(book):
+        seq = [c.acquisition_date for c in consumptions_for(book, txn_ref)]
         assert seq == sorted(seq)
 
 
@@ -591,7 +600,7 @@ def test_gate_invariant_4_pnl_closure(
             continue
         nav = max(d for d in navs[scheme_id] if d <= AS_OF)
         market_value += units * navs[scheme_id][nav]
-        cost_remaining += book.cost_basis_remaining(SchemeId(scheme_id))
+        cost_remaining += cost_basis_remaining(book, SchemeId(scheme_id))
 
     by_lot = realised + (market_value - cost_remaining)
     by_cashflow = market_value + proceeds - invested_gross
@@ -604,6 +613,6 @@ def test_gate_invariant_5_rebuild_is_deterministic(lines: list[str]) -> None:
     A full rebuild — reparse, reimport, replay — must reproduce byte-identical
     derived output, which is what makes every derived table droppable.
     """
-    a = build_book(import_cas(USER, lines, _resolve).txns).fingerprint()
-    b = build_book(import_cas(USER, lines, _resolve).txns).fingerprint()
+    a = fingerprint(build_book(import_cas(USER, lines, _resolve).txns))
+    b = fingerprint(build_book(import_cas(USER, lines, _resolve).txns))
     assert a == b

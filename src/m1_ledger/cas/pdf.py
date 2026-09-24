@@ -5,10 +5,11 @@ parser testable: a real CAS carries a PAN, folio numbers and a postal address,
 so it is Zone B and can never be committed to this repository. The tests run
 against synthetic statements in the same layout.
 
-`pypdf` and `pdfplumber` are imported inside the functions, not at module
-scope. Neither is needed to parse text, and importing them eagerly would make
-the whole ledger unimportable on a machine that has not installed them — for a
-capability most test runs never use.
+`pdfplumber` is imported inside the function, not at module scope. It is not
+needed to parse text, and importing it eagerly would make the whole ledger
+unimportable on a machine that has not installed it — for a capability most test
+runs never use. It decrypts too (pdfminer's security handlers, RC4 through
+AES-256), so no second PDF library is needed (DECISIONS V1-73).
 """
 
 from __future__ import annotations
@@ -47,26 +48,17 @@ def decrypt_and_extract(pdf_bytes: bytes, password: str) -> list[str]:
     import io
 
     import pdfplumber
-    import pypdf
-
-    reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-    if reader.is_encrypted and reader.decrypt(password) == 0:
-        raise CasDecryptError("password rejected by the PDF")
-
-    buffer = io.BytesIO()
-    writer = pypdf.PdfWriter()
-    # Named apart from the `page` below on purpose: `pypdf.PageObject` and
-    # `pdfplumber.page.Page` are different types from different libraries, and
-    # reusing one name for both is a type error the moment the `cas` extra is
-    # actually installed — which CI never does.
-    for source_page in reader.pages:
-        writer.add_page(source_page)
-    writer.write(buffer)
-    buffer.seek(0)
+    from pdfminer.pdfdocument import PDFPasswordIncorrect
+    from pdfplumber.utils.exceptions import PdfminerException
 
     lines: list[str] = []
-    with pdfplumber.open(buffer) as doc:
-        for page in doc.pages:
-            text: Any = page.extract_text(layout=True) or ""
-            lines.extend(str(text).splitlines())
+    try:
+        with pdfplumber.open(io.BytesIO(pdf_bytes), password=password) as doc:
+            for page in doc.pages:
+                text: Any = page.extract_text(layout=True) or ""
+                lines.extend(str(text).splitlines())
+    except PdfminerException as exc:
+        if exc.args and isinstance(exc.args[0], PDFPasswordIncorrect):
+            raise CasDecryptError("password rejected by the PDF") from None
+        raise
     return lines

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -116,10 +116,6 @@ class Txn:
             ]
         )
         return hashlib.sha256(payload.encode()).hexdigest()
-
-    def _replace_units_for_test(self, units: Decimal) -> Txn:
-        """Test helper for constructing an over-redemption. Not production code."""
-        return replace(self, units=units)
 
 
 def _money(row: dict[str, str], field_name: str) -> Decimal:

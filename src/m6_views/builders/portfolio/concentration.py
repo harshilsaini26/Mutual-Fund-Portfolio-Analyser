@@ -38,10 +38,6 @@ class ConcentrationCurveBuilder:
 
     def __init__(self, deps: Deps) -> None:
         self.lookthrough = deps.lookthrough
-        self.ledger = deps.ledger
-
-    def required_sources(self) -> list[str]:
-        return VIEW_DEFS[VIEW_ID].requires_fields
 
     def build(self, scope: Scope, params: dict[str, Any]) -> ViewEnvelope:
         question = VIEW_DEFS[VIEW_ID].question
@@ -114,7 +110,6 @@ class ConcentrationCurveBuilder:
             source_modules=["m3"],
             row_count=metric.issuer_count,
             params=params,
-            ledger=self.ledger,
             extra_caveats=extra,
         )
 

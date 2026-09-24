@@ -40,6 +40,7 @@ from src.m1_ledger.returns import (
 from src.m1_ledger.txn import load_transactions
 
 from tests.fakes.loader import load_yaml
+from tests.helpers import cost_basis_remaining
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = SchemeId("INF179K01UT0")
@@ -362,7 +363,7 @@ def test_cost_basis_remaining_excludes_what_was_already_sold(
     on this fixture that reads as -85.67% on a position actually up 20.62%.
     """
     book = build_book(txns)
-    basis = book.cost_basis_remaining(HDFC)
+    basis = cost_basis_remaining(book, HDFC)
     purchases = sum(
         (
             abs(t.amount) + t.stamp_duty
@@ -494,7 +495,7 @@ def test_returns_computed_for_every_held_scheme(
             as_of=AS_OF,
             units=units,
             market_value=units * nav,
-            invested_net=book.cost_basis_remaining(scheme_id),
+            invested_net=cost_basis_remaining(book, scheme_id),
             first_purchase=first,
         )
         r = compute_returns(

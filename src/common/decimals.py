@@ -52,21 +52,6 @@ def dec(v: Any) -> Decimal | None:
     return None if v is None else Decimal(str(v))
 
 
-def quantise_units(v: Decimal) -> Decimal:
-    """Round to CAS unit precision, ROUND_HALF_UP."""
-    return v.quantize(UNITS_Q)
-
-
-def quantise_money(v: Decimal) -> Decimal:
-    """Round to rupee money precision, ROUND_HALF_UP."""
-    return v.quantize(MONEY_Q)
-
-
-def quantise_nav(v: Decimal) -> Decimal:
-    """Round to NAV precision, ROUND_HALF_UP."""
-    return v.quantize(NAV_Q)
-
-
 # --- SQLite adapters -------------------------------------------------------
 #
 # The declared column type decides affinity, and NUMERIC affinity rewrites a

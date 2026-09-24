@@ -27,6 +27,13 @@ from src.m1_ledger.lots import (
 from src.m1_ledger.txn import Txn, load_transactions
 
 from tests.fakes.loader import load_yaml
+from tests.helpers import (
+    closing_txn_refs,
+    consumptions_for,
+    cost_basis_remaining,
+    fingerprint,
+    total_units_remaining,
+)
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "v0_ledger"
 HDFC = "INF179K01UT0"
@@ -194,7 +201,7 @@ def test_consumptions_match_the_golden_file(
     book: LotBook, expected: dict[str, Any]
 ) -> None:
     for txn_ref, rows in expected["consumptions"].items():
-        actual = book.consumptions_for(txn_ref)
+        actual = consumptions_for(book, txn_ref)
         assert len(actual) == len(rows), f"{txn_ref}: wrong consumption count"
         for got, want in zip(actual, rows, strict=True):
             assert got.lot_golden_ref == want["lot_id"]
@@ -212,7 +219,7 @@ def test_one_redemption_produces_both_gain_types(book: LotBook) -> None:
     T009 spans the 365-day boundary: lot 1 is 380 days (LTCG), lots 2 and 3 are
     349 and 320 (STCG). Gain type is a property of the LOT, not the sale.
     """
-    cons = book.consumptions_for("T009")
+    cons = consumptions_for(book, "T009")
     assert [c.gain_type for c in cons] == ["LTCG", "STCG", "STCG", "STCG"]
     assert [c.holding_days for c in cons] == [380, 349, 320, 289]
     assert cons[0].holding_days > 365 >= cons[1].holding_days
@@ -255,7 +262,7 @@ def test_non_equity_holding_threshold_is_not_invented() -> None:
 def test_fifo_order_is_oldest_acquisition_first(book: LotBook) -> None:
     """MODULE_1.md §7.3. Monotonic in acquisition_date — PLAN.md §8.3 invariant 3."""
     for txn_ref in ("T009", "T010", "T014"):
-        dates = [c.acquisition_date for c in book.consumptions_for(txn_ref)]
+        dates = [c.acquisition_date for c in consumptions_for(book, txn_ref)]
         assert dates == sorted(dates)
 
 
@@ -264,7 +271,7 @@ def test_net_proceeds_are_reduced_by_exit_load_and_stt(
 ) -> None:
     """Gross is not what the investor receives, and cost is not what they paid."""
     want = expected["totals"]["T009"]
-    cons = book.consumptions_for("T009")
+    cons = consumptions_for(book, "T009")
     total_net = sum((c.proceeds_net for c in cons), Decimal(0))
     stated_net = (
         Decimal(want["gross"]) - Decimal(want["exit_load"]) - Decimal(want["stt"])
@@ -288,7 +295,7 @@ def test_every_closing_transaction_ties_exactly(
     """
     assert len(expected["totals"]) == 3
     for txn_ref, want in expected["totals"].items():
-        cons = book.consumptions_for(txn_ref)
+        cons = consumptions_for(book, txn_ref)
         assert cons, f"{txn_ref} produced no consumptions"
         total = sum((c.proceeds_net for c in cons), Decimal(0))
         assert total == Decimal(want["net_total"])
@@ -302,7 +309,7 @@ def test_switch_out_is_taxable_even_though_no_cash_moved(book: LotBook) -> None:
 
     Modelling a switch as a single transfer under-reports capital gains.
     """
-    cons = book.consumptions_for("T010")
+    cons = consumptions_for(book, "T010")
     assert cons, "the switch produced no taxable consumption"
     assert all(c.gain_type == "LTCG" for c in cons)
     assert sum((c.gain_amount for c in cons), Decimal(0)) > 0
@@ -321,7 +328,7 @@ def test_insufficient_units_raises_and_never_clamps() -> None:
     """
     rows = load_transactions(FIXTURES / "transactions.csv")
     oversized = [t for t in rows if t.txn_ref in {"T001", "T002"}] + [
-        t._replace_units_for_test(Decimal("-999.000000"))
+        replace(t, units=Decimal("-999.000000"))
         for t in rows
         if t.txn_ref == "T009"
     ]
@@ -338,9 +345,9 @@ def test_invariant_1_unit_conservation(
 ) -> None:
     """Sum of lot.units_remaining == sum of signed transaction units."""
     want = expected["conservation"]
-    assert book.total_units_remaining() == Decimal(want["sum_units_remaining"])
+    assert total_units_remaining(book) == Decimal(want["sum_units_remaining"])
     assert book.signed_txn_units(txns) == Decimal(want["signed_txn_units"])
-    assert book.total_units_remaining() == book.signed_txn_units(txns)
+    assert total_units_remaining(book) == book.signed_txn_units(txns)
 
 
 def test_invariant_2_cost_conservation(book: LotBook) -> None:
@@ -364,8 +371,8 @@ def test_invariant_2_cost_conservation(book: LotBook) -> None:
 
 
 def test_invariant_3_fifo_ordering_is_monotonic(book: LotBook) -> None:
-    for txn_ref in book.closing_txn_refs():
-        seq = [c.acquisition_date for c in book.consumptions_for(txn_ref)]
+    for txn_ref in closing_txn_refs(book):
+        seq = [c.acquisition_date for c in consumptions_for(book, txn_ref)]
         assert seq == sorted(seq)
 
 
@@ -374,8 +381,8 @@ def test_invariant_5_rebuild_is_deterministic(txns: list[Txn]) -> None:
 
     Guarantees the derived tables are droppable — CLAUDE.md invariant 10.
     """
-    a = build_book(txns).fingerprint()
-    b = build_book(load_transactions(FIXTURES / "transactions.csv")).fingerprint()
+    a = fingerprint(build_book(txns))
+    b = fingerprint(build_book(load_transactions(FIXTURES / "transactions.csv")))
     assert a == b
 
 
@@ -391,8 +398,8 @@ def test_a_lot_can_be_split_across_two_transactions(book: LotBook) -> None:
     days at the redemption, 655 at the switch — so the same lot yields STCG
     once and LTCG later. A lot is not classified when it is opened.
     """
-    first = next(c for c in book.consumptions_for("T009") if c.lot_golden_ref == "L4")
-    second = next(c for c in book.consumptions_for("T010") if c.lot_golden_ref == "L4")
+    first = next(c for c in consumptions_for(book, "T009") if c.lot_golden_ref == "L4")
+    second = next(c for c in consumptions_for(book, "T010") if c.lot_golden_ref == "L4")
     assert first.gain_type == "STCG"
     assert second.gain_type == "LTCG"
     assert first.lot_id == second.lot_id
@@ -473,7 +480,7 @@ def test_gain_type_is_per_lot_in_the_kotak_redemption(book: LotBook) -> None:
     Two schemes showing the same behaviour is what distinguishes a rule from a
     coincidence of one fixture's dates.
     """
-    cons = book.consumptions_for("T014")
+    cons = consumptions_for(book, "T014")
     assert [c.gain_type for c in cons] == ["LTCG", "STCG"]
     assert cons[0].holding_days == 527
     assert cons[1].holding_days == 257
@@ -546,7 +553,7 @@ def test_invariant_4_pnl_closure(book: LotBook) -> None:
         nav = nav_on_or_before(navs[scheme_id], as_of)
         assert nav is not None
         market_value += units * nav
-        cost_remaining += book.cost_basis_remaining(scheme_id)
+        cost_remaining += cost_basis_remaining(book, scheme_id)
 
     unrealised = market_value - cost_remaining
     by_lot = realised + unrealised

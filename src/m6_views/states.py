@@ -74,7 +74,6 @@ def _blank(
         truncated=False,
         computed_at=datetime.now(UTC),
         export_url="",
-        upstream_hash="",
     )
 
 
@@ -83,13 +82,6 @@ def empty_envelope(
 ) -> ViewEnvelope:
     """§7.3. Nothing to show yet — say what would produce it."""
     return _blank(view_id, question, scope, ViewState.EMPTY, reason)
-
-
-def suppressed_envelope(
-    view_id: str, question: str, scope: Scope, reason: str
-) -> ViewEnvelope:
-    """§7.3. Computed and withheld — say why, and what is available instead."""
-    return _blank(view_id, question, scope, ViewState.SUPPRESSED, reason)
 
 
 def error_envelope(
@@ -120,5 +112,4 @@ __all__ = [
     "empty_envelope",
     "error_envelope",
     "should_suppress",
-    "suppressed_envelope",
 ]

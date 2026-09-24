@@ -28,7 +28,7 @@ from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
 from src.m3_lookthrough.persist import save_lookthrough
 from src.m6_views.api.app import BIND_HOST, create_app
-from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY, seed_view_definitions
+from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY
 
 from tests.conftest import migrated
 
@@ -61,7 +61,6 @@ def client(tmp_path: Path) -> TestClient:
         " VALUES ('ACME', 'Acme Industries Ltd.', 1)"
     )
     warehouse.commit()
-    seed_view_definitions(warehouse)
 
     ledger = connect_ledger(
         str(tmp_path / "personal.db"), key="test-key", check_same_thread=False

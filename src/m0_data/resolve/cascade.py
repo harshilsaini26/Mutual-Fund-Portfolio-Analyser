@@ -37,7 +37,6 @@ from decimal import Decimal
 from src.common.types import UNRESOLVED, IssuerId
 from src.m0_data.normalise.names import normalise_name
 from src.m0_data.resolve.fuzzy import (
-    REVIEW_MIN,
     best_matches,
     is_auto_acceptable,
     token_jaccard,
@@ -209,8 +208,3 @@ def load_issuer_index(conn: sqlite3.Connection) -> dict[str, str]:
             "SELECT issuer_id, canonical_name FROM issuer WHERE is_synthetic = 0"
         )
     }
-
-
-def review_band(score: float) -> bool:
-    """Whether a score is worth showing a human at all. §8.2's `FUZZY_REVIEW_MIN`."""
-    return score >= REVIEW_MIN

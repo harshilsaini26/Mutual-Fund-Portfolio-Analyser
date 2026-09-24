@@ -45,6 +45,8 @@ from src.m1_ledger.cas import StagedTxn, import_cas
 from src.m1_ledger.cas.pdf import decrypt_and_extract, file_id
 from src.m1_ledger.lots import build_book
 
+from tests.helpers import closing_balance
+
 REAL_CAS = Path(__file__).resolve().parents[1] / "fixtures" / "local" / "cas_real.pdf"
 PASSWORD_ENV = "MF_CAS_PASSWORD"
 USER = UserId("USER-01")
@@ -146,7 +148,7 @@ def test_every_folio_on_the_real_statement_reconciles(
     for marker in report.ctx.balances:
         if marker.kind != "closing":
             continue
-        printed = report.ctx.closing_balance(marker.folio, marker.scheme_raw_isin)
+        printed = closing_balance(report.ctx, marker.folio, marker.scheme_raw_isin)
         if printed is None:
             continue
         computed = sum(

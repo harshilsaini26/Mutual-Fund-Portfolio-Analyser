@@ -46,7 +46,7 @@ from src.m3_lookthrough.persist_metrics import (
 )
 from src.m6_views.api.app import create_app
 from src.m6_views.api.pages import LANDING
-from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY, seed_view_definitions
+from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY
 from src.m6_views.render import CHART_TEMPLATES
 
 from tests.conftest import migrated
@@ -191,7 +191,6 @@ def client(tmp_path: Path) -> TestClient:
         ],
     )
     warehouse.commit()
-    seed_view_definitions(warehouse)
 
     ledger = connect_ledger(
         str(tmp_path / "personal.db"), key="test-key", check_same_thread=False

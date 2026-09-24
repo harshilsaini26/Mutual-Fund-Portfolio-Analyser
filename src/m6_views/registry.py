@@ -18,8 +18,6 @@ returns `empty` is a broken feature pretending to be a data problem.
 
 from __future__ import annotations
 
-import json
-import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -269,35 +267,6 @@ def assert_registry_consistent() -> None:
         )
 
 
-def seed_view_definitions(conn: sqlite3.Connection) -> int:
-    """Write `VIEW_DEFS` into Zone A. §4.1: seeded from code.
-
-    Replace rather than merge: the catalogue is derived from the code, so a view
-    deleted here must disappear there. Same rule as every other derived table in
-    this project (`CLAUDE.md` invariant 10), and the same reason V1-18 and V1-20
-    both record — an upsert leaves behind what the new set dropped.
-    """
-    conn.execute("DELETE FROM view_definition WHERE is_builtin = 1")
-    for view in VIEW_DEFS.values():
-        conn.execute(
-            "INSERT INTO view_definition ("
-            " view_id, view_name, module_source, question, chart_type,"
-            " default_scope, requires_fields, drill_targets, min_confidence,"
-            " supports_export, is_builtin, sort_order"
-            ") VALUES (?,?,?,?,?,?,?,?,?,?,1,?)",
-            (
-                view.view_id, view.view_name, view.module_source, view.question,
-                view.chart_type, view.default_scope,
-                json.dumps(view.requires_fields),
-                json.dumps(view.drill_targets) if view.drill_targets else None,
-                view.min_confidence, 1 if view.supports_export else 0,
-                view.sort_order,
-            ),
-        )
-    conn.commit()
-    return len(VIEW_DEFS)
-
-
 def catalogue() -> list[dict[str, Any]]:
     """`GET /api/views`. Ordered by `sort_order`, which is the landing order."""
     return [
@@ -324,5 +293,4 @@ __all__ = [
     "assert_registry_consistent",
     "catalogue",
     "register",
-    "seed_view_definitions",
 ]

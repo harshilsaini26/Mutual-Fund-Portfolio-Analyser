@@ -108,7 +108,6 @@ def public_deps(warehouse: Any) -> Deps:
         lookthrough=SqliteLookThroughProvider(ledger, warehouse),
         positions=SqlitePositionProvider(ledger),
         market=WithoutIndexLevels(warehouse),
-        ledger=ledger,
     )
 
 

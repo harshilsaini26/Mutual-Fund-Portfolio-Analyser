@@ -130,14 +130,6 @@ class McapBucket(str, Enum):
     UNCLASSIFIED = "unclassified"
 
 
-class Regime(str, Enum):
-    """MODULE_2.md §3.2. NO_TENURE_DATA will be common early."""
-
-    SINGLE_REGIME = "SINGLE_REGIME"
-    SPLIT_REGIME = "SPLIT_REGIME"
-    NO_TENURE_DATA = "NO_TENURE_DATA"
-
-
 class ClassificationBasis(str, Enum):
     """MODULE_3.md §12.1. A required argument with no default, everywhere.
 

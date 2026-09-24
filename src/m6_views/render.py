@@ -25,7 +25,6 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from src.m6_views.colors import SEMANTIC
 from src.m6_views.envelope import ViewEnvelope
 from src.m6_views.format import (
     DASH,
@@ -340,7 +339,6 @@ def chart_context(env: ViewEnvelope) -> dict[str, Any]:
         "grid": {},
         "curve_path": "",
         "payload_json": "{}",
-        "accent": SEMANTIC["neutral"],
     }
     if env.state.value != "ok":
         return context
