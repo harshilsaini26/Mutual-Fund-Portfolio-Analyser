@@ -17,9 +17,15 @@ grouping would not be. The most informative name across the files wins: 281 of
 the way down (Rs 2,275 Cr), which stay unresolved because an issuer called `CP`
 is worse than no issuer.
 
-Deliberately excluded: government paper, since segments are `None` for `IN` +
-digits and naming a state borrower needs a decision this module should not make
-(V1-30); and mutual fund units, which resolve to `__MFUNIT__` first (V1-41).
+**State development loans too, since V1-71.** A state government ISIN is `IN`
++ a two-digit government code + `20`, and the code names the borrower whatever
+the row calls itself -- ICICI writes `7.5% State Government Securities`, Nippon
+only the coupon. The issuer is that state's government, named for it
+("Government of Maharashtra"), from `config/state_isin_codes.yaml`, where every
+code carries its evidence. A code without evidence stays unresolved, and a
+disclosure naming a different state for a code refuses the code: one of the two
+is wrong, and neither is trusted. Central government paper (code 00) is
+`__GSEC__`'s (V1-30). Mutual fund units resolve to `__MFUNIT__` first (V1-41).
 
 Not silent, which is V1-02 departure 3's requirement: the `issuer_id` carries a
 `DISC:` prefix, `is_listed` is 0, and `source_file_id` points at the disclosure
@@ -32,6 +38,8 @@ import re
 import sqlite3
 from collections import defaultdict
 
+from src.m0_data.config import state_isin_codes
+
 #: A disclosed name that identifies nothing. Every one of these was observed in
 #: the warehouse, not imagined: an AMC writing `CP` in the name column is
 #: describing the instrument, not the borrower.
@@ -41,6 +49,9 @@ USELESS_NAME = re.compile(
     r"government securities|[\d.\s%]+)$",
     re.I,
 )
+
+#: A state government's ISIN: `IN`, the government's two digits, then `20`.
+STATE_ISIN = re.compile(r"^IN(\d{2})20")
 
 #: A coupon printed ahead of the borrower: `7.45% Bharti Telecom Limited`.
 COUPON_PREFIX = re.compile(r"^\s*\d+(\.\d+)?\s*%\s*")
@@ -106,8 +117,18 @@ def _best_name(names: list[str]) -> str | None:
     )
 
 
-def derive_disclosed_issuers(conn: sqlite3.Connection) -> dict[str, int]:
-    """Create an issuer per named segment, and an instrument per ISIN."""
+def state_code(isin: str) -> str | None:
+    """The issuing state's two-digit code, or None: not a state's ISIN."""
+    found = STATE_ISIN.match(isin.strip().upper())
+    return found.group(1) if found and found.group(1) != "00" else None
+
+
+def derive_disclosed_issuers(
+    conn: sqlite3.Connection, states: dict[str, str] | None = None
+) -> dict[str, int]:
+    """Create an issuer per named segment or evidenced state, and an
+    instrument per ISIN. `states` defaults to `config/state_isin_codes.yaml`."""
+    summary = _derive_states(conn, state_isin_codes() if states is None else states)
     rows = conn.execute(
         "SELECT h.isin, h.instrument_raw_name, h.instrument_class,"
         "       h.source_file_id"
@@ -153,7 +174,52 @@ def derive_disclosed_issuers(conn: sqlite3.Connection) -> dict[str, int]:
         "issuers": created,
         "instruments": instruments,
         "unnamed_segments": unnamed,
+        **summary,
     }
+
+
+def _derive_states(conn: sqlite3.Connection, states: dict[str, str]) -> dict[str, int]:
+    """An issuer per evidenced state, and its loans as instruments.
+
+    Every current row with a state ISIN is read, resolved or not, so the
+    evidence is re-checked on every load and not only the first.
+    """
+    by_code: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
+    for isin, name, file_id in conn.execute(
+        "SELECT isin, instrument_raw_name, source_file_id FROM holding"
+        " WHERE is_current = 1 AND isin GLOB 'IN[0-9][0-9]20*'"
+    ):
+        code = state_code(str(isin))
+        if code:
+            by_code[code].append((str(isin).upper(), str(name), str(file_id)))
+
+    created = conflicts = 0
+    for code in sorted(by_code):
+        state = states.get(code)
+        if state is None:
+            continue
+        named = {
+            other for other in states.values()
+            for _i, name, _f in by_code[code] if other.lower() in name.lower()
+        }
+        if named - {state}:
+            conflicts += 1
+            continue
+        issuer_id = f"STATE:IN{code}"
+        source = sorted(f for _i, _n, f in by_code[code])[0]
+        conn.execute(
+            "INSERT OR IGNORE INTO issuer (issuer_id, canonical_name, country,"
+            " is_listed, is_synthetic, source_file_id) VALUES (?,?,'IN',0,0,?)",
+            (issuer_id, f"Government of {state}", source),
+        )
+        created += 1
+        for isin in sorted({i for i, _n, _f in by_code[code]}):
+            conn.execute(
+                "INSERT OR IGNORE INTO instrument (isin, issuer_id,"
+                " instrument_type, source_file_id) VALUES (?,?,'sdl',?)",
+                (isin, issuer_id, source),
+            )
+    return {"state_issuers": created, "state_conflicts": conflicts}
 
 
 __all__ = [
@@ -161,4 +227,5 @@ __all__ = [
     "derive_disclosed_issuers",
     "is_informative",
     "issuer_segment",
+    "state_code",
 ]

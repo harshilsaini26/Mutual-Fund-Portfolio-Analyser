@@ -52,6 +52,10 @@ UNRESOLVED_MAX_PCT = Decimal(2)
 #: tolerance but inside it, V2 fails as a warning, recorded but not blocking.
 UNITS_ERROR_RATIO = Decimal(10)
 
+#: The synthetic issuer a fund's netted receivables and payables resolve to
+#: (`resolve/synthetic.py`). Negative when it owes more than it is owed.
+NET_CURRENT_ASSETS = "__RECV__"
+
 
 #: Which tolerance V2 applies to which kind of AUM, as a table rather than a
 #: comparison against one literal. Written as `AVERAGE if basis ==
@@ -225,16 +229,24 @@ def validate_disclosure(
         )
     )
 
-    # V8 — negative weight, allowed only for a derivative. A short equity leg
-    # disclosed as equity is either a parse error or a genuine position the
-    # classifier mislabelled; either way it must be looked at.
+    # V8 — negative weight, allowed only for a derivative, and for net current
+    # assets. A short equity leg disclosed as equity is either a parse error or
+    # a genuine position the classifier mislabelled; either way it must be
+    # looked at. Net current assets below zero are neither: a fund owing more
+    # (payables) than it is owed (receivables) on the day, which every fund
+    # house prints as one netted line. All 54 of V8's warnings were that line,
+    # and a warning on every such fund taught a reader to ignore V8 (V1-71).
+    # The fund page says so where it happens instead.
     bad_negatives = [
-        r for r in rows if r.market_value < 0 and r.instrument_class != "derivative"
+        r for r in rows
+        if r.market_value < 0
+        and r.instrument_class != "derivative"
+        and r.issuer_id != NET_CURRENT_ASSETS
     ]
     results.append(
         CheckResult(
             "V8", not bad_negatives, WARN,
-            "negative market value only on derivatives",
+            "negative market value only on derivatives and net current assets",
             ", ".join(sorted({r.instrument_class for r in bad_negatives})) or None,
         )
     )

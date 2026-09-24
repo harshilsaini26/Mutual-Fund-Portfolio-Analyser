@@ -82,9 +82,9 @@ def test_an_unknown_fund_explains_itself_rather_than_failing(
     assert "Nothing to show yet" in response.text
 
 
-def test_a_hostile_holding_name_stays_text_on_the_fund_page(tmp_path: Path) -> None:
-    """Holding names come from fund houses' files. One written to close the
-    chart's JSON block must arrive escaped in the JSON and in the table."""
+def _one_fund(tmp_path: Path, holdings: list[tuple[str, str, str, str]]) -> TestClient:
+    """An app over one fund, S9, disclosed on 31 Jul 2026 with `holdings`
+    as (issuer_id, issuer name, class, share of fund)."""
     from src.common.decimals import connect
     from src.m1_ledger.db import apply_ledger_schema, connect_ledger
     from src.m6_views.api.app import create_app
@@ -94,10 +94,6 @@ def test_a_hostile_holding_name_stays_text_on_the_fund_page(tmp_path: Path) -> N
     db = str(tmp_path / "w.db")
     migrated(db)
     warehouse = connect(db, check_same_thread=False)
-    warehouse.execute(
-        "INSERT INTO issuer (issuer_id, canonical_name, is_listed) VALUES (?,?,1)",
-        ("EVIL", HOSTILE),
-    )
     warehouse.execute(
         "INSERT INTO scheme (scheme_id, scheme_name, plan, option, status)"
         " VALUES ('S9', 'Fund nine', 'direct', 'growth', 'active')"
@@ -110,28 +106,54 @@ def test_a_hostile_holding_name_stays_text_on_the_fund_page(tmp_path: Path) -> N
         "INSERT INTO holding_disclosure (scheme_id, as_of_date, revision,"
         " source_file_id, row_count, unresolved_mv_pct, total_mv,"
         " validation_status, ingested_at, is_current)"
-        " VALUES ('S9', '2026-07-31', 1, 'f9', 1, 0, 100, 'ok', '2026-08-01', 1)"
+        " VALUES ('S9', '2026-07-31', 1, 'f9', ?, 0, 100, 'ok', '2026-08-01', 1)",
+        (len(holdings),),
     )
-    warehouse.execute(
-        "INSERT INTO holding (scheme_id, as_of_date, revision, row_number,"
-        " issuer_id, instrument_raw_name, market_value, pct_normalised,"
-        " instrument_class, resolution_method, source_file_id, ingested_at,"
-        " is_current) VALUES ('S9', '2026-07-31', 1, 1, 'EVIL', 'x', 1, 100,"
-        " 'equity', 'isin', 'f9', '2026-08-01', 1)"
-    )
+    for row, (issuer, name, klass, weight) in enumerate(holdings, start=1):
+        warehouse.execute(
+            "INSERT OR IGNORE INTO issuer (issuer_id, canonical_name, is_listed)"
+            " VALUES (?,?,1)",
+            (issuer, name),
+        )
+        warehouse.execute(
+            "INSERT INTO holding (scheme_id, as_of_date, revision, row_number,"
+            " issuer_id, instrument_raw_name, market_value, pct_normalised,"
+            " instrument_class, resolution_method, source_file_id, ingested_at,"
+            " is_current) VALUES ('S9', '2026-07-31', 1, ?, ?, 'x', 1, ?, ?,"
+            " 'isin', 'f9', '2026-08-01', 1)",
+            (row, issuer, Decimal(weight), klass),
+        )
     warehouse.commit()
     ledger = connect_ledger(
         str(tmp_path / "l.db"), key="test-key", check_same_thread=False
     )
     apply_ledger_schema(ledger)
-    app = TestClient(create_app(ledger, warehouse), base_url="http://127.0.0.1:8765")
+    return TestClient(create_app(ledger, warehouse), base_url="http://127.0.0.1:8765")
 
+
+def test_a_hostile_holding_name_stays_text_on_the_fund_page(tmp_path: Path) -> None:
+    """Holding names come from fund houses' files. One written to close the
+    chart's JSON block must arrive escaped in the JSON and in the table."""
+    app = _one_fund(tmp_path, [("EVIL", HOSTILE, "equity", "100")])
     html = app.get("/fund/S9?as_of=2026-09-04").text
     assert 'data-view-id="fund_portfolio"' in html
     assert HOSTILE not in html
     assert "<script>alert(1)</script>" not in html
     assert "\\u003c/script\\u003e" in html  # escaped inside the JSON block
     assert "&lt;/script&gt;" in html  # escaped in the table
+
+
+def test_a_fund_owing_more_than_it_is_owed_says_so(tmp_path: Path) -> None:
+    """V1-71: V8 no longer warns on negative net current assets, so the page
+    says it where a reader looks -- the holdings panel's own sentence."""
+    app = _one_fund(tmp_path, [
+        ("ACME", "Acme", "equity", "101.5"),
+        ("__RECV__", "Net Receivables / Payables", "cash", "-1.5"),
+    ])
+    env = app.get("/api/views/fund_portfolio?as_of=2026-09-04&scope_id=S9").json()
+    assert "net current assets were -1.50%" in env["payload"]["headline"]
+    assert "owed more than it was owed" in env["payload"]["headline"]
+    assert not any("negative weight" in c for c in env["quality"]["caveats"])
 
 
 HOSTILE = "Acme</script><script>alert(1)</script>"

@@ -167,3 +167,81 @@ def test_deriving_twice_changes_nothing(conn: sqlite3.Connection) -> None:
     ).fetchall()
     assert before == after
     assert first["issuers"] == second["issuers"]
+
+
+# --- state development loans (V1-71) -----------------------------------------
+
+
+def _hold(conn: sqlite3.Connection, row: int, isin: str, name: str) -> None:
+    conn.execute(
+        "INSERT INTO holding (scheme_id, as_of_date, revision, row_number,"
+        " isin, issuer_id, instrument_raw_name, market_value,"
+        " pct_normalised, instrument_class, resolution_method,"
+        " source_file_id, ingested_at, is_current)"
+        " VALUES ('S1','2026-07-31',1,?,?,'__UNRESOLVED__',?,'100','1',"
+        " 'debt','unresolved','f','2026-09-13',1)",
+        (row, isin, name),
+    )
+
+
+def _issuer_of(conn: sqlite3.Connection, isin: str) -> tuple[str, str] | None:
+    row = conn.execute(
+        "SELECT i.issuer_id, i.canonical_name FROM instrument n"
+        " JOIN issuer i ON i.issuer_id = n.issuer_id WHERE n.isin = ?",
+        (isin,),
+    ).fetchone()
+    return (row[0], row[1]) if row else None
+
+
+def test_a_state_loan_is_owed_by_that_state_s_government(
+    conn: sqlite3.Connection,
+) -> None:
+    """The ISIN's two digits name the borrower whatever the row calls itself:
+    ICICI writes `7.5% State Government Securities` and Nippon only the coupon,
+    and both are Maharashtra's once the code is evidenced."""
+    _hold(conn, 10, "IN2220240435", "7.5% State Government Securities")
+    _hold(conn, 11, "IN2220250012", "0.0718")
+    _hold(conn, 12, "IN2220230204", "State Government of Maharashtra")
+    summary = derive_disclosed_issuers(conn, {"22": "Maharashtra"})
+    for isin in ("IN2220240435", "IN2220250012", "IN2220230204"):
+        assert _issuer_of(conn, isin) == ("STATE:IN22", "Government of Maharashtra")
+    assert summary["state_issuers"] == 1
+    kind = conn.execute(
+        "SELECT instrument_type FROM instrument WHERE isin = 'IN2220240435'"
+    ).fetchone()
+    assert kind == ("sdl",)
+
+
+def test_an_unevidenced_state_code_is_left_unresolved(conn: sqlite3.Connection) -> None:
+    _hold(conn, 10, "IN3620180023", "8.2% State Government Securities")
+    derive_disclosed_issuers(conn, {"22": "Maharashtra"})
+    assert _issuer_of(conn, "IN3620180023") is None
+
+
+def test_a_disclosure_naming_another_state_refuses_the_code(
+    conn: sqlite3.Connection,
+) -> None:
+    """The evidence is re-checked on every load. A fund house naming a
+    different state for the same code means one of the two is wrong, and
+    neither is trusted."""
+    _hold(conn, 10, "IN2220240435", "State Government of Karnataka")
+    summary = derive_disclosed_issuers(
+        conn, {"22": "Maharashtra", "19": "Karnataka"}
+    )
+    assert _issuer_of(conn, "IN2220240435") is None
+    assert summary["state_conflicts"] == 1
+
+
+def test_central_government_paper_is_not_a_state(conn: sqlite3.Connection) -> None:
+    _hold(conn, 10, "IN0020230085", "7.18% Government of India")
+    derive_disclosed_issuers(conn, {"22": "Maharashtra"})
+    assert _issuer_of(conn, "IN0020230085") is None
+
+
+def test_every_state_code_carries_evidence_and_names_one_state() -> None:
+    from src.m0_data.config import state_isin_codes
+
+    codes = state_isin_codes()
+    assert codes["22"] == "Maharashtra" and codes["31"] == "Tamil Nadu"
+    assert "00" not in codes
+    assert len(set(codes.values())) == len(codes), "two codes name one state"

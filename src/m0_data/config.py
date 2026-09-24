@@ -19,6 +19,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCES_YAML = REPO_ROOT / "config" / "sources.yaml"
 RISK_FREE_YAML = REPO_ROOT / "config" / "risk_free.yaml"
+STATE_CODES_YAML = REPO_ROOT / "config" / "state_isin_codes.yaml"
 
 #: §13.2. `/data` is gitignored in full — it holds the raw archive and both
 #: warehouses, and none of it is source.
@@ -134,3 +135,24 @@ def risk_free_on(when: date, path: Path = RISK_FREE_YAML) -> Decimal | None:
     rates = risk_free_rates(path)
     i = bisect_right([d for d, _ in rates], when) - 1
     return rates[i][1] if i >= 0 else None
+
+
+def state_isin_codes(path: Path = STATE_CODES_YAML) -> dict[str, str]:
+    """A state government's two-digit ISIN code -> the state. V1-71.
+
+    Raises on an entry without its evidence, or on a code that is not two
+    digits: the file's whole claim is that no entry is a guess, and an entry
+    that does not say where it came from cannot show that it is not.
+    """
+    with path.open(encoding="utf-8") as fh:
+        loaded = yaml.safe_load(fh) or {}
+    out: dict[str, str] = {}
+    for code, entry in (loaded.get("codes") or {}).items():
+        code = str(code)
+        entry = entry or {}
+        if not (len(code) == 2 and code.isdigit() and code != "00"):
+            raise ValueError(f"{path}: {code!r} is not a state's two-digit code")
+        if not entry.get("state") or not entry.get("evidence"):
+            raise ValueError(f"{path}: code {code} needs a state and its evidence")
+        out[code] = str(entry["state"])
+    return out

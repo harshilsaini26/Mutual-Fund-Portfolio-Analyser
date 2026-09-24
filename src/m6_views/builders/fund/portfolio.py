@@ -33,6 +33,8 @@ VIEW_ID = "fund_portfolio"
 TILES = 50
 SECTORS = 10
 UNRESOLVED = "__UNRESOLVED__"
+#: Netted receivables and payables (`validate.checks.NET_CURRENT_ASSETS`).
+NET_CURRENT_ASSETS = "__RECV__"
 #: Days after which a monthly disclosure is behind (MODULE_3 §5.5's threshold).
 STALE_DAYS = 45
 
@@ -126,13 +128,28 @@ class FundPortfolioBuilder:
             f"{len(fund.holdings):,} holdings in the portfolio disclosed for "
             f"{format_date(disclosed)}: {mix}."
         )
+        # V1-71: V8 no longer warns on this, so the page says it instead.
+        owing = next(
+            (h.weight for h in fund.holdings
+             if str(h.issuer_id) == NET_CURRENT_ASSETS and h.weight < 0),
+            None,
+        )
+        if owing is not None:
+            headline += (
+                f" Its net current assets were {format_pct(owing, precision=2)}:"
+                f" that day it owed more than it was owed, which is ordinary for"
+                f" a fund, and why the rest adds up to a little over 100%."
+            )
         caveats: list[str] = []
-        negative = [h for h in fund.holdings if h.weight < 0]
+        negative = [
+            h for h in fund.holdings
+            if h.weight < 0 and str(h.issuer_id) != NET_CURRENT_ASSETS
+        ]
         if negative:
             caveats.append(
                 f"{len(negative)} holding{'s' if len(negative) != 1 else ''} with a "
-                f"negative weight (net payables or written options) are listed in "
-                f"the table and not drawn in the pictures."
+                f"negative weight (written options or borrowing) are listed in the "
+                f"table and not drawn in the pictures."
             )
         if tier == "aggregator":
             caveats.append(

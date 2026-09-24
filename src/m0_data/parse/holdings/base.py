@@ -165,7 +165,8 @@ HEADER_SCAN_ROWS = 6
 #: 5: a listing-status heading nests under the instrument heading above it.
 #: 6: V2 against a quarterly average quarantines only a units-scale mismatch.
 #: 7: a row whose name resolved to a derivative is one under any heading.
-READER_VERSION = "7"
+#: 8: V8 passes negative net current assets, which are ordinary (V1-71).
+READER_VERSION = "8"
 
 #: A heading that says how a security trades, not what it is. Kotak prints
 #: `Debentures and Bonds`, then `Listed/Awaiting listing on Stock Exchange`

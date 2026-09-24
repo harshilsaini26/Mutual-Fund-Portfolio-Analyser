@@ -56,7 +56,7 @@ from src.m0_data.resolve.synthetic import match_synthetic
 #:
 #: Rows written before the ISIN issuer segment existed carry `'0'` from the
 #: migration default, which is what makes the first run after an upgrade rewrite.
-RESOLVER_VERSION = "8"
+RESOLVER_VERSION = "9"  # 9: state development loans resolve to their state (V1-71)
 
 #: How many leading characters of an Indian ISIN identify the ISSUER rather
 #: than the security. `IN` is the country, the next five are the entity, and

@@ -169,6 +169,21 @@ def test_v8_allows_a_negative_weight_only_on_a_derivative() -> None:
     assert _check(_rows((None, "derivative", "-88", "-0.01")), "V8").passed  # type: ignore[attr-defined]
 
 
+def test_v8_passes_a_fund_that_owes_more_than_it_is_owed() -> None:
+    """V1-71. Net current assets below zero are payables exceeding receivables
+    on the day -- ordinary, and all 54 of V8's warnings. Negative cash that is
+    not that netted line still warns."""
+    owing = [
+        HoldingRow(None, "equity", Decimal("101"), Decimal("101"), "AMFI:X"),
+        HoldingRow(None, "cash", Decimal("-1"), Decimal("-1"), "__RECV__"),
+    ]
+    assert _check(owing, "V8").passed  # type: ignore[attr-defined]
+    overdrawn = [
+        owing[0], HoldingRow(None, "cash", Decimal("-1"), Decimal("-1"), "__CASH__")
+    ]
+    assert not _check(overdrawn, "V8").passed  # type: ignore[attr-defined]
+
+
 def test_v10_flags_an_isin_that_fails_its_check_digit() -> None:
     v10 = _check(_rows(("INE002A01019", "equity", "100", "100")), "V10")
     assert not v10.passed  # type: ignore[attr-defined]

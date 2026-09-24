@@ -1,0 +1,43 @@
+# Which state government issued a state development loan, by its ISIN.
+#
+# An Indian government ISIN is `IN` + a two-digit government code + `20` + a
+# serial. Code 00 is the Union (`__GSEC__`, V1-30); every other code is one
+# state, and the loan's issuer is that state's government -- a real borrower,
+# never bucketed with sovereign paper (MODULE_0 §8.4).
+#
+# EVERY ENTRY CARRIES ITS EVIDENCE, and nothing is inferred from the pattern the
+# codes happen to follow. Two kinds:
+#
+#   disclosure  a fund house's own file names the state for an ISIN with that
+#               code. These are re-checked on every load: a disclosure naming a
+#               DIFFERENT state for a code refuses that code rather than trusting
+#               either (`derive/disclosed_issuers.py`).
+#   published   a public listing names the state for a specific ISIN, AND that
+#               listing's coupon matches the coupon our own holdings record for
+#               the same ISIN. The second condition is what rejected code 37:
+#               one site called IN3720160032 an 8.33% Kerala loan, our holdings
+#               record it at 6.9%, and Kerala is code 20.
+#
+# Absent codes (36, 37) are not guessed. Their rows stay `__UNRESOLVED__` and
+# resolve on the first load after an entry here is evidenced. DECISIONS V1-71.
+
+codes:
+  "10": {state: Andhra Pradesh, evidence: "disclosure: State Government of Andhra Pradesh"}
+  "12": {state: Assam, evidence: "disclosure: Assam State Govt - 2033 - Assam"}
+  "13": {state: Bihar, evidence: "published: IN1320250013, 6.88% BH 09JL35 (India ISIN Database, zenodo.org/records/15851191); holdings 6.88%"}
+  "14": {state: Goa, evidence: "published: IN1420180144, 8.36% Goa SDL 20 Feb 2029 (cbonds.com/bonds/645897); holdings 8.36%"}
+  "15": {state: Gujarat, evidence: "published: IN1520250185, SDL GUJ 26NV32 6.98 (India ISIN Database, zenodo.org/records/17727909); holdings 6.98%"}
+  "16": {state: Haryana, evidence: "disclosure: State Government of Haryana"}
+  "17": {state: Himachal Pradesh, evidence: "disclosure: State Government of Himachal pradesh"}
+  "19": {state: Karnataka, evidence: "disclosure: State Government of Karnataka"}
+  "20": {state: Kerala, evidence: "published: IN2020180013, 8.00% Kerala SDL 11 Apr 2028 and IN2020160155, 7.8% Kerala SDL 2027 (smest.in); holdings 8.0% and 7.8%"}
+  "21": {state: Madhya Pradesh, evidence: "disclosure: State Government of Madhya Pradesh"}
+  "22": {state: Maharashtra, evidence: "disclosure: State Government of Maharashtra"}
+  "27": {state: Odisha, evidence: "disclosure: State Government of Odisha"}
+  "28": {state: Punjab, evidence: "disclosure: Punjab State Govt - 2027 - Punjab"}
+  "29": {state: Rajasthan, evidence: "disclosure: State Government of Rajasthan"}
+  "31": {state: Tamil Nadu, evidence: "published: IN3120250706, 7.54% Tamil Nadu SDL 2036 (NSE circular CML72748); holdings 7.54%"}
+  "33": {state: Uttar Pradesh, evidence: "disclosure: State Government of Uttar Pradesh"}
+  "34": {state: West Bengal, evidence: "disclosure: State Government of West Bengal"}
+  "35": {state: Chhattisgarh, evidence: "published: IN3520200137, 6.94% CG 24 Mar 2029 (cbonds.com/bonds/989925, harmoney.in); holdings 6.94%"}
+  "45": {state: Telangana, evidence: "disclosure: State Government of Telangana"}

@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-24 · 1,556 tests passing
+**Last updated:** 2026-09-24 · 1,563 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -65,20 +65,20 @@ prices, and a failed fetch leaves the prices loaded and marks the run
 |---|---|---|
 | HDFC Flexi Cap | 83 | **0.00%** |
 | Kotak Pioneer | 55 | **0.00%** |
-| ICICI Multi Asset | 290 | 1.79% |
+| ICICI Multi Asset | 290 | **0.00%** |
 
 PPFAS Flexi Cap, the fifth fund with a disclosure, is also at **0.00%**.
 
-Disclosure quality across all 200: **107 `ok`, 93 `warn`, 0 quarantined.** The
-warnings are V8 on 54 (a negative value not classed as a derivative — every
-one now a fund's net current assets below zero, payables exceeding
-receivables), V3 on 33 (unresolved value, much of it the state development
-loans below) and V2 on 13 (a portfolio a quarter's growth away from AMFI's
-quarterly average AUM, V1-67). No parse is being stored that disagrees with
-the file it came from.
+Disclosure quality across all 200: **173 `ok`, 27 `warn`, 0 quarantined.** The
+warnings are V3 on 13 (unresolved value above 2%), V2 on 13 (a portfolio a
+quarter's growth away from AMFI's quarterly average AUM, V1-67), and four
+others. A fund whose net current assets are below zero -- owing more than it is
+owed on the day -- no longer warns; the fund page says so in words instead
+(V1-71). No parse is being stored that disagrees with the file it came from.
 
-Unresolved across the whole warehouse is **2.12%** of value, measured over each
-scheme's newest disclosure.
+Unresolved across the whole warehouse is **0.52%** of value, measured over each
+scheme's newest disclosure. It was 2.12% before state development loans had an
+issuer.
 
 ## How to add a fund
 
@@ -421,11 +421,15 @@ Ordered by what they cost.
    table has, which moves the primary key and touches `aum_for`, the
    `INSERT OR REPLACE` and the restatement counter. A slice, not a patch.
 
-1. **State development loans have no issuer.** 1,553 Cr in one fund. §8.4
-   forbids bucketing them with sovereign paper because a state is a real
-   borrower; giving them real issuers needs either a hardcoded state-code table
-   (data this project would be inventing) or a cascade that creates issuers
-   (which V1-02 deliberately refused). A decision, not an implementation.
+1. ~~**State development loans have no issuer.**~~ **Closed 2026-09-24.** A
+   state loan's ISIN carries its government's two-digit code, and each loan
+   now resolves to that state's government ("Government of Maharashtra"), a
+   real borrower apart from sovereign paper (§8.4). The code table carries its
+   evidence for every entry -- a fund house naming the state, or a public
+   listing whose coupon matches our own holdings -- and a disclosure naming a
+   different state refuses the code (V1-71). 633 of 639 rows resolve, to 19
+   states; codes 36 and 37 have no evidence yet and their 6 rows stay
+   unresolved. Three Kotak SDL index funds went from 58-97% unresolved to 0%.
 2. ~~**Covered calls classify as `equity`.**~~ **Closed 2026-09-24.** ICICI
    prints its written calls inside the equity block, each named `(Covered
    call)`. The name already resolved to `__DERIV__`; the heading made the
@@ -504,15 +508,6 @@ who has never heard of a look-through. In order (the plan agreed 2026-09-24):
 
 Then the data work already planned:
 
-- **State development loans**, the next data fix found in the 2026-09-23
-  research: an SDL's ISIN carries its state's code, observed one-to-one
-  against the state each fund house names. It needs one decision first: the
-  issuer name each state gets. Three newly identified Kotak SDL index funds
-  are 58-97% unresolved for want of it.
-- **Whether V8 should pass negative net current assets.** §10.1 allows a
-  negative value only on a derivative, and all 54 of its remaining warnings
-  are a fund owing more than it is owed — ordinary, and not what V8 exists
-  to catch. A spec question before a code change.
 - **The small internal defects above**: `rebuild_weights` committing, the
   re-read, the four latent fetch defects and a loud `data_only` check.
 - **Two schema changes**: `scheme_aum` revisions, and remembering which
