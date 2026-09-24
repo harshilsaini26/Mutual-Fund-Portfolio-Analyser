@@ -1,0 +1,62 @@
+{#
+  An interactive chart: every `echart` view. DECISIONS V1-70.
+
+  Three layers, and only the middle one runs in the browser:
+
+    headline   one plain sentence, written server-side, that says what the
+               picture shows. A reader who looks at nothing else gets it.
+    charts     ECharts, drawn by `static/charts.js` from the JSON below. Each
+               point carries a position (a number) and the label a reader sees
+               (a string formatted in Python). §16.4: the browser positions and
+               toggles; it never formats a figure.
+    table      the same figures as a table, formatted here by `fmt_cell`, for a
+               screen reader, a text browser and Ctrl-F (§10.4). It is also
+               exactly what the CSV export writes.
+
+  The period tabs are ordinary links. Without JavaScript each reloads the page
+  for that period; with it, `data-fragment` swaps this panel alone.
+#}
+{% if env.payload.headline %}
+<p class="headline">{{ env.payload.headline }}</p>
+{% endif %}
+{% if env.payload.tabs %}
+<nav class="tabs" aria-label="Period">
+  {% for tab in env.payload.tabs %}
+  <a class="tab" href="{{ tab.href }}" data-fragment="{{ tab.fragment }}"
+     {% if tab.active %}aria-current="true"{% endif %}>{{ tab.label }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+<div class="echarts{% if env.payload.charts | length > 1 %} echarts--several{% endif %}"
+     data-chart="echart">
+  {% for chart in env.payload.charts %}
+  <figure class="echart echart--{{ chart.kind }}">
+    {% if env.payload.charts | length > 1 %}<figcaption>{{ chart.title }}</figcaption>{% endif %}
+    <div class="echart__canvas" data-index="{{ loop.index0 }}"
+         {% if chart.bars %}data-bars="{{ chart.bars | length }}"{% endif %}
+         role="img" aria-label="{{ chart.title }}. The table below carries the same figures."></div>
+  </figure>
+  {% endfor %}
+  <script type="application/json" class="echart-data">{{ payload_json | safe }}</script>
+</div>
+<details class="chart-table">
+  <summary>The same figures as a table ({{ env.payload.rows | length }} rows)</summary>
+  <div class="table-wrap">
+  <table>
+    <thead><tr>
+      {% for column in env.payload.columns %}
+      <th scope="col" class="col--{{ column.kind }}">{{ column.label }}</th>
+      {% endfor %}
+    </tr></thead>
+    <tbody>
+      {% for row in env.payload.rows %}
+      <tr>
+        {% for column in env.payload.columns %}
+        <td class="col--{{ column.kind }}">{{ {'value': row[column.key], 'kind': column.kind} | fmt_cell }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</details>

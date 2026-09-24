@@ -76,7 +76,8 @@ def format_inr(
 
     a, sign = abs(v), ("-" if v < 0 else "")
     if a >= CRORE:
-        return f"{sign}₹{a / CRORE:.{precision}f} Cr"
+        # Grouped too: a fund of 1,01,793 crore printed "101792.99 Cr".
+        return f"{sign}₹{group_indian(a / CRORE, precision)} Cr"
     if a >= LAKH:
         return f"{sign}₹{a / LAKH:.{precision}f} L"
     if a >= THOUSAND:
@@ -113,6 +114,17 @@ def format_return(v: Decimal | None, annualised: bool) -> str:
     return f"{v * 100:+.1f}%" + (" p.a." if annualised else "")
 
 
+def format_fraction(v: Decimal | None, precision: int = 1) -> str:
+    """A fraction that is not a return: a fall of -0.4184 renders "41.8%".
+
+    Unsigned by design. A drawdown is always a fall, and printing "-41.8%"
+    beside the word "fell" says the fall twice.
+    """
+    if v is None:
+        return DASH
+    return f"{abs(v) * 100:.{precision}f}%"
+
+
 def format_date(d: date | None) -> str:
     """§9.4. `31 Jul 2026`. Never MM/DD or DD/MM — both are ambiguous, and this
     project's data spans Indian (DD/MM) and American (MM/DD) sources."""
@@ -139,6 +151,7 @@ def format_staleness(days: int | None) -> str:
 __all__ = [
     "DASH",
     "format_date",
+    "format_fraction",
     "format_inr",
     "format_pct",
     "format_return",

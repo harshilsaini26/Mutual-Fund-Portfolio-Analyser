@@ -41,6 +41,12 @@ from src.common.types import (
     UserId,
     WeightBasis,
 )
+from src.m0_data.derive.scheme_family import disclosure_scheme_for
+from src.m3_lookthrough.composition import (
+    CompositionRow,
+    FundComposition,
+    composition,
+)
 from src.m3_lookthrough.concentration import Concentration as ComputedConcentration
 from src.m3_lookthrough.overlap import Overlap as ComputedOverlap
 from src.m3_lookthrough.persist_metrics import (
@@ -61,6 +67,7 @@ from src.m3_lookthrough.providers.lookthrough import (
     Tilt,
 )
 from src.m3_lookthrough.tilts import mcap_tilts
+from src.m3_lookthrough.weights import latest_disclosure
 
 #: What each unimplemented method is waiting on. Raised rather than returned
 #: empty: a caller that gets `[]` from `tilts()` concludes the portfolio has no
@@ -434,6 +441,47 @@ class SqliteLookThroughProvider:
         self, user_id: UserId, as_of: date, basis: ClassificationBasis
     ) -> dict[str, Decimal]:
         raise NotImplementedError(_NOT_BUILT["sector_exposure"])
+
+    # --- one fund, for the fund page -----------------------------------------
+
+    def fund_composition(
+        self, scheme_id: SchemeId, as_of: date
+    ) -> tuple[FundComposition, date, str] | None:
+        """What `scheme_id` holds, from its newest usable disclosure on or before
+        `as_of`, with that disclosure's date and tier. None when it has none.
+
+        The disclosure is found exactly as the look-through finds it
+        (`latest_disclosure`: family-served, quarantine excluded, the AMC's file
+        preferred), so the fund page and the portfolio cannot disagree about
+        which month a fund is shown from.
+        """
+        found = latest_disclosure(self._warehouse, scheme_id, as_of)
+        if found is None:
+            return None
+        disclosed, tier = found
+        source = disclosure_scheme_for(
+            self._warehouse, str(scheme_id), disclosed.isoformat()
+        )
+        rows = [
+            CompositionRow(IssuerId(r[0]), r[1], str(r[2]), r[3])
+            for r in self._warehouse.execute(
+                "SELECT h.issuer_id, h.pct_normalised, h.instrument_class,"
+                " h.reported_sector FROM holding h"
+                " JOIN holding_disclosure d ON d.scheme_id = h.scheme_id"
+                "  AND d.as_of_date = h.as_of_date AND d.revision = h.revision"
+                " WHERE h.scheme_id = ? AND h.as_of_date = ? AND d.is_current = 1",
+                (source, disclosed),
+            )
+        ]
+        try:
+            listed, buckets = self._amfi_mcap(disclosed)
+        except LookupError:
+            listed, buckets = disclosed, {}
+        return (
+            composition(rows, buckets, ClassificationBasis.AS_OF_HOLDING, listed),
+            disclosed,
+            tier,
+        )
 
 
 def _to_contract_concentration(stored: ComputedConcentration) -> Concentration:

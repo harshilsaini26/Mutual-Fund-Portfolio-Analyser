@@ -69,7 +69,7 @@ reconciliation against the statement's own closing balance.
 | **Look-through** | Exposure by *company*, not by security, so an issuer's shares and bonds count once. Overlap, duplication, concentration (HHI and effective number of holdings), a large/mid/small size profile on AMFI's list in force at the time, funds held inside other funds expanded to their own holdings, and the marginal contribution of each fund to the whole. |
 | **Fund x-ray** | Returns over 1, 3 and 5 years and since launch; volatility, drawdown and recovery; rolling-return distributions; Sharpe and Sortino against the 91-day T-bill rate in force when each window began; alpha, beta, tracking error, information ratio and up/down capture against a total-return benchmark. On a fund page linked from your holdings, and in the terminal. |
 | **Ledger** | CAS statement import, FIFO lots, §112A grandfathering, XIRR and TWRR, reconciled to the statement's closing units. |
-| **Views** | A local browser interface with CSV export. Every chart carries its as-of date, staleness, coverage and unresolved share, in a footer that cannot be switched off. |
+| **Views** | A local browser interface: search any fund by name for a page of interactive charts (growth of Rs 10,000 against its benchmark, returns, falls, consistency, holdings), plus the portfolio views. CSV export everywhere. Every chart carries its as-of date, staleness, coverage and unresolved share, in a footer that cannot be switched off. |
 
 ### Coverage today
 
@@ -222,7 +222,7 @@ known vulnerabilities.
 ## Quality gate
 
 ```bash
-python -m pytest -q                             # 1,455 tests, hermetic, no network
+python -m pytest -q                             # 1,556 tests, hermetic, no network
 python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                  # strict
 python -m scripts.verify_v0_ledger --check      # the independent ledger verifier

@@ -14,11 +14,12 @@ the interface rather than asserted in a docstring.
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
 from src.common.contracts.entity import MergerLink, SchemeRef
-from src.common.contracts.market import IdcwEvent, NavPoint
+from src.common.contracts.market import IdcwEvent, IndexPoint, NavPoint
 from src.common.types import Confidence, IndexId, Isin, Plan, SchemeId
 
 #: §11.3 resolution confidence, by the field that matched.
@@ -276,6 +277,118 @@ class WarehouseMarketDataProvider:
         ).fetchone()
         return Decimal(str(row[0])) if row else None
 
+    def index_series(
+        self, index_id: IndexId, start: date, end: date
+    ) -> list[IndexPoint]:
+        """Every level `index_id` published from `start` to `end`, in order.
+
+        One range read for what `index_level` answers a date at a time: the
+        fund page pairs thousands of NAV dates with levels, and a query per
+        date is what made that slow. Same TRI rule (invariant 7).
+        """
+        rows = self._execute(
+            "SELECT l.level_date, l.level FROM index_level l"
+            " JOIN benchmark_index b ON b.index_id = l.index_id"
+            " WHERE l.index_id = ? AND l.level_date BETWEEN ? AND ?"
+            " AND b.is_total_return = 1 ORDER BY l.level_date",
+            (str(index_id), start, end),
+        ).fetchall()
+        return [
+            IndexPoint(index_id, _as_date(r[0]), Decimal(str(r[1]))) for r in rows
+        ]
+
+    # --- facts and search, for the fund page ---------------------------------
+
+    def scheme_facts(self, scheme_id: SchemeId) -> SchemeFacts | None:
+        """What a reader needs to recognise a fund, in words.
+
+        The AUM is the newest on record and says what kind of figure it is: AMFI
+        publishes a quarterly AVERAGE (V1-50), not a month-end balance.
+        """
+        row = self._execute(
+            "SELECT s.scheme_id, s.scheme_name, s.fund_name, s.sebi_category,"
+            " s.plan, s.option, s.status, a.amc_name, s.benchmark_id,"
+            " b.index_name, s.inception_date"
+            " FROM scheme s LEFT JOIN amc a ON a.amc_id = s.amc_id"
+            " LEFT JOIN benchmark_index b ON b.index_id = s.benchmark_id"
+            " AND b.is_total_return = 1"
+            " WHERE s.scheme_id = ?",
+            (str(scheme_id),),
+        ).fetchone()
+        if row is None:
+            return None
+        aum = self._execute(
+            "SELECT aum_inr, as_of_date, basis FROM scheme_aum WHERE scheme_id = ?"
+            " ORDER BY as_of_date DESC LIMIT 1",
+            (str(scheme_id),),
+        ).fetchone()
+        return SchemeFacts(
+            scheme_id=SchemeId(str(row["scheme_id"])),
+            name=str(row["fund_name"] or row["scheme_name"]),
+            scheme_name=str(row["scheme_name"]),
+            amc_name=row["amc_name"],
+            category=row["sebi_category"],
+            plan=row["plan"],
+            option=row["option"],
+            status=row["status"],
+            benchmark_id=row["benchmark_id"],
+            benchmark_name=row["index_name"],
+            inception=_as_date(row["inception_date"]) if row["inception_date"] else None,
+            aum_inr=Decimal(str(aum["aum_inr"])) if aum else None,
+            aum_as_of=_as_date(aum["as_of_date"]) if aum else None,
+            aum_basis=aum["basis"] if aum else None,
+        )
+
+    def search_schemes(self, query: str, limit: int = 10) -> list[SchemeHit]:
+        """Funds whose name holds every word typed, one row per fund.
+
+        A fund has up to eight share classes and a list of eight near-identical
+        names is not an answer, so each fund appears once, as the share class a
+        reader is likeliest to mean: Direct before Regular, Growth before IDCW.
+        """
+        words = [w for w in "".join(
+            ch if ch.isalnum() else " " for ch in query.lower()
+        ).split()][:SEARCH_MAX_WORDS]
+        if not words:
+            return []
+        clause = " AND ".join(
+            "lower(coalesce(s.fund_name, '') || ' ' || s.scheme_name) LIKE ?"
+            for _ in words
+        )
+        rows = self._execute(
+            "SELECT s.scheme_id, s.scheme_name, s.fund_name, s.plan, s.option,"
+            " s.sebi_category, s.amc_id, s.scheme_family FROM scheme s"
+            f" WHERE s.status = 'active' AND {clause} LIMIT {SEARCH_SCAN_ROWS}",
+            tuple(f"%{w}%" for w in words),
+        ).fetchall()
+        best: dict[str, sqlite3.Row] = {}
+        for r in rows:
+            key = f"{r['amc_id']}|{r['scheme_family'] or r['scheme_id']}"
+            if key not in best or _preference(r) < _preference(best[key]):
+                best[key] = r
+        # The words as typed, in order, first; then names that start with the
+        # first word; then shorter names, which are closer to what was typed.
+        phrase = " ".join(words)
+        ranked = sorted(
+            best.values(),
+            key=lambda r: (
+                phrase not in (name := str(r["fund_name"] or r["scheme_name"]).lower()),
+                not name.startswith(words[0]),
+                len(name),
+                name,
+            ),
+        )
+        return [
+            SchemeHit(
+                scheme_id=SchemeId(str(r["scheme_id"])),
+                name=str(r["fund_name"] or r["scheme_name"]),
+                plan=r["plan"],
+                option=r["option"],
+                category=r["sebi_category"],
+            )
+            for r in ranked[:limit]
+        ]
+
     # --- internals ---------------------------------------------------------
 
     def _execute(self, sql: str, params: tuple[object, ...]) -> sqlite3.Cursor:
@@ -295,6 +408,45 @@ class WarehouseMarketDataProvider:
 
     def _scheme_rows(self, sql: str, params: tuple[str, ...]) -> list[sqlite3.Row]:
         return self._execute(sql, params).fetchall()
+
+
+#: A search is a few words. Beyond this it is not a query anyone typed, and
+#: each word is a LIKE over every scheme name.
+SEARCH_MAX_WORDS = 6
+#: Share-class rows read before collapsing to one per fund.
+SEARCH_SCAN_ROWS = 400
+
+
+@dataclass(frozen=True)
+class SchemeFacts:
+    scheme_id: SchemeId
+    name: str  # AMFI's fund-level name where the scheme master gives one
+    scheme_name: str
+    amc_name: str | None
+    category: str | None
+    plan: str | None
+    option: str | None
+    status: str | None
+    benchmark_id: str | None
+    benchmark_name: str | None  # None when the index is not total-return
+    inception: date | None
+    aum_inr: Decimal | None
+    aum_as_of: date | None
+    aum_basis: str | None
+
+
+@dataclass(frozen=True)
+class SchemeHit:
+    scheme_id: SchemeId
+    name: str
+    plan: str | None
+    option: str | None
+    category: str | None
+
+
+def _preference(row: sqlite3.Row) -> tuple[bool, bool, str]:
+    """Direct before Regular, Growth before IDCW, then a stable id."""
+    return (row["plan"] != "direct", row["option"] != "growth", str(row["scheme_id"]))
 
 
 def _as_date(value: object) -> date:

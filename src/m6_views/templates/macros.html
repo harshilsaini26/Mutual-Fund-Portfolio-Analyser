@@ -66,13 +66,19 @@
 {%- endmacro %}
 
 
-{% macro view_container(env, expanded=True) -%}
+{% macro view_container(env, expanded=True, quiet=False) -%}
 <section class="view view--{{ env.confidence }}"
          data-view-id="{{ env.view_id }}"
          aria-labelledby="q-{{ env.view_id }}">
 
-  <header class="view__header">
-    <h2 id="q-{{ env.view_id }}">{{ env.question }}</h2>
+  {#
+    `quiet` is for a panel whose own heading says more than its question -- the
+    fund page's header, whose heading is the fund's name. The question stays in
+    the markup for a screen reader (§2.3: every view states it); it is only not
+    drawn twice.
+  #}
+  <header class="view__header{% if quiet %} view__header--quiet{% endif %}">
+    <h2 id="q-{{ env.view_id }}" {% if quiet %}class="sr-only"{% endif %}>{{ env.question }}</h2>
     {{ confidence_badge(env.confidence) }}
   </header>
 
@@ -89,6 +95,23 @@
     unsure whether they are looking at nothing or at yesterday.
   #}
   <footer class="view__footer">
+    {#
+      One quiet line for the reader who wants only the date, and everything else
+      a click away. Nothing is removed: the gate's fields all render, inside the
+      disclosure, in every state.
+    #}
+    <p class="view__source">
+      Data as of
+      {% if env.state.value == 'ok' %}{{ env.data_as_of | fmt_date }}
+      <span class="staleness">({{ env.staleness_days | fmt_staleness }})</span>
+      {%- else %}&mdash;{% endif %}
+      {% if env.export_url %}
+      · <a href="{{ env.export_url }}">Export CSV</a>
+      {% if env.truncated %}· <a href="{{ env.export_url }}&amp;full=1">every row</a>{% endif %}
+      {% endif %}
+    </p>
+    <details class="view__provenance">
+    <summary>About this data</summary>
     <dl>
       <div><dt>As of</dt><dd>{{ env.as_of | fmt_date }}</dd></div>
       {#
@@ -113,14 +136,7 @@
       <div><dt>Rows</dt><dd>{{ env.row_count }}{% if env.truncated %} <span class="truncated">grouped</span>{% endif %}</dd></div>
       <div><dt>Source</dt><dd>{{ env.source_modules | join(', ') or '—' }}</dd></div>
     </dl>
-    {% if env.export_url %}
-    <p class="view__export">
-      <a href="{{ env.export_url }}">Export CSV</a>
-      {% if env.truncated %}
-        · <a href="{{ env.export_url }}&amp;full=1">every row</a>
-      {% endif %}
-    </p>
-    {% endif %}
+    </details>
   </footer>
 </section>
 {%- endmacro %}

@@ -28,6 +28,7 @@ import sqlite3
 import threading
 from datetime import date
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import JSONResponse
@@ -35,7 +36,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from src.common.types import UserId
-from src.m6_views.api.pages import STATIC, make_router
+from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
+from src.m6_views.api.pages import SEARCH_MAX_CHARS, STATIC, make_router
 from src.m6_views.builder import Scope
 from src.m6_views.builders import (  # noqa: F401  — import registers the builders
     portfolio,
@@ -114,6 +116,26 @@ def health_snapshot(
     }
 
 
+def search_funds(warehouse: sqlite3.Connection, query: str) -> list[dict[str, Any]]:
+    """Funds whose name holds every word of `query`, one row per fund, with
+    the link to its page. Under the lock, like every other database use."""
+    with DB_LOCK:
+        hits = WarehouseMarketDataProvider(warehouse).search_schemes(query)
+    return [
+        {
+            "scheme_id": str(h.scheme_id),
+            "name": h.name,
+            "detail": " · ".join(
+                x
+                for x in (h.category, (h.plan or "").title(), (h.option or "").title())
+                if x
+            ),
+            "url": f"/fund/{quote(str(h.scheme_id), safe='')}",
+        }
+        for h in hits
+    ]
+
+
 def create_app(
     ledger: sqlite3.Connection, warehouse: sqlite3.Connection
 ) -> FastAPI:
@@ -131,17 +153,29 @@ def create_app(
         one that still holds if the first regresses.
 
         The policy can afford to be strict because the page has no inline
-        script, no inline style, no external font and no image host: d3 is
-        vendored under `/static`, so `'self'` covers everything it loads.
-        `frame-ancestors 'none'` matters even on loopback — a page in another
-        tab must not be able to frame the portfolio and read it.
+        script, no inline style, no external font and no image host: d3 and
+        ECharts are vendored under `/static`, so `'self'` covers everything the
+        page loads. `form-action 'self'` lets the search box submit to this
+        server and nowhere else. `frame-ancestors 'none'` matters even on
+        loopback — a page in another tab must not be able to frame the
+        portfolio and read it.
+
+        **Caching.** A page or API response holds the decrypted portfolio, so
+        it is `no-store`: nothing of it is written to the browser's disk cache.
+        Static files are `no-cache`: kept, but revalidated by ETag on every
+        load. Without a header the browser guesses freshness from
+        Last-Modified, and served a stylesheet two releases old after an update.
         """
         response: Response = await call_next(request)
+        response.headers.setdefault(
+            "Cache-Control",
+            "no-cache" if request.url.path.startswith("/static/") else "no-store",
+        )
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self'; style-src 'self'; "
             "img-src 'self' data:; connect-src 'self'; font-src 'self'; "
-            "base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
         )
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
@@ -170,6 +204,13 @@ def create_app(
         """§15.3: report freshness so the UI can say "last updated" honestly
         rather than implying the data is live."""
         return health_snapshot(ledger, warehouse)
+
+    @app.get("/api/search")
+    async def search(
+        q: str = Query("", max_length=SEARCH_MAX_CHARS),
+    ) -> list[dict[str, Any]]:
+        """The masthead's suggestions: at most ten funds, one row each."""
+        return search_funds(warehouse, q) if q.strip() else []
 
     @app.get("/api/views/{view_id}")
     async def get_view(
@@ -240,7 +281,10 @@ def create_app(
     # last so `/api/*` always wins: a view named `views` could otherwise be
     # shadowed by the page router's `/view/{view_id}`.
     app.include_router(
-        make_router(ledger, warehouse, build_view, health_snapshot)
+        make_router(
+            ledger, warehouse, build_view, health_snapshot,
+            lambda q: search_funds(warehouse, q),
+        )
     )
     return app
 
@@ -252,4 +296,5 @@ __all__ = [
     "build_view",
     "create_app",
     "health_snapshot",
+    "search_funds",
 ]

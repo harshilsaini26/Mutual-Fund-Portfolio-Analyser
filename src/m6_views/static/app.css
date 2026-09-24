@@ -15,18 +15,58 @@
  * none of its point.
  */
 
+/*
+ * Tokens. Every colour below is one of these, so the dark theme is a second
+ * set of values rather than a second stylesheet. The neutrals lean slightly
+ * blue, toward the accent. Series and category hues are Okabe-Ito derived and
+ * darkened until white text reads on them (the treemap's labels).
+ */
 :root {
-  --ink: #1a1a1a;
-  --ink-soft: #53585e;
-  --rule: #d8dbdf;
+  color-scheme: light dark;
+  --ink: #16202a;
+  --ink-soft: #56606b;
+  --rule: #dde2e8;
   --bg: #ffffff;
-  --bg-soft: #f6f7f9;
-  --accent: #0072b2;
+  --bg-soft: #f3f5f8;
+  --accent: #0b6fa8;
   --warn-bg: #fdf6e3;
   --warn-rule: #d8b44a;
-  --gain: #009e73;
-  --loss: #d55e00;
+  --gain: #0f7a5a;
+  --loss: #b8480e;
   --synthetic: #9e9e9e;
+  --good: #1f6f4a;
+  --fair: #8a6100;
+  --weak: #8a2f1a;
+  --series-fund: #0b6fa8;
+  --series-bench: #b86e00;
+  --cat-1: #0b6fa8;
+  --cat-2: #1a8a6a;
+  --cat-3: #b8520e;
+  --cat-4: #8e5aa6;
+  --cat-5: #a8396b;
+  --cat-6: #5b6b7a;
+  --cat-7: #8a6d1f;
+  --cat-8: #2f7f86;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e4e9ee;
+    --ink-soft: #9ba7b3;
+    --rule: #2a333d;
+    --bg: #141a21;
+    --bg-soft: #0e1318;
+    --accent: #5fb0e6;
+    --warn-bg: #2b2412;
+    --warn-rule: #8a6d1f;
+    --gain: #43c29a;
+    --loss: #ff8a50;
+    --good: #5fcf98;
+    --fair: #e0b04a;
+    --weak: #ff8a6a;
+    --series-fund: #5fb0e6;
+    --series-bench: #f0a830;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -45,9 +85,11 @@ body {
   border-bottom: 1px solid var(--rule);
   padding: 0.75rem 1.25rem 0.5rem;
 }
-.masthead nav { display: flex; align-items: baseline; gap: 1.25rem; flex-wrap: wrap; }
-.brand { font-weight: 700; text-decoration: none; color: var(--ink); }
-.masthead ul { display: flex; gap: 1rem; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.masthead__top { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.masthead nav { margin-top: 0.55rem; }
+.brand { font-weight: 750; font-size: 1.05rem; text-decoration: none; color: var(--ink);
+         letter-spacing: -0.01em; }
+.masthead ul { display: flex; gap: 0.35rem 1rem; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
 .masthead a { color: var(--ink-soft); text-decoration: none; }
 .masthead a:hover { text-decoration: underline; }
 .masthead a[aria-current="page"] { color: var(--accent); font-weight: 600; }
@@ -85,9 +127,9 @@ main { max-width: 1100px; margin: 1.25rem auto; padding: 0 1.25rem; }
   padding: 0.15rem 0.45rem; border-radius: 3px; border: 1px solid currentColor;
   white-space: nowrap;
 }
-.badge--high { color: #1f6f4a; }
-.badge--medium { color: #8a6100; }
-.badge--low { color: #8a2f1a; border-style: dashed; }
+.badge--high { color: var(--good); }
+.badge--medium { color: var(--fair); }
+.badge--low { color: var(--weak); border-style: dashed; }
 
 /* --- caveats: never quiet ------------------------------------------------ */
 
@@ -105,17 +147,21 @@ main { max-width: 1100px; margin: 1.25rem auto; padding: 0 1.25rem; }
 .view__footer {
   border-top: 1px solid var(--rule);
   background: var(--bg-soft);
-  padding: 0.7rem 1.1rem;
-  font-size: 0.82rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.8rem;
   color: var(--ink-soft);
 }
+.view__source { margin: 0; }
+.view__source a { color: var(--accent); }
+.view__provenance summary { cursor: pointer; margin-top: 0.3rem; width: fit-content; }
+.view__provenance dl { margin-top: 0.45rem; }
 .view__footer dl { display: flex; flex-wrap: wrap; gap: 0.35rem 1.6rem; margin: 0; }
 .view__footer dt { font-weight: 600; display: inline; }
 .view__footer dt::after { content: ": "; }
 .view__footer dd { display: inline; margin: 0; }
 .view__footer div { white-space: nowrap; }
 .staleness { color: var(--ink-soft); }
-.truncated { color: #8a6100; font-weight: 600; }
+.truncated { color: var(--fair); font-weight: 600; }
 .view__export { margin: 0.5rem 0 0; }
 .view__export a { color: var(--accent); }
 
@@ -152,10 +198,10 @@ th { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; colo
   text-align: right; font-variant-numeric: tabular-nums;
 }
 /* Unreconciled rows carry the `!` marker as well as the tint. §10.3. */
-.row--unreconciled { background: #fdf6e3; }
+.row--unreconciled { background: var(--warn-bg); }
 .row--unaligned td { font-style: italic; }
 .flag {
-  color: #8a6100; font-weight: 700; border: none; text-decoration: none;
+  color: var(--fair); font-weight: 700; border: none; text-decoration: none;
   cursor: help; margin-left: 0.2rem;
 }
 .chart-table { margin-top: 1rem; }
@@ -171,9 +217,9 @@ th { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; colo
 /* Flow into missing mass is dashed as well as grey. */
 .link--synthetic { stroke: var(--synthetic); stroke-opacity: 0.4; stroke-dasharray: 5 3; }
 .node text { font-size: 10px; fill: var(--ink); paint-order: stroke;
-             stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+             stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
 .node--synthetic text { font-style: italic; }
-.node rect { stroke: #ffffff; stroke-width: 0.5; }
+.node rect { stroke: var(--bg); stroke-width: 0.5; }
 
 /* --- heatmap ------------------------------------------------------------- */
 
@@ -181,9 +227,11 @@ th { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; colo
 .heatmap svg { max-width: 100%; height: auto; }
 .heatmap .axis { font-size: 10px; fill: var(--ink-soft); }
 .heatmap .axis--row { text-anchor: end; }
-.cell rect { stroke: #ffffff; stroke-width: 2; }
-.cell--unaligned rect { stroke: #8a6100; }
-.cell__label { font-size: 11px; text-anchor: middle; fill: var(--ink);
+.cell rect { stroke: var(--bg); stroke-width: 2; }
+.cell--unaligned rect { stroke: var(--fair); }
+/* The ramp's fills are fixed light-to-mid blues in both themes, so the label
+   on them is fixed dark rather than following the theme's ink. */
+.cell__label { font-size: 11px; text-anchor: middle; fill: #16202a;
                font-variant-numeric: tabular-nums; }
 
 /* --- lorenz -------------------------------------------------------------- */
@@ -195,13 +243,108 @@ th { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; colo
 .axis-line { stroke: var(--rule); stroke-width: 1; }
 .lorenz .axis { font-size: 9px; fill: var(--ink-soft); }
 
+/* --- search -------------------------------------------------------------- */
+
+.search { position: relative; flex: 1 1 280px; max-width: 460px; }
+.search input {
+  width: 100%; font: inherit; color: var(--ink); background: var(--bg-soft);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 0.42rem 0.95rem;
+}
+.search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; background: var(--bg); }
+.search__suggest {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0;
+  list-style: none; margin: 0; padding: 0.3rem; background: var(--bg);
+  border: 1px solid var(--rule); border-radius: 10px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.14);
+}
+.search__suggest a, .search-results a {
+  display: flex; flex-direction: column; gap: 0.1rem; padding: 0.45rem 0.6rem;
+  border-radius: 7px; text-decoration: none; color: var(--ink);
+}
+.search__suggest a:hover, .search__suggest a:focus, .search-results a:hover {
+  background: var(--bg-soft); outline: none;
+}
+.search__meta, .search-results__meta { font-size: 0.78rem; color: var(--ink-soft); }
+.search__name, .search-results__name { font-weight: 600; }
+.search-page h1 { margin: 0 0 0.8rem; font-size: 1.5rem; }
+.search--page { max-width: 640px; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.search--page label { flex-basis: 100%; font-size: 0.85rem; color: var(--ink-soft); }
+.search--page input { flex: 1; }
+.search--page button {
+  font: inherit; border: 0; border-radius: 999px; padding: 0.42rem 1.1rem;
+  background: var(--accent); color: var(--bg); cursor: pointer;
+}
+.search-page__count { color: var(--ink-soft); }
+.search-results { list-style: none; padding: 0; margin: 0.5rem 0 0; max-width: 760px;
+                  background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; }
+.search-results li + li { border-top: 1px solid var(--rule); }
+
+/* --- the fund page ------------------------------------------------------- */
+
+.fund-page { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1.25rem; }
+.fund-page > * { grid-column: span 12; }
+.fund-page .view { margin-bottom: 0; }
+@media (min-width: 960px) {
+  .fund-page__panel--fund_returns, .fund-page__panel--fund_drawdown { grid-column: span 6; }
+}
+.fund-page__detail summary { cursor: pointer; color: var(--ink-soft); font-size: 0.9rem; }
+.fund-page__detail[open] summary { margin-bottom: 0.75rem; }
+
+.view__header--quiet { border-bottom: 0; padding-bottom: 0; justify-content: flex-end; }
+.fundcard__name { margin: 0; font-size: 1.75rem; line-height: 1.2; letter-spacing: -0.015em;
+                  text-wrap: balance; }
+.fundcard__sub { margin: 0.35rem 0 0; color: var(--ink-soft); }
+.fundcard__isin { font-size: 0.78rem; margin-left: 0.4rem; font-variant-numeric: tabular-nums;
+                  border: 1px solid var(--rule); border-radius: 4px; padding: 0.05rem 0.35rem; }
+.findings { list-style: none; padding: 0; margin: 1.1rem 0 0;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+.finding { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.75rem 0.85rem;
+           background: var(--bg-soft); border-radius: 10px; }
+.finding__symbol {
+  flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: 0.8rem; color: var(--bg);
+  background: var(--ink-soft);
+}
+.finding--ahead .finding__symbol { background: var(--gain); }
+.finding--behind .finding__symbol { background: var(--loss); }
+.finding__title { margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+                  color: var(--ink-soft); }
+.finding__text { margin: 0.15rem 0 0; font-weight: 600; line-height: 1.4; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+         gap: 0.6rem 1.25rem; margin: 1.1rem 0 0; }
+.facts dt { font-size: 0.75rem; color: var(--ink-soft); }
+.facts dd { margin: 0.1rem 0 0; }
+
+/* --- interactive charts -------------------------------------------------- */
+
+.headline { margin: 0 0 0.9rem; font-size: 1.02rem; max-width: 72ch; text-wrap: pretty; }
+.tabs { display: flex; gap: 0.35rem; margin: 0 0 0.6rem; flex-wrap: wrap; }
+.tab {
+  font-size: 0.82rem; text-decoration: none; color: var(--ink-soft);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 0.2rem 0.75rem;
+}
+.tab:hover { color: var(--ink); border-color: var(--ink-soft); }
+.tab[aria-current="true"] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.view[aria-busy="true"] .echarts { opacity: 0.5; }
+.echarts--several { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.5rem; }
+.echarts--several .echart--treemap { grid-column: 1 / -1; }
+@media (max-width: 720px) { .echarts--several { grid-template-columns: minmax(0, 1fr); } }
+.echart { margin: 0; min-width: 0; }
+.echart figcaption { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+                     color: var(--ink-soft); margin-bottom: 0.3rem; }
+.echart__canvas { width: 100%; height: 340px; }
+.echart--bar .echart__canvas { height: 300px; }
+.echart--donut .echart__canvas { height: 280px; }
+.echart--treemap .echart__canvas { height: 380px; }
+.echart--hbar .echart__canvas { height: 240px; }
+
 /* --- accessibility ------------------------------------------------------- */
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
-a:focus-visible, summary:focus-visible, details:focus-visible {
+a:focus-visible, summary:focus-visible, details:focus-visible, button:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 

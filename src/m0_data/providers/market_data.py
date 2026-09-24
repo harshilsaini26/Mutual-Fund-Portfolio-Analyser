@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import Protocol
 
 from src.common.contracts.entity import MergerLink, SchemeRef
-from src.common.contracts.market import IdcwEvent, NavPoint
+from src.common.contracts.market import IdcwEvent, IndexPoint, NavPoint
 from src.common.types import IndexId, Isin, Plan, SchemeId
 
 
@@ -84,3 +84,7 @@ class MarketDataProvider(Protocol):
     def benchmark_for(self, scheme_id: SchemeId) -> IndexId | None: ...
 
     def index_level(self, index_id: IndexId, on: date) -> Decimal | None: ...
+
+    def index_series(
+        self, index_id: IndexId, start: date, end: date
+    ) -> list[IndexPoint]: ...

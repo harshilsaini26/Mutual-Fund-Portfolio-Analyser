@@ -36,8 +36,14 @@ from fastapi.templating import Jinja2Templates
 from src.common.types import UserId
 from src.m6_views.builder import Scope
 from src.m6_views.envelope import ViewEnvelope
-from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY, catalogue
-from src.m6_views.render import FILTERS, chart_context, needs_sankey_script
+from src.m6_views.registry import FUND_PAGE, VIEW_DEFS, VIEW_REGISTRY, catalogue
+from src.m6_views.render import (
+    ECHART_SCRIPTS,
+    FILTERS,
+    chart_context,
+    needs_echarts,
+    needs_sankey_script,
+)
 from src.m6_views.states import error_envelope
 
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
@@ -47,11 +53,26 @@ STATIC = Path(__file__).resolve().parent.parent / "static"
 #: ends "Resist adding a fourth." Everything else is one click away in the nav.
 LANDING = ("portfolio_summary", "lookthrough_sankey", "overlap_heatmap")
 
+#: A search is a few words; anything longer is not a query anyone typed.
+SEARCH_MAX_CHARS = 80
+
 SANKEY_SCRIPTS = (
     '<script src="/static/vendor/d3.v7.min.js"></script>\n'
     '<script src="/static/vendor/d3-sankey.v0.12.3.min.js"></script>\n'
     '<script src="/static/sankey.js"></script>'
 )
+
+
+def chart_scripts(envelopes: list[ViewEnvelope]) -> str:
+    """The script tags a page's charts need, and none it does not."""
+    return "\n".join(
+        tags
+        for tags, needed in (
+            (SANKEY_SCRIPTS, needs_sankey_script(envelopes)),
+            (ECHART_SCRIPTS, needs_echarts(envelopes)),
+        )
+        if needed
+    )
 
 
 def templates() -> Jinja2Templates:
@@ -92,6 +113,7 @@ def make_router(
     warehouse: sqlite3.Connection,
     build: Any,
     health: Any,
+    search: Any,
 ) -> APIRouter:
     """`build` is `app.build_view` and `health` is `app.health_snapshot`, both
     passed in rather than imported.
@@ -142,9 +164,74 @@ def make_router(
             {
                 **_shell(user_id, as_of, active=""),
                 "panels": [safe_chart_context(env, scope) for env in envelopes],
-                "chart_scripts": (
-                    SANKEY_SCRIPTS if needs_sankey_script(envelopes) else ""
-                ),
+                "chart_scripts": chart_scripts(envelopes),
+            },
+        )
+
+    @router.get("/fund/{scheme_id}", response_class=HTMLResponse)
+    async def fund_page(
+        request: Request,
+        scheme_id: str,
+        user_id: str = Query("USER-01"),
+        as_of: date | None = None,
+        window: str | None = Query(None),
+    ) -> Any:
+        """One fund, every picture of it. `registry.FUND_PAGE`, top to bottom."""
+        scope = _scope(user_id, as_of, scheme_id)
+        params = {"window": window} if window else {}
+        envelopes = [
+            build(view_id, scope, params if view_id == "fund_growth" else {},
+                  ledger, warehouse)
+            for view_id in FUND_PAGE
+        ]
+        detail = build("fund_xray_header", scope, {}, ledger, warehouse)
+        head = envelopes[0]
+        name = head.payload.get("name") if head.state.value == "ok" else None
+        return engine.TemplateResponse(
+            request,
+            "fund.html",
+            {
+                **_shell(user_id, as_of, active=""),
+                "title": name or scheme_id,
+                "panels": [safe_chart_context(env, scope) for env in envelopes],
+                "detail": safe_chart_context(detail, scope),
+                "chart_scripts": chart_scripts([*envelopes, detail]),
+            },
+        )
+
+    @router.get("/fragment/{view_id}", response_class=HTMLResponse)
+    async def fragment(
+        request: Request,
+        view_id: str,
+        user_id: str = Query("USER-01"),
+        as_of: date | None = None,
+        scope_id: str | None = Query(None),
+        window: str | None = Query(None),
+    ) -> Any:
+        """One panel, for a period tab to swap in place. Same builder, macro and
+        partial as a full page, so the swapped panel cannot differ from it."""
+        if view_id not in VIEW_REGISTRY:
+            return HTMLResponse(status_code=404, content="")
+        scope = _scope(user_id, as_of, scope_id)
+        env = build(view_id, scope, {"window": window} if window else {},
+                    ledger, warehouse)
+        return engine.TemplateResponse(
+            request, "fragment.html", safe_chart_context(env, scope)
+        )
+
+    @router.get("/search", response_class=HTMLResponse)
+    async def search_page(
+        request: Request,
+        q: str = Query("", max_length=SEARCH_MAX_CHARS),
+        user_id: str = Query("USER-01"),
+    ) -> Any:
+        return engine.TemplateResponse(
+            request,
+            "search.html",
+            {
+                **_shell(user_id, None, active=""),
+                "query": q,
+                "hits": search(q) if q.strip() else [],
             },
         )
 
@@ -186,9 +273,7 @@ def make_router(
             {
                 **_shell(user_id, as_of, active=view_id),
                 **safe_chart_context(env, view_scope),
-                "chart_scripts": (
-                    SANKEY_SCRIPTS if needs_sankey_script([env]) else ""
-                ),
+                "chart_scripts": chart_scripts([env]),
             },
         )
 
@@ -197,9 +282,11 @@ def make_router(
 
 __all__ = [
     "LANDING",
+    "SEARCH_MAX_CHARS",
     "STATIC",
     "TEMPLATES",
     "chart_context",
+    "chart_scripts",
     "make_router",
     "safe_chart_context",
     "templates",

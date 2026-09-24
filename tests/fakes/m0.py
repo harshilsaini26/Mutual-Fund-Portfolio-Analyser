@@ -287,6 +287,19 @@ class FakeMarketDataProvider:
                 return as_decimal(row["level"])
         return None
 
+    def index_series(self, index_id: IndexId, start: date, end: date) -> list[IndexPoint]:
+        levels = (self._md.get("index_levels") or {}).get(index_id) or []
+        out = []
+        for row in levels:
+            level_date = as_date(row["level_date"])
+            level = as_decimal(row["level"])
+            assert level_date is not None and level is not None
+            if start <= level_date <= end:
+                out.append(
+                    IndexPoint(index_id=index_id, level_date=level_date, level=level)
+                )
+        return sorted(out, key=lambda p: p.level_date)
+
 
 class FakeFundDataProvider(FakeMarketDataProvider):
     """The holdings and classification surface, fixture-backed.
@@ -428,19 +441,6 @@ class FakeFundDataProvider(FakeMarketDataProvider):
         return factor
 
     # --- index / rates -----------------------------------------------------
-
-    def index_series(self, index_id: IndexId, start: date, end: date) -> list[IndexPoint]:
-        levels = (self._md.get("index_levels") or {}).get(index_id) or []
-        out = []
-        for row in levels:
-            level_date = as_date(row["level_date"])
-            level = as_decimal(row["level"])
-            assert level_date is not None and level is not None
-            if start <= level_date <= end:
-                out.append(
-                    IndexPoint(index_id=index_id, level_date=level_date, level=level)
-                )
-        return sorted(out, key=lambda p: p.level_date)
 
     def risk_free(self, on: date) -> Decimal | None:
         for row in self._store.table("market_data", "risk_free"):

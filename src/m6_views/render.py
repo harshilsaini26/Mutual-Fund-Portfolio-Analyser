@@ -46,7 +46,15 @@ CHART_TEMPLATES = {
     "sankey": "charts/sankey.html",
     "heatmap": "charts/heatmap.html",
     "lorenz": "charts/lorenz.html",
+    "echart": "charts/echart.html",
+    "fundcard": "charts/fundcard.html",
 }
+
+#: ECharts draws every `echart` view; `charts.js` hands it each payload.
+ECHART_SCRIPTS = (
+    '<script src="/static/vendor/echarts.v6.1.0.min.js"></script>\n'
+    '<script src="/static/charts.js"></script>'
+)
 
 
 # --- formatting filters ------------------------------------------------------
@@ -338,12 +346,26 @@ def chart_context(env: ViewEnvelope) -> dict[str, Any]:
         context["grid"] = heatmap_grid(env)
     elif chart_type == "lorenz":
         context["curve_path"] = lorenz_path(env)
+    elif chart_type == "echart":
+        # Only what the drawing needs: positions and the labels the reader sees.
+        # The table under the chart is rendered here, in Python, from `rows`.
+        context["payload_json"] = embeddable_json(
+            {"charts": env.payload.get("charts", [])}
+        )
     elif chart_type == "sankey":
         context["labels"] = sankey_labels(env)
         # Decimals stay strings across this boundary — §15.2. `sankey.js` parses
         # them only where a pixel width is being computed.
         context["payload_json"] = embeddable_json(env.payload)
     return context
+
+
+def needs_echarts(envelopes: list[ViewEnvelope]) -> bool:
+    """ECharts is 1.1 MB. It loads where a view draws with it and nowhere else."""
+    return any(
+        VIEW_DEFS[e.view_id].chart_type == "echart" and e.state.value == "ok"
+        for e in envelopes
+    )
 
 
 def needs_sankey_script(envelopes: list[ViewEnvelope]) -> bool:
@@ -356,6 +378,7 @@ def needs_sankey_script(envelopes: list[ViewEnvelope]) -> bool:
 
 __all__ = [
     "CHART_TEMPLATES",
+    "ECHART_SCRIPTS",
     "FILTERS",
     "chart_context",
     "embeddable_json",
@@ -363,6 +386,7 @@ __all__ = [
     "fmt_tile",
     "heatmap_grid",
     "lorenz_path",
+    "needs_echarts",
     "needs_sankey_script",
     "sankey_labels",
 ]

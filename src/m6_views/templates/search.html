@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Find a fund{% endblock %}
+
+{#
+  Search results without JavaScript. The masthead box suggests as you type
+  (`static/app.js`); pressing Enter lands here, and so does a reader with
+  scripts off. One row per fund, as the share class a reader most likely means.
+#}
+{% block content %}
+<section class="search-page">
+  <h1>Find a fund</h1>
+  <form class="search search--page" action="/search" method="get" role="search">
+    <label for="q-page">Fund name, or part of it</label>
+    <input id="q-page" name="q" type="search" value="{{ query }}" autocomplete="off"
+           placeholder="for example: parag parikh flexi">
+    <button type="submit">Search</button>
+  </form>
+  {% if query %}
+    {% if hits %}
+    <p class="search-page__count">{{ hits | length }} fund{{ '' if hits | length == 1 else 's' }} whose name holds every word of "{{ query }}".</p>
+    <ul class="search-results">
+      {% for hit in hits %}
+      <li><a href="{{ hit.url }}"><span class="search-results__name">{{ hit.name }}</span>
+          <span class="search-results__meta">{{ hit.detail }}</span></a></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="search-page__count">No fund in AMFI's list has a name holding every word of "{{ query }}". Fewer words, or a shorter spelling, may find it.</p>
+    {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

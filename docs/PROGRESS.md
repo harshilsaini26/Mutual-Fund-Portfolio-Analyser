@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-24 · 1,455 tests passing
+**Last updated:** 2026-09-24 · 1,556 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -168,6 +168,34 @@ percent from a portfolio through ordinary market movement; `basis` travels with
 the figure and V2 widens its tolerance to match. A 100x error still fails it by
 11,321%.
 
+## Looking up any fund
+
+```bash
+python -m jobs.serve     # then search for a fund by name at the top of any page
+```
+
+Every fund in AMFI's list has a page, `/fund/<ISIN>`, found by typing any words
+of its name (DECISIONS V1-70). It is pictures first, each with one plain
+sentence above it:
+
+- **the fund at a glance**: its name, house, category, launch date and size, and
+  three findings (against its benchmark, how steady, its worst fall);
+- **what Rs 10,000 became**, against the benchmark with dividends, over 1, 3 or
+  5 years or everything on record; the period tabs redraw that chart alone;
+- **returns by period**, fund beside benchmark;
+- **falls and recoveries**, how far below its last high it stood each day;
+- **consistency**, the return of every three-year stretch;
+- **what it owns**, as an asset-mix ring, a holdings treemap and bars by size
+  and sector, for the 200 schemes with a portfolio loaded.
+
+The charts are interactive (hover, zoom, series toggles) and the figures in them
+are formatted on the server: a tooltip says exactly what the CSV export says.
+The table of every statistic stays at the bottom, closed.
+
+A fund's pictures need its price history, and **207 of 1,834 active Direct
+Growth funds have three years of it loaded.** For the rest, each panel says
+what is missing. Loading the rest automatically is the next piece of work.
+
 ## Benchmarks
 
 ```bash
@@ -178,8 +206,8 @@ python -m jobs.fetch_index --held           # total-return levels for every one 
 python -m scripts.show_fund_xray --scheme INF179K01UT0
 ```
 
-The same figures are on the fund page, `/view/fund_xray_header?scope_id=<ISIN>`,
-linked from every scheme in Holdings. The page and the script both call M2's
+The same figures are on the fund page, `/fund/<ISIN>`, linked from every
+scheme in Holdings. The page and the script both call M2's
 `fund_windows`, so they cannot disagree; checked against HDFC Flexi Cap, they
 match to the digit (5y alpha 8.42%, beta 0.85).
 
@@ -217,7 +245,7 @@ The unit is the **scheme**, not the house. Kotak's August file carried 21 of its
 | **M0 data** | built — fetch, parse, resolve, validate, load |
 | **M1 ledger** | built — CAS parsing, FIFO lots, XIRR/TWRR, reconciliation |
 | **M3 look-through** | built — exposure, overlap, concentration, duplication, nested funds, marginal contribution |
-| **M6 views** | built — nine views (eight portfolio, one fund), CSV export, loopback API |
+| **M6 views** | built — fifteen views (eight portfolio, seven on the fund page), interactive charts, fund search, CSV export, loopback API |
 | M2 fund x-ray | partly built — return windows, risk statistics, rolling returns, Sharpe and Sortino, and alpha, beta, tracking error and capture against a total-return index |
 | M4 risk | specified, not built |
 | M5 market | specified, not built |
@@ -460,8 +488,21 @@ Ordered by what they cost.
 
 ## Next
 
-The coverage machinery is done. What is left is mostly not machinery. In
-order:
+The coverage machinery is done; the work now is making it usable by someone
+who has never heard of a look-through. In order (the plan agreed 2026-09-24):
+
+- **Price history for every fund, loaded automatically.** One-time download
+  of all ~1,800 active Direct Growth funds, kept current by the daily job;
+  then category peers (normalised category names), a rank on the fund page,
+  expense ratios from AMFI, and a risk-against-return picture of the category.
+- **Compare**: two to four funds side by side, with how much their portfolios
+  overlap.
+- **Your portfolio**: import a CAS statement in the browser rather than the
+  terminal; a home page of what you have, what it has returned, and what the
+  same money would be in the benchmark index; the Regular-plan cost in rupees;
+  the nine portfolio views gathered into two pages.
+
+Then the data work already planned:
 
 - **State development loans**, the next data fix found in the 2026-09-23
   research: an SDL's ISIN carries its state's code, observed one-to-one

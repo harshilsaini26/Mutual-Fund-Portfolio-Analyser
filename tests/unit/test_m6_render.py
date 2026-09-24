@@ -52,6 +52,14 @@ from src.m6_views.render import CHART_TEMPLATES
 from tests.conftest import migrated
 
 USER = "USER-01"
+#: The fixture fund's price history, in days, and its shape: a steady climb
+#: with one fall of a fifth that is later made good.
+FUND_DAYS = 1500
+
+
+def _price(t: int) -> Decimal:
+    dip = Decimal(20) if 600 <= t < 700 else Decimal(0)
+    return Decimal(100) + Decimal(t) / 10 - dip
 AS_OF = date(2026, 9, 4)
 JULY = date(2026, 7, 31)
 JUNE = date(2026, 6, 30)
@@ -134,16 +142,52 @@ def client(tmp_path: Path) -> TestClient:
         " VALUES (?, 'amfi_mcap', ?, '2026-06-30')",
         [("ACME", "large"), ("BETA", "mid")],
     )
-    # A NAV series for S1, so the fund page has something to show.
+    # Four years of prices for S1, with a fall and a recovery, beside a
+    # total-return benchmark: enough that every picture on the fund page draws
+    # (three-year stretches need three years and a quarter).
     warehouse.execute(
-        "INSERT INTO scheme (scheme_id, scheme_name, plan, option)"
-        " VALUES ('S1', 'Fund one', 'direct', 'growth')"
+        "INSERT INTO benchmark_index (index_id, index_name, is_total_return)"
+        " VALUES ('NSE:TEST_TRI', 'Test 50', 1)"
     )
+    warehouse.execute(
+        "INSERT INTO scheme (scheme_id, scheme_name, fund_name, plan, option,"
+        " sebi_category, benchmark_id, status)"
+        " VALUES ('S1', 'Fund one - Direct Growth', 'Fund One', 'direct',"
+        " 'growth', 'Equity Scheme - Flexi Cap Fund', 'NSE:TEST_TRI', 'active')"
+    )
+    prices = [
+        (AS_OF - timedelta(days=FUND_DAYS - t), _price(t)) for t in range(FUND_DAYS)
+    ]
     warehouse.executemany(
         "INSERT INTO nav_daily (scheme_id, nav_date, nav, nav_adj) VALUES (?,?,?,?)",
+        [("S1", d, v, v) for d, v in prices],
+    )
+    warehouse.executemany(
+        "INSERT INTO index_level (index_id, level_date, level) VALUES (?,?,?)",
+        [("NSE:TEST_TRI", d, v - 5) for d, v in prices],
+    )
+    # And S1's own portfolio in Zone A, for "What does this fund own?".
+    warehouse.execute(
+        "INSERT INTO raw_file (file_id, source_id, fetched_at, storage_path,"
+        " byte_size) VALUES ('f1', 'S5', '2026-08-01', '/x', 0)"
+    )
+    warehouse.execute(
+        "INSERT INTO holding_disclosure (scheme_id, as_of_date, revision,"
+        " source_file_id, row_count, unresolved_mv_pct, total_mv,"
+        " validation_status, ingested_at, is_current)"
+        " VALUES ('S1', ?, 1, 'f1', 3, 0, 100, 'ok', '2026-08-01', 1)",
+        (JULY,),
+    )
+    warehouse.executemany(
+        "INSERT INTO holding (scheme_id, as_of_date, revision, row_number,"
+        " issuer_id, instrument_raw_name, market_value, pct_normalised,"
+        " instrument_class, reported_sector, resolution_method, source_file_id,"
+        " ingested_at, is_current)"
+        " VALUES ('S1', ?, 1, ?, ?, ?, 1, ?, ?, ?, 'isin', 'f1', '2026-08-01', 1)",
         [
-            ("S1", AS_OF - timedelta(days=i), Decimal(100 - i), Decimal(100 - i))
-            for i in range(60)
+            (JULY, 1, "ACME", "Acme", Decimal("60"), "equity", "Industrials"),
+            (JULY, 2, "BETA", "Beta", Decimal("30"), "equity", "Banks"),
+            (JULY, 3, "__CASH__", "Cash", Decimal("10"), "cash", None),
         ],
     )
     warehouse.commit()
@@ -193,7 +237,11 @@ def client(tmp_path: Path) -> TestClient:
 
 QS = f"?user_id={USER}&as_of={AS_OF.isoformat()}"
 #: Views scoped to one entity rather than the portfolio, and the entity.
-SCOPED = {"fund_xray_header": "&scope_id=S1"}
+SCOPED = {
+    view_id: "&scope_id=S1"
+    for view_id, view in VIEW_DEFS.items()
+    if view.default_scope == "scheme"
+}
 
 
 def page(client: TestClient, view_id: str) -> str:
@@ -271,10 +319,9 @@ def test_every_view_offers_its_csv(client: TestClient, view_id: str) -> None:
 
 
 def test_holdings_link_each_scheme_to_its_fund_page(client: TestClient) -> None:
-    """§12.2's one built drill-down. Escaped: `&amp;` inside the attribute."""
+    """§12.2's drill-down: a holding opens its fund's page."""
     html = page(client, "fund_list")
-    assert f'href="/view/fund_xray_header?user_id={USER}&amp;as_of=' in html
-    assert "&amp;scope_id=S1" in html
+    assert f'href="/fund/S1?user_id={USER}&amp;as_of=' in html
 
 
 def test_a_staleness_figure_is_rendered_in_words(client: TestClient) -> None:
@@ -410,10 +457,16 @@ def test_the_landing_surface_is_three_questions(client: TestClient) -> None:
     assert html.count('class="view view--') == 3
 
 
-def test_the_nav_reaches_every_view(client: TestClient) -> None:
-    html = client.get(f"/{QS}").text
-    for view_id in VIEW_REGISTRY:
-        assert f"/view/{view_id}" in html
+def test_every_view_is_reachable(client: TestClient) -> None:
+    """The portfolio's views from the nav; a fund's views on its page, where
+    there is a fund for them to show."""
+    nav = client.get(f"/{QS}").text
+    fund = client.get("/fund/S1" + QS).text
+    for view_id, view in VIEW_DEFS.items():
+        if view.default_scope == "portfolio":
+            assert f"/view/{view_id}" in nav, view_id
+        else:
+            assert f'data-view-id="{view_id}"' in fund, view_id
 
 
 def test_d3_is_vendored_not_fetched_from_a_cdn(client: TestClient) -> None:

@@ -1,0 +1,10 @@
+{#
+  One panel and nothing around it: what a period tab fetches to swap a single
+  chart without reloading the page. The same macro and partial as a full page,
+  so a swapped panel carries the same caveats, footer and export as the one it
+  replaces.
+#}
+{% import "macros.html" as vc %}
+{% call vc.view_container(env, expanded=False) %}
+  {% include chart_template %}
+{% endcall %}

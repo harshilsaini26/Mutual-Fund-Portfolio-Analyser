@@ -74,6 +74,7 @@ def test_grouping_survives_a_zero_precision_request() -> None:
     "value,expected",
     [
         ("15000000", "₹1.50 Cr"),
+        ("1017929885000", "₹1,01,792.99 Cr"),
         ("250000", "₹2.50 L"),
         ("5000", "₹5.00 K"),
         ("-250000", "-₹2.50 L"),

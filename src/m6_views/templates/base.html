@@ -21,10 +21,26 @@
 </head>
 <body>
 <header class="masthead">
-  <nav>
+  <div class="masthead__top">
     <a class="brand" href="/">Look-through</a>
+    {#
+      Search is the way into any fund, held or not. Without JavaScript this is
+      an ordinary form to `/search`; `static/app.js` adds suggestions as you type.
+    #}
+    <form class="search" action="/search" method="get" role="search">
+      <label class="sr-only" for="q">Find a fund</label>
+      <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Find a fund by name" data-suggest="/api/search">
+      <ul class="search__suggest" hidden></ul>
+    </form>
+  </div>
+  <nav aria-label="Your portfolio">
     <ul>
-      {% for view in catalogue %}
+      {#
+        The portfolio's views. A fund's views live on its own page, reached by
+        search or from a holding -- a link to one here would have no fund to show.
+      #}
+      {% for view in catalogue if view.default_scope == 'portfolio' %}
       <li><a href="/view/{{ view.view_id }}{{ qs }}"
              {% if view.view_id == active %}aria-current="page"{% endif %}
           >{{ view.view_name }}</a></li>
@@ -54,6 +70,7 @@
     Every figure traces to an archived source file.
   </p>
 </footer>
+<script src="/static/app.js" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

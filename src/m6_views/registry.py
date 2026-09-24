@@ -132,7 +132,7 @@ VIEW_DEFS: dict[str, ViewDef] = {
         chart_type="table",
         default_scope="portfolio",
         requires_fields=["m3.marginal", "m3.summary"],
-        drill_targets={"scheme": "fund_xray_header"},
+        drill_targets={"scheme": "fund_header"},
         sort_order=45,
     ),
     "fund_list": ViewDef(
@@ -146,17 +146,88 @@ VIEW_DEFS: dict[str, ViewDef] = {
         drill_targets={"scheme": "lookthrough_sankey"},
         sort_order=60,
     ),
+    # --- the fund page (`/fund/{isin}`), one view per picture --------------
+    "fund_header": ViewDef(
+        view_id="fund_header",
+        view_name="Fund at a glance",
+        module_source="m2",
+        question="What is this fund, and how has it done?",
+        chart_type="fundcard",
+        default_scope="scheme",
+        requires_fields=["m0.scheme_facts", "m2.fund_windows", "m2.rolling_path"],
+        sort_order=70,
+    ),
+    "fund_growth": ViewDef(
+        view_id="fund_growth",
+        view_name="Growth of Rs 10,000",
+        module_source="m2",
+        question="What would ₹10,000 have become?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m2.price_history", "m2.growth_path"],
+        sort_order=71,
+    ),
+    "fund_returns": ViewDef(
+        view_id="fund_returns",
+        view_name="Returns by period",
+        module_source="m2",
+        question="How much has it returned, against its benchmark?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m2.fund_windows"],
+        sort_order=72,
+    ),
+    "fund_drawdown": ViewDef(
+        view_id="fund_drawdown",
+        view_name="Falls and recoveries",
+        module_source="m2",
+        question="How far has it fallen, and how long did it take to recover?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m2.price_history", "m2.drawdown_path"],
+        sort_order=73,
+    ),
+    "fund_consistency": ViewDef(
+        view_id="fund_consistency",
+        view_name="Consistency",
+        module_source="m2",
+        question="Was the return steady, or a few good years?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m2.price_history", "m2.rolling_path"],
+        sort_order=74,
+    ),
+    "fund_portfolio": ViewDef(
+        view_id="fund_portfolio",
+        view_name="What it owns",
+        module_source="m3",
+        question="What does this fund own?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m3.fund_composition"],
+        sort_order=75,
+    ),
     "fund_xray_header": ViewDef(
         view_id="fund_xray_header",
-        view_name="Fund x-ray",
+        view_name="Every figure",
         module_source="m2",
         question="How has this fund done, and against what?",
         chart_type="table",
         default_scope="scheme",
         requires_fields=["m2.fund_windows"],
-        sort_order=70,
+        sort_order=79,
     ),
 }
+
+#: The fund page, top to bottom. `fund_xray_header` is its detail, collapsed.
+FUND_PAGE = (
+    "fund_header",
+    "fund_growth",
+    "fund_returns",
+    "fund_drawdown",
+    "fund_consistency",
+    "fund_portfolio",
+)
 
 BuilderT = TypeVar("BuilderT", bound=ViewBuilder)
 
@@ -246,6 +317,7 @@ def catalogue() -> list[dict[str, Any]]:
 
 
 __all__ = [
+    "FUND_PAGE",
     "VIEW_DEFS",
     "VIEW_REGISTRY",
     "ViewDef",

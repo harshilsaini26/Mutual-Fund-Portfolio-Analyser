@@ -29,9 +29,8 @@ held can start after it, and the window is only as long as the prices are.
 
 from __future__ import annotations
 
-from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from statistics import median
 from typing import NamedTuple
@@ -41,6 +40,7 @@ from src.common.decimals import RATE_Q, annualise
 from src.common.types import IndexId, SchemeId
 from src.m0_data.config import risk_free_on
 from src.m0_data.providers.market_data import MarketDataProvider
+from src.m2_fund.paths import price_history, rolling_windows
 from src.m2_fund.risk import (
     Drawdown,
     aligned,
@@ -322,25 +322,18 @@ def rolling_returns(
         return None
     _reject_non_positive(navs)
 
-    dates = [p.nav_date for p in navs]
-    horizon, step = timedelta(days=horizon_days), timedelta(days=step_days)
-    rets: list[Decimal] = []
-    start = dates[0]
-    while start + horizon <= dates[-1]:
-        # The series is sorted, so both ends are a binary search rather than
-        # the linear scan M1's nav_on_or_before does over a dict.
-        i = bisect_left(dates, start)
-        j = bisect_right(dates, start + horizon) - 1
-        # STRICTLY less: i == j means both ends resolve to the SAME price, so
-        # the ratio is forced to 1.0 and the window reports exactly 0.00% --
-        # a fabricated figure. On a series sparse relative to the horizon every
-        # window can land that way: points every 150 days rising 100 -> 2050
-        # reported 0.00% across all 49 windows before this.
-        if i < j:
-            rets.append(
-                annualise(navs[j].nav / navs[i].nav, horizon_days).quantize(RATE_Q)
-            )
-        start += step
+    # The windows are walked by `paths.rolling_windows`, which the fund page's
+    # rolling chart shares. It yields only i < j: i == j means both ends
+    # resolve to the SAME price, so the ratio is forced to 1.0 and the window
+    # reports exactly 0.00% -- a fabricated figure. On a series sparse relative
+    # to the horizon every window can land that way: points every 150 days
+    # rising 100 -> 2050 reported 0.00% across all 49 windows before that guard.
+    rets = [
+        annualise(navs[j].nav / navs[i].nav, horizon_days).quantize(RATE_Q)
+        for i, j in rolling_windows(
+            [p.nav_date for p in navs], horizon_days, step_days
+        )
+    ]
 
     if len(rets) < MIN_ROLLING_WINDOWS:
         return None
@@ -382,7 +375,7 @@ def fund_windows(
     md: MarketDataProvider, scheme_id: SchemeId, as_of: date
 ) -> FundWindows:
     """Windows ending at the last NAV on or before `as_of`."""
-    navs = md.nav_series(scheme_id, date.min, as_of, adjusted=True)
+    navs, by_date, index_id = price_history(md, scheme_id, as_of)
     if len(navs) < 2:
         raise NothingToCompute(
             f"{len(navs)} NAV points for {scheme_id} on or before {as_of}, so "
@@ -401,15 +394,9 @@ def fund_windows(
         )
 
     end = navs[-1].nav_date
-    index_id = md.benchmark_for(scheme_id)
     # One level per NAV date: a comparison pairs same-day prices, so a level
     # on a day the fund did not price is never used.
-    # ponytail: one query per NAV date; a range read if a page is ever slow.
-    levels = [
-        (p.nav_date, level)
-        for p in navs
-        if index_id and (level := md.index_level(index_id, p.nav_date)) is not None
-    ]
+    levels = list(by_date.items())
     windows: dict[str, ReturnWindow | None] = {
         key: compute_return_window(
             [p for p in navs if p.nav_date >= window_start(end, key)],

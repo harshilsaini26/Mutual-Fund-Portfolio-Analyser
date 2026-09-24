@@ -23,7 +23,7 @@ from __future__ import annotations
 import ast
 import re
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -145,6 +145,27 @@ def populated(tmp_path: Path) -> Deps:
         AS_OF,
     )
     save_lookthrough(ledger, USER, AS_OF, result, {S1: JULY})
+    # Four years of prices and a benchmark, so the fund page's views build their
+    # `ok` strings -- headlines and findings -- rather than only empty states.
+    warehouse.execute(
+        "INSERT INTO benchmark_index (index_id, index_name, is_total_return)"
+        " VALUES ('NSE:TEST_TRI', 'Test 50', 1)"
+    )
+    warehouse.execute(
+        "INSERT INTO scheme (scheme_id, scheme_name, fund_name, plan, option,"
+        " benchmark_id, status) VALUES ('S1', 'Fund one', 'Fund One', 'direct',"
+        " 'growth', 'NSE:TEST_TRI', 'active')"
+    )
+    days = [AS_OF - timedelta(days=i) for i in range(1500)]
+    warehouse.executemany(
+        "INSERT INTO nav_daily (scheme_id, nav_date, nav, nav_adj) VALUES (?,?,?,?)",
+        [("S1", d, Decimal(2000 - i), Decimal(2000 - i)) for i, d in enumerate(days)],
+    )
+    warehouse.executemany(
+        "INSERT INTO index_level (index_id, level_date, level) VALUES (?,?,?)",
+        [("NSE:TEST_TRI", d, Decimal(3000 - 2 * i)) for i, d in enumerate(days)],
+    )
+    warehouse.commit()
     return Deps.over(ledger, warehouse)
 
 
@@ -155,18 +176,32 @@ def all_user_facing_strings(deps: Deps) -> list[str]:
     for view in VIEW_DEFS.values():
         out.extend([view.question, view.view_name])
 
-    scope = Scope(user_id=USER, as_of=AS_OF, scope_type="portfolio")
+    whole = Scope(user_id=USER, as_of=AS_OF, scope_type="portfolio")
+    fund = Scope(user_id=USER, as_of=AS_OF, scope_type="scheme", scope_id=str(S1))
     for view_id in VIEW_REGISTRY:
-        env = VIEW_REGISTRY[view_id](deps).build(scope, {})
-        out.extend(env.caveats)
-        if env.state_reason:
-            out.append(env.state_reason)
-        for key in ("tiles", "columns"):
-            for item in env.payload.get(key, []):
-                out.append(str(item.get("label", "")))
-        if "definition" in env.payload:
-            out.append(str(env.payload["definition"]))
+        for scope in (whole, fund):
+            env = VIEW_REGISTRY[view_id](deps).build(scope, {})
+            out.extend(env.caveats)
+            if env.state_reason:
+                out.append(env.state_reason)
+            for key in ("tiles", "columns", "facts"):
+                for item in env.payload.get(key, []):
+                    out.append(str(item.get("label", "")))
+            for key in ("definition", "headline", "name", "subtitle"):
+                if key in env.payload:
+                    out.append(str(env.payload[key]))
+            for finding in env.payload.get("findings", []):
+                out.extend([finding["title"], finding["text"]])
+            for chart in env.payload.get("charts", []):
+                out.append(str(chart.get("title", "")))
     return [s for s in out if s]
+
+
+def test_the_fund_views_contribute_their_prose(populated: Deps) -> None:
+    """The lint only proves something if the headlines are in what it reads."""
+    strings = all_user_facing_strings(populated)
+    assert any(s.startswith("₹10,000 put into Fund One") for s in strings)
+    assert any("ahead of its benchmark" in s.lower() for s in strings)
 
 
 def test_there_are_strings_to_lint(populated: Deps) -> None:

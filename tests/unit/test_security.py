@@ -254,6 +254,27 @@ def test_every_response_carries_a_content_security_policy(
     assert headers.get("referrer-policy") == "no-referrer"
 
 
+@pytest.mark.parametrize(
+    ("path", "rule"),
+    [
+        ("/", "no-store"),
+        ("/view/lookthrough_sankey", "no-store"),
+        ("/api/views/portfolio_summary", "no-store"),
+        ("/api/search?q=acme", "no-store"),
+        ("/static/app.css", "no-cache"),
+        ("/static/vendor/echarts.v6.1.0.min.js", "no-cache"),
+    ],
+)
+def test_the_portfolio_never_reaches_the_disk_cache(
+    tmp_path: Path, path: str, rule: str
+) -> None:
+    """A page or API response carries the decrypted portfolio: `no-store`.
+    A static file is kept but revalidated, so an update is never masked by a
+    stale stylesheet the browser guessed was still fresh."""
+    client = _client(tmp_path, "Acme Ltd.")
+    assert client.get(path).headers.get("cache-control") == rule
+
+
 def test_the_csp_still_allows_the_vendored_d3(tmp_path: Path) -> None:
     """`script-src 'self'` must not block the scripts the page actually needs —
     a policy that breaks the flagship chart would be reverted within a day."""

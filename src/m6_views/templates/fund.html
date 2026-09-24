@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "macros.html" as vc %}
+{% block title %}{{ title }}{% endblock %}
+
+{#
+  The fund page, `/fund/{isin}`. `registry.FUND_PAGE` in reading order: what
+  the fund is and three findings, then the pictures -- growth, returns, falls,
+  consistency, holdings -- and every figure in one table at the end, closed.
+
+  Each panel is its own envelope, so one that fails degrades alone (§4.9), and
+  each carries its own provenance footer and export (§2.2, §2.5).
+#}
+{% block content %}
+<div class="fund-page">
+{% for panel in panels %}
+  {% with env = panel.env,
+          labels = panel.labels,
+          grid = panel.grid,
+          curve_path = panel.curve_path,
+          payload_json = panel.payload_json %}
+  <div class="fund-page__panel fund-page__panel--{{ env.view_id }}">
+    {% call vc.view_container(env, expanded=False, quiet=(env.view_id == 'fund_header')) %}
+      {% include panel.chart_template %}
+    {% endcall %}
+  </div>
+  {% endwith %}
+{% endfor %}
+{% if detail %}
+<details class="fund-page__detail">
+  <summary>Every figure for this fund, in one table</summary>
+  {% with env = detail.env, payload_json = detail.payload_json %}
+    {% call vc.view_container(env, expanded=False) %}
+      {% include detail.chart_template %}
+    {% endcall %}
+  {% endwith %}
+</details>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}{{ chart_scripts | safe }}{% endblock %}
