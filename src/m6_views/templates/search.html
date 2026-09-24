@@ -9,7 +9,7 @@
 {% block content %}
 <section class="search-page">
   <h1>Find a fund</h1>
-  <form class="search search--page" action="/search" method="get" role="search">
+  <form class="search search--page" action="{{ root }}/search" method="get" role="search">
     <label for="q-page">Fund name, or part of it</label>
     <input id="q-page" name="q" type="search" value="{{ query }}" autocomplete="off"
            placeholder="for example: parag parikh flexi">

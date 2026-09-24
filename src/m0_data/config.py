@@ -56,9 +56,45 @@ def inbox_root() -> Path:
     return Path(env) if env else data_root() / "inbox"
 
 
+def settings_path() -> Path:
+    """Answers `jobs.setup` asked for once, kept with the data it fetched.
+
+    Under `data/`, which is gitignored in full, so a contact address typed into
+    the setup never reaches the repository.
+    """
+    return data_root() / "settings.yaml"
+
+
+def settings() -> dict[str, Any]:
+    path = settings_path()
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as fh:
+        loaded = yaml.safe_load(fh) or {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def save_setting(key: str, value: str) -> None:
+    # Read before opening for writing: "w" empties the file, and the others
+    # were lost the first time a second setting was saved.
+    merged = {**settings(), key: value}
+    path = settings_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        yaml.safe_dump(merged, fh)
+
+
 def contact_email() -> str:
-    """Goes into the User-Agent. §2.3 requires an honest, contactable agent."""
-    return os.environ.get("MF_CONTACT_EMAIL", "unset@example.invalid")
+    """Goes into the User-Agent. §2.3 requires an honest, contactable agent.
+
+    The environment first, then the answer `jobs.setup` saved, so a one-command
+    start asks once rather than needing a variable in every shell.
+    """
+    return (
+        os.environ.get("MF_CONTACT_EMAIL")
+        or str(settings().get("contact_email") or "")
+        or "unset@example.invalid"
+    )
 
 
 def load_sources(path: Path = SOURCES_YAML) -> dict[str, Any]:

@@ -351,3 +351,17 @@ a:focus-visible, summary:focus-visible, details:focus-visible, button:focus-visi
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* --- the public copy (DECISIONS V1-72) ------------------------------------ */
+
+.public-note a { color: var(--accent); }
+.explorer h1 { margin: 0 0 0.5rem; font-size: 1.6rem; letter-spacing: -0.01em; }
+.explorer__lede { color: var(--ink-soft); max-width: 68ch; margin: 0 0 1.25rem; }
+.explorer__group { margin: 0 0 0.6rem; }
+.explorer__group summary {
+  cursor: pointer; font-weight: 600; padding: 0.55rem 0.8rem;
+  background: var(--bg); border: 1px solid var(--rule); border-radius: 10px;
+}
+.explorer__group[open] summary { border-radius: 10px 10px 0 0; }
+.explorer__group .search-results { margin: 0; border-top: 0; border-radius: 0 0 10px 10px; }
+.explorer__count { font-weight: 400; color: var(--ink-soft); margin-left: 0.35rem; }

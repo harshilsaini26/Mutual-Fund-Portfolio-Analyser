@@ -118,14 +118,29 @@ recomputes the reference portfolio without importing any of the code it checks.
 
 ## Getting started
 
-Python 3.11+, and SQLCipher for the encrypted ledger: `apt install libsqlcipher-dev` on
-Debian/Ubuntu, `brew install sqlcipher` on macOS.
-
 ```bash
 git clone https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.git
 cd Mutual-Fund-Portfolio-Analyser
+python start.py
+```
+
+That is all of it. `start.py` makes a private Python environment in `.venv`, installs
+the pinned dependencies, loads market data from its public sources, and opens the portal
+at `http://127.0.0.1:8765`. The first run takes a few minutes, then about 70 more for
+NSE's index history, and resumes where it stopped if interrupted; later starts refresh
+today's prices in seconds. It asks once for an email to send as the `From:` header on
+its requests, and keeps it in `data/`, which is never committed.
+
+Search any fund by name straight away. Your own portfolio appears once you import a CAS
+statement (below). Needs Python 3.11+; on Linux or macOS the encrypted ledger may also
+need SQLCipher (`apt install libsqlcipher-dev`, `brew install sqlcipher`).
+
+### Doing it by hand
+
+```bash
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv/Scripts/activate
 pip install -e ".[dev,cas]" -c requirements.lock
+python -m jobs.setup --list                          # what start.py runs, and what is done
 ```
 
 `requirements.lock` pins the whole dependency graph, transitive packages included.
@@ -180,6 +195,20 @@ No statement to hand? `python -m scripts.show_lookthrough --equal 1000000` weigh
 disclosed scheme equally to show the shape of the output. It labels itself illustrative
 and refuses to save anything.
 
+### The public fund explorer
+
+```bash
+python -m jobs.publish_site            # build it into site/; nothing leaves the machine
+python -m jobs.publish_site --push     # publish it to the gh-pages branch
+```
+
+A static copy of the fund pages for GitHub Pages, served at
+`https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Analyser/` once Pages is set to
+deploy from the `gh-pages` branch (Settings → Pages). It carries AMFI's prices and fund
+houses' own disclosures, and nothing else: NSE's index levels are licensed for personal
+use, so benchmark comparisons stay in the self-hosted app, and the build opens no
+personal ledger at all. Nothing is published unless you run `--push`.
+
 ### Configuration
 
 | Variable | Default | What it does |
@@ -199,7 +228,8 @@ ledger, created readable only by you, which refuses to open without a key rather
 falling back to plain text. A new ledger's key must be at least 12 characters and is typed
 twice. Market data — NAVs, disclosures, indices — is public and kept
 separately. There is no account, no telemetry and no server beyond the one you start on
-your own machine; the single JavaScript library is vendored with a recorded checksum
+your own machine (the optional public explorer publishes fund-level public data only,
+and only when you run it); the single JavaScript library is vendored with a recorded checksum
 rather than loaded from a CDN.
 
 **Polite by construction.** Every request is rate-limited per site, respects
@@ -222,7 +252,7 @@ known vulnerabilities.
 ## Quality gate
 
 ```bash
-python -m pytest -q                             # 1,563 tests, hermetic, no network
+python -m pytest -q                             # 1,577 tests, hermetic, no network
 python -m ruff check src/ tests/ scripts/ jobs/
 python -m mypy                                  # strict
 python -m scripts.verify_v0_ledger --check      # the independent ledger verifier

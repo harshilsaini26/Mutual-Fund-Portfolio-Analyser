@@ -116,6 +116,11 @@ def health_snapshot(
     }
 
 
+def _word(value: str | None) -> str:
+    """A plan or option as a reader writes it; AMFI's "unknown" is left out."""
+    return "" if not value or value == "unknown" else value.title()
+
+
 def search_funds(warehouse: sqlite3.Connection, query: str) -> list[dict[str, Any]]:
     """Funds whose name holds every word of `query`, one row per fund, with
     the link to its page. Under the lock, like every other database use."""
@@ -126,9 +131,7 @@ def search_funds(warehouse: sqlite3.Connection, query: str) -> list[dict[str, An
             "scheme_id": str(h.scheme_id),
             "name": h.name,
             "detail": " · ".join(
-                x
-                for x in (h.category, (h.plan or "").title(), (h.option or "").title())
-                if x
+                x for x in (h.category, _word(h.plan), _word(h.option)) if x
             ),
             "url": f"/fund/{quote(str(h.scheme_id), safe='')}",
         }

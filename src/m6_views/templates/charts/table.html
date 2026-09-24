@@ -35,7 +35,7 @@
           <abbr class="flag" title="This folio did not reconcile against the statement's own closing balance.">!</abbr>
           {% endif %}
         {% elif column.key == 'scheme_id' %}
-          <a href="/fund/{{ row.scheme_id | urlencode }}{{ qs }}">{{ row.scheme_id }}</a>
+          <a href="{{ root }}/fund/{{ row.scheme_id | urlencode }}{{ qs }}">{{ row.scheme_id }}</a>
         {% else %}
           {{ {'value': row[column.key], 'kind': column.kind} | fmt_cell }}
         {% endif %}

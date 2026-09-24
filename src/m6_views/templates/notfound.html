@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Not found{% endblock %}
+
+{% block content %}
+<section class="explorer">
+  <h1>That page is not here</h1>
+  <p class="explorer__lede">
+    The fund may have been renamed, or it has too little price history to have a
+    page. Search for it by name above, or see <a href="{{ root }}/">every fund</a>.
+  </p>
+</section>
+{% endblock %}

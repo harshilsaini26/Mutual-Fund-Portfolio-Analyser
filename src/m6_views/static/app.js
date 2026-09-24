@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  var input = document.querySelector("input[data-suggest]");
+  var input = document.querySelector("input[data-suggest], input[data-index]");
   if (!input) return;
   var list = input.parentNode.querySelector(".search__suggest");
   var timer = null;
@@ -41,11 +41,50 @@
     input.setAttribute("aria-expanded", String(hits.length > 0));
   }
 
+  // The public copy has no server (DECISIONS V1-72): it ships every fund in
+  // search.json, and this matches it here by the server's rules -- every word
+  // typed must appear, the words in the order typed rank first, then names
+  // starting with the first word, then shorter names.
+  var index = null;
+
+  function words(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ")
+      .filter(Boolean).slice(0, 6);
+  }
+
+  function local(query) {
+    var typed = words(query);
+    var phrase = typed.join(" ");
+    return index
+      .map(function (hit) { return { hit: hit, name: words(hit.name).join(" ") }; })
+      .filter(function (c) {
+        return typed.every(function (w) { return c.name.indexOf(w) !== -1; });
+      })
+      .sort(function (a, b) {
+        var keyA = [a.name.indexOf(phrase) === -1, a.name.indexOf(typed[0]) !== 0, a.name.length];
+        var keyB = [b.name.indexOf(phrase) === -1, b.name.indexOf(typed[0]) !== 0, b.name.length];
+        for (var i = 0; i < 3; i++) {
+          if (keyA[i] !== keyB[i]) return keyA[i] < keyB[i] ? -1 : 1;
+        }
+        return a.name < b.name ? -1 : 1;
+      })
+      .slice(0, 10)
+      .map(function (c) { return c.hit; });
+  }
+
   function suggest() {
     var query = input.value.trim();
     if (query.length < 2) { close(); return; }
     if (query === asked) return;
     asked = query;
+    var bundled = input.getAttribute("data-index");
+    if (bundled) {
+      var ready = index ? Promise.resolve() : fetch(bundled)
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (all) { index = all; });
+      ready.then(function () { if (query === asked) show(local(query)); }).catch(close);
+      return;
+    }
     fetch(input.getAttribute("data-suggest") + "?q=" + encodeURIComponent(query), {
       headers: { Accept: "application/json" },
     })

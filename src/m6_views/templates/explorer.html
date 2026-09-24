@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Mutual fund explorer{% endblock %}
+
+{#
+  The public copy's front page (DECISIONS V1-72). The masthead's box finds a
+  fund as you type; this list is every published fund, by category -- the way
+  in with JavaScript off, and a way to browse with it on.
+#}
+{% block content %}
+<section class="explorer">
+  <h1>Mutual fund explorer</h1>
+  <p class="explorer__lede">
+    {{ count }} Indian mutual funds, each with what ₹10,000 became, its returns by
+    period, its falls and recoveries, how steady it has been, and what it owns.
+    Type a fund's name in the box above, or pick one below.
+  </p>
+  {% for category, funds in categories %}
+  <details class="explorer__group">
+    <summary>{{ category }} <span class="explorer__count">{{ funds | length }}</span></summary>
+    <ul class="search-results">
+      {% for fund in funds %}
+      <li><a href="{{ root }}/fund/{{ fund.scheme_id }}/">
+        <span class="search-results__name">{{ fund.name }}</span>
+        <span class="search-results__meta">{{ fund.detail }}</span></a></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endfor %}
+</section>
+{% endblock %}

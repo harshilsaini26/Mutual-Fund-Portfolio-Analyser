@@ -51,6 +51,20 @@ SIZE_NAMES = {
 }
 
 
+#: What a fund page says where the public copy leaves the benchmark out. The
+#: public copy's market data withholds index levels (`index_levels_withheld`),
+#: because NSE licenses them for personal use (DECISIONS V1-72); "no benchmark
+#: on record" would be untrue there, so the builders say this instead.
+INDEX_WITHHELD = (
+    "Benchmark comparisons are left out of this public copy: the index data is "
+    "licensed for personal use. The self-hosted app shows them."
+)
+
+
+def withholds_index(market: Any) -> bool:
+    return bool(getattr(market, "index_levels_withheld", False))
+
+
 #: The empty state for a fund page opened with no fund.
 NO_FUND = (
     "No fund chosen. Search for one by name at the top of the page, or open "
@@ -116,6 +130,7 @@ __all__ = [
     "CLASS_NAMES",
     "CLASS_PHRASES",
     "DEFAULT_WINDOW",
+    "INDEX_WITHHELD",
     "NO_FUND",
     "SIZE_NAMES",
     "WINDOWS",
@@ -125,4 +140,5 @@ __all__ = [
     "tabs",
     "thin",
     "window_of",
+    "withholds_index",
 ]

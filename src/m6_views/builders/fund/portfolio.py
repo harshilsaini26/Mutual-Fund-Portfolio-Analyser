@@ -174,6 +174,9 @@ class FundPortfolioBuilder:
             payload={
                 "headline": headline,
                 "charts": charts,
+                # Which kind of file the holdings came from: the public copy
+                # shows only a fund house's own (DECISIONS V1-72).
+                "tier": tier,
                 "columns": [
                     {"key": "holding", "label": "Holding", "kind": "text"},
                     {"key": "kind", "label": "Kind", "kind": "text"},

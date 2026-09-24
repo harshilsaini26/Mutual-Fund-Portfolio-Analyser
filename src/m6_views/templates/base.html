@@ -6,34 +6,56 @@
   decision was that the Sankey is the flagship and worth a real frontend; the
   Sankey is `d3-sankey` either way, and React was never doing that work.
 
-  d3 is **vendored**, not linked from a CDN. `PLAN.md` §6 makes this a
+  Every script is **vendored**, not linked from a CDN. `PLAN.md` §6 makes this a
   self-hosted tool for one person's financial data; a page that phones a CDN on
   every load stops working offline and tells a third party when the user looks at
   their portfolio.
+
+  Two globals shape it (`pages.templates`): `root`, the URL prefix every link
+  carries, and `static`, set for the public copy on GitHub Pages
+  (DECISIONS V1-72). That copy has no server behind it: no portfolio, no search
+  API, no response headers -- so it carries its policy in a <meta> tag instead.
 #}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if static %}
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  {% endif %}
   <title>{% block title %}Look-through{% endblock %}</title>
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="{{ root }}/static/app.css">
 </head>
 <body>
 <header class="masthead">
   <div class="masthead__top">
-    <a class="brand" href="/">Look-through</a>
+    <a class="brand" href="{{ root }}/">Look-through</a>
     {#
       Search is the way into any fund, held or not. Without JavaScript this is
-      an ordinary form to `/search`; `static/app.js` adds suggestions as you type.
+      an ordinary form -- to `/search` here, to the list of every fund on the
+      public copy; `static/app.js` adds suggestions as you type, from the API or,
+      with no server, from `search.json`.
     #}
-    <form class="search" action="/search" method="get" role="search">
+    <form class="search" action="{{ root }}/{% if not static %}search{% endif %}"
+          method="get" role="search">
       <label class="sr-only" for="q">Find a fund</label>
       <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
-             placeholder="Find a fund by name" data-suggest="/api/search">
+             placeholder="Find a fund by name"
+             {% if static %}data-index="{{ root }}/search.json"{% else %}data-suggest="/api/search"{% endif %}>
       <ul class="search__suggest" hidden></ul>
     </form>
   </div>
+  {% if static %}
+  <p class="freshness public-note">
+    A public copy of the fund pages, built {{ built | fmt_date }} from AMFI's prices
+    and fund houses' own disclosures. Descriptive, not advice. Benchmark comparisons
+    and your own portfolio are in the
+    <a href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser">self-hosted app</a>.
+  </p>
+  {% else %}
   <nav aria-label="Your portfolio">
     <ul>
       {#
@@ -41,7 +63,7 @@
         search or from a holding -- a link to one here would have no fund to show.
       #}
       {% for view in catalogue if view.default_scope == 'portfolio' %}
-      <li><a href="/view/{{ view.view_id }}{{ qs }}"
+      <li><a href="{{ root }}/view/{{ view.view_id }}{{ qs }}"
              {% if view.view_id == active %}aria-current="page"{% endif %}
           >{{ view.view_name }}</a></li>
       {% endfor %}
@@ -58,6 +80,7 @@
     · {{ health.current_disclosures }} current disclosure{{ '' if health.current_disclosures == 1 else 's' }}
     {%- if health.latest_disclosure %}, latest {{ health.latest_disclosure | fmt_date }}{% endif %}
   </p>
+  {% endif %}
 </header>
 
 <main>
@@ -66,11 +89,16 @@
 
 <footer class="colophon">
   <p>
+    {% if static %}
+    Built from public sources; every figure traces to an archived source file.
+    No cookies, no tracking, and nothing loads from anywhere but this site.
+    {% else %}
     Self-hosted. Nothing on this page left your machine.
     Every figure traces to an archived source file.
+    {% endif %}
   </p>
 </footer>
-<script src="/static/app.js" defer></script>
+<script src="{{ root }}/static/app.js" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

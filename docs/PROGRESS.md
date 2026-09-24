@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-24 · 1,563 tests passing
+**Last updated:** 2026-09-24 · 1,577 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -167,6 +167,25 @@ It is a quarterly average rather than a month-end balance, so it sits a few
 percent from a portfolio through ordinary market movement; `basis` travels with
 the figure and V2 widens its tolerance to match. A 100x error still fails it by
 11,321%.
+
+## Starting it
+
+```bash
+python start.py
+```
+
+One command from a fresh clone (DECISIONS V1-72): a private environment, the pinned
+dependencies, market data from its public sources, and the portal open in the browser.
+The first run takes a few minutes plus about 70 for NSE's index history and resumes if
+interrupted; later starts refresh today's prices in seconds. A new user with no CAS
+imported still gets every fund page -- the server starts on an empty ledger rather than
+refusing.
+
+**A public copy of the fund pages** -- 754 funds, 246 MB -- builds with
+`python -m jobs.publish_site` and publishes to GitHub Pages with `--push`. It carries
+AMFI's prices and fund houses' own disclosures only: NSE's index levels are licensed for
+personal use, so benchmark comparisons stay in the self-hosted app, and the build never
+opens a personal ledger. Publishing is only ever the user's own command.
 
 ## Looking up any fund
 

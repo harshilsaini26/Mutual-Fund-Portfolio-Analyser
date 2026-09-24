@@ -97,3 +97,7 @@ docs/MODULE_4.md
 docs/MODULE_5.md
 docs/MODULE_6.md
 docs/PLAN.md
+
+# The public fund explorer, built by jobs/publish_site.py and published to
+# the gh-pages branch -- never committed to main (DECISIONS V1-72).
+/site/

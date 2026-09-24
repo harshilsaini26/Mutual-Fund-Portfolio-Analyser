@@ -16,6 +16,7 @@ from src.m2_fund.risk import confidence_from_obs
 from src.m2_fund.windows import window_start
 from src.m6_views.builder import Scope
 from src.m6_views.builders.fund.common import (
+    INDEX_WITHHELD,
     NO_FUND,
     FundQuality,
     points,
@@ -23,6 +24,7 @@ from src.m6_views.builders.fund.common import (
     tabs,
     thin,
     window_of,
+    withholds_index,
 )
 from src.m6_views.compose import ok_envelope
 from src.m6_views.deps import Deps
@@ -85,7 +87,9 @@ class FundGrowthBuilder:
                 f"Prices on record begin on {format_date(path.start)}, after "
                 f"this period's start, so both lines begin there."
             )
-        if index_id is None:
+        if withholds_index(self.market):
+            caveats.append(INDEX_WITHHELD)
+        elif index_id is None:
             caveats.append(
                 "No benchmark index is on record for this fund, so only the "
                 "fund is drawn."

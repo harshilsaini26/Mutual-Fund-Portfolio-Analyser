@@ -51,9 +51,11 @@ CHART_TEMPLATES = {
 }
 
 #: ECharts draws every `echart` view; `charts.js` hands it each payload.
+#: `{root}` is the site's URL prefix: empty on the server, the repository's
+#: name on the public copy (`jobs/publish_site.py`).
 ECHART_SCRIPTS = (
-    '<script src="/static/vendor/echarts.v6.1.0.min.js"></script>\n'
-    '<script src="/static/charts.js"></script>'
+    '<script src="{root}/static/vendor/echarts.v6.1.0.min.js"></script>\n'
+    '<script src="{root}/static/charts.js"></script>'
 )
 
 

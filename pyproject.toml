@@ -106,7 +106,7 @@ ignore = [
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src", "tests", "jobs"]
+files = ["src", "tests", "jobs", "start.py"]
 # Slice Zero is contracts only: every function body is `...`, by design.
 disallow_empty_bodies = false
 

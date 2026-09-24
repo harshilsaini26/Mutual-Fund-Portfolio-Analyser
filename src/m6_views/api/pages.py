@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import html
 import sqlite3
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -57,16 +58,16 @@ LANDING = ("portfolio_summary", "lookthrough_sankey", "overlap_heatmap")
 SEARCH_MAX_CHARS = 80
 
 SANKEY_SCRIPTS = (
-    '<script src="/static/vendor/d3.v7.min.js"></script>\n'
-    '<script src="/static/vendor/d3-sankey.v0.12.3.min.js"></script>\n'
-    '<script src="/static/sankey.js"></script>'
+    '<script src="{root}/static/vendor/d3.v7.min.js"></script>\n'
+    '<script src="{root}/static/vendor/d3-sankey.v0.12.3.min.js"></script>\n'
+    '<script src="{root}/static/sankey.js"></script>'
 )
 
 
-def chart_scripts(envelopes: list[ViewEnvelope]) -> str:
+def chart_scripts(envelopes: list[ViewEnvelope], root: str = "") -> str:
     """The script tags a page's charts need, and none it does not."""
     return "\n".join(
-        tags
+        tags.format(root=root)
         for tags, needed in (
             (SANKEY_SCRIPTS, needs_sankey_script(envelopes)),
             (ECHART_SCRIPTS, needs_echarts(envelopes)),
@@ -75,16 +76,52 @@ def chart_scripts(envelopes: list[ViewEnvelope]) -> str:
     )
 
 
-def templates() -> Jinja2Templates:
+def templates(root: str = "", static: bool = False) -> Jinja2Templates:
     """Jinja with §9's formatters bound as filters.
 
     Registering them here rather than calling them in the templates is what
     keeps §16.4 true: a template can render a figure but cannot make one, and
     every conversion from `Decimal` to text happens in `format.py`.
+
+    `root` prefixes every link the templates write: empty for this server, the
+    repository's name for the public copy on GitHub Pages, which is served from
+    a subdirectory. `static` is that copy: no server behind it, so no portfolio,
+    no search API and no fragments (DECISIONS V1-72).
     """
     engine = Jinja2Templates(directory=str(TEMPLATES))
     engine.env.filters.update(FILTERS)
+    engine.env.globals.update(root=root, static=static)
     return engine
+
+
+def fund_context(
+    build: Callable[[str, Scope, dict[str, Any]], ViewEnvelope],
+    scope: Scope,
+    window: str | None = None,
+    root: str = "",
+    adapt: Callable[[ViewEnvelope], ViewEnvelope] = lambda env: env,
+) -> dict[str, Any]:
+    """Everything `fund.html` needs for one fund, `registry.FUND_PAGE` in order.
+
+    One function for the server's `/fund` route and the public copy's builder,
+    so the two cannot draw a different page. `adapt` is the public copy's hook
+    for what it must change before rendering (its export links, what it
+    withholds).
+    """
+    params = {"window": window} if window else {}
+    envelopes = [
+        adapt(build(view_id, scope, params if view_id == "fund_growth" else {}))
+        for view_id in FUND_PAGE
+    ]
+    detail = adapt(build("fund_xray_header", scope, {}))
+    head = envelopes[0]
+    name = head.payload.get("name") if head.state.value == "ok" else None
+    return {
+        "title": name or scope.scope_id,
+        "panels": [safe_chart_context(env, scope) for env in envelopes],
+        "detail": safe_chart_context(detail, scope),
+        "chart_scripts": chart_scripts([*envelopes, detail], root),
+    }
 
 
 def safe_chart_context(env: ViewEnvelope, scope: Scope) -> dict[str, Any]:
@@ -178,24 +215,14 @@ def make_router(
     ) -> Any:
         """One fund, every picture of it. `registry.FUND_PAGE`, top to bottom."""
         scope = _scope(user_id, as_of, scheme_id)
-        params = {"window": window} if window else {}
-        envelopes = [
-            build(view_id, scope, params if view_id == "fund_growth" else {},
-                  ledger, warehouse)
-            for view_id in FUND_PAGE
-        ]
-        detail = build("fund_xray_header", scope, {}, ledger, warehouse)
-        head = envelopes[0]
-        name = head.payload.get("name") if head.state.value == "ok" else None
         return engine.TemplateResponse(
             request,
             "fund.html",
             {
                 **_shell(user_id, as_of, active=""),
-                "title": name or scheme_id,
-                "panels": [safe_chart_context(env, scope) for env in envelopes],
-                "detail": safe_chart_context(detail, scope),
-                "chart_scripts": chart_scripts([*envelopes, detail]),
+                **fund_context(
+                    lambda v, s, p: build(v, s, p, ledger, warehouse), scope, window
+                ),
             },
         )
 
@@ -287,6 +314,7 @@ __all__ = [
     "TEMPLATES",
     "chart_context",
     "chart_scripts",
+    "fund_context",
     "make_router",
     "safe_chart_context",
     "templates",

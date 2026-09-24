@@ -19,7 +19,7 @@
 {% if env.payload.headline %}
 <p class="headline">{{ env.payload.headline }}</p>
 {% endif %}
-{% if env.payload.tabs %}
+{% if env.payload.tabs and not static %}
 <nav class="tabs" aria-label="Period">
   {% for tab in env.payload.tabs %}
   <a class="tab" href="{{ tab.href }}" data-fragment="{{ tab.fragment }}"
