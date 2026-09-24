@@ -224,6 +224,9 @@ def run(inbox: Path | None = None, amc_id: str | None = None) -> int:
                 continue
             conn.commit()
             loaded += 1
+            if summary.get("retired"):
+                print(f"      {entry['scheme_id']} now files what this workbook"
+                      f" filed under {summary['retired']}; that filing is retired")
             if summary.get("skipped"):
                 continue
         loaded_total += loaded

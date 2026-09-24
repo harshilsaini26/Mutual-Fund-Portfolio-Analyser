@@ -1295,3 +1295,28 @@ def test_cash_is_cash_under_a_borrowed_heading(
     after its AIF block, read as `other`, and Kotak's after `Treasury Bills` as
     debt. Before, the stale heading matched nothing and the issuer answered."""
     assert instrument_class(section, issuer) == expected
+
+
+def test_a_covered_call_is_a_derivative_under_the_equity_heading(
+    icici_real: HoldingsParseResult,
+) -> None:
+    """ICICI prints its written calls inside the equity block, each named
+    `Larsen & Toubro Ltd. (Covered call) $$` at a negative value. The name
+    already resolved to `__DERIV__`, but the heading classed them equity, so
+    V8 warned on the fund and every equity-scoped figure counted a short
+    option as stock."""
+    from src.m0_data.normalise.instrument_class import class_from_section
+    from src.m0_data.resolve.synthetic import match_synthetic
+
+    calls = [
+        s for s in icici_real.securities
+        if "covered call" in s.instrument_raw_name.lower()
+    ]
+    assert len(calls) == 43
+    assert {class_from_section(s.section) for s in calls} == {"equity"}
+    assert {
+        instrument_class(s.section, str(match_synthetic(
+            s.instrument_raw_name, class_from_section(s.section), s.isin_raw
+        )))
+        for s in calls
+    } == {"derivative"}

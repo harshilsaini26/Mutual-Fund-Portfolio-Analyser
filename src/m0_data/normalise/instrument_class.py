@@ -107,9 +107,15 @@ def instrument_class(section: str | None, issuer_id: str) -> str:
     that. A row whose own name resolved to cash is cash, unless its heading is
     a derivative one: `Repo Future` resolves to `__TREPS__` by name and is
     still the contract.
+
+    And for a derivative. ICICI prints its written calls in the equity block,
+    each named `... (Covered call)`: the name resolved to `__DERIV__`, and a
+    heading that says equity does not make a short option stock.
     """
     from_section = class_from_section(section)
     from_issuer = CLASS_BY_ISSUER.get(issuer_id)
+    if from_issuer == "derivative":
+        return "derivative"
     if from_issuer == "cash" and from_section != "derivative":
         return "cash"
     if from_section is not None:

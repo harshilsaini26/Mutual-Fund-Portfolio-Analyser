@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 from src.common.decimals import connect
 from src.m0_data.derive.scheme_family import disclosure_scheme_for
-from src.m0_data.load import load_holdings, next_revision
+from src.m0_data.load import load_holdings, next_revision, retire_siblings
 from src.m0_data.normalise.family import family_key
 from src.m0_data.normalise.weights import NormalisationError, normalise_weights
 from src.m0_data.validate.checks import (
@@ -434,6 +434,46 @@ def test_a_share_class_is_served_its_familys_newest_disclosure(
                   "file-a")
     assert disclosure_scheme_for(conn, "INF179K01UT0") == "INF179K01UT0"
     assert disclosure_scheme_for(conn, "INF179K01608") == "INF179K01608"
+
+
+def test_a_sheet_refiled_under_a_sibling_retires_the_old_filing(
+    conn: sqlite3.Connection,
+) -> None:
+    """When AMFI's scheme master merged Kotak Banking and PSU Debt's plans,
+    `canonical_scheme` moved the fund's sheet from the Regular ISIN to the
+    Direct one, and the Regular filing of the same file and date stayed current
+    beside it: one fund, one date, two portfolios, which a rebuild from the
+    archive never produces. Only that file's restatement retires it."""
+    direct, regular = "INF179K01UT0", "INF179K01608"
+    name = "HDFC Flexi Cap Fund - Growth Plan"
+    for scheme_id, plan in ((direct, "direct"), (regular, "regular")):
+        conn.execute(
+            "INSERT OR REPLACE INTO scheme (scheme_id, scheme_name, plan, option,"
+            " amc_id, status, scheme_family) VALUES (?,?,?,'growth','hdfc',"
+            " 'active', ?)",
+            (scheme_id, name, plan, family_key(name)),
+        )
+    rows, header = _payload()
+    later = AS_OF + timedelta(days=31)
+    load_holdings(conn, regular, AS_OF, rows, header, "file-a")  # the old pick
+    load_holdings(conn, regular, later, rows, header, "file-b")  # not restated
+    load_holdings(conn, direct, AS_OF, rows, header, "file-a")  # the new pick
+
+    assert retire_siblings(conn, direct, None, "hdfc", AS_OF, "file-a") == []
+    assert retire_siblings(
+        conn, direct, family_key(name), "hdfc", AS_OF, "file-a"
+    ) == [regular]
+    current = "SELECT DISTINCT scheme_id, as_of_date FROM {} WHERE is_current = 1"
+    for table in ("holding_disclosure", "holding"):
+        assert sorted(conn.execute(current.format(table))) == sorted([
+            (direct, AS_OF), (regular, later)
+        ])
+
+    # Another file's filing of that date is not this file's to retire.
+    load_holdings(conn, regular, AS_OF, rows, header, "file-c")
+    assert retire_siblings(
+        conn, direct, family_key(name), "hdfc", AS_OF, "file-a"
+    ) == []
 
 
 def test_a_scheme_with_no_family_behaves_exactly_as_before(

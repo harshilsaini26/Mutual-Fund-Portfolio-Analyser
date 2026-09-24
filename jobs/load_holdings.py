@@ -39,7 +39,7 @@ from src.m0_data.fetch.base import (
     conditional_get,
 )
 from src.m0_data.load import aum_for as _aum_for
-from src.m0_data.load import build_holding_rows, load_holdings
+from src.m0_data.load import build_holding_rows, load_holdings, retire_siblings
 from src.m0_data.parse.base import HoldingsParser, ParseFailed, RawFile
 from src.m0_data.parse.holdings.registry import by_parser_id, route
 from src.m0_data.resolve.cascade import (
@@ -357,6 +357,12 @@ def _one(
         },
         str(result.file_id),
     )
+    # Even when the load itself was skipped as unchanged: the sibling's filing
+    # may predate the family change that moved this sheet.
+    retired = retire_siblings(
+        conn, scheme_id, entry.get("family"), amc_id, parsed.as_of_date,
+        str(result.file_id),
+    )
     conn.execute(
         "UPDATE raw_file SET parse_status='ok', parser_id=?, parser_version=?,"
         " parsed_at=?, as_of_date=? WHERE file_id=?",
@@ -371,6 +377,7 @@ def _one(
         "parser": parser.parser_id, "fetch": result.status, **counts,
         "unresolved_mv_pct": unresolved, "validation_status": status,
         "failed_checks": ",".join(failed) or "none",
+        **({"retired": ",".join(retired)} if retired else {}),
     }
 
 

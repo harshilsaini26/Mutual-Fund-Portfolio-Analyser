@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-23 · 1,453 tests passing
+**Last updated:** 2026-09-24 · 1,455 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -17,14 +17,14 @@ re-measured rather than trusted.
 | | |
 |---|---|
 | Schemes in the AMFI universe | 19,676 |
-| Schemes with a loaded portfolio | **192** |
-| **ISINs a look-through can answer for** | **1,099** |
-| Holding rows | 10,976 |
+| Schemes with a loaded portfolio | **200** |
+| **ISINs a look-through can answer for** | **1,144** |
+| Holding rows | 11,166 |
 | AMC formats with a parser | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
 | **AMCs that fetch themselves** | **2** — Kotak, ICICI |
 | **Schemes reachable without one** | **1,973**, via the coverage tier |
 
-The gap between 192 schemes and 1,099 ISINs is V1-37: a disclosure describes a
+The gap between 200 schemes and 1,144 ISINs is V1-37: a disclosure describes a
 *scheme*, and every share class of that scheme — Direct, Regular, Growth, each
 IDCW variant — holds the identical portfolio. Which share classes make one fund
 comes from AMFI's own scheme master since 2026-09-23 (V1-68), refreshed by
@@ -35,6 +35,15 @@ so a holder of HDFC Flexi Cap Regular saw 100% `__NO_DISCLOSURE__`.
 `rebuild_weights` now keys every share class itself, so the API and the terminal
 report cannot disagree about it, and each is served its fund's **newest** usable
 disclosure rather than an older one filed under its own ISIN.
+
+The master's fund names also sharpened which sheet of a workbook is which
+fund (V1-69). Nine Kotak sheets the matcher had refused now identify —
+Gilt, three SDL index funds, Banking and Financial Services, Gold Fund,
+Gold ETF and the Multi Asset Omni fund-of-funds — and one wrong match is
+gone: that fund-of-funds sheet had been filed as Kotak Infrastructure and
+Economic Reform, whose own sheet spells the name with an "and" the old
+key had lost. One fund is filed twice by hand, ICICI Multi Asset under its
+Direct and Regular ISINs, so the 200 schemes are 199 funds.
 
 The master also carries each fund's launch date, now on 18,162 schemes and on
 the fund page. It needs no command: `jobs.fetch_nav` fetches it after the day's
@@ -60,13 +69,15 @@ prices, and a failed fetch leaves the prices loaded and marks the run
 
 PPFAS Flexi Cap, the fifth fund with a disclosure, is also at **0.00%**.
 
-Disclosure quality across all 192: **101 `ok`, 91 `warn`, 0 quarantined.** Most
-warnings are V2 (a portfolio a quarter's growth away from AMFI's quarterly
-average AUM, V1-67) or V8 (a negative value on something not classified as a
-derivative — the covered-call defect below). No parse is being stored that
-disagrees with the file it came from.
+Disclosure quality across all 200: **107 `ok`, 93 `warn`, 0 quarantined.** The
+warnings are V8 on 54 (a negative value not classed as a derivative — every
+one now a fund's net current assets below zero, payables exceeding
+receivables), V3 on 33 (unresolved value, much of it the state development
+loans below) and V2 on 13 (a portfolio a quarter's growth away from AMFI's
+quarterly average AUM, V1-67). No parse is being stored that disagrees with
+the file it came from.
 
-Unresolved across the whole warehouse is **2.09%** of value, measured over each
+Unresolved across the whole warehouse is **2.12%** of value, measured over each
 scheme's newest disclosure.
 
 ## How to add a fund
@@ -387,9 +398,12 @@ Ordered by what they cost.
    borrower; giving them real issuers needs either a hardcoded state-code table
    (data this project would be inventing) or a cascade that creates issuers
    (which V1-02 deliberately refused). A decision, not an implementation.
-2. **Covered calls classify as `equity`.** 44 rows in ICICI Multi Asset with
-   negative market values. A written option is a derivative; this is why that
-   fund reports `warn`.
+2. ~~**Covered calls classify as `equity`.**~~ **Closed 2026-09-24.** ICICI
+   prints its written calls inside the equity block, each named `(Covered
+   call)`. The name already resolved to `__DERIV__`; the heading made the
+   class equity, so V8 warned. A row whose name resolves to a derivative is
+   now one under any heading (reader 7): 43 rows moved, and ICICI Multi
+   Asset reads `ok`. Nothing else in the warehouse changed class.
 3. ~~**`checks.py:96` claims V3 blocks the look-through. Nothing does.**~~
    **Closed 2026-09-23.** A quarantine now blocks, as MODULE_3 §5.4 specifies:
    `latest_disclosure` never picks a quarantined disclosure, so a scheme uses
@@ -449,11 +463,15 @@ Ordered by what they cost.
 The coverage machinery is done. What is left is mostly not machinery. In
 order:
 
-- **Covered calls and state development loans**, the next two data fixes
-  found in the 2026-09-23 research: ICICI names its written calls "(Covered
-  call)", and an SDL's ISIN carries its state's code, observed one-to-one
-  against the state each fund house names. The SDLs need one decision first:
-  the issuer name each state gets.
+- **State development loans**, the next data fix found in the 2026-09-23
+  research: an SDL's ISIN carries its state's code, observed one-to-one
+  against the state each fund house names. It needs one decision first: the
+  issuer name each state gets. Three newly identified Kotak SDL index funds
+  are 58-97% unresolved for want of it.
+- **Whether V8 should pass negative net current assets.** §10.1 allows a
+  negative value only on a derivative, and all 54 of its remaining warnings
+  are a fund owing more than it is owed — ordinary, and not what V8 exists
+  to catch. A spec question before a code change.
 - **The small internal defects above**: `rebuild_weights` committing, the
   re-read, the four latent fetch defects and a loud `data_only` check.
 - **Two schema changes**: `scheme_aum` revisions, and remembering which

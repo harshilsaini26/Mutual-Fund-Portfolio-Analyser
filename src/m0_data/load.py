@@ -594,6 +594,49 @@ def load_holdings(
     return {"holding": len(rows), "revision": revision}
 
 
+def retire_siblings(
+    conn: sqlite3.Connection,
+    scheme_id: str,
+    family: str | None,
+    amc_id: str,
+    as_of: date,
+    source_file_id: str,
+) -> list[str]:
+    """Retire this file's filing of the same fund and date under another share class.
+
+    `canonical_scheme` picks which share class of a family a sheet is filed
+    against, and the family can change under it: AMFI's scheme master merged
+    Kotak Banking and PSU Debt's plans, the pick moved from the Regular ISIN to
+    the Direct, and the Regular filing of the same file and date stayed current
+    beside the new one. One fund, one date, two portfolios, which a rebuild from
+    the archive never produces (invariant 10).
+
+    Only the SAME file's filing: another file's is not this one's to restate.
+    Flipped like a superseded revision, never deleted, and returned so the
+    caller reports it (invariant 4).
+    """
+    if not family:
+        return []
+    stale = [
+        str(r[0]) for r in conn.execute(
+            "SELECT d.scheme_id FROM holding_disclosure d"
+            " JOIN scheme s ON s.scheme_id = d.scheme_id"
+            " WHERE d.is_current = 1 AND d.as_of_date = ? AND d.source_file_id = ?"
+            "   AND s.scheme_family = ? AND s.amc_id = ? AND d.scheme_id <> ?"
+            " ORDER BY d.scheme_id",
+            (as_of, source_file_id, family, amc_id, scheme_id),
+        )
+    ]
+    for stale_id in stale:
+        for table in ("holding", "holding_disclosure"):
+            conn.execute(
+                f"UPDATE {table} SET is_current = 0"
+                " WHERE scheme_id = ? AND as_of_date = ? AND source_file_id = ?",
+                (stale_id, as_of, source_file_id),
+            )
+    return stale
+
+
 #: How old an AUM witness may be before it stops being one.
 #:
 #: AAUM is quarterly and arrives about ten days after a quarter ends, so a

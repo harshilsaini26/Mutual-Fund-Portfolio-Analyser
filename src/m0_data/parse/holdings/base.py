@@ -164,7 +164,8 @@ HEADER_SCAN_ROWS = 6
 #: a product of the run as the rows are, and a fact row is never updated.
 #: 5: a listing-status heading nests under the instrument heading above it.
 #: 6: V2 against a quarterly average quarantines only a units-scale mismatch.
-READER_VERSION = "6"
+#: 7: a row whose name resolved to a derivative is one under any heading.
+READER_VERSION = "7"
 
 #: A heading that says how a security trades, not what it is. Kotak prints
 #: `Debentures and Bonds`, then `Listed/Awaiting listing on Stock Exchange`
