@@ -11,7 +11,7 @@
   "use strict";
   try {
     var chosen = window.localStorage.getItem("theme");
-    if (chosen === "light" || chosen === "dark") {
+    if (chosen === "light" || chosen === "dark" || chosen === "matrix") {
       document.documentElement.setAttribute("data-theme", chosen);
     }
   } catch (e) { /* no storage: the light default */ }

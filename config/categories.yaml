@@ -26,58 +26,72 @@ categories:
   # --- equity ------------------------------------------------------------------
   - key: equity/large_cap
     name: Large cap
+    about: "At least 80% in the 100 largest listed companies."
     family: equity
     merges: ["Equity Scheme - Large Cap Fund", "Equity Schemes - Large Cap Fund"]
   - key: equity/large_mid_cap
     name: Large and mid cap
+    about: "At least 35% each in large and mid-sized companies."
     family: equity
     merges: ["Equity Scheme - Large & Mid Cap Fund", "Equity Schemes - Large & Mid Cap Fund"]
   - key: equity/mid_cap
     name: Mid cap
+    about: "At least 65% in companies ranked 101st to 250th by size."
     family: equity
     merges: ["Equity Scheme - Mid Cap Fund", "Equity Schemes - Mid Cap Fund"]
   - key: equity/small_cap
     name: Small cap
+    about: "At least 65% in companies ranked 251st and below by size."
     family: equity
     merges: ["Equity Scheme - Small Cap Fund", "Equity Schemes - Small Cap Fund"]
   - key: equity/multi_cap
     name: Multi cap
+    about: "At least 25% each in large, mid-sized and small companies."
     family: equity
     merges: ["Equity Scheme - Multi Cap Fund", "Equity Schemes - Multi Cap Fund"]
   - key: equity/flexi_cap
     name: Flexi cap
+    about: "At least 65% in shares, of any size, in any mix."
     family: equity
     merges: ["Equity Scheme - Flexi Cap Fund", "Equity Schemes - Flexi Cap Fund"]
   - key: equity/focused
     name: Focused
+    about: "At most 30 companies, at least 65% in shares."
     family: equity
     merges: ["Equity Scheme - Focused Fund", "Equity Schemes - Focused Fund"]
   - key: equity/value
     name: Value
+    about: "Shares chosen for a low price against their value; at least 65% in shares."
     family: equity
     merges: ["Equity Scheme - Value Fund", "Equity Schemes - Value Fund"]
   - key: equity/contra
     name: Contra
+    about: "Shares chosen against the market's current view; at least 65% in shares."
     family: equity
     merges: ["Equity Scheme - Contra Fund", "Equity Schemes - Contra Fund"]
   - key: equity/dividend_yield
     name: Dividend yield
+    about: "Mostly shares that pay high dividends; at least 65% in shares."
     family: equity
     merges: ["Equity Scheme - Dividend Yield Fund", "Equity Schemes - Dividend Yield Fund"]
   - key: equity/elss
     name: ELSS (tax saver)
+    about: "At least 80% in shares, locked in for 3 years; eligible for tax deduction."
     family: equity
     merges: ["Equity Scheme - ELSS", "Equity Schemes - ELSS- Tax Saver Fund", "ELSS"]
   - key: equity/sectoral
     name: Sectoral
+    about: "At least 80% in one sector, such as banks or technology."
     family: equity
     merges: ["Equity Schemes - Sectoral Fund"]
   - key: equity/thematic
     name: Thematic
+    about: "At least 80% in one theme across sectors, such as consumption."
     family: equity
     merges: ["Equity Schemes - Thematic Fund"]
   - key: equity/sectoral_thematic
     name: Sectoral or thematic (older naming)
+    about: "Sectoral and thematic funds, under the name used before they were split."
     family: equity
     merges: ["Equity Scheme - Sectoral/ Thematic"]
     note: >-
@@ -88,76 +102,93 @@ categories:
   # --- hybrid ----------------------------------------------------------------------
   - key: hybrid/aggressive
     name: Aggressive hybrid
+    about: "65% to 80% in shares, the rest in bonds."
     family: hybrid
     merges: ["Hybrid Scheme - Aggressive Hybrid Fund", "Hybrid Schemes - Aggressive Hybrid Fund"]
   - key: hybrid/conservative
     name: Conservative hybrid
+    about: "75% to 90% in bonds, 10% to 25% in shares."
     family: hybrid
     merges: ["Hybrid Scheme - Conservative Hybrid Fund", "Hybrid Schemes - Conservative Hybrid Fund"]
   - key: hybrid/balanced
     name: Balanced hybrid
+    about: "40% to 60% in shares and 40% to 60% in bonds."
     family: hybrid
     merges: ["Hybrid Scheme - Balanced Hybrid Fund", "Hybrid Schemes - Balanced Hybrid Fund"]
   - key: hybrid/balanced_advantage
     name: Balanced advantage (dynamic asset allocation)
+    about: "Moves between shares and bonds as the fund's model directs."
     family: hybrid
     merges:
       - "Hybrid Scheme - Dynamic Asset Allocation or Balanced Advantage"
       - "Hybrid Schemes - Balanced Advantage Fund/ Dynamic Asset Allocation"
   - key: hybrid/multi_asset
     name: Multi asset allocation
+    about: "At least 10% each in three asset classes, such as shares, bonds and gold."
     family: hybrid
     merges: ["Hybrid Scheme - Multi Asset Allocation", "Hybrid Schemes - Multi Asset Allocation Fund"]
   - key: hybrid/arbitrage
     name: Arbitrage
+    about: "Buys and sells the same shares in different markets for the price gap."
     family: hybrid
     merges: ["Hybrid Scheme - Arbitrage Fund", "Hybrid Schemes - Arbitrage Fund"]
   - key: hybrid/equity_savings
     name: Equity savings
+    about: "Shares, arbitrage and bonds together, at least 65% in shares with hedges."
     family: hybrid
     merges: ["Hybrid Scheme - Equity Savings", "Hybrid Schemes - Equity Savings Fund"]
 
   # --- debt: names that did not change -----------------------------------------------
   - key: debt/overnight
     name: Overnight
+    about: "Bonds and loans that mature the next day."
     family: debt
     merges: ["Debt Scheme - Overnight Fund", "Income/Debt Oriented Schemes - Overnight Fund"]
   - key: debt/liquid
     name: Liquid
+    about: "Debt and money-market papers maturing within 91 days."
     family: debt
     merges: ["Debt Scheme - Liquid Fund", "Income/Debt Oriented Schemes - Liquid Fund"]
   - key: debt/money_market
     name: Money market
+    about: "Money-market papers maturing within a year."
     family: debt
     merges: ["Debt Scheme - Money Market Fund", "Income/Debt Oriented Schemes - Money Market Fund"]
   - key: debt/gilt
     name: Gilt
+    about: "At least 80% in government bonds, of any maturity."
     family: debt
     merges: ["Debt Scheme - Gilt Fund", "Income/Debt Oriented Schemes - Gilt Fund"]
   - key: debt/corporate_bond
     name: Corporate bond
+    about: "At least 80% in the highest-rated company bonds."
     family: debt
     merges: ["Debt Scheme - Corporate Bond Fund", "Income/Debt Oriented Schemes - Corporate Bond Fund"]
   - key: debt/credit_risk
     name: Credit risk
+    about: "At least 65% in company bonds rated below the highest grades."
     family: debt
     merges: ["Debt Scheme - Credit Risk Fund", "Income/Debt Oriented Schemes - Credit Risk Fund"]
   - key: debt/banking_psu
     name: Banking and PSU
+    about: "At least 80% in bonds of banks, public sector firms and public finance bodies."
     family: debt
     merges: ["Debt Scheme - Banking and PSU Fund", "Income/Debt Oriented Schemes - Banking and PSU Debt Fund"]
   - key: debt/gilt_10y
     name: Gilt, 10-year constant maturity
+    about: "At least 80% in government bonds, averaging 10 years to maturity."
     family: debt
     merges: ["Income/Debt Oriented Schemes - 10-year Constant Maturity Gilt Fund"]
   - key: debt/floating_rate
     name: Floating interest rates
+    about: "At least 65% in bonds whose interest resets with market rates."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Floating Interest Rates Fund"]
 
   # --- debt: the older "Duration" names, kept apart from the newer "Term" ones --------
   - key: debt/ultra_short_duration
     name: Ultra short duration (older naming)
+    about: "Bonds held for an average of 3 to 6 months (older naming)."
     family: debt
     merges: ["Debt Scheme - Ultra Short Duration Fund"]
     note: &renamed_debt >-
@@ -166,71 +197,87 @@ categories:
       compared with each other.
   - key: debt/low_duration
     name: Low duration (older naming)
+    about: "Bonds held for an average of 6 to 12 months (older naming)."
     family: debt
     merges: ["Debt Scheme - Low Duration Fund"]
     note: *renamed_debt
   - key: debt/short_duration
     name: Short duration (older naming)
+    about: "Bonds held for an average of 1 to 3 years (older naming)."
     family: debt
     merges: ["Debt Scheme - Short Duration Fund"]
     note: *renamed_debt
   - key: debt/medium_duration
     name: Medium duration (older naming)
+    about: "Bonds held for an average of 3 to 4 years (older naming)."
     family: debt
     merges: ["Debt Scheme - Medium Duration Fund"]
     note: *renamed_debt
   - key: debt/medium_long_duration
     name: Medium to long duration (older naming)
+    about: "Bonds held for an average of 4 to 7 years (older naming)."
     family: debt
     merges: ["Debt Scheme - Medium to Long Duration Fund"]
     note: *renamed_debt
   - key: debt/dynamic_bond
     name: Dynamic bond (older naming)
+    about: "Bonds of any maturity, changed as rates move (older naming)."
     family: debt
     merges: ["Debt Scheme - Dynamic Bond"]
     note: *renamed_debt
   - key: debt/ultra_short_term
     name: Ultra short term
+    about: "Short-dated bonds, held for months rather than years."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Ultra Short Term Fund"]
   - key: debt/ultra_short_to_short_term
     name: Ultra short to short term
+    about: "Bonds between ultra short and short term."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Ultra Short to Short Term Fund"]
   - key: debt/short_term
     name: Short term
+    about: "Bonds held for an average of about 1 to 3 years."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Short Term Fund"]
   - key: debt/medium_term
     name: Medium term
+    about: "Bonds held for an average of about 3 to 4 years."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Medium Term Fund"]
   - key: debt/medium_long_term
     name: Medium to long term
+    about: "Bonds held for an average of about 4 to 7 years."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Medium to Long Term Fund"]
   - key: debt/long_term
     name: Long term
+    about: "Bonds held for an average of more than 7 years."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Long Term Fund"]
   - key: debt/dynamic_term
     name: Dynamic term
+    about: "Bonds of any maturity, changed as rates move."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Dynamic Term Fund"]
   - key: debt/fixed_term
     name: Fixed term plans
+    about: "Closed-end plans holding bonds that mature with the plan."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Fixed Term Plan"]
   - key: debt/sectoral
     name: Debt, sectoral
+    about: "Bonds of one sector."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Sectoral Fund"]
   - key: debt/other
     name: Other debt
+    about: "Debt funds outside SEBI's named debt categories."
     family: debt
     merges: ["Income/Debt Oriented Schemes - Other Debt Scheme"]
   - key: debt/income_legacy
     name: Income (older naming)
+    about: "Bond funds under a name used before SEBI's 2017 categories."
     family: debt
     merges: ["Income"]
     note: >-
@@ -240,18 +287,22 @@ categories:
   # --- index funds, ETFs, funds of funds ------------------------------------------------
   - key: index/equity
     name: Index funds, equity
+    about: "Track a share index, such as the Nifty 50, rather than choosing shares."
     family: other
     merges: ["Index Funds - Equity Funds"]
   - key: index/debt
     name: Index funds, debt
+    about: "Track a bond index, often one that matures on a set date."
     family: other
     merges: ["Index Funds - Debt Funds"]
   - key: index/hybrid
     name: Index funds, hybrid
+    about: "Track an index made of shares and bonds."
     family: other
     merges: ["Index Funds - Hybrid Fund"]
   - key: index/undivided
     name: Index funds (older naming)
+    about: "Index funds, under the name used before they were split by asset."
     family: other
     merges: ["Other Scheme - Index Funds"]
     note: >-
@@ -259,26 +310,32 @@ categories:
       bonds, so these funds are compared only with each other.
   - key: etf/equity
     name: ETFs, equity
+    about: "Traded on the stock exchange like a share; track a share index."
     family: other
     merges: ["Exchange Traded Funds (ETFs) - Equity ETF"]
   - key: etf/debt
     name: ETFs, debt
+    about: "Traded on the stock exchange; track a bond or money-market index."
     family: other
     merges: ["Exchange Traded Funds (ETFs) - Debt ETF"]
   - key: etf/gold
     name: Gold ETFs
+    about: "Traded on the stock exchange; hold physical gold."
     family: other
     merges: ["Other Scheme - Gold ETF", "Exchange Traded Funds (ETFs) - Gold ETF"]
   - key: etf/silver
     name: Silver ETFs
+    about: "Traded on the stock exchange; hold physical silver."
     family: other
     merges: ["Exchange Traded Funds (ETFs) - Silver ETF"]
   - key: etf/other
     name: ETFs, other
+    about: "Exchange-traded funds of other kinds."
     family: other
     merges: ["Exchange Traded Funds (ETFs) - Other ETF"]
   - key: etf/undivided
     name: ETFs (older naming)
+    about: "Exchange-traded funds, under the name used before they were split."
     family: other
     merges: ["Other Scheme - Other ETFs"]
     note: >-
@@ -286,12 +343,14 @@ categories:
       compared only with each other.
   - key: fof/domestic
     name: Funds of funds, domestic
+    about: "Invest in other Indian mutual funds or ETFs rather than directly."
     family: other
     merges:
       - "Other Scheme - FoF Domestic"
       - "Fund of Funds Scheme (Domestic) - Fund of Funds Scheme (Domestic)"
   - key: fof/overseas
     name: Funds of funds, overseas
+    about: "Invest in funds abroad, for exposure to foreign markets."
     family: other
     merges:
       - "Other Scheme - FoF Overseas"
@@ -300,12 +359,14 @@ categories:
   # --- solution oriented -------------------------------------------------------------------
   - key: solution/retirement
     name: Retirement
+    about: "For retirement: locked in for 5 years or until retirement age."
     family: solution
     merges:
       - "Solution Oriented Scheme - Retirement Fund"
       - "Solution Oriented Schemes ** - Retirement Fund"
   - key: solution/children
     name: Children's
+    about: "For a child's goals: locked in for 5 years or until the child turns 18."
     family: solution
     # AMFI writes a typographic apostrophe (U+2019) in both names.
     merges:
@@ -313,13 +374,16 @@ categories:
       - "Children’s Fund - Childrens' Fund"
   - key: solution/life_cycle_5y
     name: Life cycle, 5-year maturity
+    about: "Shift from shares to bonds as a 5-year target date nears."
     family: solution
     merges: ["Life Cycle Funds - Life Cycle Fund with Maturity of 5 Years"]
   - key: solution/life_cycle_10y
     name: Life cycle, 10-year maturity
+    about: "Shift from shares to bonds as a 10-year target date nears."
     family: solution
     merges: ["Life Cycle Funds - Life Cycle Fund with Maturity of 10 Years"]
   - key: solution/life_cycle_15y
     name: Life cycle, 15-year maturity
+    about: "Shift from shares to bonds as a 15-year target date nears."
     family: solution
     merges: ["Life Cycle Funds - Life Cycle Fund with Maturity of 15 Years"]

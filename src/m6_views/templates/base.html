@@ -59,9 +59,10 @@
 {%- endmacro %}
 
 {% macro theme_toggle() -%}
+{#- Each theme shows the next one's icon: moon (dark), terminal (Matrix), sun (light). -#}
 <button class="icon-button" type="button" data-theme-toggle
-        aria-label="Switch between the light and dark themes">
-  {{ icon.i("sun", "icon icon--sun") }}{{ icon.i("moon", "icon icon--moon") }}
+        aria-label="Switch theme: light, dark or Matrix">
+  {{ icon.i("moon", "icon icon--moon") }}{{ icon.i("terminal", "icon icon--term") }}{{ icon.i("sun", "icon icon--sun-next") }}
 </button>
 {%- endmacro %}
 

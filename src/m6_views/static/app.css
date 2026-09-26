@@ -21,6 +21,19 @@
  * of brand and category use.
  */
 
+/* Terminess Nerd Font (V1-81, everywhere): Terminus by Dimitar Zhekov, SIL OFL 1.1,
+   with Nerd Fonts' patches (MIT), v3.5.1. Cut to Latin and the symbols these pages
+   use (fonts/terminess-LICENSE.txt); Rubik below covers what Terminus lacks (₹). */
+@font-face {
+  font-family: "Terminess Nerd Font";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/terminess-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Terminess Nerd Font";
+  font-style: normal; font-weight: 500 900; font-display: swap;
+  src: url("fonts/terminess-Bold.woff2") format("woff2");
+}
 @font-face {
   font-family: "Rubik";
   font-style: normal;
@@ -82,11 +95,13 @@
   --shadow-lift: 0 2px 4px rgb(15 27 45 / 0.05), 0 16px 40px rgb(19 69 133 / 0.12);
   --sun: none;
   --moon: inline;
+  --term: none;
+  --sun-next: none;
   --radius: 14px;
   --radius-sm: 10px;
-  --font: "Rubik", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+  --font: "Terminess Nerd Font", "Rubik", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
           BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  --mono: "Terminess Nerd Font", ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
 }
 
 :root[data-theme="dark"] {
@@ -139,8 +154,72 @@
   --heat-ink-high: #0b1220;
   --shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 30px rgb(0 0 0 / 0.28);
   --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 44px rgb(0 0 0 / 0.4);
-  --sun: inline;
+  --sun: none;
   --moon: none;
+  --term: inline;
+  --sun-next: none;
+}
+
+/* Matrix (V1-81): green on black. Loss keeps its own hue, so gain and loss are
+   still two colours as well as two symbols (§10.3). */
+:root[data-theme="matrix"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #020b03;
+  --surface-2: #051a08;
+  --surface-3: #0a2a0e;
+  --line: #0d3b12;
+  --line-strong: #17601f;
+  --ink: #33ff66;
+  --ink-soft: #22cc4e;
+  --ink-faint: #19a33d;
+  --accent: #00ff41;
+  --accent-strong: #7dff9b;
+  --accent-soft: rgb(0 255 65 / 0.1);
+  --on-accent: #000000;
+  --sky: #00ff41;
+  --hero-a: #001a05;
+  --hero-b: #000000;
+  --bench: #b8ff3d;
+  --gain: #00ff41;
+  --loss: #ff5f3a;
+  --gain-soft: rgb(0 255 65 / 0.12);
+  --loss-soft: rgb(255 95 58 / 0.14);
+  --warn: #d7ff3d;
+  --warn-bg: rgb(215 255 61 / 0.07);
+  --warn-line: rgb(215 255 61 / 0.4);
+  --good: #00ff41;
+  --fair: #d7ff3d;
+  --weak: #ff5f3a;
+  --synthetic: #1f6b2c;
+  --cat-1: #00ff41;
+  --cat-2: #7dff9b;
+  --cat-3: #b8ff3d;
+  --cat-4: #3dffc5;
+  --cat-5: #9dff00;
+  --cat-6: #2e9e48;
+  --cat-7: #d7ff3d;
+  --cat-8: #00c8a0;
+  --on-cat: #000000;
+  --decal: rgb(0 0 0 / 0.5);
+  --sankey-right: #3dffc5;
+  --heat-0: #031405;
+  --heat-1: #06330d;
+  --heat-2: #0a6618;
+  --heat-3: #0fa326;
+  --heat-4: #00ff41;
+  --heat-ink-low: #33ff66;
+  --heat-ink-high: #000000;
+  --shadow: 0 0 0 1px rgb(0 255 65 / 0.06), 0 8px 24px rgb(0 0 0 / 0.6);
+  --shadow-lift: 0 0 0 1px rgb(0 255 65 / 0.25), 0 0 24px rgb(0 255 65 / 0.18);
+  --sun: none;
+  --moon: none;
+  --term: none;
+  --sun-next: inline;
+}
+:root[data-theme="matrix"] h1, :root[data-theme="matrix"] h2,
+:root[data-theme="matrix"] .home-stats dd, :root[data-theme="matrix"] .kpi__value {
+  text-shadow: 0 0 8px rgb(0 255 65 / 0.45);
 }
 
 * { box-sizing: border-box; }
@@ -164,8 +243,9 @@ h1, h2, h3 { text-wrap: balance; }
   fill: none; stroke: currentColor; stroke-width: 1.8;
   stroke-linecap: round; stroke-linejoin: round;
 }
-.icon--sun { display: var(--sun); }
 .icon--moon { display: var(--moon); }
+.icon--term { display: var(--term); }
+.icon--sun-next { display: var(--sun-next); }
 
 /* --- the shell ------------------------------------------------------------- */
 
@@ -252,11 +332,11 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .chip--mono { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.02em; }
 
-.content { width: 100%; max-width: 1440px; margin: 0 auto; padding: 28px; }
-.content--public { max-width: 1240px; }
+.content { width: 100%; max-width: 1680px; margin: 0 auto; padding: 28px; }
+.content--public { max-width: 1600px; }
 
 .colophon {
-  width: 100%; max-width: 1440px; margin: 0 auto;
+  width: 100%; max-width: 1680px; margin: 0 auto;
   padding: 8px 28px 32px;
   font-size: 12px; color: var(--ink-faint);
 }
@@ -460,7 +540,7 @@ thead th {
 tbody tr:hover > * { background: var(--surface-2); }
 tbody tr:last-child > * { border-bottom: 0; }
 .col--inr, .col--inr_signed, .col--pct, .col--units, .col--nav, .col--fraction,
-.col--return_ann, .col--ratio, .col--metric, .col--count, .num {
+.col--return_ann, .col--ratio, .col--metric, .col--count, .col--row, .num {
   text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 th button {
@@ -875,7 +955,7 @@ select:focus-visible, [tabindex]:focus-visible {
 
 /* --- V1-80: the front page after MF Zone, the fund page after Fundoo ----------------- */
 
-body { font-size: 14.5px; }
+body { font-size: 15.5px; overflow-x: clip; }  /* a full-bleed hero is 100vw, scrollbar included */
 .brand { font-weight: 600; }
 .brand span { letter-spacing: -0.015em; }
 
@@ -906,7 +986,8 @@ body { font-size: 14.5px; }
 /* The hero: a soft sky wash, the aurora (an island) behind it, the way in. */
 .home-hero {
   position: relative; overflow: hidden; isolation: isolate;
-  margin: -28px -28px 0; padding: 72px 28px 56px;
+  /* Edge to edge, whatever the content's width (V1-81). */
+  margin: -28px calc(50% - 50vw) 0; padding: 72px 28px 56px;
   background: linear-gradient(180deg, var(--hero-a), var(--hero-b) 70%, var(--bg));
   border-bottom: 1px solid var(--line);
 }
@@ -1077,7 +1158,7 @@ body { font-size: 14.5px; }
   .topnav__link[href$="#about"] { display: none; }
 }
 @media (max-width: 720px) {
-  .home-hero { margin: -18px -16px 0; padding: 44px 16px 36px; }
+  .home-hero { margin: -18px calc(50% - 50vw) 0; padding: 44px 16px 36px; }
   .home-stats { gap: 10px 24px; }
   .home-stats dd { font-size: 24px; }
   .leaders, .features, .ranges { grid-template-columns: minmax(0, 1fr); }
@@ -1090,6 +1171,60 @@ body { font-size: 14.5px; }
   .facts--grid { grid-template-columns: minmax(0, 1fr); }
   .leader__table th:nth-child(4), .leader__table td:nth-child(4) { display: none; }
 }
+
+/* The fund map (V1-81): mutual funds -> families -> categories, top down, with
+   connector lines; a category opens in place (<details>). */
+.fundmap { display: flex; flex-direction: column; align-items: center; }
+.fundmap__root {
+  margin: 0; padding: 10px 22px; border-radius: 12px;
+  background: var(--accent); color: var(--on-accent); font-weight: 700;
+}
+.fundmap__root span { font-weight: 400; opacity: 0.85; margin-left: 8px; }
+.fundmap__families {
+  position: relative; width: 100%; list-style: none; margin: 28px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
+}
+/* The trunk from the root, and the bar every family hangs from. */
+.fundmap__families::before {
+  content: ""; position: absolute; top: -28px; left: 50%; height: 14px;
+  border-left: 2px solid var(--line-strong);
+}
+.fundmap__families::after {
+  content: ""; position: absolute; top: -14px; left: 10%; right: 10%;
+  border-top: 2px solid var(--line-strong);
+}
+.fundmap__family { position: relative; min-width: 0; }
+.fundmap__family::before {
+  content: ""; position: absolute; top: -14px; left: 50%; height: 14px;
+  border-left: 2px solid var(--line-strong);
+}
+.fundmap__node {
+  margin: 0; padding: 12px 14px; text-align: center;
+  background: var(--surface); border: 1px solid var(--accent); border-radius: 12px;
+}
+.fundmap__node strong { display: block; color: var(--accent); }
+.fundmap__node span { font-size: 12px; color: var(--ink-faint); }
+.fundmap__cats {
+  list-style: none; margin: 10px 0 0 18px; padding: 0 0 0 14px;
+  border-left: 2px solid var(--line);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.fundmap__cats > li { position: relative; }
+.fundmap__cats > li::before {
+  content: ""; position: absolute; left: -14px; top: 17px; width: 12px;
+  border-top: 2px solid var(--line);
+}
+.fundmap__cat {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 10px; font-size: 13px;
+}
+.fundmap__cat summary { cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.fundmap__cat summary span { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.fundmap__cat[open] { border-color: var(--accent); box-shadow: var(--shadow-lift); }
+.fundmap__cat p { margin: 8px 0 6px; color: var(--ink-soft); line-height: 1.45; }
+.fundmap__cat a { font-weight: 600; text-decoration: none; }
+.leader__table th button { font-size: 11px; }
+@media (max-width: 720px) { .fundmap__families::after { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

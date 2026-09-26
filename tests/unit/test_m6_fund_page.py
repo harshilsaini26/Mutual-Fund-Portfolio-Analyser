@@ -157,3 +157,32 @@ def test_a_fund_owing_more_than_it_is_owed_says_so(tmp_path: Path) -> None:
 
 
 HOSTILE = "Acme</script><script>alert(1)</script>"
+
+
+def test_performance_sets_each_measure_beside_its_benchmark(
+    client: TestClient,  # noqa: F811
+) -> None:
+    env = client.get(f"/api/views/fund_performance{QS}&scope_id=S1").json()
+    assert env["state"] == "ok", env.get("state_reason")
+    rows = {r["measure"]: r for r in env["payload"]["rows"]}
+    for measure in ("Sharpe ratio", "Treynor ratio", "Alpha a year", "Beta",
+                    "Information ratio", "Up capture", "Down capture"):
+        assert measure in rows, measure
+    three = rows["Return a year"]["3y"], rows["Benchmark a year"]["3y"]
+    assert all(v is not None for v in three)
+    lead = Decimal(rows["Ahead of benchmark"]["3y"])
+    assert lead == Decimal(three[0]) - Decimal(three[1])
+    assert rows["Beta"]["3y"] is not None
+    html = client.get(f"/fund/S1{QS}").text
+    assert "What it says" in html and "Return above cash for each unit of beta." in html
+
+
+def test_the_price_history_is_the_published_nav_from_its_first_day(
+    client: TestClient,  # noqa: F811
+) -> None:
+    env = client.get(f"/api/views/fund_nav{QS}&scope_id=S1").json()
+    assert env["state"] == "ok", env.get("state_reason")
+    rows = env["payload"]["rows"]
+    line = env["payload"]["charts"][0]["series"][0]["points"]
+    assert line[0][0] == rows[0]["date"] and line[-1][0] == rows[-1]["date"]
+    assert env["payload"]["headline"].startswith("Its NAV was ₹")

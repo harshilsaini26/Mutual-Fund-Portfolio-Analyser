@@ -40,7 +40,7 @@ from src.common.decimals import RATE_Q, annualise
 from src.common.types import IndexId, SchemeId
 from src.m0_data.config import risk_free_on
 from src.m0_data.providers.market_data import MarketDataProvider
-from src.m2_fund.paths import price_history, rolling_windows
+from src.m2_fund.paths import SPAN_SLACK_DAYS, price_history, rolling_windows
 from src.m2_fund.risk import (
     Drawdown,
     aligned,
@@ -57,15 +57,12 @@ from src.m2_fund.risk import (
     sharpe,
     sortino,
     tracking_error,
+    treynor,
 )
 
 #: The fixed look-back windows, in years. `since_first_nav` is not here: its
 #: start is a property of the series, not of the calendar.
 WINDOW_YEARS = {"1y": 1, "3y": 3, "5y": 5}
-
-#: A week: a window whose first price falls on the day after a holiday still
-#: spans its period.
-SPAN_SLACK_DAYS = 7
 
 
 def spans(obs_days: int, key: str) -> bool:
@@ -164,6 +161,7 @@ class ReturnWindow:
     tracking_error: Decimal | None = None
     alpha_ann: Decimal | None = None
     information_ratio: Decimal | None = None
+    treynor: Decimal | None = None
     up_capture: Decimal | None = None
     down_capture: Decimal | None = None
 
@@ -207,6 +205,15 @@ def _against(
     common = aligned(navs, benchmark)
     if len(common) < MIN_PAIRED_OBS:
         return {}
+    # The benchmark must span the fund's window, not a late part of it: the
+    # fund's return is over the whole window, and setting it against a
+    # benchmark's over a shorter stretch makes alpha and the lead the gap
+    # between two periods (an index fund standing in for a benchmark, V1-81,
+    # can be younger than the window; so can an index).
+    if (common[0][0] - navs[0].nav_date).days > SPAN_SLACK_DAYS or (
+        navs[-1].nav_date - common[-1][0]
+    ).days > SPAN_SLACK_DAYS:
+        return {}
     # Only the levels actually divided by are checked -- the list passed in is
     # the index's whole history, and re-validating 3,895 levels on each of four
     # windows buys nothing the arithmetic needs.
@@ -237,6 +244,9 @@ def _against(
         ),
         "information_ratio": (
             information_ratio(fund_ann, bench_ann, te) if te is not None else None
+        ),
+        "treynor": (
+            treynor(fund_ann, b, rf) if b is not None and rf is not None else None
         ),
         "up_capture": capture(fund_rets, bench_rets, rising=True),
         "down_capture": capture(fund_rets, bench_rets, rising=False),

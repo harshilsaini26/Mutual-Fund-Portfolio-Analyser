@@ -58,6 +58,7 @@ from src.m0_data.universe import live_funds
 from src.m2_fund.stats import rebuild_fund_stats
 
 from jobs import publish_site
+from jobs.fetch_groww import declared_benchmarks
 
 #: Fetching steps before the history, each `jobs.<name>` and its arguments.
 #: `required` steps stop the build when they fail; the others degrade a panel.
@@ -147,7 +148,8 @@ def build(out: Path, store_root: Path | None, base: str, workdir: Path,
         print("\n== every fund's figures, for its peers (V1-77)", flush=True)
         print(f"  {rebuild_fund_stats(conn, today, progress=print):,} windows")
         print("\n== the pages", flush=True)
-        summary = publish_site.build_site(conn, out, base, today)
+        summary = publish_site.build_site(
+            conn, out, base, today, declared_benchmarks(workdir / "groww.csv"))
         kept = save(conn, out, live_funds(conn))
         save_fetched(conn, out)
         print(f"  the store: {kept:,} funds, "

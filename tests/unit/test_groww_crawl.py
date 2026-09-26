@@ -53,13 +53,21 @@ def test_a_page_for_no_fund_we_list_waits_three_months() -> None:
 
 
 def test_the_map_survives_a_round_trip(tmp_path: Path) -> None:
-    seen = {"b-direct-growth": _seen("INF000B00001", 3),
+    seen = {"b-direct-growth": groww.Seen("INF000B00001", "2026-08-31", TODAY,
+                                          "NIFTY 500 Total Return Index"),
             "a-direct-growth": _seen("", 100)}
     path = tmp_path / "data" / "groww.csv"
     groww.write_map(path, seen)
     assert groww.read_map(path) == seen
     assert path.read_text(encoding="utf-8").splitlines()[1].startswith("a-direct")
+    assert groww.declared_benchmarks(path) == {
+        "INF000B00001": "NIFTY 500 Total Return Index"}
     assert groww.read_map(tmp_path / "none.csv") == {}
+    # A map written before the benchmark column still reads.
+    old = tmp_path / "old.csv"
+    old.write_text("slug,isin,as_of,checked\nb,INF000B00001,2026-08-31,2026-09-26\n",
+                   encoding="utf-8")
+    assert groww.read_map(old)["b"].benchmark == ""
 
 
 def test_the_sitemap_yields_direct_growth_pages_only() -> None:

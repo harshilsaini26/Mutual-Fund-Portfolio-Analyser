@@ -52,6 +52,8 @@ class Category:
     mapped: bool = True
     #: Why this group is kept apart from a similar one, when it is.
     note: str | None = None
+    #: What SEBI's rules say it holds, in a line (the front page's map, V1-81).
+    about: str | None = None
 
 
 def normalise(name: str) -> str:
@@ -69,6 +71,7 @@ def _table(path: Path = CATEGORIES_YAML) -> dict[str, Category]:
             name=str(entry["name"]),
             family=str(entry["family"]),
             note=" ".join(str(entry["note"]).split()) if entry.get("note") else None,
+            about=entry.get("about"),
         )
         for amfi_name in entry["merges"]:
             table[normalise(str(amfi_name))] = category

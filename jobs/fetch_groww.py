@@ -140,13 +140,16 @@ def _get(url: str, cfg: dict[str, Any], manners: Polite) -> bytes:
     return bytes(response.content)
 
 
-def page_isin(content: bytes) -> str | None:
-    """The ISIN the page states for ITSELF, which is the only trustworthy one."""
+def page_stated(content: bytes) -> tuple[str | None, str]:
+    """The ISIN the page states for ITSELF, which is the only trustworthy one,
+    and the benchmark it declares ("" if none). The public copy picks each
+    fund's index-fund proxy by that benchmark (V1-81)."""
     from src.m0_data.parse.holdings.groww import _payload
 
     data = _payload(RawFile("probe", SOURCE_ID, "probe.html", content))
     isin = data.get("isin")
-    return str(isin).strip().upper() if isin else None
+    bench = data.get("benchmark_name") or data.get("benchmark") or ""
+    return (str(isin).strip().upper() if isin else None), str(bench).strip()
 
 
 def _archived(conn: Any, file_id: str) -> bool:
@@ -282,7 +285,7 @@ def _one(
     parser = GrowwHoldingsParser()
     parsed = parser.parse(RawFile("probe", SOURCE_ID, f"{slug}.html", content))
     assert parsed.as_of_date is not None
-    stated = page_isin(content)
+    stated, benchmark = page_stated(content)
 
     if scheme_id and stated and stated != scheme_id.upper():
         raise SlugMismatch(
@@ -314,6 +317,7 @@ def _one(
             "slug": slug,
             "scheme_id": scheme_id,
             "as_of": str(parsed.as_of_date),
+            "benchmark": benchmark,
             "skipped": f"covered amc_direct at {covered}",
             "hint": "--force to load anyway; the AMC's own file resolves more",
         }
@@ -366,6 +370,7 @@ def _one(
         "unresolved_mv_pct": unresolved,
         "validation_status": status,
         "source_tier": TIER,
+        "benchmark": benchmark,
     }
 
 
@@ -404,11 +409,13 @@ def run(
 @dataclass(frozen=True)
 class Seen:
     """What one page said when it was last read: its ISIN ("" if it named none
-    or could not be read), its portfolio's date, and the day it was read."""
+    or could not be read), its portfolio's date, the day it was read, and the
+    benchmark it declares ("" if none)."""
 
     isin: str
     as_of: str
     checked: date
+    benchmark: str = ""
 
 
 def read_map(path: Path) -> dict[str, Seen]:
@@ -416,7 +423,8 @@ def read_map(path: Path) -> dict[str, Seen]:
         return {}
     with path.open(encoding="utf-8", newline="") as fh:
         return {
-            r["slug"]: Seen(r["isin"], r["as_of"], date.fromisoformat(r["checked"]))
+            r["slug"]: Seen(r["isin"], r["as_of"], date.fromisoformat(r["checked"]),
+                            r.get("benchmark") or "")
             for r in csv.DictReader(fh)
         }
 
@@ -425,10 +433,16 @@ def write_map(path: Path, seen: dict[str, Seen]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as fh:
         out = csv.writer(fh, lineterminator="\n")
-        out.writerow(["slug", "isin", "as_of", "checked"])
+        out.writerow(["slug", "isin", "as_of", "checked", "benchmark"])
         for slug in sorted(seen):
             s = seen[slug]
-            out.writerow([slug, s.isin, s.as_of, s.checked.isoformat()])
+            out.writerow([slug, s.isin, s.as_of, s.checked.isoformat(), s.benchmark])
+
+
+def declared_benchmarks(path: Path) -> dict[str, str]:
+    """Each fund's benchmark as its Groww page declares it, by ISIN."""
+    return {s.isin: s.benchmark for s in read_map(path).values()
+            if s.isin and s.benchmark}
 
 
 def plan(
@@ -477,7 +491,8 @@ def crawl(limit: int, map_path: Path, today: date | None = None) -> dict[str, in
             try:
                 got = _one(conn, promised, slug, cfg, index, prefixes, False,
                            manners=manners)
-                seen[slug] = Seen(str(got["scheme_id"]), str(got["as_of"]), today)
+                seen[slug] = Seen(str(got["scheme_id"]), str(got["as_of"]), today,
+                                  str(got["benchmark"]))
                 counts["skipped" if "skipped" in got else "loaded"] += 1
             except Exception as exc:  # one page's failure is that page's alone
                 # SlugMismatch is a page for a fund we do not list, or not the

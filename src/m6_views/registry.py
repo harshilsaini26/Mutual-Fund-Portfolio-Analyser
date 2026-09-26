@@ -215,6 +215,26 @@ VIEW_DEFS: dict[str, ViewDef] = {
         requires_fields=["m3.fund_composition"],
         sort_order=76,
     ),
+    "fund_performance": ViewDef(
+        view_id="fund_performance",
+        view_name="Performance",
+        module_source="m2",
+        question="How has it done against its benchmark, for the risk taken?",
+        chart_type="table",
+        default_scope="scheme",
+        requires_fields=["m2.fund_windows"],
+        sort_order=77,
+    ),
+    "fund_nav": ViewDef(
+        view_id="fund_nav",
+        view_name="Price history",
+        module_source="m0",
+        question="How has its price moved since the first one on record?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m0.nav_series"],
+        sort_order=78,
+    ),
     "fund_xray_header": ViewDef(
         view_id="fund_xray_header",
         view_name="Every figure",
@@ -230,7 +250,9 @@ VIEW_DEFS: dict[str, ViewDef] = {
 #: The fund page, top to bottom. `fund_xray_header` is its detail, collapsed.
 FUND_PAGE = (
     "fund_header",
+    "fund_performance",
     "fund_growth",
+    "fund_nav",
     "fund_returns",
     "fund_peers",
     "fund_drawdown",

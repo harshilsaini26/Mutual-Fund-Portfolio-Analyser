@@ -61,6 +61,15 @@ INDEX_WITHHELD = (
 )
 
 
+#: What it says where an index fund's price stands in for the index (V1-81).
+INDEX_PROXY = (
+    "The benchmark here is an index fund that tracks the index, not the index "
+    "itself, whose levels are licensed for personal use. That fund's costs keep "
+    "it a little behind the index, so this fund's lead over it reads a little "
+    "larger than over the index."
+)
+
+
 def withholds_index(market: Any) -> bool:
     return bool(getattr(market, "index_levels_withheld", False))
 
@@ -130,6 +139,7 @@ __all__ = [
     "CLASS_NAMES",
     "CLASS_PHRASES",
     "DEFAULT_WINDOW",
+    "INDEX_PROXY",
     "INDEX_WITHHELD",
     "NO_FUND",
     "SIZE_NAMES",

@@ -262,6 +262,18 @@ def alpha_annual(
     return (return_ann - (rf + beta_value * (bench_ann - rf))).quantize(RATE_Q)
 
 
+def treynor(
+    return_ann: Decimal, beta_value: Decimal, rf_pct: Decimal
+) -> Decimal | None:
+    """Excess return per unit of market risk (beta), where Sharpe uses total
+    volatility. None when beta is not positive: a fund that does not move with
+    its market has no market risk to divide by, and a negative one inverts
+    the ratio's meaning."""
+    if beta_value <= 0:
+        return None
+    return ((return_ann - rf_pct / 100) / beta_value).quantize(RATE_Q)
+
+
 def information_ratio(
     return_ann: Decimal, bench_ann: Decimal, tracking: Decimal
 ) -> Decimal | None:

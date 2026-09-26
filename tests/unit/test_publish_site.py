@@ -18,6 +18,7 @@ from pathlib import Path
 import jobs.publish_site as publish
 import pytest
 from src.common.decimals import connect
+from src.common.types import IndexId, SchemeId
 from src.m0_data.categories import category_of
 from src.m6_views.builders.fund.common import INDEX_WITHHELD
 
@@ -175,6 +176,37 @@ def test_no_index_level_reaches_the_public_copy(site: Path) -> None:
     assert all(line.endswith(",") for line in growth.splitlines()[-3:])
 
 
+def test_an_index_funds_price_stands_in_for_the_benchmark_it_declares(
+    warehouse: sqlite3.Connection,
+) -> None:
+    tracker, younger = "INF000T01052", "INF000T01060"
+    for sid, name, days in ((tracker, "Test 50 Index Fund", 400),
+                            (younger, "Young 50 Index Fund", 300)):
+        warehouse.execute(
+            "INSERT INTO scheme (scheme_id, scheme_name, fund_name, plan, option,"
+            " amc_id, scheme_family, sebi_category, status, last_seen) VALUES"
+            " (?,?,?,'direct','growth','amc1',?,'Index Funds - Equity Funds',"
+            " 'active',?)", (sid, name, name, name, TODAY))
+        _prices(warehouse, sid, days)
+    declared = {DIRECT: "Test 50 Total Return Index", tracker: "TEST 50 TRI",
+                younger: "Test 50 Total Return Index"}
+    market = publish.PublicMarket(warehouse, declared)
+
+    # The longest record stands in; a tracker is never its own benchmark.
+    assert market.benchmark_for(SchemeId(DIRECT)) == f"proxy:{tracker}"
+    assert market.benchmark_for(SchemeId(tracker)) == f"proxy:{younger}"
+    assert market.benchmark_for(SchemeId(AGGREGATED)) is None  # declares nothing
+    facts = market.scheme_facts(SchemeId(DIRECT))
+    assert facts is not None
+    assert facts.benchmark_name == "Test 50 (via Test 50 Index Fund)"
+    series = market.index_series(IndexId(f"proxy:{tracker}"),
+                                 TODAY - timedelta(days=2), TODAY)
+    assert [p.level for p in series] == [Decimal(498), Decimal(499)]  # to yesterday
+    # The index's own levels stay withheld.
+    assert market.index_series(IndexId("NSE:TEST_TRI"),
+                               TODAY - timedelta(days=9), TODAY) == []
+
+
 def test_an_aggregators_holdings_are_published_and_say_whose_they_are(
     site: Path,
 ) -> None:
@@ -248,6 +280,12 @@ def test_the_front_page_is_a_way_in_not_a_list(site: Path) -> None:
     assert 'data-index="/Repo/search.json"' in index
     assert f'href="{BASE}/funds/"' in index and 'id="about"' in index
     assert "<table data-sortable" not in index
+    # V1-81: a map of families and categories where "Recently viewed" was, each
+    # category with SEBI's rule, its count and a way to its funds.
+    assert "Recently viewed" not in index and 'class="fundmap"' in index
+    assert "Flexi cap <span>2</span>" in index
+    assert "At least 65% in shares, of any size, in any mix." in index
+    assert f'href="{BASE}/funds/#category=equity/flexi_cap">See its 2 funds' in index
     # Islands enhance text the server already wrote: with scripts off it reads.
     assert re.search(r'data-island="count-up">2<', index)
     assert len(index.encode("utf-8")) < 200_000

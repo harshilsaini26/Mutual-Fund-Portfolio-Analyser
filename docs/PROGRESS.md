@@ -259,6 +259,10 @@ pushes one commit to `gh-pages`. Measured on the first full build, 2026-09-26:
   Groww's pages (V1-79), 100 a night, each panel marked as from an aggregator.
 - **Pages ~90 KB** (from 352 KB): each panel's figures are a linked CSV, not an
   inline table (§10.4).
+- **Benchmarks, by proxy** (V1-81): NSE's levels stay out, so a fund is compared with
+  an index fund that declares the same benchmark on its Groww page, named as such.
+  The crawl map gained that column on 2026-09-26, so proxies fill in as pages are
+  read, about 100 a night.
 
 ## Benchmarks
 

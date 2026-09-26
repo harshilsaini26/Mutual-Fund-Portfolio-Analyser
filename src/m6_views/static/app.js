@@ -147,14 +147,16 @@
   // theme.js applied a stored choice before the page was drawn; this is the
   // switch. charts.js watches the attribute and redraws in the new colours.
 
-  // Light unless the reader chose dark (V1-80: light is the design's first form).
+  // Light unless the reader chose another (V1-80); three themes, in turn (V1-81).
+  var THEMES = ["light", "dark", "matrix"];
+
   function currentTheme() {
     return document.documentElement.getAttribute("data-theme") || "light";
   }
 
   document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
     button.addEventListener("click", function () {
-      var next = currentTheme() === "dark" ? "light" : "dark";
+      var next = THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length];
       document.documentElement.setAttribute("data-theme", next);
       store("theme", next);
     });

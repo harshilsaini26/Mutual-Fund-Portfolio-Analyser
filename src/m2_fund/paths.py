@@ -23,6 +23,9 @@ from src.m0_data.providers.market_data import MarketDataProvider
 
 #: What "Rs 10,000 invested" means on the growth chart.
 GROWTH_BASE = Decimal(10000)
+#: A week: a window whose first price falls on the day after a holiday still
+#: spans its period.
+SPAN_SLACK_DAYS = 7
 RUPEE_Q = Decimal("0.01")
 
 #: §9's floor: below twelve windows a distribution describes the sample.
@@ -70,8 +73,15 @@ def growth_path(
     window = [p for p in navs if p.nav_date >= start]
     if len(window) < 2:
         return None
-    # Anchor on the first day the index also priced, so both start at `base`.
+    # Anchor on the first day the index also priced, so both start at `base`;
+    # but only if that is the window's start. An index (or an index fund
+    # standing in for one, V1-81) that begins later would cut the fund's own
+    # line short, so the fund is drawn alone instead.
     anchor = next((p for p in window if p.nav_date in levels), None)
+    if anchor is not None and (
+        anchor.nav_date - window[0].nav_date
+    ).days > SPAN_SLACK_DAYS:
+        anchor = None
     if anchor is not None:
         window = [p for p in window if p.nav_date >= anchor.nav_date]
     first = window[0]

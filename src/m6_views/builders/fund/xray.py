@@ -17,7 +17,11 @@ from typing import Any
 from src.common.types import SchemeId
 from src.m2_fund.windows import NothingToCompute, ReturnWindow, fund_windows
 from src.m6_views.builder import Scope
-from src.m6_views.builders.fund.common import INDEX_WITHHELD, withholds_index
+from src.m6_views.builders.fund.common import (
+    INDEX_PROXY,
+    INDEX_WITHHELD,
+    withholds_index,
+)
 from src.m6_views.compose import ok_envelope
 from src.m6_views.deps import Deps
 from src.m6_views.envelope import ViewEnvelope
@@ -92,7 +96,7 @@ class FundXrayBuilder:
         shown = [w for w in fw.windows.values() if w]
         caveats: list[str] = []
         if withholds_index(self.market):
-            caveats.append(INDEX_WITHHELD)
+            caveats.append(INDEX_PROXY if fw.benchmark_id else INDEX_WITHHELD)
         elif fw.benchmark_id is None:
             caveats.append(
                 "No benchmark index is on record for this scheme, so alpha, "

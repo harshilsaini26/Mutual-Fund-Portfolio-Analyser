@@ -16,6 +16,7 @@ from src.m2_fund.risk import confidence_from_obs
 from src.m2_fund.windows import window_start
 from src.m6_views.builder import Scope
 from src.m6_views.builders.fund.common import (
+    INDEX_PROXY,
     INDEX_WITHHELD,
     NO_FUND,
     FundQuality,
@@ -84,7 +85,7 @@ class FundGrowthBuilder:
                 f"Prices on record begin on {format_date(path.start)}, after "
                 f"this period's start, so both lines begin there."
             )
-        if withholds_index(self.market):
+        if withholds_index(self.market) and index_id is None:
             caveats.append(INDEX_WITHHELD)
         elif index_id is None:
             caveats.append(
@@ -93,10 +94,13 @@ class FundGrowthBuilder:
             )
         elif bench_end is None:
             caveats.append(
-                f"Benchmark {index_id} is on record, but its total-return "
-                f"series does not cover this period. python -m jobs.fetch_index "
-                f"--held loads it."
+                f"{bench or index_id} is on record as its benchmark, but its "
+                f"prices do not cover this period, so the fund is drawn alone."
+                + ("" if withholds_index(self.market)
+                   else " python -m jobs.fetch_index --held loads it.")
             )
+        elif withholds_index(self.market):
+            caveats.append(INDEX_PROXY)
 
         kept = thin(path.points)
         series = [

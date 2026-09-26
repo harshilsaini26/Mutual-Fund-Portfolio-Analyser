@@ -433,7 +433,7 @@ def test_a_window_with_no_benchmark_at_all_leaves_every_field_none() -> None:
     w = compute_return_window(series(["100", "110"]), "1y")
     assert w is not None
     for field in ("benchmark_id", "beta", "tracking_error", "alpha_ann",
-                  "up_capture", "down_capture", "information_ratio"):
+                  "up_capture", "down_capture", "information_ratio", "treynor"):
         assert getattr(w, field) is None, field
 
 
@@ -485,3 +485,37 @@ def test_capture_survives_a_zero_denominator_no_market_produces() -> None:
 
     falls = [Decimal("-2"), Decimal("-2")]
     assert capture([Decimal("-0.5"), Decimal("-0.5")], falls, rising=False) is None
+
+
+def test_treynor_is_excess_return_per_unit_of_beta() -> None:
+    from src.m2_fund.risk import treynor
+
+    # 15% a year, cash at 6%, beta 0.9: 9 points of excess over 0.9 of market risk.
+    assert treynor(Decimal("0.15"), Decimal("0.9"), Decimal("6")) == Decimal("0.1")
+    assert treynor(Decimal("0.15"), Decimal("0"), Decimal("6")) is None
+    assert treynor(Decimal("0.15"), Decimal("-0.2"), Decimal("6")) is None
+
+
+def test_a_benchmark_that_begins_late_in_the_window_is_not_compared() -> None:
+    """A fund's three years against a benchmark's last one would make alpha the
+    gap between two periods. The benchmark is kept; the comparison is not."""
+    from src.m2_fund.windows import compute_return_window
+
+    values = [str(100 + i) for i in range(60)]
+    navs = series(values)
+    late = levels(values)[30:]  # the benchmark's record starts on day 30
+    w = compute_return_window(navs, "1y", late, "proxy:X")
+    assert w is not None and w.benchmark_id == "proxy:X"
+    assert w.bench_return_ann is None and w.alpha_ann is None
+    whole = compute_return_window(navs, "1y", levels(values), "proxy:X")
+    assert whole is not None and whole.beta is not None
+
+
+def test_a_benchmark_younger_than_the_period_leaves_the_fund_drawn_alone() -> None:
+    from src.m2_fund.paths import growth_path
+
+    navs = series([str(100 + i) for i in range(60)])
+    late = dict(levels([str(50 + i) for i in range(60)])[30:])
+    path = growth_path(navs, late, navs[0].nav_date)
+    assert path is not None and path.start == navs[0].nav_date  # not cut short
+    assert all(b is None for _, _, b in path.points)

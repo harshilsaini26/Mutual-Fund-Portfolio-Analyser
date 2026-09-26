@@ -42,10 +42,38 @@
   </div>
 </section>
 
-<div class="recent card" data-recent data-recent-slash="true" hidden>
-  <h3>Recently viewed</h3>
-  <ul></ul>
-</div>
+<section id="map" class="home-section" aria-labelledby="map-h">
+  <div class="section-head">
+    <h2 id="map-h">How mutual funds are organised</h2>
+    <p>SEBI sorts every fund into a family and a category by what it may hold.
+      Open a category for its rule and its funds.</p>
+  </div>
+  {#
+    A flowchart of plain lists (V1-81): mutual funds, their families, each
+    family's categories. Each category is a <details>, so it opens with a click,
+    the keyboard or a screen reader, and without scripts.
+  #}
+  <div class="fundmap">
+    <p class="fundmap__root">Mutual funds <span>{{ count | fmt_count }} funds</span></p>
+    <ul class="fundmap__families">
+      {% for family in fund_map %}
+      <li class="fundmap__family">
+        <p class="fundmap__node"><strong>{{ family.name }}</strong>
+          <span>{{ family.count | fmt_count }} funds · {{ family.hint }}</span></p>
+        <ul class="fundmap__cats">
+          {% for c in family.categories %}
+          <li><details class="fundmap__cat">
+            <summary>{{ c.name }} <span>{{ c.count }}</span></summary>
+            {% if c.about %}<p>{{ c.about }}</p>{% endif %}
+            <a href="{{ root }}/funds/#category={{ c.key }}">See its {{ c.count }} fund{{ '' if c.count == 1 else 's' }}</a>
+          </details></li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
 
 <section id="categories" class="home-section" aria-labelledby="categories-h">
   <div class="section-head">
@@ -62,19 +90,21 @@
         <a class="leader__all" href="{{ root }}/funds/#category={{ card.key }}">All {{ card.count }} funds
           {{ icon.i("arrow") }}</a>
       </header>
-      <table class="leader__table">
+      <table class="leader__table" data-sortable>
         <thead><tr>
-          <th scope="col">Fund</th>
-          <th scope="col" class="num">1 year</th>
-          <th scope="col" class="num">3 years</th>
-          <th scope="col" class="num">5 years</th>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
         </tr></thead>
         <tbody>
           {% for fund in card.funds %}
           <tr>
             <td><a class="fund-name" href="{{ root }}/fund/{{ fund.scheme_id }}/">{{ fund.name }}</a></td>
+            <td class="num"{% if fund.size_value %} data-value="{{ fund.size_value }}"{% endif %}>{{ fund.size_label }}</td>
             {% for r in fund.returns %}
-            <td class="num{% if r.tone %} ret--{{ r.tone }}{% endif %}{% if loop.index == 2 %} leader__key{% endif %}">
+            <td class="num{% if r.tone %} ret--{{ r.tone }}{% endif %}{% if loop.index == 2 %} leader__key{% endif %}"{% if r.value %} data-value="{{ r.value }}"{% endif %}>
               {%- if r.symbol %}<span class="ret__symbol" aria-hidden="true">{{ r.symbol }}</span>{% endif %}{{ r.label -}}
             </td>
             {% endfor %}

@@ -85,18 +85,20 @@ function countUp(el) {
   seen.observe(el);
 }
 
-// Light unless the reader chose dark, as in app.js.
-function isLight() {
-  return document.documentElement.getAttribute('data-theme') !== 'dark';
-}
+const theme = () => document.documentElement.getAttribute('data-theme') || 'light';
+const AURORA = {
+  light: ['#7DD3FC', '#2F5FB3', '#9FB9F5'],
+  dark: ['#7DD3FC', '#2F5FB3', '#9FB9F5'],
+  matrix: ['#00FF41', '#003B0F', '#39FF14'],
+};
 
 function aurora(el) {
   const probe = document.createElement('canvas');
   if (!probe.getContext('webgl2')) return;
   const draw = () =>
     render(
-      <Aurora colorStops={['#7DD3FC', '#2F5FB3', '#9FB9F5']} amplitude={1.0} blend={0.55} speed={0.6}
-        lightMode={isLight()} />,
+      <Aurora colorStops={AURORA[theme()] || AURORA.light} amplitude={1.0} blend={0.55}
+        speed={0.6} lightMode={theme() === 'light'} />,
       el
     );
   // Drawn only while the hero is on screen: its animation runs every frame,

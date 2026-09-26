@@ -18,8 +18,9 @@ What it carries is decided, not incidental:
   terms of use apply to republishing them.
 - **Not NSE's index levels.** They are licensed for personal use (PLAN.md §5.3
   separates that from redistribution), so the market data here withholds them
-  (`WithoutIndexLevels`) and every builder draws the fund alone, saying why. The
-  benchmark's *name* stays: that is a fact about the fund.
+  (`PublicMarket`). Where an index fund declares the same benchmark as a fund
+  (both from their Groww pages), that index fund's own price stands in for the
+  index, named as such (V1-81); otherwise the fund is drawn alone, saying why.
 - **Never the portfolio.** The ledger here is an empty in-memory database; the
   personal ledger file is not opened, and a test holds that.
 
@@ -32,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -48,7 +50,8 @@ from src.common.decimals import connect
 from src.common.types import IndexId, SchemeId, UserId
 from src.m0_data.categories import FAMILIES, category_of
 from src.m0_data.config import REPO_ROOT, warehouse_path
-from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
+from src.m0_data.normalise.index_id import index_key
+from src.m0_data.providers.warehouse import SchemeFacts, WarehouseMarketDataProvider
 from src.m0_data.universe import ISIN, live_funds
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m1_ledger.providers.position import SqlitePositionProvider
@@ -64,6 +67,8 @@ from src.m6_views.format import DASH, format_inr, format_pct
 from src.m6_views.registry import VIEW_DEFS, VIEW_REGISTRY
 from src.m6_views.states import empty_envelope, error_envelope
 
+from jobs.fetch_groww import declared_benchmarks
+
 #: GitHub Pages publishes at most 1 GB. The build stops well short of it.
 SITE_BUDGET_BYTES = 900 * 1024 * 1024
 #: About a year of trading days: below this a fund page is mostly empty panels.
@@ -75,6 +80,7 @@ STATIC_FILES = (
     "app.css", "app.js", "charts.js", "theme.js", "lenis.css",
     "vendor/echarts.v6.1.0.min.js", "vendor/lenis.v1.3.26.min.js",
     "vendor/islands.v1.js", "fonts/rubik-latin-wght-normal.woff2",
+    "fonts/terminess-Regular.woff2", "fonts/terminess-Bold.woff2",
 )
 #: A file only this job writes, so a rebuild can tell its own output from a
 #: directory it must not delete.
@@ -96,32 +102,84 @@ class SiteTooLarge(RuntimeError):
     """The site would not fit GitHub Pages; publishing it would fail there."""
 
 
-class WithoutIndexLevels(WarehouseMarketDataProvider):
-    """The warehouse's market data with every index level withheld.
+#: The id a proxied benchmark carries: never an index id, so nothing can take
+#: an index fund's price for the index's own level.
+PROXY = "proxy:"
+_TRI = re.compile(r"\s*[-(]?\s*(total returns? index|tri)\)?\s*$", re.I)
+
+
+def trackers(warehouse: Any, declared: dict[str, str]) -> dict[str, list[str]]:
+    """Each benchmark (by `index_key`) and the index funds and ETFs that declare
+    it, longest price record first: the first is its proxy."""
+    kinds = {f.scheme_id: category_of(f.category).key for f in live_funds(warehouse)}
+    ids = [s for s in declared if kinds.get(s, "").startswith(("index/", "etf/"))]
+    first = dict(warehouse.execute(
+        f"SELECT scheme_id, min(nav_date) FROM nav_daily WHERE scheme_id IN"
+        f" ({','.join('?' * len(ids))}) GROUP BY scheme_id", ids).fetchall())
+    out: dict[str, list[str]] = defaultdict(list)
+    for sid in sorted((s for s in ids if s in first), key=lambda s: (str(first[s]), s)):
+        out[index_key(declared[sid])].append(sid)
+    return out
+
+
+class PublicMarket(WarehouseMarketDataProvider):
+    """The warehouse's market data with every index level withheld (V1-72), and
+    an index fund's price in place of each benchmark one tracks (V1-81).
 
     `index_levels_withheld` is what the fund builders read to say "left out of
-    this public copy" rather than "none on record" (`builders/fund/common.py`).
+    this public copy" rather than "none on record" (`builders/fund/common.py`);
+    a fund with a proxy is told apart by its `proxy:` benchmark id.
     """
 
     index_levels_withheld = True
 
+    def __init__(self, conn: Any, declared: dict[str, str] | None = None) -> None:
+        super().__init__(conn)
+        self.declared = declared or {}
+        self.trackers = trackers(conn, self.declared) if self.declared else {}
+
+    def proxy(self, scheme_id: str) -> str | None:
+        """The index fund standing in for this fund's benchmark: never itself."""
+        name = self.declared.get(scheme_id)
+        found = self.trackers.get(index_key(name), []) if name else []
+        return next((s for s in found if s != scheme_id), None)
+
+    def benchmark_for(self, scheme_id: SchemeId) -> IndexId | None:
+        proxy = self.proxy(str(scheme_id))
+        return IndexId(PROXY + proxy) if proxy else None
+
     def index_series(
         self, index_id: IndexId, start: date, end: date
     ) -> list[IndexPoint]:
-        return []
+        if not index_id.startswith(PROXY):
+            return []
+        return [IndexPoint(index_id, p.nav_date, p.nav) for p in
+                self.nav_series(SchemeId(index_id[len(PROXY):]), start, end)]
 
     def index_level(self, index_id: IndexId, on: date) -> Decimal | None:
-        return None
+        found = self.index_series(index_id, on, on)
+        return found[0].level if found else None
+
+    def scheme_facts(self, scheme_id: SchemeId) -> SchemeFacts | None:
+        facts = super().scheme_facts(scheme_id)
+        proxy = self.proxy(str(scheme_id))
+        tracker = super().scheme_facts(SchemeId(proxy)) if proxy else None
+        if facts is None or tracker is None:
+            return facts
+        index = _TRI.sub("", self.declared[str(scheme_id)])
+        return replace(facts, benchmark_id=PROXY + str(proxy),
+                       benchmark_name=f"{index} (via {tracker.name})")
 
 
-def public_deps(warehouse: Any) -> Deps:
-    """The providers the public pages may read: never a personal ledger."""
+def public_deps(warehouse: Any, declared: dict[str, str] | None = None) -> Deps:
+    """The providers the public pages may read: never a personal ledger.
+    `declared` is each fund's benchmark as its Groww page names it."""
     ledger = connect_ledger(":memory:", allow_unencrypted=True)
     apply_ledger_schema(ledger)
     return Deps(
         lookthrough=SqliteLookThroughProvider(ledger, warehouse),
         positions=SqlitePositionProvider(ledger),
-        market=WithoutIndexLevels(warehouse),
+        market=PublicMarket(warehouse, declared),
     )
 
 
@@ -243,6 +301,29 @@ def category_leaders(
     return cards
 
 
+def fund_map(funds: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """The front page's map (V1-81): each family, then its categories with what
+    SEBI's rules say they hold and how many funds they have here. Largest first."""
+    counts: dict[str, int] = defaultdict(int)
+    found = {}
+    for fund in funds:
+        category = category_of(fund["category"])
+        counts[category.key] += 1
+        found[category.key] = category
+    families = []
+    for key, name, hint in FAMILIES:
+        members = sorted((c for c in found.values() if c.family == key),
+                         key=lambda c: (-counts[c.key], c.name))
+        if members:
+            families.append({
+                "key": key, "name": name, "hint": hint,
+                "count": sum(counts[c.key] for c in members),
+                "categories": [{"key": c.key, "name": c.name, "about": c.about,
+                                "count": counts[c.key]} for c in members],
+            })
+    return families
+
+
 def _build(
     deps: Deps, view_id: str, scope: Scope, params: dict[str, Any]
 ) -> ViewEnvelope:
@@ -278,9 +359,11 @@ def _adapter(folder: Path, url: str, scope: Scope) -> Any:
 
 
 def build_site(
-    warehouse: Any, out: Path, base: str, today: date | None = None
+    warehouse: Any, out: Path, base: str, today: date | None = None,
+    declared: dict[str, str] | None = None,
 ) -> dict[str, int]:
-    """Render every public fund page, the index and the search list into `out`."""
+    """Render every public fund page, the index and the search list into `out`.
+    `declared` is each fund's benchmark by ISIN, from the Groww crawl's map."""
     today = today or date.today()
     if out.exists():
         if any(out.iterdir()) and not (out / MARKER).exists():
@@ -290,7 +373,7 @@ def build_site(
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    deps = public_deps(warehouse)
+    deps = public_deps(warehouse, declared)
     engine = templates(root=base, static=True)
     shell = {"catalogue": [], "health": {}, "qs": "", "active": "", "built": today}
     funds = funds_to_publish(warehouse)
@@ -349,7 +432,7 @@ def build_site(
     (out / "index.html").write_text(
         engine.get_template("home.html").render({
             **shell, "count": len(funds), "stats": stats,
-            "leaders": category_leaders(rows),
+            "leaders": category_leaders(rows), "fund_map": fund_map(funds),
         }),
         encoding="utf-8",
     )
@@ -464,7 +547,8 @@ def main() -> None:
     # The public copy reads; it never writes. SQLite enforces it from here on.
     warehouse.execute("PRAGMA query_only = ON")
     print(f"building the public copy into {args.out} (links under {base or '/'})")
-    summary = build_site(warehouse, args.out, base)
+    summary = build_site(warehouse, args.out, base,
+                         declared=declared_benchmarks(REPO_ROOT / "data" / "groww.csv"))
     print(f"{summary['funds']:,} fund pages, {summary['bytes'] / 1e6:,.1f} MB")
     if args.push:
         push(args.out)

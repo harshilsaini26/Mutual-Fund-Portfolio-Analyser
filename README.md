@@ -108,8 +108,12 @@ and each page leads with charts, each under one plain sentence:
   period's prices), its rank in its category over three years, its worst fall and how
   long it took to recover, volatility, fund size, and its expense ratio (AMFI's total
   TER). Below the strip, how steady it has been across every three-year stretch.
+- **Performance:** return, volatility and deepest fall over 1, 3 and 5 years beside the
+  benchmark's, with Sharpe, Sortino, Treynor, alpha, beta, tracking error, information
+  ratio and up and down capture, each with a line on what it says.
 - **What ₹10,000 became**, against the benchmark with dividends reinvested, over 1, 3 or
   5 years or the whole record.
+- **Price history:** the published NAV from its first day on record.
 - **Returns by period**, fund beside benchmark.
 - **Among its peers:** where it ranks among the open funds of its category (Direct
   plans, one share class each) on return, volatility, worst fall, return for the risk
@@ -307,12 +311,15 @@ python -m jobs.build_site --out site --base ""          # about an hour the firs
 python -m http.server -d site 8000                      # then open http://127.0.0.1:8000
 ```
 
-Its front page lists every published fund in one table you can sort by size, cost,
-return or category rank, and narrow by category. It carries AMFI's figures and fund
-houses' own disclosures, and nothing else:
+Its front page maps how funds are organised and shows each large equity category's
+highest three-year returns; `/funds/` lists every published fund in one table you can
+sort by size, cost, return or category rank, and narrow by category. It carries AMFI's
+figures and fund houses' own disclosures, and nothing else:
 
-- **No benchmark comparisons.** NSE's index levels are licensed for personal use, so the
-  public copy leaves them out and each page says so.
+- **Benchmarks by proxy.** NSE's index levels are licensed for personal use, so the
+  public copy leaves them out. Where an index fund declares the same benchmark as a
+  fund, that index fund's price stands in, named as such; elsewhere the page says why
+  there is no comparison.
 - **Groww's portfolios, marked.** Where the fund house's own file is not loaded, what a
   fund owns comes from Groww's page for it, and the panel says so. Groww's terms of use
   apply to what it publishes.
@@ -459,7 +466,7 @@ src/m1_ledger/        statement parsing, lots, returns          your positions
 src/m2_fund/          returns, risk, benchmark analytics        fund x-ray
 src/m3_lookthrough/   exposure, overlap, concentration          look-through
 src/m6_views/         pages, charts, export, local API          what you see
-ui/                   React Bits islands, Lenis, the Rubik font  built once, committed
+ui/                   React Bits islands, Lenis                 built once, committed
 migrations/           numbered, forward-only schema changes
 ```
 
