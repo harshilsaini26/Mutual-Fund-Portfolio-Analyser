@@ -1,74 +1,39 @@
 {% extends "base.html" %}
 {% import "icons.html" as icon %}
-{% block title %}Mutual fund explorer{% endblock %}
+{% block title %}Every fund · Look-through{% endblock %}
 
 {#
-  The public copy's front page (DECISIONS V1-72, redesigned in V1-74).
+  The public copy's list of every fund, at /funds/ (DECISIONS V1-72, V1-74; its
+  own page since V1-80, so the front page need not carry 1,661 rows).
 
-  What it is, a way to any fund, and every fund in one table. Every figure in
-  the table was formatted by `jobs/publish_site.py` from the same fund pages it
-  links to; the browser only sorts it (on the `data-value` beside each figure)
-  and filters it. With scripts off the table is simply the whole list, and the
-  grouped lists at the end are the way through by category.
-
-  There is deliberately no "featured" or "top" fund here: a front page that
-  singles funds out reads as a recommendation, and the page is descriptive.
+  Every figure in the table was formatted by `jobs/publish_site.py` from the same
+  fund pages it links to; the browser only sorts it (on the `data-value` beside
+  each figure) and filters it, by family, by category (`#category=<key>`, which
+  the front page's cards link to) and by name. With scripts off the table is the
+  whole list, and the grouped lists at the end are the way through by category.
 #}
 {% block content %}
-<section class="hero">
-  <p class="eyebrow">Indian mutual funds, looked through</p>
-  <h1 class="hero__title">See what a mutual fund actually owns</h1>
-  <p class="hero__lede">
-    {{ count }} funds, each with what ₹10,000 became, how far it fell and how
-    fast it recovered, how steady its returns have been, and the companies it
-    holds — from AMFI's prices and the fund house's own monthly disclosure.
-  </p>
-  <form class="search search--hero" action="{{ root }}/" method="get" role="search">
-    <label class="sr-only" for="q-hero">Find a fund by name</label>
-    {{ icon.i("search", "icon search__icon") }}
-    <input id="q-hero" name="q" type="search" autocomplete="off" spellcheck="false"
-           placeholder="Search {{ count }} funds by name" data-index="{{ root }}/search.json">
-    <ul class="search__suggest" hidden></ul>
-  </form>
-  <div class="recent" data-recent data-recent-slash="true" hidden>
-    <h3>Recently viewed</h3>
-    <ul></ul>
-  </div>
-</section>
-
-<dl class="stats">
-  <div class="stat"><dt>funds with a page</dt><dd>{{ count }}</dd></div>
-  <div class="stat"><dt>fund houses</dt><dd>{{ stats.houses }}</dd></div>
-  <div class="stat"><dt>funds with their holdings</dt><dd>{{ stats.holdings }}</dd></div>
-  <div class="stat"><dt>prices through</dt><dd>{{ stats.prices_to | fmt_date if stats.prices_to else '—' }}</dd></div>
-</dl>
-
-<div class="section-head">
-  <h2>Browse by category</h2>
-  <p>SEBI's categories, as AMFI lists each fund.</p>
-</div>
-<div class="families">
-  {% for family in families %}
-  <a class="family" href="{{ root }}/#funds" data-family="{{ family.key }}">
-    <span class="family__count">{{ family.count }}</span>
-    <span class="family__name">{{ family.name }}</span>
-    <span class="family__hint">{{ family.hint }}</span>
-  </a>
-  {% endfor %}
-</div>
+<header class="page-head">
+  <p class="eyebrow">Explore funds</p>
+  <h1>Every fund</h1>
+  <p class="page-head__lede">{{ count | fmt_count }} funds from {{ stats.houses | fmt_count }} fund houses:
+    every open fund with a Direct plan and a year of prices, as its Direct growth
+    option. Sort by any column; narrow by family, category or name.</p>
+</header>
 
 <section id="funds" aria-labelledby="funds-h">
-  <div class="section-head">
-    <h2 id="funds-h">Every fund</h2>
-    <p>Direct plan and growth option where a fund offers them. Returns are
-      annualised; a dash means too little price history for the period.</p>
-  </div>
+  <h2 id="funds-h" class="sr-only">Every fund</h2>
   <div class="card table-card">
     <div class="table-card__tools">
-      <label class="sr-only" for="filter-family">Category</label>
+      <label class="sr-only" for="filter-family">Family</label>
       <select id="filter-family" data-filter-family>
-        <option value="">All categories</option>
+        <option value="">All families</option>
         {% for family in families %}<option value="{{ family.key }}">{{ family.name }}</option>{% endfor %}
+      </select>
+      <label class="sr-only" for="filter-category">Category</label>
+      <select id="filter-category" data-filter-category>
+        <option value="">All categories</option>
+        {% for key, name in category_options %}<option value="{{ key }}">{{ name }}</option>{% endfor %}
       </select>
       <label class="sr-only" for="filter-text">Narrow by name</label>
       <input id="filter-text" type="search" autocomplete="off" placeholder="Narrow by name" data-filter-text>
@@ -88,7 +53,7 @@
       </tr></thead>
       <tbody>
         {% for fund in funds %}
-        <tr data-family="{{ fund.family }}">
+        <tr data-family="{{ fund.family }}" data-category="{{ fund.category_key }}">
           <td><a class="fund-name" href="{{ root }}/fund/{{ fund.scheme_id }}/">{{ fund.name }}</a>
             <span class="cell-sub">{{ fund.house }}</span></td>
           <td>{{ fund.category_short }}</td>
@@ -107,23 +72,9 @@
     </table>
     </div>
   </div>
+  <p class="table-note">Returns are annualised; a dash means too little price history
+    for the period. Ranks compare a fund with the open funds of its own category.</p>
 </section>
-
-<div class="section-head"><h2>What each fund page shows</h2></div>
-<div class="features">
-  <div class="card feature">{{ icon.i("growth") }}
-    <h3>What ₹10,000 became</h3>
-    <p>Its growth over one, three and five years and its whole record, drawn from AMFI's daily prices.</p></div>
-  <div class="card feature">{{ icon.i("fall") }}
-    <h3>Falls and recoveries</h3>
-    <p>How far below its last high the fund stood each day, and how long it took to climb back.</p></div>
-  <div class="card feature">{{ icon.i("wave") }}
-    <h3>Consistency</h3>
-    <p>The return of every three-year stretch, not only the one that ends today.</p></div>
-  <div class="card feature">{{ icon.i("box") }}
-    <h3>What it owns</h3>
-    <p>Asset mix, largest holdings and sectors, from the fund house's own monthly disclosure.</p></div>
-</div>
 
 <div class="section-head">
   <h2>Every fund, by category</h2>

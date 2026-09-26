@@ -16,7 +16,7 @@ from typing import Any
 
 from src.common.contracts.market import NavPoint
 from src.common.types import SchemeId
-from src.m2_fund.paths import price_history, rolling_path
+from src.m2_fund.paths import day_change, price_history, rolling_path
 from src.m2_fund.peers import PeerContext, peer_context
 from src.m2_fund.windows import (
     FundWindows,
@@ -89,6 +89,27 @@ def _rank_tile(peers: PeerContext | None) -> dict[str, Any]:
         return _tile("rank_3y", label, None, "text", (three.reason or "").capitalize())
     return _tile("rank_3y", label, rank_words(three), "text",
                  f"The {QUARTERS[three.quartile]} of {peers.category.name}")
+
+
+def _nav(fw: FundWindows | None) -> dict[str, Any] | None:
+    """The latest published price, its date and the change on the day, for the
+    top of the card (DECISIONS V1-80, after Fundoo). Formatted here (§16.4); the
+    change carries its direction as a symbol as well as a tone (§10.3)."""
+    if fw is None:
+        return None
+    published = [n for n in fw.navs if not n.is_interpolated]
+    if not published:
+        return None
+    change = day_change(fw.navs)
+    tone = None if change is None or change == 0 else ("gain" if change > 0 else "loss")
+    return {
+        "value": {"value": str(published[-1].nav), "kind": "nav"},
+        "date": format_date(published[-1].nav_date),
+        "change": format_pct(change * 100, precision=2, signed=True)
+        if change is not None else None,
+        "tone": tone,
+        "symbol": {"gain": "▲", "loss": "▼"}.get(tone or ""),
+    }
 
 
 def _tiles(fw: FundWindows | None, facts: Any,
@@ -228,6 +249,7 @@ class FundHeaderBuilder:
                     x for x in (facts.amc_name, facts.category, plan) if x
                 ),
                 "scheme_id": str(scheme),
+                "nav": _nav(fw),
                 "tiles": _tiles(fw, facts, peer_context(self.market, scheme)),
                 "findings": findings,
                 "columns": [

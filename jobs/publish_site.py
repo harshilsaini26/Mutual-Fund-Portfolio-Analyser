@@ -72,7 +72,9 @@ PUBLIC_USER = UserId("PUBLIC")
 #: What the public pages load. d3 draws only the portfolio Sankey, which the
 #: public copy does not have.
 STATIC_FILES = (
-    "app.css", "app.js", "charts.js", "theme.js", "vendor/echarts.v6.1.0.min.js",
+    "app.css", "app.js", "charts.js", "theme.js", "lenis.css",
+    "vendor/echarts.v6.1.0.min.js", "vendor/lenis.v1.3.26.min.js",
+    "vendor/islands.v1.js", "fonts/rubik-latin-wght-normal.woff2",
 )
 #: A file only this job writes, so a rebuild can tell its own output from a
 #: directory it must not delete.
@@ -81,6 +83,13 @@ MARKER = ".nojekyll"
 NOT_BUILT = "This picture could not be built for the public copy."
 
 RETURN_WINDOWS = ("1y", "3y", "5y")
+#: The front page's category cards (DECISIONS V1-80, after MF Zone's): the six
+#: equity categories most funds sit in, each with its five highest 3-year returns.
+LEADER_CATEGORIES = (
+    "equity/flexi_cap", "equity/large_cap", "equity/mid_cap",
+    "equity/small_cap", "equity/large_mid_cap", "equity/elss",
+)
+LEADERS_PER_CARD = 5
 
 
 class SiteTooLarge(RuntimeError):
@@ -195,6 +204,7 @@ def explorer_row(
         # The canonical name (DECISIONS V1-76), not whichever of AMFI's two
         # spellings this fund house happens to use.
         "category_short": category.name,
+        "category_key": category.key,
         "house": (facts.amc_name if facts is not None else None) or "",
         "size_value": str(size) if size is not None else "",
         "size_label": format_inr(size, precision=0) if size is not None else DASH,
@@ -206,6 +216,31 @@ def explorer_row(
         "rank_label": rank.get("label") or DASH,
         "rank_quarter": rank.get("quarter") or "",
     }
+
+
+def category_leaders(
+    rows: list[dict[str, Any]], keys: tuple[str, ...] = LEADER_CATEGORIES,
+    top: int = LEADERS_PER_CARD,
+) -> list[dict[str, Any]]:
+    """Each category's funds with the highest 3-year return, for the front page.
+
+    Sorted here, on the Decimal behind each figure, never in SQL (CLAUDE.md
+    invariant 1). A fund without three years of prices is not in a card, and the
+    card says how many funds the category has in all.
+    """
+    three = RETURN_WINDOWS.index("3y")
+    cards = []
+    for key in keys:
+        members = [r for r in rows if r.get("category_key") == key]
+        ranked = sorted(
+            (r for r in members if r["returns"][three]["value"]),
+            key=lambda r: Decimal(r["returns"][three]["value"]),
+            reverse=True,
+        )[:top]
+        if ranked:
+            cards.append({"key": key, "name": members[0]["category_short"],
+                          "count": len(members), "funds": ranked})
+    return cards
 
 
 def _build(
@@ -305,18 +340,33 @@ def build_site(
         for key, name, hint in FAMILIES
         if counted[key]
     ]
+    stats = {
+        "houses": len(houses),
+        "holdings": with_holdings,
+        "prices_to": prices_to,
+        "categories": len({r["category_key"] for r in rows}),
+    }
     (out / "index.html").write_text(
+        engine.get_template("home.html").render({
+            **shell, "count": len(funds), "stats": stats,
+            "leaders": category_leaders(rows),
+        }),
+        encoding="utf-8",
+    )
+    (out / "funds").mkdir(exist_ok=True)
+    (out / "funds" / "index.html").write_text(
         engine.get_template("explorer.html").render({
             **shell,
+            "active": "funds",
             "categories": sorted(by_category.items()),
+            "category_options": sorted(
+                {(r["category_key"], r["category_short"]) for r in rows},
+                key=lambda kv: kv[1].lower(),
+            ),
             "count": len(funds),
             "funds": rows,
             "families": families,
-            "stats": {
-                "houses": len(houses),
-                "holdings": with_holdings,
-                "prices_to": prices_to,
-            },
+            "stats": stats,
         }),
         encoding="utf-8",
     )

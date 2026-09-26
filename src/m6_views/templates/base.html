@@ -1,10 +1,11 @@
 {#
   The shell. MODULE_6.md §16; the layout is DECISIONS V1-74.
 
-  Server-rendered Jinja rather than React, per DECISIONS V1-23 — which overrides
-  `PLAN.md` §9.10 and `MODULE_6.md` Appendix A. The reasoning behind the locked
-  decision was that the Sankey is the flagship and worth a real frontend; the
-  Sankey is `d3-sankey` either way, and React was never doing that work.
+  Server-rendered Jinja rather than a React app, per DECISIONS V1-23 — which
+  overrides `PLAN.md` §9.10 and `MODULE_6.md` Appendix A. React arrives only as
+  islands (V1-80): a few React Bits components, on Preact, that animate what the
+  server already wrote (`static/vendor/islands.v1.js`, built from `ui/`). Every
+  page is complete without them.
 
   Every script is **vendored**, not linked from a CDN. `PLAN.md` §6 makes this a
   self-hosted tool for one person's financial data; a page that phones a CDN on
@@ -33,6 +34,7 @@
   {% endif %}
   <title>{% block title %}Look-through{% endblock %}</title>
   <script src="{{ root }}/static/theme.js"></script>
+  <link rel="stylesheet" href="{{ root }}/static/lenis.css">
   <link rel="stylesheet" href="{{ root }}/static/app.css">
 </head>
 <body class="{{ 'is-public' if static else 'is-app' }}" data-root="{{ root }}"
@@ -41,24 +43,24 @@
 {% macro search_box() -%}
 {#
   Search is the way into any fund, held or not. Without JavaScript this is an
-  ordinary form -- to `/search` here, to the list of every fund on the public
+  ordinary form -- to `/search` here, to `/funds/` (every fund) on the public
   copy; `static/app.js` adds suggestions as you type, from the API or, with no
   server, from `search.json`.
 #}
-<form class="search" action="{{ root }}/{% if not static %}search{% endif %}"
+<form class="search" action="{{ root }}/{% if static %}funds/{% else %}search{% endif %}"
       method="get" role="search">
   <label class="sr-only" for="q">Find a fund</label>
   {{ icon.i("search", "icon search__icon") }}
   <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
          placeholder="Find a fund by name"
          {% if static %}data-index="{{ root }}/search.json"{% else %}data-suggest="/api/search"{% endif %}>
-  <ul class="search__suggest" hidden></ul>
+  <ul class="search__suggest" hidden data-lenis-prevent></ul>
 </form>
 {%- endmacro %}
 
 {% macro theme_toggle() -%}
 <button class="icon-button" type="button" data-theme-toggle
-        aria-label="Switch between the dark and light themes">
+        aria-label="Switch between the light and dark themes">
   {{ icon.i("sun", "icon icon--sun") }}{{ icon.i("moon", "icon icon--moon") }}
 </button>
 {%- endmacro %}
@@ -66,6 +68,12 @@
 {% if static %}
 <header class="topbar topbar--public">
   <a class="brand" href="{{ root }}/">{{ icon.i("logo", "icon brand__mark") }}<span>Look-through</span></a>
+  <nav class="topnav" aria-label="Main">
+    <a class="topnav__link" href="{{ root }}/funds/"
+       {% if active == 'funds' %}aria-current="page"{% endif %}>Explore funds</a>
+    <a class="topnav__link" href="{{ root }}/#categories">Categories</a>
+    <a class="topnav__link" href="{{ root }}/#about">About the data</a>
+  </nav>
   {{ search_box() }}
   <a class="topbar__link" href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io">
     <span>Self-hosted app</span>{{ icon.i("external") }}</a>
@@ -148,7 +156,10 @@
   </div>
 </div>
 {% endif %}
+{#- In this order: app.js starts Lenis, and deferred scripts run as listed. -#}
+<script src="{{ root }}/static/vendor/lenis.v1.3.26.min.js" defer></script>
 <script src="{{ root }}/static/app.js" defer></script>
+<script src="{{ root }}/static/vendor/islands.v1.js" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

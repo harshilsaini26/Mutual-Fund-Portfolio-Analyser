@@ -1,5 +1,5 @@
 /*
- * The look of the whole portal, app and public copy alike. DECISIONS V1-74.
+ * The look of the whole portal, app and public copy alike. DECISIONS V1-74, V1-80.
  *
  * Three rules here are not taste (MODULE_6.md):
  *
@@ -14,27 +14,99 @@
  * styled into invisibility satisfies the letter of the gate and none of its point.
  *
  * Tokens. Every colour below is one of these, so a theme is a set of values, not
- * a stylesheet. Dark is the design's first form and the fallback; the light set
- * applies when the computer prefers light or the reader picked it (`theme.js`
- * stamps `data-theme`). The indigo accent is deliberate: green is the gain
- * colour, and §10.2 keeps a semantic hue out of brand and category use.
+ * a stylesheet. Light is the design's first form (V1-80, after MF Zone and
+ * Fundoo): navy on white, a sky-blue ring for focus. Dark applies when the reader
+ * picks it (`theme.js` stamps `data-theme`). Navy is the brand, never a figure's
+ * colour: green and orange are gain and loss, and §10.2 keeps a semantic hue out
+ * of brand and category use.
  */
 
+@font-face {
+  font-family: "Rubik";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  /* Rubik, SIL Open Font License 1.1, from @fontsource-variable/rubik 5.3.0 (ui/). */
+  src: url("fonts/rubik-latin-wght-normal.woff2") format("woff2");
+}
+
 :root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f0f4fa;
+  --surface-3: #e4eaf4;
+  --line: #e2e8f0;
+  --line-strong: #c8d2e0;
+  --ink: #0f1b2d;
+  --ink-soft: #46566c;
+  --ink-faint: #637287;
+  --accent: #134585;
+  --accent-strong: #0c3366;
+  --accent-soft: rgb(19 69 133 / 0.08);
+  --on-accent: #ffffff;
+  --sky: #7dd3fc;
+  --hero-a: #eaf2ff;
+  --hero-b: #f7fbff;
+  --bench: #a86200;
+  --gain: #0e7a55;
+  --loss: #c2410c;
+  --gain-soft: rgb(14 122 85 / 0.1);
+  --loss-soft: rgb(194 65 12 / 0.1);
+  --warn: #8a6100;
+  --warn-bg: #fdf6e3;
+  --warn-line: #e3c56f;
+  --good: #1f6f4a;
+  --fair: #8a6100;
+  --weak: #a1391d;
+  --synthetic: #9aa1ad;
+  --cat-1: #134585;
+  --cat-2: #1a8a6a;
+  --cat-3: #b8520e;
+  --cat-4: #8e5aa6;
+  --cat-5: #a8396b;
+  --cat-6: #5b6b7a;
+  --cat-7: #8a6d1f;
+  --cat-8: #2f7f86;
+  --on-cat: #ffffff;
+  --decal: rgb(255 255 255 / 0.5);
+  --sankey-right: #2f7f86;
+  --heat-0: #eef2f8;
+  --heat-1: #d6e2f4;
+  --heat-2: #a7bfe6;
+  --heat-3: #5a84c7;
+  --heat-4: #134585;
+  --heat-ink-low: #0f1b2d;
+  --heat-ink-high: #ffffff;
+  --shadow: 0 1px 2px rgb(15 27 45 / 0.04), 0 8px 24px rgb(15 27 45 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(15 27 45 / 0.05), 0 16px 40px rgb(19 69 133 / 0.12);
+  --sun: none;
+  --moon: inline;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --font: "Rubik", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+          BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0e14;
-  --surface: #121722;
-  --surface-2: #192030;
-  --surface-3: #212a3d;
-  --line: #252e40;
-  --line-strong: #34405a;
-  --ink: #e7eaf0;
-  --ink-soft: #a3acbb;
-  --ink-faint: #7a8496;
-  --accent: #8b9cff;
-  --accent-strong: #b4bfff;
-  --accent-soft: rgb(139 156 255 / 0.14);
-  --on-accent: #0b0e14;
+  --bg: #0b1220;
+  --surface: #111a2b;
+  --surface-2: #17223a;
+  --surface-3: #1f2c48;
+  --line: #22304a;
+  --line-strong: #33446a;
+  --ink: #e8edf5;
+  --ink-soft: #a6b1c4;
+  --ink-faint: #7f8ba0;
+  --accent: #8fb4ff;
+  --accent-strong: #b9d0ff;
+  --accent-soft: rgb(143 180 255 / 0.13);
+  --on-accent: #0b1220;
+  --sky: #7dd3fc;
+  --hero-a: #0f1d38;
+  --hero-b: #0b1220;
   --bench: #f2b347;
   --gain: #4cc38a;
   --loss: #ff7b61;
@@ -55,126 +127,20 @@
   --cat-6: #93a4b8;
   --cat-7: #d4b454;
   --cat-8: #4fc3cb;
-  --on-cat: #0b0e14;
+  --on-cat: #0b1220;
   --decal: rgb(11 14 20 / 0.45);
   --sankey-right: #4fc3cb;
-  --heat-0: #1b2233;
-  --heat-1: #28315a;
-  --heat-2: #3a4789;
-  --heat-3: #5a6bd0;
-  --heat-4: #9aa8ff;
-  --heat-ink-low: #e7eaf0;
-  --heat-ink-high: #0b0e14;
+  --heat-0: #17223a;
+  --heat-1: #213463;
+  --heat-2: #2f4d93;
+  --heat-3: #4f78cf;
+  --heat-4: #9cbcff;
+  --heat-ink-low: #e8edf5;
+  --heat-ink-high: #0b1220;
   --shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 30px rgb(0 0 0 / 0.28);
+  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 44px rgb(0 0 0 / 0.4);
   --sun: inline;
   --moon: none;
-  --radius: 14px;
-  --radius-sm: 10px;
-  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
-          BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    color-scheme: light;
-    --bg: #f4f6fa;
-    --surface: #ffffff;
-    --surface-2: #f1f3f8;
-    --surface-3: #e7eaf2;
-    --line: #e1e5ed;
-    --line-strong: #c9d0dc;
-    --ink: #131a26;
-    --ink-soft: #4d5869;
-    --ink-faint: #6b7587;
-    --accent: #4152e0;
-    --accent-strong: #2f3fc4;
-    --accent-soft: rgb(65 82 224 / 0.1);
-    --on-accent: #ffffff;
-    --bench: #a86200;
-    --gain: #127a4f;
-    --loss: #c2410c;
-    --gain-soft: rgb(18 122 79 / 0.1);
-    --loss-soft: rgb(194 65 12 / 0.1);
-    --warn: #8a6100;
-    --warn-bg: #fdf6e3;
-    --warn-line: #e3c56f;
-    --good: #1f6f4a;
-    --fair: #8a6100;
-    --weak: #a1391d;
-    --synthetic: #9aa1ad;
-    --cat-1: #0b6fa8;
-    --cat-2: #1a8a6a;
-    --cat-3: #b8520e;
-    --cat-4: #8e5aa6;
-    --cat-5: #a8396b;
-    --cat-6: #5b6b7a;
-    --cat-7: #8a6d1f;
-    --cat-8: #2f7f86;
-    --on-cat: #ffffff;
-    --decal: rgb(255 255 255 / 0.5);
-    --sankey-right: #2f7f86;
-    --heat-0: #eef1f7;
-    --heat-1: #d7dcfb;
-    --heat-2: #adb6f5;
-    --heat-3: #6f7ee7;
-    --heat-4: #3a49c9;
-    --heat-ink-low: #131a26;
-    --heat-ink-high: #ffffff;
-    --shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 6px 18px rgb(16 24 40 / 0.06);
-    --sun: none;
-    --moon: inline;
-  }
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg: #f4f6fa;
-  --surface: #ffffff;
-  --surface-2: #f1f3f8;
-  --surface-3: #e7eaf2;
-  --line: #e1e5ed;
-  --line-strong: #c9d0dc;
-  --ink: #131a26;
-  --ink-soft: #4d5869;
-  --ink-faint: #6b7587;
-  --accent: #4152e0;
-  --accent-strong: #2f3fc4;
-  --accent-soft: rgb(65 82 224 / 0.1);
-  --on-accent: #ffffff;
-  --bench: #a86200;
-  --gain: #127a4f;
-  --loss: #c2410c;
-  --gain-soft: rgb(18 122 79 / 0.1);
-  --loss-soft: rgb(194 65 12 / 0.1);
-  --warn: #8a6100;
-  --warn-bg: #fdf6e3;
-  --warn-line: #e3c56f;
-  --good: #1f6f4a;
-  --fair: #8a6100;
-  --weak: #a1391d;
-  --synthetic: #9aa1ad;
-  --cat-1: #0b6fa8;
-  --cat-2: #1a8a6a;
-  --cat-3: #b8520e;
-  --cat-4: #8e5aa6;
-  --cat-5: #a8396b;
-  --cat-6: #5b6b7a;
-  --cat-7: #8a6d1f;
-  --cat-8: #2f7f86;
-  --on-cat: #ffffff;
-  --decal: rgb(255 255 255 / 0.5);
-  --sankey-right: #2f7f86;
-  --heat-0: #eef1f7;
-  --heat-1: #d7dcfb;
-  --heat-2: #adb6f5;
-  --heat-3: #6f7ee7;
-  --heat-4: #3a49c9;
-  --heat-ink-low: #131a26;
-  --heat-ink-high: #ffffff;
-  --shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 6px 18px rgb(16 24 40 / 0.06);
-  --sun: none;
-  --moon: inline;
 }
 
 * { box-sizing: border-box; }
@@ -905,6 +871,224 @@ select:focus-visible, [tabindex]:focus-visible {
   .topbar--public .brand span { display: none; }
   .fundcard__name { padding-right: 0; }
   .view__header--quiet { position: static; padding: 14px 20px 0; }
+}
+
+/* --- V1-80: the front page after MF Zone, the fund page after Fundoo ----------------- */
+
+body { font-size: 14.5px; }
+.brand { font-weight: 600; }
+.brand span { letter-spacing: -0.015em; }
+
+/* The public bar: mark, the three ways around, search, theme. */
+.topnav { display: flex; align-items: center; gap: 4px; }
+.topnav__link {
+  padding: 7px 12px; border-radius: 8px;
+  color: var(--ink-soft); text-decoration: none; font-size: 14px; font-weight: 500; white-space: nowrap;
+}
+.topnav__link:hover { color: var(--accent); background: var(--accent-soft); }
+.topnav__link[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+.topbar--public { background: color-mix(in srgb, var(--surface) 88%, transparent); }
+.topbar--public .search { max-width: 360px; min-width: 180px; }
+@media (max-width: 980px) { .topbar--public .topbar__link span { display: none; } }
+.public-note { background: var(--surface-2); color: var(--ink-faint); font-size: 12px; }
+
+.button {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 18px; border-radius: 10px;
+  background: var(--accent); color: var(--on-accent);
+  font-weight: 500; text-decoration: none;
+  box-shadow: 0 0 0 0 var(--sky);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.button:hover { box-shadow: 0 0 0 4px color-mix(in srgb, var(--sky) 45%, transparent); }
+.button .icon { width: 16px; height: 16px; }
+
+/* The hero: a soft sky wash, the aurora (an island) behind it, the way in. */
+.home-hero {
+  position: relative; overflow: hidden; isolation: isolate;
+  margin: -28px -28px 0; padding: 72px 28px 56px;
+  background: linear-gradient(180deg, var(--hero-a), var(--hero-b) 70%, var(--bg));
+  border-bottom: 1px solid var(--line);
+}
+.home-hero__aurora {
+  position: absolute; inset: 0; z-index: -1; opacity: 0.7; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 20%, transparent 85%);
+  mask-image: linear-gradient(180deg, #000 20%, transparent 85%);
+}
+/* ogl sizes its canvas once, in pixels; the hero's height settles later. */
+.home-hero__aurora canvas { display: block; width: 100% !important; height: 100% !important; }
+.home-hero__inner { max-width: 880px; margin: 0 auto; text-align: center; }
+.home-hero .eyebrow { color: var(--accent); }
+.home-hero__title {
+  margin: 14px auto 16px; max-width: 20ch;
+  font-size: clamp(34px, 5.4vw, 60px); font-weight: 600; line-height: 1.05; letter-spacing: -0.035em;
+  color: var(--ink);
+}
+.home-hero__title .blur-text { justify-content: center; }
+.home-hero__lede { margin: 0 auto 28px; max-width: 60ch; font-size: 17px; color: var(--ink-soft); }
+.home-hero .search--hero { margin: 0 auto; text-align: left; }
+.home-hero .search--hero input { box-shadow: var(--shadow); border-color: var(--line-strong); }
+.home-stats {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 12px 40px; margin: 34px 0 0;
+}
+.home-stats div { display: flex; flex-direction: column-reverse; align-items: center; }
+.home-stats dt { font-size: 12.5px; color: var(--ink-faint); }
+.home-stats dd {
+  margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.02em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+
+/* Words that arrive one by one (BlurText, an island). */
+.blur-text { display: inline-flex; flex-wrap: wrap; }
+.blur-text__word { display: inline-block; will-change: transform, filter, opacity; }
+
+.home-section { margin-top: 48px; }
+.home-section .section-head { margin-bottom: 18px; }
+.home-section .section-head h2 { font-size: 24px; font-weight: 600; }
+.home-section .section-head p { max-width: 70ch; font-size: 13.5px; }
+.home-section__more { display: flex; justify-content: center; margin: 26px 0 0; }
+.recent.card { max-width: 880px; margin: 22px auto 0; }
+
+/* Category cards: five highest three-year returns each. */
+.leaders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.leader {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px 18px 10px; min-width: 0;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.leader:hover { box-shadow: var(--shadow-lift); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.leader__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.leader__head h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--accent); }
+.leader__all {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.leader__all .icon { width: 14px; height: 14px; }
+.leader__table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.leader__table th {
+  padding: 6px 4px; border-bottom: 1px solid var(--line);
+  font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink-faint); text-align: left;
+}
+.leader__table td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.leader__table tr:last-child td { border-bottom: 0; }
+.leader__table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.leader__table .fund-name { color: var(--ink); text-decoration: none; font-weight: 500; }
+.leader__table .fund-name:hover { color: var(--accent); text-decoration: underline; }
+.leader__key { font-weight: 600; }
+
+/* Spotlight (an island): a soft light follows the cursor across a card.
+   After React Bits' SpotlightCard (MIT + Commons Clause), in this site's tokens. */
+.card-spotlight { position: relative; overflow: hidden; }
+.card-spotlight::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                              var(--spotlight-color, rgb(19 69 133 / 0.12)), transparent 70%);
+  opacity: 0; transition: opacity 0.5s ease;
+}
+.card-spotlight:hover::before, .card-spotlight:focus-within::before { opacity: 1; }
+:root[data-theme="dark"] .card-spotlight::before {
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                              rgb(143 180 255 / 0.14), transparent 70%);
+}
+
+.features { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.feature {
+  padding: 22px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.feature .icon {
+  width: 38px; height: 38px; padding: 9px; border-radius: 10px;
+  color: var(--accent); background: var(--accent-soft);
+}
+.feature h3 { margin: 14px 0 6px; font-size: 16px; font-weight: 600; }
+.feature p { font-size: 13.5px; line-height: 1.55; }
+
+/* /funds/ */
+.page-head { display: block; margin: 8px 0 22px; }
+.page-head h1 { margin: 6px 0 6px; font-size: 32px; font-weight: 600; }
+.page-head__lede { max-width: 70ch; }
+.table-note { margin: 10px 2px 0; font-size: 12.5px; color: var(--ink-faint); }
+
+/* --- the fund page, in Fundoo's rhythm ------------------------------------------------- */
+
+/* Each panel's label is its section's heading: navy capitals over a hairline. */
+.fund-page .view__eyebrow {
+  padding-bottom: 8px; margin-bottom: 8px; border-bottom: 2px solid var(--accent);
+  width: fit-content; color: var(--accent); font-size: 12px; letter-spacing: 0.1em;
+}
+.fund-page .view__eyebrow .icon { color: var(--accent); }
+.fund-page .view { box-shadow: var(--shadow); }
+
+.fundcard__top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px 32px;
+  flex-wrap: wrap; padding-right: 90px;
+}
+.fundcard__id { min-width: 0; flex: 1 1 420px; }
+.fundcard__name { padding-right: 0; font-weight: 600; color: var(--ink); }
+.fundcard__nav {
+  flex: none; text-align: right;
+  padding: 12px 18px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line);
+}
+.fundcard__nav p { margin: 0; }
+.fundcard__nav-label { font-size: 12px; color: var(--ink-faint); }
+.fundcard__nav-value {
+  font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.fundcard__nav-change { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.facts--grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+  padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+}
+.facts--grid div { padding: 12px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.facts--grid dt { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.facts--grid dd { margin-top: 4px; font-weight: 500; }
+
+/* Returns compared to peers: lowest to highest, and this fund's mark. */
+.ranges { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 22px; margin: 6px 0 18px; }
+.range { padding: 14px 16px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.range__head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 0 0 10px; }
+.range__period { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+.range__value { font-size: 20px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.range__rank { font-size: 12.5px; color: var(--ink-soft); }
+.range__bar { display: block; width: 100%; height: 14px; }
+.range__track { fill: var(--surface-3); }
+.range__fill { fill: color-mix(in srgb, var(--accent) 35%, transparent); }
+.range__mark { fill: var(--accent); }
+.range__ends {
+  display: flex; justify-content: space-between; gap: 8px; margin: 6px 0 0;
+  font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+
+/* 1Y / 3Y / 5Y / All above a time chart (charts.js). */
+.zoom { display: flex; gap: 4px; margin: 0 0 6px; justify-content: flex-end; }
+.zoom button {
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-soft); font: inherit; font-size: 12px; cursor: pointer;
+}
+.zoom button:hover { color: var(--accent); border-color: var(--accent); }
+.zoom button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+@media (max-width: 1099px) {
+  .leaders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .topnav__link[href$="#about"] { display: none; }
+}
+@media (max-width: 720px) {
+  .home-hero { margin: -18px -16px 0; padding: 44px 16px 36px; }
+  .home-stats { gap: 10px 24px; }
+  .home-stats dd { font-size: 24px; }
+  .leaders, .features, .ranges { grid-template-columns: minmax(0, 1fr); }
+  .topnav { display: none; }
+  .fundcard__top { padding-right: 0; }
+  .fundcard__nav { text-align: left; }
+  .fundcard__nav-value { font-size: 22px; }
+}
+@media (max-width: 420px) {
+  .facts--grid { grid-template-columns: minmax(0, 1fr); }
+  .leader__table th:nth-child(4), .leader__table td:nth-child(4) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

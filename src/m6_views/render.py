@@ -170,8 +170,14 @@ def bar_width(value: Any) -> str:
     return f"{pct:.2f}"
 
 
+def fmt_count(value: Any) -> str:
+    """A count, thousands separated: 1,661 (the "count" kind of a tile)."""
+    return _fmt_value({"value": value, "kind": "count"}, compact=False)
+
+
 FILTERS: dict[str, Callable[..., str]] = {
     "bar_width": bar_width,
+    "fmt_count": fmt_count,
     "fmt_date": fmt_date,
     "fmt_datetime": fmt_datetime,
     "fmt_pct": fmt_pct,
@@ -287,6 +293,21 @@ def _step(pct: Decimal) -> int:
         if pct < bound:
             return step
     return 4
+
+
+def range_bars(env: ViewEnvelope) -> list[dict[str, Any]]:
+    """Where a fund's figure sits between its category's lowest and highest,
+    0 to 100 along the bar (DECISIONS V1-80). Geometry, like `bar_width`: every
+    figure the bar shows was formatted by the builder and is printed beside it.
+    A category whose funds all returned the same sits the marker mid-bar."""
+    bars = []
+    for r in env.payload.get("ranges", []):
+        low, high, value = (Decimal(str(r[k])) for k in ("low", "high", "value"))
+        span = high - low
+        pos = Decimal(50) if span == 0 else (value - low) * 100 / span
+        pos = min(max(pos, Decimal(0)), Decimal(100))
+        bars.append({**r, "pos": f"{pos:.2f}"})
+    return bars
 
 
 def lorenz_path(env: ViewEnvelope) -> str:
@@ -406,6 +427,7 @@ def chart_context(env: ViewEnvelope) -> dict[str, Any]:
         context["payload_json"] = embeddable_json(
             {"charts": env.payload.get("charts", [])}
         )
+        context["ranges"] = range_bars(env)
     elif chart_type == "sankey":
         context["labels"] = sankey_labels(env)
         # Decimals stay strings across this boundary — §15.2. `sankey.js` parses

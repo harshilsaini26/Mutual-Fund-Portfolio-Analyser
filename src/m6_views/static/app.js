@@ -1,7 +1,7 @@
 /*
  * The page's behaviour, loaded on every page. Everything here enhances markup
  * that already works: without this file search is an ordinary form, tables are
- * ordinary tables, and the theme follows the computer's setting.
+ * ordinary tables, the theme is light, and the page scrolls natively.
  *
  * MODULE_6.md §16.4 holds throughout: the browser positions, sorts, filters and
  * toggles; it never formats or derives a figure. A table sorts on the
@@ -147,10 +147,9 @@
   // theme.js applied a stored choice before the page was drawn; this is the
   // switch. charts.js watches the attribute and redraws in the new colours.
 
+  // Light unless the reader chose dark (V1-80: light is the design's first form).
   function currentTheme() {
-    var set = document.documentElement.getAttribute("data-theme");
-    if (set) return set;
-    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    return document.documentElement.getAttribute("data-theme") || "light";
   }
 
   document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
@@ -230,17 +229,20 @@
   var table = document.querySelector("table[data-filterable]");
   if (table) {
     var family = document.querySelector("select[data-filter-family]");
+    var category = document.querySelector("select[data-filter-category]");
     var text = document.querySelector("input[data-filter-text]");
     var count = document.querySelector("[data-filter-count]");
     var all = table.tBodies[0].rows;
 
     var apply = function () {
       var wanted = family ? family.value : "";
+      var kind = category ? category.value : "";
       var typed = text ? words(text.value) : [];
       var shown = 0;
       Array.prototype.forEach.call(all, function (row) {
         var name = words(row.cells[0].textContent || "").join(" ");
         var match = (!wanted || row.getAttribute("data-family") === wanted) &&
+          (!kind || row.getAttribute("data-category") === kind) &&
           typed.every(function (w) { return name.indexOf(w) !== -1; });
         row.hidden = !match;
         if (match) shown += 1;
@@ -252,7 +254,25 @@
       }
     };
     if (family) family.addEventListener("change", apply);
+    if (category) category.addEventListener("change", apply);
     if (text) text.addEventListener("input", apply);
+
+    // "?q=hdfc": the search box's plain form, with scripts off, lands here.
+    var query = /[?&]q=([^&]*)/.exec(window.location.search);
+    if (query && text) {
+      text.value = decodeURIComponent(query[1].replace(/\+/g, " "));
+      apply();
+    }
+
+    // "#category=equity/flexi_cap": the front page's category cards link here.
+    var asked = /(?:^#|&)category=([^&]+)/.exec(window.location.hash);
+    if (asked && category) {
+      var key = decodeURIComponent(asked[1]);
+      if (Array.prototype.some.call(category.options, function (o) { return o.value === key; })) {
+        category.value = key;
+        apply();
+      }
+    }
 
     // A category tile narrows the table rather than jumping to the plain lists
     // below it, which are the way through with scripts off.
@@ -291,6 +311,15 @@
     var seen = recent().filter(function (f) { return f.id !== here; });
     seen.unshift({ id: here, name: name });
     store(RECENT, JSON.stringify(seen.slice(0, 6)));
+  }
+
+  // --- smooth scrolling (Lenis, DECISIONS V1-80) ---------------------------------
+  //
+  // Only where motion is welcome; anchors still jump to their target, and a list
+  // that scrolls on its own (`data-lenis-prevent`) keeps its own scrolling.
+
+  if (window.Lenis && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    new window.Lenis({ autoRaf: true, anchors: true });
   }
 
   document.querySelectorAll("[data-recent]").forEach(function (box) {

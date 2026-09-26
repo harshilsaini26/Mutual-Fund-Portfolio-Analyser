@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "icons.html" as icon %}
+{% block title %}Look-through: Indian mutual funds, looked through{% endblock %}
+
+{#
+  The public copy's front page (DECISIONS V1-80, after MF Zone's).
+
+  A hero with the way in (search), then the six most-held equity categories,
+  each with the five funds whose three-year return was highest, then what every
+  fund page shows. Every figure was formatted by `jobs/publish_site.py`; the
+  islands (`data-island`) only animate what is already written here, so with
+  scripts off, or with reduced motion asked for, this page is complete.
+
+  V1-74 kept "top" funds off the front page. V1-80 puts them back at the user's
+  request, as a plain fact with its period stated -- "highest three-year return"
+  -- beside the category's size, and never as "best" or "top performers".
+#}
+{% block content %}
+<section class="home-hero">
+  <div class="home-hero__aurora" data-island="aurora" aria-hidden="true"></div>
+  <div class="home-hero__inner">
+    <p class="eyebrow">Indian mutual funds, looked through</p>
+    <h1 class="home-hero__title" data-island="blur-text">See what every fund owns, and how it has done</h1>
+    <p class="home-hero__lede">
+      {{ count }} funds, each set against the funds that do the same job: returns,
+      falls and recoveries, costs, and the companies it holds, from AMFI's prices
+      and the fund houses' own disclosures.
+    </p>
+    <form class="search search--hero" action="{{ root }}/funds/" method="get" role="search">
+      <label class="sr-only" for="q-hero">Find a fund by name</label>
+      {{ icon.i("search", "icon search__icon") }}
+      <input id="q-hero" name="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search {{ count }} funds by name" data-index="{{ root }}/search.json">
+      <ul class="search__suggest" hidden data-lenis-prevent></ul>
+    </form>
+    <dl class="home-stats">
+      <div><dt>funds with a page</dt><dd data-island="count-up">{{ count | fmt_count }}</dd></div>
+      <div><dt>fund houses</dt><dd data-island="count-up">{{ stats.houses | fmt_count }}</dd></div>
+      <div><dt>categories</dt><dd data-island="count-up">{{ stats.categories | fmt_count }}</dd></div>
+      <div><dt>prices through</dt><dd>{{ stats.prices_to | fmt_date if stats.prices_to else '—' }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<div class="recent card" data-recent data-recent-slash="true" hidden>
+  <h3>Recently viewed</h3>
+  <ul></ul>
+</div>
+
+<section id="categories" class="home-section" aria-labelledby="categories-h">
+  <div class="section-head">
+    <h2 id="categories-h">Highest three-year returns, by category</h2>
+    <p>Annualised, Direct plans, to {{ stats.prices_to | fmt_date if stats.prices_to else 'the latest prices' }}.
+      Past returns only: each fund's page sets them against its whole category,
+      with its falls, its costs and what it holds.</p>
+  </div>
+  <div class="leaders">
+    {% for card in leaders %}
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-{{ loop.index }}">
+      <header class="leader__head">
+        <h3 id="leader-{{ loop.index }}">{{ card.name }}</h3>
+        <a class="leader__all" href="{{ root }}/funds/#category={{ card.key }}">All {{ card.count }} funds
+          {{ icon.i("arrow") }}</a>
+      </header>
+      <table class="leader__table">
+        <thead><tr>
+          <th scope="col">Fund</th>
+          <th scope="col" class="num">1 year</th>
+          <th scope="col" class="num">3 years</th>
+          <th scope="col" class="num">5 years</th>
+        </tr></thead>
+        <tbody>
+          {% for fund in card.funds %}
+          <tr>
+            <td><a class="fund-name" href="{{ root }}/fund/{{ fund.scheme_id }}/">{{ fund.name }}</a></td>
+            {% for r in fund.returns %}
+            <td class="num{% if r.tone %} ret--{{ r.tone }}{% endif %}{% if loop.index == 2 %} leader__key{% endif %}">
+              {%- if r.symbol %}<span class="ret__symbol" aria-hidden="true">{{ r.symbol }}</span>{% endif %}{{ r.label -}}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </article>
+    {% endfor %}
+  </div>
+  <p class="home-section__more"><a class="button" href="{{ root }}/funds/">Explore all {{ count }} funds {{ icon.i("arrow") }}</a></p>
+</section>
+
+<section id="about" class="home-section" aria-labelledby="about-h">
+  <div class="section-head">
+    <h2 id="about-h">What every fund page shows</h2>
+    <p>From public sources only, rebuilt every night, with each figure's date and source beside it.</p>
+  </div>
+  <div class="features">
+    <div class="feature" data-island="spotlight">{{ icon.i("growth") }}
+      <h3>Returns</h3>
+      <p>What ₹10,000 became over one, three and five years and its whole record, from AMFI's daily prices.</p></div>
+    <div class="feature" data-island="spotlight">{{ icon.i("scatter") }}
+      <h3>Its peers</h3>
+      <p>Where it stands among the funds that do the same job, on return, risk, falls and cost.</p></div>
+    <div class="feature" data-island="spotlight">{{ icon.i("pie") }}
+      <h3>Its cost</h3>
+      <p>The total expense ratio AMFI publishes each month, and how it compares with the category's.</p></div>
+    <div class="feature" data-island="spotlight">{{ icon.i("fall") }}
+      <h3>Falls and recoveries</h3>
+      <p>How far below its last high it stood each day, and how long it took to climb back.</p></div>
+    <div class="feature" data-island="spotlight">{{ icon.i("wave") }}
+      <h3>Consistency</h3>
+      <p>The return of every three-year stretch, not only the one that ends today.</p></div>
+    <div class="feature" data-island="spotlight">{{ icon.i("box") }}
+      <h3>What it owns</h3>
+      <p>Asset mix, largest holdings and sectors, from the fund house's disclosure or, marked, an aggregator's page.</p></div>
+  </div>
+</section>
+{% endblock %}

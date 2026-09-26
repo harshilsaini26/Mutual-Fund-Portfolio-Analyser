@@ -183,6 +183,7 @@
 
     bar: function (c, p) {
       var o = base(p);
+      o.grid.top = 56;  // room for the legend and the labels over the tallest bar
       o.tooltip.trigger = "axis";
       o.tooltip.formatter = function (items) {
         return [items[0].name].concat(items.map(function (it) {
@@ -278,9 +279,20 @@
     },
 
     // Funds as points: risk across, return up. §10.3: this fund is a larger
-    // diamond with its name beside it, not only a different colour.
+    // diamond with its name beside it, not only a different colour. A point's
+    // area follows the fund's size where it is known (V1-80, after Fundoo); the
+    // size is also in its tooltip, so the area is never the only way to read it.
     scatter: function (c, p) {
       var o = base(p);
+      var largest = 0;
+      c.series.forEach(function (s) {
+        s.points.forEach(function (pt) { largest = Math.max(largest, number(pt[4] || null) || 0); });
+      });
+      function area(pt, fund) {
+        var size = number(pt[4] || null);
+        var d = largest > 0 && size ? 7 + 23 * Math.sqrt(size / largest) : 9;
+        return fund ? Math.max(d, 16) : d;
+      }
       o.grid.bottom = 28;
       o.grid.right = 28;
       o.tooltip.trigger = "item";
@@ -303,16 +315,17 @@
           type: "scatter",
           z: fund ? 3 : 2,
           symbol: fund ? "diamond" : "circle",
-          symbolSize: fund ? 18 : 8,
+          symbolSize: function (value, d) { return d.data.size; },
           itemStyle: fund
             ? { color: p.fund, borderColor: p.bg, borderWidth: 2 }
-            : { color: alpha(p.soft, 0.45), borderColor: p.soft, borderWidth: 1 },
+            : { color: alpha(p.fund, 0.16), borderColor: alpha(p.fund, 0.55), borderWidth: 1 },
           // A short mark ("This fund"); the full name is in the legend.
           label: { show: fund, position: "top", distance: 8, color: p.ink,
                    fontWeight: 600, formatter: function () { return s.mark; } },
           emphasis: { scale: 1.4 },
           data: s.points.map(function (pt) {
-            return { value: [number(pt[0]), number(pt[1])], name: pt[2], caption: pt[3] };
+            return { value: [number(pt[0]), number(pt[1])], name: pt[2], caption: pt[3],
+                     size: area(pt, fund) };
           }),
         };
       });
@@ -352,6 +365,47 @@
     var chart = echarts.init(el, null, { renderer: "svg" });
     chart.setOption(KINDS[spec.kind](spec, palette()));
     specs.set(el, spec);
+    if (spec.kind === "line" || spec.kind === "area") zoomButtons(el, chart, spec);
+  }
+
+  // 1Y / 3Y / 5Y / All above a time chart (V1-80, after Fundoo's range buttons):
+  // they move the zoom the slider already offers, and change no figure. Only
+  // where the panel has no period tabs -- the public copy, which has no server
+  // to fetch a period from -- and made here, so without scripts none appear.
+  var ZOOMS = [["1Y", 1], ["3Y", 3], ["5Y", 5], ["All", 0]];
+
+  function zoomButtons(el, chart, spec) {
+    var panel = el.closest("section.view");
+    if ((panel && panel.querySelector(".tabs")) || el.previousElementSibling &&
+        el.previousElementSibling.classList.contains("zoom")) return;
+    var last = null;
+    spec.series.forEach(function (s) {
+      s.points.forEach(function (pt) { if (!last || pt[0] > last) last = pt[0]; });
+    });
+    if (!last) return;
+    var group = document.createElement("div");
+    group.className = "zoom";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", "Show a period");
+    ZOOMS.forEach(function (z) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.textContent = z[0];
+      button.setAttribute("aria-pressed", z[1] === 0 ? "true" : "false");
+      button.addEventListener("click", function () {
+        var end = new Date(last);
+        var start = new Date(last);
+        start.setUTCFullYear(end.getUTCFullYear() - z[1]);
+        var live = echarts.getInstanceByDom(el) || chart;
+        if (z[1] === 0) live.dispatchAction({ type: "dataZoom", start: 0, end: 100 });
+        else live.dispatchAction({ type: "dataZoom", startValue: start.getTime(), endValue: end.getTime() });
+        group.querySelectorAll("button").forEach(function (b) {
+          b.setAttribute("aria-pressed", b === button ? "true" : "false");
+        });
+      });
+      group.appendChild(button);
+    });
+    el.parentNode.insertBefore(group, el);
   }
 
   function init(root) {

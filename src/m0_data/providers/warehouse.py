@@ -227,6 +227,22 @@ class WarehouseMarketDataProvider:
             raise KeyError(f"no TER for {scheme_id} on or before {on}")
         return found.total
 
+    def fund_sizes(self, scheme_ids: list[str]) -> dict[str, Decimal]:
+        """Each fund's newest size on record, in rupees (`scheme_aum`), for the
+        peers' bubble chart. Funds with none are absent, not zero."""
+        found: dict[str, Decimal] = {}
+        for start in range(0, len(scheme_ids), 500):
+            chunk = scheme_ids[start:start + 500]
+            marks = ",".join("?" * len(chunk))
+            for sid, aum in self.conn.execute(
+                "SELECT scheme_id, aum_inr FROM scheme_aum"
+                f" WHERE scheme_id IN ({marks}) AND aum_inr IS NOT NULL"
+                " ORDER BY scheme_id, as_of_date",
+                chunk,
+            ):
+                found[str(sid)] = Decimal(str(aum))  # the newest date wins
+        return found
+
     def ters(self, scheme_ids: list[str], on: date) -> dict[str, Ter]:
         """Each fund's TER in force on `on`: its newest `valid_from` on or before
         that day, at its latest revision. Empty before migration 017."""

@@ -71,6 +71,10 @@ class Rank:
     quartile: int | None
     #: Why there is no rank, when there is none.
     reason: str | None = None
+    #: The category's lowest and highest figure among the ranked funds, when
+    #: ranked: the ends of the fund page's "compared to peers" bars (V1-80).
+    low: Decimal | None = None
+    high: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +83,8 @@ class Point:
     name: str
     volatility: Decimal
     return_ann: Decimal
+    #: Fund size in rupees, for the bubble's area (V1-80); None when not on record.
+    aum: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -141,10 +147,12 @@ def peer_context(market: Any, scheme_id: str) -> PeerContext | None:
             others = [v for sid, v in values.items() if sid != scheme_id]
             position = competition_rank(own, others, metric.higher_first)
             ranks.append(Rank(metric, own, position, len(values),
-                              quartile(position, len(values))))
+                              quartile(position, len(values)),
+                              low=min(values.values()), high=max(values.values())))
 
+    sizes = market.fund_sizes(sorted(members))
     points = [
-        Point(sid, members[sid].name, vol, ret)
+        Point(sid, members[sid].name, vol, ret, sizes.get(sid))
         for sid in sorted(members)
         if (stat := stats.get((sid, "3y"))) is not None and stat.spans
         and (vol := stat.volatility_ann) is not None

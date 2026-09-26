@@ -1,25 +1,46 @@
 {#
-  The top of a fund page: `fund_header`.
+  The top of a fund page: `fund_header`. Laid out after Fundoo's fund card
+  (DECISIONS V1-80): who the fund is and its latest price, then the facts a
+  reader checks first, then the figures.
 
   The fund's own name as the page heading, not its ISIN; its house, category
-  and plan as chips. Then the KPI strip (DECISIONS V1-74): returns over one,
-  three and five years each beside the benchmark's own figure, the worst fall,
-  volatility and size, with a sparkline of the prices behind each return. The
-  findings are sentences, each with a symbol as well as a tone (▲ ahead,
-  ▼ behind, ● a fact), so none of them relies on colour (§10.3). The facts sit
-  in a definition list a screen reader reads as label and value.
+  and plan as chips; beside them the latest published NAV, its date and the
+  change on the day, the change carrying a symbol as well as a tone (§10.3).
+  Then the facts as a definition list a screen reader reads as label and value,
+  and the KPI strip (V1-74): returns over one, three and five years, the
+  category rank, the worst fall, volatility, size and cost, each with a
+  sparkline where it has one. The figures count up (`data-island`, V1-80) and
+  land on the text written here; with scripts off they are simply the text.
 #}
 {% import "macros.html" as vc %}
 <div class="fundcard" data-chart="fundcard">
-  <div>
-    <h1 class="fundcard__name">{{ env.payload.name }}</h1>
-    <ul class="fundcard__chips">
-      {% for part in env.payload.subtitle.split(" · ") if part %}
-      <li class="chip">{{ part }}</li>
-      {% endfor %}
-      <li class="chip chip--mono">{{ env.payload.scheme_id }}</li>
-    </ul>
+  <div class="fundcard__top">
+    <div class="fundcard__id">
+      <h1 class="fundcard__name">{{ env.payload.name }}</h1>
+      <ul class="fundcard__chips">
+        {% for part in env.payload.subtitle.split(" · ") if part %}
+        <li class="chip">{{ part }}</li>
+        {% endfor %}
+        <li class="chip chip--mono">{{ env.payload.scheme_id }}</li>
+      </ul>
+    </div>
+    {% if env.payload.nav %}
+    <div class="fundcard__nav">
+      <p class="fundcard__nav-label">NAV on {{ env.payload.nav.date }}</p>
+      <p class="fundcard__nav-value">₹{{ env.payload.nav.value | fmt_tile }}</p>
+      {% if env.payload.nav.change %}
+      <p class="fundcard__nav-change{% if env.payload.nav.tone %} ret--{{ env.payload.nav.tone }}{% endif %}">
+        {%- if env.payload.nav.symbol %}<span aria-hidden="true">{{ env.payload.nav.symbol }} </span>{% endif -%}
+        {{ env.payload.nav.change }} on the day</p>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
+  <dl class="facts facts--grid">
+    {% for fact in env.payload.facts %}
+    <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
+    {% endfor %}
+  </dl>
   {% if env.payload.tiles %}
   <dl class="tiles">
     {% for tile in env.payload.tiles %}
@@ -40,9 +61,4 @@
     {% endfor %}
   </ul>
   {% endif %}
-  <dl class="facts">
-    {% for fact in env.payload.facts %}
-    <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
-    {% endfor %}
-  </dl>
 </div>

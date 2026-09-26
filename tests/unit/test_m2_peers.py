@@ -64,6 +64,9 @@ class _Market:
     def window_stats(self, scheme_ids: list[str]) -> list[WindowStat]:
         return [s for s in self.stats if s.scheme_id in scheme_ids]
 
+    def fund_sizes(self, scheme_ids: list[str]) -> dict[str, Decimal]:
+        return {sid: Decimal(1000) for sid in scheme_ids}
+
     def ters(self, scheme_ids: list[str], on: date) -> dict[str, Ter]:
         return {sid: Ter(sid, on, Decimal(len(sid)) / 10, None)
                 for sid in scheme_ids if sid.startswith("F")}
@@ -87,6 +90,8 @@ def test_one_category_under_two_headings_is_one_peer_group() -> None:
     assert found.in_category == 6  # the small-cap fund is not a peer
     three_years = next(r for r in found.ranks if r.metric.key == "return_3y")
     assert (three_years.rank, three_years.ranked) == (6, 6)
+    # The ends of the fund page's peer bar: the category's lowest and highest.
+    assert (three_years.low, three_years.high) == (Decimal("0.10"), Decimal("0.15"))
     assert len(found.points) == 6
 
 

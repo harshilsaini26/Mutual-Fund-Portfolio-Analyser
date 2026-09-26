@@ -31,6 +31,34 @@
   {% endfor %}
 </nav>
 {% endif %}
+{% if ranges %}
+{#
+  "Returns compared to peers" (DECISIONS V1-80, after Fundoo): for each period
+  a bar from the category's lowest return to its highest, and a mark where this
+  fund's sits. The bar is drawn from `render.range_bars`; every figure on it was
+  formatted by the builder and is written out, so the bar is never the only way
+  to read it (§10.3), and the sentence under each says it in full.
+#}
+<div class="ranges">
+  {% for r in ranges %}
+  <div class="range">
+    <p class="range__head">
+      <span class="range__period">{{ r.label }}</span>
+      <span class="range__value">{{ r.value_label }}</span>
+      <span class="range__rank">{{ r.rank }}{% if r.quarter %} · {{ r.quarter }}{% endif %}</span>
+    </p>
+    <svg class="range__bar" viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <rect class="range__track" x="0" y="5" width="100" height="4" rx="2"></rect>
+      <rect class="range__fill" x="0" y="5" width="{{ r.pos }}" height="4" rx="2"></rect>
+      <rect class="range__mark" x="{{ r.pos }}" y="0" width="1.4" height="14" transform="translate(-0.7 0)"></rect>
+    </svg>
+    <p class="range__ends"><span>Lowest {{ r.low_label }}</span><span>Highest {{ r.high_label }}</span></p>
+    <p class="sr-only">Over {{ r.label }}, the {{ r.ranked }} ranked funds in its category returned
+      from {{ r.low_label }} to {{ r.high_label }}; this fund returned {{ r.value_label }}.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 <div class="echarts{% if env.payload.charts | length > 1 %} echarts--several{% endif %}"
      data-chart="echart">
   {% for chart in env.payload.charts %}

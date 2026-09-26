@@ -163,7 +163,7 @@
 #}
 <div class="kpi__tile{% if tile.value is none %} kpi__tile--absent{% endif %}{% if tile.tone %} kpi__tile--{{ tile.tone }}{% endif %}">
   <dt>{{ tile.label }}</dt>
-  <dd class="kpi__value"{% if tile.value is none %} title="{{ tile.context or why }}"{% endif %}>{{ tile | fmt_tile }}</dd>
+  <dd class="kpi__value"{% if tile.value is none %} title="{{ tile.context or why }}"{% else %} data-island="count-up"{% endif %}>{{ tile | fmt_tile }}</dd>
   {% if tile.context %}
   <dd class="kpi__context">{% if tile.symbol %}<span class="kpi__symbol" aria-hidden="true">{{ tile.symbol }}</span>{% endif %}<span>{{ tile.context }}</span></dd>
   {% endif %}

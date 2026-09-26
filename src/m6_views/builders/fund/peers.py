@@ -21,6 +21,7 @@ from src.m6_views.envelope import ViewEnvelope
 from src.m6_views.format import (
     DASH,
     format_fraction,
+    format_inr,
     format_ordinal,
     format_pct,
     format_return,
@@ -40,6 +41,7 @@ RANK_ORDER = (
 #: How the headline names a period, and the history that period needs.
 PERIOD_WORDS = {"1y": ("one-year", "a year of prices"),
                 "3y": ("three-year", "three years of prices")}
+PERIOD_LABELS = {"1y": "1 year", "3y": "3 years", "5y": "5 years"}
 #: Below this many ranked funds, a rank is shown with medium confidence.
 SOLID_PEERS = 10
 
@@ -112,11 +114,16 @@ class FundPeersBuilder:
         charts: list[dict[str, Any]] = []
         if len(points) > len(own):
 
+            # [volatility, return, name, caption, size]: the size sets a bubble's
+            # area (V1-80, after Fundoo) and is said in the caption too (§10.3).
             def point(p: Point) -> list[str]:
+                size = (f"; size {format_inr(p.aum, precision=0, compact=True)}"
+                        if p.aum is not None else "")
                 return [
                     str(p.volatility), str(p.return_ann), p.name,
                     f"{format_return(p.return_ann, True)}; volatility "
-                    f"{format_fraction(p.volatility)}",
+                    f"{format_fraction(p.volatility)}{size}",
+                    "" if p.aum is None else str(p.aum),
                 ]
 
             series = [{"name": "Other funds in its category", "role": "peer",
@@ -156,6 +163,24 @@ class FundPeersBuilder:
                 "headline": headline,
                 "category": category,
                 "in_category": found.in_category,
+                # "Returns compared to peers" (V1-80, after Fundoo): each period's
+                # lowest and highest in the category, and where this fund sits.
+                # Positions along the bar are drawn in `render.range_bars`.
+                "ranges": [
+                    {
+                        "label": PERIOD_LABELS[r.metric.window],
+                        "low": str(r.low), "high": str(r.high), "value": str(r.value),
+                        "low_label": figure_words(Rank(r.metric, r.low, None, 0, None)),
+                        "high_label": figure_words(Rank(r.metric, r.high, None, 0, None)),
+                        "value_label": figure_words(r),
+                        "rank": rank_words(r),
+                        "quarter": QUARTERS[r.quartile] if r.quartile else "",
+                        "ranked": r.ranked,
+                    }
+                    for r in found.ranks
+                    if r.metric.field == "return_ann" and r.rank is not None
+                    and r.low is not None and r.high is not None
+                ],
                 "ranks": [
                     {
                         "label": r.metric.label,

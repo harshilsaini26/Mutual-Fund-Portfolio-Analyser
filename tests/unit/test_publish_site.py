@@ -218,22 +218,57 @@ def test_a_site_too_large_for_pages_stops_the_build() -> None:
         publish.check_budget(101, budget=100)
 
 
-def test_the_front_page_lists_every_fund_in_one_table(site: Path) -> None:
-    """DECISIONS V1-74: a table of every published fund, sortable and narrowed
-    by category in the browser, and the grouped lists beneath for no script."""
-    index = (site / "index.html").read_text(encoding="utf-8")
+def test_every_fund_is_listed_in_one_table_on_its_own_page(site: Path) -> None:
+    """DECISIONS V1-74, moved to /funds/ in V1-80: a table of every published
+    fund, sortable and narrowed by family or category in the browser, and the
+    grouped lists beneath for no script."""
+    index = (site / "funds" / "index.html").read_text(encoding="utf-8")
     assert "<table data-sortable data-filterable>" in index
-    assert index.count('<tr data-family="equity">') == 2
+    flexi = '<tr data-family="equity" data-category="equity/flexi_cap">'
+    assert index.count(flexi) == 2
+    assert '<option value="equity/flexi_cap">Flexi cap</option>' in index
     assert f'href="{BASE}/fund/{DIRECT}/"' in index
     assert 'class="explorer__group"' in index
-    assert (site / "static" / "theme.js").exists()
+    for name in publish.STATIC_FILES:
+        assert (site / "static" / name).exists(), name
     # Three hundred days of prices span no fixed window: every return is a
     # dash, never a figure for a period the history does not cover. The
     # fixture has no fund size, expense ratio (V1-78) or peers (V1-77) either:
     # three dashes more.
-    row = re.search(r'<tr data-family="equity">(.*?)</tr>', index, re.S)
+    row = re.search(r'<tr data-family="equity"[^>]*>(.*?)</tr>', index, re.S)
     assert row is not None and "data-value=\"0." not in row.group(1)
     assert row.group(1).count("—") == 6
+
+
+def test_the_front_page_is_a_way_in_not_a_list(site: Path) -> None:
+    """V1-80, after MF Zone: a hero with search, the category cards and what a
+    fund page shows -- and small, now that the full list lives at /funds/."""
+    index = (site / "index.html").read_text(encoding="utf-8")
+    assert 'data-island="blur-text">See what every fund owns' in index
+    assert 'data-index="/Repo/search.json"' in index
+    assert f'href="{BASE}/funds/"' in index and 'id="about"' in index
+    assert "<table data-sortable" not in index
+    # Islands enhance text the server already wrote: with scripts off it reads.
+    assert re.search(r'data-island="count-up">2<', index)
+    assert len(index.encode("utf-8")) < 200_000
+
+
+def _leader_row(sid: str, key: str, three: str | None) -> dict[str, object]:
+    cell = {"value": three or "", "label": three or "—"}
+    return {"scheme_id": sid, "name": sid, "category_key": key,
+            "category_short": key.split("/")[1], "returns": [cell, cell, cell]}
+
+
+def test_category_cards_hold_the_highest_three_year_returns_in_order() -> None:
+    rows = [_leader_row(f"F{i}", "equity/flexi_cap", v)
+            for i, v in enumerate(["0.12", "0.3", "0.05", None, "0.21", "0.09", "0.18"])]
+    rows.append(_leader_row("M0", "equity/mid_cap", None))
+    cards = publish.category_leaders(rows)
+    assert [c["key"] for c in cards] == ["equity/flexi_cap"]  # no 3-year figure: no card
+    flexi = cards[0]
+    # Decimal order, not text order ("0.3" > "0.21"), five of them, of seven.
+    assert [f["scheme_id"] for f in flexi["funds"]] == ["F1", "F4", "F6", "F0", "F5"]
+    assert flexi["count"] == 7
 
 
 @pytest.mark.parametrize(("category", "family"), [

@@ -172,10 +172,25 @@ def rolling_path(
     )
 
 
+def day_change(navs: list[NavPoint]) -> Decimal | None:
+    """The last published price against the one before it, as a fraction:
+    the "+0.43% on the day" beside a fund's NAV (DECISIONS V1-80, after Fundoo).
+
+    Published prices only: an interpolated NAV is ours, not the fund's, and a
+    change to or from one would be a change nobody published. None with fewer
+    than two published prices.
+    """
+    published = [n for n in navs if not n.is_interpolated]
+    if len(published) < 2 or published[-2].nav <= 0:
+        return None
+    return (published[-1].nav / published[-2].nav - 1).quantize(RATE_Q)
+
+
 __all__ = [
     "GROWTH_BASE",
     "GrowthPath",
     "RollingPath",
+    "day_change",
     "drawdown_path",
     "growth_path",
     "price_history",

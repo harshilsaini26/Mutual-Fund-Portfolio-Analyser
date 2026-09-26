@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from src.common.contracts.market import NavPoint
 from src.common.types import SchemeId
-from src.m2_fund.paths import drawdown_path, growth_path, rolling_path
+from src.m2_fund.paths import day_change, drawdown_path, growth_path, rolling_path
 from src.m2_fund.risk import max_drawdown
 
 D0 = date(2020, 1, 1)
@@ -84,3 +84,14 @@ def test_too_few_windows_is_no_answer_rather_than_a_thin_one() -> None:
 def test_no_benchmark_means_no_share_ahead_not_zero() -> None:
     path = rolling_path(_navs([str(100 + i) for i in range(40)], step=10), {}, 60, 10)
     assert path is not None and path.pct_ahead is None
+
+
+def test_the_day_change_is_between_the_last_two_published_prices() -> None:
+    """V1-80: "+0.43% on the day" beside the NAV. 78.34 to 78.68 is +0.434%.
+    An interpolated price is skipped: nobody published it."""
+    navs = _navs(["78.34", "78.68"])
+    assert day_change(navs) == Decimal("0.004340")
+    filled = NavPoint(SchemeId("S"), navs[-1].nav_date + timedelta(days=1),
+                      Decimal("99"), True)
+    assert day_change([*navs, filled]) == Decimal("0.004340")
+    assert day_change(navs[:1]) is None

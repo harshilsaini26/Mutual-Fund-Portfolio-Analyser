@@ -441,7 +441,7 @@ recomputes the reference portfolio without importing any of the code it checks.
 
 ```bash
 pip install -e ".[dev,cas]" -c requirements.lock   # inside .venv; start.py installs [cas] only
-python -m pytest -q                                # 1,541 tests, hermetic, no network
+python -m pytest -q                                # 1,626 tests, hermetic, no network
 python -m ruff check .
 python -m mypy                                     # strict
 python -m scripts.verify_v0_ledger --check         # the independent ledger verifier
@@ -459,7 +459,18 @@ src/m1_ledger/        statement parsing, lots, returns          your positions
 src/m2_fund/          returns, risk, benchmark analytics        fund x-ray
 src/m3_lookthrough/   exposure, overlap, concentration          look-through
 src/m6_views/         pages, charts, export, local API          what you see
+ui/                   React Bits islands, Lenis, the Rubik font  built once, committed
 migrations/           numbered, forward-only schema changes
+```
+
+The pages are server-rendered and complete without JavaScript. A few React Bits
+components (the headline, counting figures, card spotlights, the hero's aurora) run as
+Preact islands over them, bundled into `src/m6_views/static/vendor/islands.v1.js` and
+committed, so neither CI nor the nightly build needs Node. After changing anything in
+`ui/src`, rebuild it (a test fails until you do):
+
+```bash
+cd ui && npm ci && npm run build
 ```
 
 Dependencies run one way, and modules talk through typed interfaces rather than reaching
