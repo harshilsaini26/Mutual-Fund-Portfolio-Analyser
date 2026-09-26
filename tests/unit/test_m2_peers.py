@@ -182,3 +182,22 @@ def test_a_fund_with_an_unusable_price_is_reported_and_the_rest_go_on(
     conn.close()
     assert rows > 0 and stored == {"INF000000A01"}
     assert any("INF000000B01" in line and "no figures" in line for line in said)
+
+
+def test_fund_sizes_are_each_funds_newest_on_record(tmp_path: Path) -> None:
+    """V1-80: the bubble chart's sizes. The newest quarter wins; a fund with no
+    size on record is absent, never zero."""
+    db = tmp_path / "w.db"
+    migrated(db)
+    conn = connect(str(db))
+    conn.executemany(
+        "INSERT INTO scheme_aum (scheme_id, as_of_date, aum_inr, basis) VALUES (?,?,?,"
+        " 'quarterly_average')",
+        [("F1", date(2026, 3, 31), Decimal("100")),
+         ("F1", date(2026, 6, 30), Decimal("250")),
+         ("F2", date(2026, 6, 30), Decimal("75"))],
+    )
+    conn.commit()
+    sizes = WarehouseMarketDataProvider(conn).fund_sizes(["F1", "F2", "F3"])
+    conn.close()
+    assert sizes == {"F1": Decimal("250"), "F2": Decimal("75")}

@@ -11,10 +11,17 @@
 #   echarts.v6.1.0.min.js     package/dist/echarts.min.js from
 #                             https://registry.npmjs.org/echarts/-/echarts-6.1.0.tgz
 #                             (tarball checked against the registry's sha512 integrity)
+#   lenis.v1.3.26.min.js      dist/lenis.min.js of lenis@1.3.26 (npm, ui/package-lock.json)
+#   islands.v1.js             built by ui/build.mjs from ui/src: React Bits components
+#                             with Preact 10.29.8, motion 13.4.4, ogl 1.0.11; its
+#                             first line records the SHA-256 of ui/src (test_islands)
+#   (both rewritten, with their lines below, by `cd ui && npm run build`)
 #
 # Verify by hand with:  sha256sum -c SHA256SUMS
 8286db5d6aa049cc6e8a546708943b79dfb4daaefb0ccf42af674ec0ee4c86be  d3-sankey.v0.12.3.min.js
 f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539  d3.v7.min.js
 b66b25aeb4df84e33199dc21694014d336d222cbd9deb0e5a7c14bd6aa0d0fd0  echarts.v6.1.0.min.js
 e774d59795fc1370eaaea045c6f18e0cf7056fa25da12d6a17372ad220d266a5  islands.v1.js
+53195c9797e7ce7bf9d7fa9242b08209e57f46de4c9dac126a6494fa780e3346  lenis.v1.3.26.min.js
+e4962f6a6204aa968c9c6e473ea7ca4411dec41151eecc8d637aea2de496ea51  islands.v1.js
 53195c9797e7ce7bf9d7fa9242b08209e57f46de4c9dac126a6494fa780e3346  lenis.v1.3.26.min.js

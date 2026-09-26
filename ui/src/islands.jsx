@@ -99,8 +99,16 @@ function aurora(el) {
         lightMode={isLight()} />,
       el
     );
-  draw();
-  new MutationObserver(draw).observe(document.documentElement, {
+  // Drawn only while the hero is on screen: its animation runs every frame,
+  // and a reader scrolled down to the funds should not pay for it.
+  let shown = false;
+  new IntersectionObserver(entries => {
+    const now = entries.some(e => e.isIntersecting);
+    if (now === shown) return;
+    shown = now;
+    if (shown) draw(); else render(null, el);
+  }).observe(el);
+  new MutationObserver(() => shown && draw()).observe(document.documentElement, {
     attributes: true, attributeFilter: ['data-theme'],
   });
 }

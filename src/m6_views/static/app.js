@@ -257,18 +257,25 @@
     if (category) category.addEventListener("change", apply);
     if (text) text.addEventListener("input", apply);
 
+    // A malformed address ("?q=%E0") names nothing; it must not stop the
+    // rest of this file from running.
+    var decoded = function (raw) {
+      try { return decodeURIComponent(raw); } catch (e) { return null; }
+    };
+
     // "?q=hdfc": the search box's plain form, with scripts off, lands here.
     var query = /[?&]q=([^&]*)/.exec(window.location.search);
-    if (query && text) {
-      text.value = decodeURIComponent(query[1].replace(/\+/g, " "));
+    var typedQuery = query ? decoded(query[1].replace(/\+/g, " ")) : null;
+    if (typedQuery !== null && text) {
+      text.value = typedQuery;
       apply();
     }
 
     // "#category=equity/flexi_cap": the front page's category cards link here.
     var asked = /(?:^#|&)category=([^&]+)/.exec(window.location.hash);
     if (asked && category) {
-      var key = decodeURIComponent(asked[1]);
-      if (Array.prototype.some.call(category.options, function (o) { return o.value === key; })) {
+      var key = decoded(asked[1]);
+      if (key !== null && Array.prototype.some.call(category.options, function (o) { return o.value === key; })) {
         category.value = key;
         apply();
       }
@@ -315,11 +322,13 @@
 
   // --- smooth scrolling (Lenis, DECISIONS V1-80) ---------------------------------
   //
-  // Only where motion is welcome; anchors still jump to their target, and a list
-  // that scrolls on its own (`data-lenis-prevent`) keeps its own scrolling.
+  // Only where motion is welcome; anchors still jump to their target, and a box
+  // that scrolls on its own -- the /funds/ table, the app's sidebar, a panel's
+  // table -- keeps the wheel (`allowNestedScroll`; Lenis's default hands every
+  // wheel to the page, which left the fund table unscrollable).
 
   if (window.Lenis && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    new window.Lenis({ autoRaf: true, anchors: true });
+    new window.Lenis({ autoRaf: true, anchors: true, allowNestedScroll: true });
   }
 
   document.querySelectorAll("[data-recent]").forEach(function (box) {

@@ -376,8 +376,15 @@
 
   function zoomButtons(el, chart, spec) {
     var panel = el.closest("section.view");
-    if ((panel && panel.querySelector(".tabs")) || el.previousElementSibling &&
-        el.previousElementSibling.classList.contains("zoom")) return;
+    if (panel && panel.querySelector(".tabs")) return;
+    var existing = el.previousElementSibling;
+    if (existing && existing.classList.contains("zoom")) {
+      // Redrawn (a theme switch starts every chart at its full range): put
+      // back the period the reader chose, so the pressed button is still true.
+      var pressed = existing.querySelector('button[aria-pressed="true"]');
+      if (pressed) pressed.click();
+      return;
+    }
     var last = null;
     spec.series.forEach(function (s) {
       s.points.forEach(function (pt) { if (!last || pt[0] > last) last = pt[0]; });

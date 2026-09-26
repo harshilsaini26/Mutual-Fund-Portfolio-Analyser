@@ -663,6 +663,51 @@ def test_the_fund_page_places_it_among_its_peers(client: TestClient) -> None:
     assert "Fund One (this fund)" in peers
     assert '"role": "fund"' in peers and '"mark": "This fund"' in peers
     assert "funds that closed or merged are not included" in peers
+    # V1-80: "compared to peers" bars, their ends written out, not only drawn.
+    assert peers.count('class="range__bar"') == 2  # one and three years ranked
+    assert "Lowest " in peers and "Highest " in peers
+
+
+def test_the_fund_card_leads_with_its_latest_price() -> None:
+    """V1-80, after Fundoo: the newest published NAV, its date and the day's
+    change beside the name -- the change with a symbol as well as a tone."""
+    from datetime import date as day
+    from decimal import Decimal as D
+
+    from src.common.contracts.market import NavPoint
+    from src.common.types import SchemeId as Sid
+    from src.m6_views.builders.fund import header
+
+    navs = [NavPoint(Sid("S"), day(2026, 9, 24), D("78.34"), False),
+            NavPoint(Sid("S"), day(2026, 9, 25), D("78.68"), False)]
+
+    class _Windows:  # only what `_nav` reads
+        pass
+
+    fw = _Windows()
+    fw.navs = navs  # type: ignore[attr-defined]
+    nav = header._nav(fw)  # type: ignore[arg-type]
+    assert nav is not None
+    assert nav["date"] == "25 Sep 2026" and nav["value"]["value"] == "78.68"
+    assert (nav["change"], nav["tone"], nav["symbol"]) == ("+0.43%", "gain", "▲")
+
+
+def test_range_bars_place_the_fund_between_its_categorys_ends() -> None:
+    """Geometry only (`render.range_bars`): 0 at the lowest, 100 at the
+    highest; a category that all returned alike puts the mark mid-bar."""
+    from src.m6_views.render import range_bars
+
+    class _Env:
+        def __init__(self, ranges: list[dict[str, str]]) -> None:
+            self.payload = {"ranges": ranges}
+
+    def pos(low: str, high: str, value: str) -> str:
+        bars = range_bars(_Env([{"low": low, "high": high, "value": value}]))  # type: ignore[arg-type]
+        return str(bars[0]["pos"])
+
+    assert pos("-0.05", "0.15", "0.10") == "75.00"
+    assert pos("0.12", "0.12", "0.12") == "50.00"
+    assert pos("0.00", "0.10", "0.20") == "100.00"  # clamped, never off the bar
 
 
 def test_the_sidebar_marks_where_the_reader_is(client: TestClient) -> None:
