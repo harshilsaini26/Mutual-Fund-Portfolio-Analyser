@@ -22,6 +22,7 @@ from src.m6_views.builders.fund.common import (
     SIZE_NAMES,
     FundQuality,
 )
+from src.m6_views.caveats import UNRESOLVED_WARN_PCT
 from src.m6_views.compose import ok_envelope
 from src.m6_views.deps import Deps
 from src.m6_views.envelope import ViewEnvelope
@@ -121,8 +122,11 @@ class FundPortfolioBuilder:
             for k, v in fund.by_class
             if v > 0
         )
+        # An aggregator's copy says so where it is always read (V1-79), not
+        # only in the notes, which start closed.
+        source = "shown on Groww's page" if tier == "aggregator" else "disclosed"
         headline = (
-            f"{len(fund.holdings):,} holdings in the portfolio disclosed for "
+            f"{len(fund.holdings):,} holdings in the portfolio {source} for "
             f"{format_date(disclosed)}: {mix}."
         )
         # V1-71: V8 no longer warns on this, so the page says it instead.
@@ -149,10 +153,11 @@ class FundPortfolioBuilder:
                 f"table and not drawn in the pictures."
             )
         if tier == "aggregator":
+            # Groww (S7) is the only aggregator in config/sources.yaml.
             caveats.append(
-                "This portfolio comes from an aggregator's page, which carries no "
-                "ISINs, so more of it is unresolved than the fund house's own file "
-                "would leave."
+                "This portfolio comes from Groww's page for the fund, an aggregator, "
+                "not from the fund house's own file. The page carries no ISINs, so "
+                "more of it is unresolved than the fund house's file would leave."
             )
         if fund.by_sector:
             caveats.append(
@@ -181,8 +186,13 @@ class FundPortfolioBuilder:
                 ],
                 "rows": rows,
             },
+            # "High" is a current fund house's file, nearly all of it placed:
+            # the badge's own words are "current, complete, and resolved".
             quality=FundQuality(
-                stale, "high" if stale <= STALE_DAYS else "medium",
+                stale,
+                "high" if stale <= STALE_DAYS and tier != "aggregator"
+                and (unresolved is None or unresolved <= UNRESOLVED_WARN_PCT)
+                else "medium",
                 unresolved_pct=unresolved,
             ),
             data_as_of=disclosed,

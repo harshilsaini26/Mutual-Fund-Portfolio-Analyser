@@ -526,6 +526,7 @@ th[aria-sort] button { color: var(--ink); }
 .chart-table { margin-top: 16px; }
 .chart-table summary { cursor: pointer; font-size: 12.5px; color: var(--ink-faint); }
 .chart-table summary:hover { color: var(--ink-soft); }
+p.chart-table { font-size: 12.5px; color: var(--ink-faint); }
 .chart-table .table-wrap {
   margin-top: 10px; max-height: 26rem; overflow-y: auto;
   border: 1px solid var(--line); border-radius: var(--radius-sm);
@@ -610,6 +611,7 @@ th[aria-sort] button { color: var(--ink); }
 .echart--donut .echart__canvas { height: 260px; }
 .echart--treemap .echart__canvas { height: 400px; }
 .echart--hbar .echart__canvas { height: 240px; }
+.echart--scatter .echart__canvas { height: 380px; }
 
 /* --- page headings ------------------------------------------------------------------- */
 
@@ -681,6 +683,8 @@ th[aria-sort] button { color: var(--ink); }
 .facts-list div { padding: 12px 14px; background: var(--surface-2); border-radius: 12px; }
 .facts-list dt { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); }
 .facts-list dd { margin: 4px 0 0; font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.facts-list .facts-list__note { margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--ink-soft); }
+.facts-list--ranks { margin: 18px 0 4px; }
 .recent { margin-top: 18px; }
 .recent h3 {
   margin: 0 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
@@ -715,7 +719,8 @@ th[aria-sort] button { color: var(--ink); }
 }
 .fundcard__chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 /* Six tiles as two rows of three: four-and-two reads as something missing. */
-.fundcard .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fundcard .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 980px) { .fundcard .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .fundcard .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 340px) { .fundcard .tiles { grid-template-columns: minmax(0, 1fr); } }
 .findings {

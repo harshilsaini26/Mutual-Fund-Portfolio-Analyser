@@ -277,6 +277,48 @@
       return o;
     },
 
+    // Funds as points: risk across, return up. §10.3: this fund is a larger
+    // diamond with its name beside it, not only a different colour.
+    scatter: function (c, p) {
+      var o = base(p);
+      o.grid.bottom = 28;
+      o.grid.right = 28;
+      o.tooltip.trigger = "item";
+      o.tooltip.formatter = function (d) { return d.data.name + "\n" + d.data.caption; };
+      function axis(kind, name, where) {
+        return {
+          type: "value", scale: true, name: name, nameLocation: "middle",
+          nameGap: where === "x" ? 28 : 44, nameTextStyle: { color: p.soft },
+          axisLabel: { color: p.faint, formatter: ticks(kind) },
+          axisLine: { lineStyle: { color: p.rule } },
+          splitLine: { lineStyle: { color: p.rule } },
+        };
+      }
+      o.xAxis = axis(c.x, c.x_name, "x");
+      o.yAxis = axis(c.y, c.y_name, "y");
+      o.series = c.series.map(function (s) {
+        var fund = s.role === "fund";
+        return {
+          name: s.name,
+          type: "scatter",
+          z: fund ? 3 : 2,
+          symbol: fund ? "diamond" : "circle",
+          symbolSize: fund ? 18 : 8,
+          itemStyle: fund
+            ? { color: p.fund, borderColor: p.bg, borderWidth: 2 }
+            : { color: alpha(p.soft, 0.45), borderColor: p.soft, borderWidth: 1 },
+          // A short mark ("This fund"); the full name is in the legend.
+          label: { show: fund, position: "top", distance: 8, color: p.ink,
+                   fontWeight: 600, formatter: function () { return s.mark; } },
+          emphasis: { scale: 1.4 },
+          data: s.points.map(function (pt) {
+            return { value: [number(pt[0]), number(pt[1])], name: pt[2], caption: pt[3] };
+          }),
+        };
+      });
+      return o;
+    },
+
     hbar: function (c, p) {
       var o = base(p);
       o.legend.show = false;

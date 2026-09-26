@@ -85,6 +85,23 @@ sources:
     # costs and why V2 carries a second tolerance because of it.
     role: witness
 
+  S14:
+    name: amfi_scheme_ter
+    kind: fixed_url
+    # The TER page's own "download": one workbook per month, every fund, one
+    # row per day. The JSON behind the same page pages at 100 rows (~500
+    # requests a month), so it is not used. `src/m0_data/fetch/amfi_ter.py`.
+    url: "https://www.amfiindia.com/api/populate-te-rdata-revised?MF_ID=All&Month={month}&strCat=-1&strType=-1&excel=true"
+    parser: ter.amfi
+    verified_on: 2026-09-25
+    provides: [scheme_ter]
+    # robots.txt, read 2026-09-25: disallows only /admin/, /login/, /search/.
+    respect_robots: true
+    # AMFI builds the workbook on request: ~20 s for ~4 MB.
+    timeout_read: 180
+    # The published figure itself (DECISIONS V1-78): total and base TER.
+    role: record
+
   S5:
     name: amc_portfolio_disclosure
     kind: per_amc_manifest

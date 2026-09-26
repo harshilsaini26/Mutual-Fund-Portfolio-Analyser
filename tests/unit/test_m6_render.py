@@ -31,6 +31,7 @@ import pytest
 from fastapi.testclient import TestClient
 from src.common.types import IssuerId, SchemeId, UserId
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
+from src.m2_fund.stats import rebuild_fund_stats
 from src.m3_lookthrough.concentration import concentration
 from src.m3_lookthrough.duplication import portfolio_duplication
 from src.m3_lookthrough.engine import IssuerWeight, Position, compute_lookthrough
@@ -190,6 +191,34 @@ def client(tmp_path: Path) -> TestClient:
             (JULY, 3, "__CASH__", "Cash", Decimal("10"), "cash", None),
         ],
     )
+    # S1's expense ratio (V1-78), for the header's tile.
+    warehouse.execute(
+        "INSERT INTO scheme_ter (scheme_id, valid_from, total_ter, base_ter,"
+        " source_file_id) VALUES ('S1', ?, '0.6200', '0.4500', 'f1')",
+        (JULY,),
+    )
+    # Five peers in S1's category (V1-77): live Direct plans with stored
+    # figures, enough to rank S1 and draw its category's picture. Their figures
+    # are rows, not prices; S1's own come from `rebuild_fund_stats`.
+    warehouse.execute("UPDATE scheme SET last_seen = ? WHERE scheme_id = 'S1'", (AS_OF,))
+    rebuild_fund_stats(warehouse, AS_OF)
+    for n in range(1, 6):
+        warehouse.execute(
+            "INSERT INTO scheme (scheme_id, scheme_name, plan, option, sebi_category,"
+            " status, last_seen) VALUES (?, ?, 'direct', 'growth',"
+            " 'Equity Scheme - Flexi Cap Fund', 'active', ?)",
+            (f"P{n}", f"Peer {n} - Direct Growth", AS_OF),
+        )
+        warehouse.executemany(
+            "INSERT INTO fund_window_stat (scheme_id, window_key, as_of, obs_days,"
+            " spans, return_ann, return_cum, volatility_ann, max_dd, sharpe,"
+            " computed_at) VALUES (?, ?, ?, 1100, 1, ?, ?, ?, ?, ?, ?)",
+            [
+                (f"P{n}", key, AS_OF, Decimal(n + 8) / 100, Decimal("0.3"),
+                 Decimal(n + 10) / 100, Decimal(-n - 10) / 100, Decimal("0.9"), AS_OF)
+                for key in ("1y", "3y")
+            ],
+        )
     warehouse.commit()
 
     ledger = connect_ledger(
@@ -620,6 +649,20 @@ def test_the_fund_page_leads_with_its_figures(client: TestClient) -> None:
     assert "Benchmark " in html
     # A figure the history cannot support is a dash with the reason, never a 0.
     assert "Less than 5 years of prices on record" in html
+
+
+def test_the_fund_page_places_it_among_its_peers(client: TestClient) -> None:
+    """V1-77: S1 against the five fixture peers in its category -- a rank with
+    how many were ranked, its point marked in words as well as colour, and the
+    caveat that closed funds are missing."""
+    html = client.get("/fund/S1" + QS).text
+    assert "Category rank, 3 years" in html
+    assert "Expense ratio" in html and "0.62%" in html
+    peers = html[html.index('id="fund_peers"'):]
+    assert "1st of 6" in peers
+    assert "Fund One (this fund)" in peers
+    assert '"role": "fund"' in peers and '"mark": "This fund"' in peers
+    assert "funds that closed or merged are not included" in peers
 
 
 def test_the_sidebar_marks_where_the_reader_is(client: TestClient) -> None:

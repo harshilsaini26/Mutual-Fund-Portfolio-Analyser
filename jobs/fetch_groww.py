@@ -3,6 +3,15 @@
     python -m jobs.fetch_groww                      # every slug in the map
     python -m jobs.fetch_groww --scheme INF179K01UT0
     python -m jobs.fetch_groww --slug <slug> --dry-run
+    python -m jobs.fetch_groww --crawl 100 --map data/groww.csv   # the daily build
+
+**The crawl** (DECISIONS V1-79) is how the public build covers every fund Groww
+lists without a hand-kept map: its sitemap names ~1,600 Direct Growth pages, and
+each page states its own ISIN. A CSV map (`--map`) remembers what each page said
+and when it was read. Each run reads at most `--crawl` pages -- pages due a
+monthly refresh first, then pages never read, then pages that named no fund we
+list, again after three months -- so the first pass takes about sixteen days at
+100 a day, and after it the refresh needs about fifty a day.
 
 **The coverage tier.** `load_holdings` reads an AMC's own workbook and covers
 the five houses with a parser; this reads an aggregator's page and covers any
@@ -20,8 +29,11 @@ the map promised, and a mismatch REFUSES.
 from __future__ import annotations
 
 import argparse
+import csv
+import re
 import sys
-from datetime import UTC, date, datetime
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -44,6 +56,7 @@ from src.m0_data.resolve.cascade import (
     load_isin_prefix_index,
     load_issuer_index,
 )
+from src.m0_data.universe import live_funds
 from src.m0_data.validate.checks import (
     HoldingRow,
     as_json,
@@ -53,6 +66,12 @@ from src.m0_data.validate.checks import (
 
 SOURCE_ID = "S7"
 SLUGS_YAML = REPO_ROOT / "config" / "groww_slugs.yaml"
+SITEMAP = "https://groww.in/mf-sitemap.xml"
+_SLUG = re.compile(r"https://groww\.in/mutual-funds/([a-z0-9-]+-direct-growth)\b")
+#: A page read this long ago is read again: disclosures are monthly.
+REFRESH = timedelta(days=30)
+#: A page that named no fund we list, or failed, is tried again after this.
+RECHECK = timedelta(days=90)
 
 #: What `source_tier` records for anything loaded here. Migration 011.
 TIER = "aggregator"
@@ -76,7 +95,25 @@ def load_slugs(path: Path = SLUGS_YAML) -> dict[str, dict[str, Any]]:
     return slugs
 
 
-def fetch_page(slug: str, cfg: dict[str, Any]) -> tuple[bytes, str]:
+@dataclass(frozen=True)
+class Polite:
+    """One limiter and one robots cache for a whole crawl (V1-55's lesson: one
+    built per request enforces nothing)."""
+
+    limiter: DomainRateLimiter
+    robots: RobotsCache | None
+
+
+def polite(cfg: dict[str, Any]) -> Polite:
+    return Polite(
+        DomainRateLimiter(float(cfg["rate_limit_per_sec"]), int(cfg["burst"])),
+        RobotsCache() if cfg.get("respect_robots") else None,
+    )
+
+
+def fetch_page(
+    slug: str, cfg: dict[str, Any], manners: Polite | None = None
+) -> tuple[bytes, str]:
     """One polite GET of `https://groww.in/mutual-funds/<slug>`.
 
     `respect_robots` is on for this source and the check runs here rather than
@@ -85,6 +122,10 @@ def fetch_page(slug: str, cfg: dict[str, Any]) -> tuple[bytes, str]:
     permission goes stale silently.
     """
     url = str(cfg["url"]).format(slug=slug)
+    return _get(url, cfg, manners or polite(cfg)), url
+
+
+def _get(url: str, cfg: dict[str, Any], manners: Polite) -> bytes:
     response = conditional_get(
         url,
         user_agent=str(cfg["user_agent"]),
@@ -92,11 +133,11 @@ def fetch_page(slug: str, cfg: dict[str, Any]) -> tuple[bytes, str]:
         timeout_read=float(cfg["timeout_read"]),
         retries=int(cfg["retries"]),
         from_email=str(cfg.get("from_email") or "") or None,
-        limiter=DomainRateLimiter(float(cfg["rate_limit_per_sec"]), int(cfg["burst"])),
-        robots=RobotsCache() if cfg.get("respect_robots") else None,
+        limiter=manners.limiter,
+        robots=manners.robots,
     )
     response.raise_for_status()
-    return response.content, url
+    return bytes(response.content)
 
 
 def page_isin(content: bytes) -> str | None:
@@ -228,8 +269,9 @@ def _one(
     prefixes: dict[str, str],
     dry_run: bool,
     force: bool = False,
+    manners: Polite | None = None,
 ) -> dict[str, object]:
-    content, url = fetch_page(slug, cfg)
+    content, url = fetch_page(slug, cfg, manners)
 
     # Parsed ONCE. The first draft parsed here for the ISIN check, again for
     # the dry-run summary and a third time after archiving -- three passes of
@@ -359,6 +401,98 @@ def run(
     return out
 
 
+@dataclass(frozen=True)
+class Seen:
+    """What one page said when it was last read: its ISIN ("" if it named none
+    or could not be read), its portfolio's date, and the day it was read."""
+
+    isin: str
+    as_of: str
+    checked: date
+
+
+def read_map(path: Path) -> dict[str, Seen]:
+    if not path.is_file():
+        return {}
+    with path.open(encoding="utf-8", newline="") as fh:
+        return {
+            r["slug"]: Seen(r["isin"], r["as_of"], date.fromisoformat(r["checked"]))
+            for r in csv.DictReader(fh)
+        }
+
+
+def write_map(path: Path, seen: dict[str, Seen]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        out = csv.writer(fh, lineterminator="\n")
+        out.writerow(["slug", "isin", "as_of", "checked"])
+        for slug in sorted(seen):
+            s = seen[slug]
+            out.writerow([slug, s.isin, s.as_of, s.checked.isoformat()])
+
+
+def plan(
+    listed: list[str], seen: dict[str, Seen], live: set[str], covered: set[str],
+    today: date, limit: int,
+) -> list[tuple[str, str | None]]:
+    """Which pages to read today, and the ISIN each promised: pages of live funds
+    due a refresh, then pages never read, then pages worth trying again. A fund
+    its fund house's own file covers is not read at all."""
+    due: list[tuple[str, str | None]] = []
+    new: list[tuple[str, str | None]] = []
+    retry: list[tuple[str, str | None]] = []
+    for slug in sorted(set(listed) | set(seen)):
+        s = seen.get(slug)
+        if s is None:
+            new.append((slug, None))
+        elif s.isin in covered:
+            continue
+        elif s.isin in live and today - s.checked >= REFRESH:
+            due.append((slug, s.isin))
+        elif s.isin not in live and today - s.checked >= RECHECK and slug in listed:
+            retry.append((slug, None))
+    return (due + new + retry)[:limit]
+
+
+def crawl(limit: int, map_path: Path, today: date | None = None) -> dict[str, int]:
+    """Read up to `limit` Groww pages, loading each one's portfolio (V1-79)."""
+    counts = {"read": 0, "loaded": 0, "skipped": 0, "failed": 0}
+    if limit <= 0:
+        return counts  # not even the sitemap
+    today = today or date.today()
+    cfg = source(SOURCE_ID)
+    manners = polite(cfg)
+    seen = read_map(map_path)
+    conn = connect(str(warehouse_path()))
+    try:
+        listed = _SLUG.findall(_get(SITEMAP, cfg, manners).decode("utf-8", "replace"))
+        live = {f.scheme_id for f in live_funds(conn)}
+        covered = {str(r[0]) for r in conn.execute(
+            "SELECT scheme_id FROM holding_disclosure"
+            " WHERE is_current = 1 AND source_tier = 'amc_direct'")}
+        index = load_issuer_index(conn)
+        prefixes = load_isin_prefix_index(conn)
+        for slug, promised in plan(listed, seen, live, covered, today, limit):
+            counts["read"] += 1
+            try:
+                got = _one(conn, promised, slug, cfg, index, prefixes, False,
+                           manners=manners)
+                seen[slug] = Seen(str(got["scheme_id"]), str(got["as_of"]), today)
+                counts["skipped" if "skipped" in got else "loaded"] += 1
+            except Exception as exc:  # one page's failure is that page's alone
+                # SlugMismatch is a page for a fund we do not list, or not the
+                # one promised; anything else is a page we could not read.
+                # Either way nothing of it stays, and it is tried again later.
+                conn.rollback()
+                print(f"  ! {slug}: {type(exc).__name__}: {exc}")
+                seen[slug] = Seen("", "", today)
+                counts["failed"] += 1
+    finally:
+        conn.close()
+        write_map(map_path, seen)
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scheme", action="append", help="scheme ISIN from the map")
@@ -373,8 +507,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="load even where the AMC's own file already covers the scheme",
     )
+    parser.add_argument("--crawl", type=int, metavar="N",
+                        help="read up to N pages from Groww's sitemap (the build)")
+    parser.add_argument("--map", type=Path, default=REPO_ROOT / "data" / "groww.csv",
+                        help="the crawl's memory of what each page said")
     args = parser.parse_args(argv)
 
+    if args.crawl is not None:
+        counts = crawl(args.crawl, args.map)
+        print("  " + ", ".join(f"{v:,} {k}" for k, v in counts.items()))
+        return 0
     for row in run(args.scheme, args.slug, args.dry_run, args.force):
         for key, value in row.items():
             print(f"  {key:20} {value}")

@@ -175,6 +175,16 @@ VIEW_DEFS: dict[str, ViewDef] = {
         requires_fields=["m2.fund_windows"],
         sort_order=72,
     ),
+    "fund_peers": ViewDef(
+        view_id="fund_peers",
+        view_name="Among its peers",
+        module_source="m2",
+        question="How does it compare with funds that do the same job?",
+        chart_type="echart",
+        default_scope="scheme",
+        requires_fields=["m0.live_funds", "m2.window_stats"],
+        sort_order=73,
+    ),
     "fund_drawdown": ViewDef(
         view_id="fund_drawdown",
         view_name="Falls and recoveries",
@@ -183,7 +193,7 @@ VIEW_DEFS: dict[str, ViewDef] = {
         chart_type="echart",
         default_scope="scheme",
         requires_fields=["m2.price_history", "m2.drawdown_path"],
-        sort_order=73,
+        sort_order=74,
     ),
     "fund_consistency": ViewDef(
         view_id="fund_consistency",
@@ -193,7 +203,7 @@ VIEW_DEFS: dict[str, ViewDef] = {
         chart_type="echart",
         default_scope="scheme",
         requires_fields=["m2.price_history", "m2.rolling_path"],
-        sort_order=74,
+        sort_order=75,
     ),
     "fund_portfolio": ViewDef(
         view_id="fund_portfolio",
@@ -203,7 +213,7 @@ VIEW_DEFS: dict[str, ViewDef] = {
         chart_type="echart",
         default_scope="scheme",
         requires_fields=["m3.fund_composition"],
-        sort_order=75,
+        sort_order=76,
     ),
     "fund_xray_header": ViewDef(
         view_id="fund_xray_header",
@@ -222,6 +232,7 @@ FUND_PAGE = (
     "fund_header",
     "fund_growth",
     "fund_returns",
+    "fund_peers",
     "fund_drawdown",
     "fund_consistency",
     "fund_portfolio",

@@ -9,9 +9,13 @@
                point carries a position (a number) and the label a reader sees
                (a string formatted in Python). §16.4: the browser positions and
                toggles; it never formats a figure.
+    ranks      where a view has them (`fund_peers`): each measure's rank, shown
+               rather than folded into the table, since they are its answer.
     table      the same figures as a table, formatted here by `fmt_cell`, for a
                screen reader, a text browser and Ctrl-F (§10.4). It is also
-               exactly what the CSV export writes.
+               exactly what the CSV export writes -- which is why the public
+               copy links that file instead (§10.4: "the CSV export view serves
+               this"). Inline, the tables were three quarters of a fund page.
 
   The period tabs are ordinary links. Without JavaScript each reloads the page
   for that period; with it, `data-fragment` swaps this panel alone.
@@ -34,11 +38,22 @@
     {% if env.payload.charts | length > 1 %}<figcaption>{{ chart.title }}</figcaption>{% endif %}
     <div class="echart__canvas" data-index="{{ loop.index0 }}"
          {% if chart.bars %}data-bars="{{ chart.bars | length }}"{% endif %}
-         role="img" aria-label="{{ chart.title }}. The table below carries the same figures."></div>
+         role="img" aria-label="{{ chart.title }}. The {{ 'file' if static else 'table' }} below carries the same figures."></div>
   </figure>
   {% endfor %}
   <script type="application/json" class="echart-data">{{ payload_json | safe }}</script>
 </div>
+{% if env.payload.ranks %}
+<dl class="facts-list facts-list--ranks">
+  {% for r in env.payload.ranks %}
+  <div><dt>{{ r.label }}</dt><dd>{{ r.value }}</dd><dd class="facts-list__note">{{ r.note }}</dd></div>
+  {% endfor %}
+</dl>
+{% endif %}
+{% if static and env.export_url %}
+<p class="chart-table"><a href="{{ env.export_url }}">The same figures as a table</a>
+  (CSV, {{ env.payload.rows | length }} rows)</p>
+{% else %}
 <details class="chart-table">
   <summary>The same figures as a table ({{ env.payload.rows | length }} rows)</summary>
   <div class="table-wrap">
@@ -60,3 +75,4 @@
   </table>
   </div>
 </details>
+{% endif %}

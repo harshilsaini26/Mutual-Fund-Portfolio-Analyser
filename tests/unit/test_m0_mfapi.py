@@ -97,6 +97,18 @@ def test_a_payload_for_another_scheme_code_is_refused() -> None:
         parse_mfapi(as_bytes(body), SCHEME, CODE)
 
 
+def test_a_scheme_listed_without_an_isin_is_identified_by_its_code() -> None:
+    """14 live Direct Growth funds have no ISIN in AMFI's list and are keyed
+    `AMFI:<code>:growth`. The payload's ISINs cannot match a key that is not an
+    ISIN; the code check is the identity, and it still refuses a wrong code."""
+    result = parse_mfapi(SAMPLE.read_bytes(), f"AMFI:{CODE}:growth", CODE)
+    assert result.navs and result.scheme_id == f"AMFI:{CODE}:growth"
+    body = payload()
+    body["meta"]["scheme_code"] = 999999
+    with pytest.raises(MfapiParseError, match="payload says"):
+        parse_mfapi(as_bytes(body), f"AMFI:{CODE}:growth", CODE)
+
+
 def test_the_isin_check_is_skipped_when_the_payload_omits_it() -> None:
     """Older entries carry no ISIN. Absent is not a mismatch.
 

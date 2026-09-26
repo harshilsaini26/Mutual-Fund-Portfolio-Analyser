@@ -1,0 +1,325 @@
+# Canonical fund categories: which of AMFI's category names are the same thing.
+# DECISIONS V1-76. Read by src/m0_data/categories.py.
+#
+# AMFI's daily file names each fund's SEBI category in its section headers, and
+# AMFI is part-way through renaming them: "Equity Scheme - Flexi Cap Fund" and
+# "Equity Schemes - Flexi Cap Fund" sit side by side, split by fund house. A
+# peer group of funds that "do the same job" has to put those together -- but
+# only where that is certain. The rule, chosen with the user (2026-09-25):
+#
+#   merged   the same SEBI category under an old and a new heading: identical
+#            wording, or the same words reordered, pluralised or with "Fund".
+#   separate a name whose meaning changed with the rename ("Short Duration"
+#            became "Short Term" and the funds were renamed with it, but which
+#            old name each new one replaced is a judgement, not a fact), or an
+#            old category the rename split in two ("Sectoral/ Thematic", the
+#            undivided "Index Funds"). Each carries a `note` saying so.
+#
+# Matching ignores repeated spaces ("Other  ETFs"). A name not listed here is
+# shown as AMFI writes it, in a group of its own, and flagged as unmapped.
+#
+# Families are the front page's five tiles: equity, debt, hybrid, other
+# (index funds, ETFs, funds of funds), solution (retirement and children's).
+
+categories:
+
+  # --- equity ------------------------------------------------------------------
+  - key: equity/large_cap
+    name: Large cap
+    family: equity
+    merges: ["Equity Scheme - Large Cap Fund", "Equity Schemes - Large Cap Fund"]
+  - key: equity/large_mid_cap
+    name: Large and mid cap
+    family: equity
+    merges: ["Equity Scheme - Large & Mid Cap Fund", "Equity Schemes - Large & Mid Cap Fund"]
+  - key: equity/mid_cap
+    name: Mid cap
+    family: equity
+    merges: ["Equity Scheme - Mid Cap Fund", "Equity Schemes - Mid Cap Fund"]
+  - key: equity/small_cap
+    name: Small cap
+    family: equity
+    merges: ["Equity Scheme - Small Cap Fund", "Equity Schemes - Small Cap Fund"]
+  - key: equity/multi_cap
+    name: Multi cap
+    family: equity
+    merges: ["Equity Scheme - Multi Cap Fund", "Equity Schemes - Multi Cap Fund"]
+  - key: equity/flexi_cap
+    name: Flexi cap
+    family: equity
+    merges: ["Equity Scheme - Flexi Cap Fund", "Equity Schemes - Flexi Cap Fund"]
+  - key: equity/focused
+    name: Focused
+    family: equity
+    merges: ["Equity Scheme - Focused Fund", "Equity Schemes - Focused Fund"]
+  - key: equity/value
+    name: Value
+    family: equity
+    merges: ["Equity Scheme - Value Fund", "Equity Schemes - Value Fund"]
+  - key: equity/contra
+    name: Contra
+    family: equity
+    merges: ["Equity Scheme - Contra Fund", "Equity Schemes - Contra Fund"]
+  - key: equity/dividend_yield
+    name: Dividend yield
+    family: equity
+    merges: ["Equity Scheme - Dividend Yield Fund", "Equity Schemes - Dividend Yield Fund"]
+  - key: equity/elss
+    name: ELSS (tax saver)
+    family: equity
+    merges: ["Equity Scheme - ELSS", "Equity Schemes - ELSS- Tax Saver Fund", "ELSS"]
+  - key: equity/sectoral
+    name: Sectoral
+    family: equity
+    merges: ["Equity Schemes - Sectoral Fund"]
+  - key: equity/thematic
+    name: Thematic
+    family: equity
+    merges: ["Equity Schemes - Thematic Fund"]
+  - key: equity/sectoral_thematic
+    name: Sectoral or thematic (older naming)
+    family: equity
+    merges: ["Equity Scheme - Sectoral/ Thematic"]
+    note: >-
+      AMFI's older heading, which its newer one splits into sectoral and thematic
+      funds; which of the two each fund here became is not recorded, so they are
+      compared only with each other.
+
+  # --- hybrid ----------------------------------------------------------------------
+  - key: hybrid/aggressive
+    name: Aggressive hybrid
+    family: hybrid
+    merges: ["Hybrid Scheme - Aggressive Hybrid Fund", "Hybrid Schemes - Aggressive Hybrid Fund"]
+  - key: hybrid/conservative
+    name: Conservative hybrid
+    family: hybrid
+    merges: ["Hybrid Scheme - Conservative Hybrid Fund", "Hybrid Schemes - Conservative Hybrid Fund"]
+  - key: hybrid/balanced
+    name: Balanced hybrid
+    family: hybrid
+    merges: ["Hybrid Scheme - Balanced Hybrid Fund", "Hybrid Schemes - Balanced Hybrid Fund"]
+  - key: hybrid/balanced_advantage
+    name: Balanced advantage (dynamic asset allocation)
+    family: hybrid
+    merges:
+      - "Hybrid Scheme - Dynamic Asset Allocation or Balanced Advantage"
+      - "Hybrid Schemes - Balanced Advantage Fund/ Dynamic Asset Allocation"
+  - key: hybrid/multi_asset
+    name: Multi asset allocation
+    family: hybrid
+    merges: ["Hybrid Scheme - Multi Asset Allocation", "Hybrid Schemes - Multi Asset Allocation Fund"]
+  - key: hybrid/arbitrage
+    name: Arbitrage
+    family: hybrid
+    merges: ["Hybrid Scheme - Arbitrage Fund", "Hybrid Schemes - Arbitrage Fund"]
+  - key: hybrid/equity_savings
+    name: Equity savings
+    family: hybrid
+    merges: ["Hybrid Scheme - Equity Savings", "Hybrid Schemes - Equity Savings Fund"]
+
+  # --- debt: names that did not change -----------------------------------------------
+  - key: debt/overnight
+    name: Overnight
+    family: debt
+    merges: ["Debt Scheme - Overnight Fund", "Income/Debt Oriented Schemes - Overnight Fund"]
+  - key: debt/liquid
+    name: Liquid
+    family: debt
+    merges: ["Debt Scheme - Liquid Fund", "Income/Debt Oriented Schemes - Liquid Fund"]
+  - key: debt/money_market
+    name: Money market
+    family: debt
+    merges: ["Debt Scheme - Money Market Fund", "Income/Debt Oriented Schemes - Money Market Fund"]
+  - key: debt/gilt
+    name: Gilt
+    family: debt
+    merges: ["Debt Scheme - Gilt Fund", "Income/Debt Oriented Schemes - Gilt Fund"]
+  - key: debt/corporate_bond
+    name: Corporate bond
+    family: debt
+    merges: ["Debt Scheme - Corporate Bond Fund", "Income/Debt Oriented Schemes - Corporate Bond Fund"]
+  - key: debt/credit_risk
+    name: Credit risk
+    family: debt
+    merges: ["Debt Scheme - Credit Risk Fund", "Income/Debt Oriented Schemes - Credit Risk Fund"]
+  - key: debt/banking_psu
+    name: Banking and PSU
+    family: debt
+    merges: ["Debt Scheme - Banking and PSU Fund", "Income/Debt Oriented Schemes - Banking and PSU Debt Fund"]
+  - key: debt/gilt_10y
+    name: Gilt, 10-year constant maturity
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - 10-year Constant Maturity Gilt Fund"]
+  - key: debt/floating_rate
+    name: Floating interest rates
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Floating Interest Rates Fund"]
+
+  # --- debt: the older "Duration" names, kept apart from the newer "Term" ones --------
+  - key: debt/ultra_short_duration
+    name: Ultra short duration (older naming)
+    family: debt
+    merges: ["Debt Scheme - Ultra Short Duration Fund"]
+    note: &renamed_debt >-
+      AMFI's older name for a debt category it has since renamed; which newer name
+      it corresponds to is not certain, so funds under the two names are not
+      compared with each other.
+  - key: debt/low_duration
+    name: Low duration (older naming)
+    family: debt
+    merges: ["Debt Scheme - Low Duration Fund"]
+    note: *renamed_debt
+  - key: debt/short_duration
+    name: Short duration (older naming)
+    family: debt
+    merges: ["Debt Scheme - Short Duration Fund"]
+    note: *renamed_debt
+  - key: debt/medium_duration
+    name: Medium duration (older naming)
+    family: debt
+    merges: ["Debt Scheme - Medium Duration Fund"]
+    note: *renamed_debt
+  - key: debt/medium_long_duration
+    name: Medium to long duration (older naming)
+    family: debt
+    merges: ["Debt Scheme - Medium to Long Duration Fund"]
+    note: *renamed_debt
+  - key: debt/dynamic_bond
+    name: Dynamic bond (older naming)
+    family: debt
+    merges: ["Debt Scheme - Dynamic Bond"]
+    note: *renamed_debt
+  - key: debt/ultra_short_term
+    name: Ultra short term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Ultra Short Term Fund"]
+  - key: debt/ultra_short_to_short_term
+    name: Ultra short to short term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Ultra Short to Short Term Fund"]
+  - key: debt/short_term
+    name: Short term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Short Term Fund"]
+  - key: debt/medium_term
+    name: Medium term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Medium Term Fund"]
+  - key: debt/medium_long_term
+    name: Medium to long term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Medium to Long Term Fund"]
+  - key: debt/long_term
+    name: Long term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Long Term Fund"]
+  - key: debt/dynamic_term
+    name: Dynamic term
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Dynamic Term Fund"]
+  - key: debt/fixed_term
+    name: Fixed term plans
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Fixed Term Plan"]
+  - key: debt/sectoral
+    name: Debt, sectoral
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Sectoral Fund"]
+  - key: debt/other
+    name: Other debt
+    family: debt
+    merges: ["Income/Debt Oriented Schemes - Other Debt Scheme"]
+  - key: debt/income_legacy
+    name: Income (older naming)
+    family: debt
+    merges: ["Income"]
+    note: >-
+      AMFI's pre-2018 heading, still used for fixed-term and interval series; it
+      names no SEBI category, so these funds are compared only with each other.
+
+  # --- index funds, ETFs, funds of funds ------------------------------------------------
+  - key: index/equity
+    name: Index funds, equity
+    family: other
+    merges: ["Index Funds - Equity Funds"]
+  - key: index/debt
+    name: Index funds, debt
+    family: other
+    merges: ["Index Funds - Debt Funds"]
+  - key: index/hybrid
+    name: Index funds, hybrid
+    family: other
+    merges: ["Index Funds - Hybrid Fund"]
+  - key: index/undivided
+    name: Index funds (older naming)
+    family: other
+    merges: ["Other Scheme - Index Funds"]
+    note: >-
+      AMFI's older heading does not say whether an index fund tracks shares or
+      bonds, so these funds are compared only with each other.
+  - key: etf/equity
+    name: ETFs, equity
+    family: other
+    merges: ["Exchange Traded Funds (ETFs) - Equity ETF"]
+  - key: etf/debt
+    name: ETFs, debt
+    family: other
+    merges: ["Exchange Traded Funds (ETFs) - Debt ETF"]
+  - key: etf/gold
+    name: Gold ETFs
+    family: other
+    merges: ["Other Scheme - Gold ETF", "Exchange Traded Funds (ETFs) - Gold ETF"]
+  - key: etf/silver
+    name: Silver ETFs
+    family: other
+    merges: ["Exchange Traded Funds (ETFs) - Silver ETF"]
+  - key: etf/other
+    name: ETFs, other
+    family: other
+    merges: ["Exchange Traded Funds (ETFs) - Other ETF"]
+  - key: etf/undivided
+    name: ETFs (older naming)
+    family: other
+    merges: ["Other Scheme - Other ETFs"]
+    note: >-
+      AMFI's older heading does not say what an ETF tracks, so these funds are
+      compared only with each other.
+  - key: fof/domestic
+    name: Funds of funds, domestic
+    family: other
+    merges:
+      - "Other Scheme - FoF Domestic"
+      - "Fund of Funds Scheme (Domestic) - Fund of Funds Scheme (Domestic)"
+  - key: fof/overseas
+    name: Funds of funds, overseas
+    family: other
+    merges:
+      - "Other Scheme - FoF Overseas"
+      - "Overseas Fund of Funds - Fund of Funds investing overseas"
+
+  # --- solution oriented -------------------------------------------------------------------
+  - key: solution/retirement
+    name: Retirement
+    family: solution
+    merges:
+      - "Solution Oriented Scheme - Retirement Fund"
+      - "Solution Oriented Schemes ** - Retirement Fund"
+  - key: solution/children
+    name: Children's
+    family: solution
+    # AMFI writes a typographic apostrophe (U+2019) in both names.
+    merges:
+      - "Solution Oriented Scheme - Children’s Fund"
+      - "Children’s Fund - Childrens' Fund"
+  - key: solution/life_cycle_5y
+    name: Life cycle, 5-year maturity
+    family: solution
+    merges: ["Life Cycle Funds - Life Cycle Fund with Maturity of 5 Years"]
+  - key: solution/life_cycle_10y
+    name: Life cycle, 10-year maturity
+    family: solution
+    merges: ["Life Cycle Funds - Life Cycle Fund with Maturity of 10 Years"]
+  - key: solution/life_cycle_15y
+    name: Life cycle, 15-year maturity
+    family: solution
+    merges: ["Life Cycle Funds - Life Cycle Fund with Maturity of 15 Years"]

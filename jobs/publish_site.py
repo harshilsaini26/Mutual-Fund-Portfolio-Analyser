@@ -13,23 +13,25 @@ What it carries is decided, not incidental:
 
 - **Fund prices and fund houses' own disclosures.** AMFI's NAVs are published
   for programmatic use, and portfolio disclosures are mandated public documents.
+- **An aggregator's page, marked.** Holdings read from Groww's pages are
+  published with a caveat naming the source (V1-79; V1-72 withheld them). Groww's
+  terms of use apply to republishing them.
 - **Not NSE's index levels.** They are licensed for personal use (PLAN.md §5.3
   separates that from redistribution), so the market data here withholds them
   (`WithoutIndexLevels`) and every builder draws the fund alone, saying why. The
   benchmark's *name* stays: that is a fact about the fund.
-- **Not an aggregator's page.** Holdings read from one are withheld with a note.
 - **Never the portfolio.** The ledger here is an empty in-memory database; the
   personal ledger file is not opened, and a test holds that.
 
-Publishing is the user's act: `--push` is the only thing that sends anything,
-and it is never run by another job.
+`--push` publishes from this machine; the nightly build (`jobs.build_site`,
+V1-75) is the other thing that does.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
+import os
 import shutil
 import subprocess
 import sys
@@ -44,8 +46,10 @@ from typing import Any
 from src.common.contracts.market import IndexPoint
 from src.common.decimals import connect
 from src.common.types import IndexId, SchemeId, UserId
+from src.m0_data.categories import FAMILIES, category_of
 from src.m0_data.config import REPO_ROOT, warehouse_path
 from src.m0_data.providers.warehouse import WarehouseMarketDataProvider
+from src.m0_data.universe import ISIN, live_funds
 from src.m1_ledger.db import apply_ledger_schema, connect_ledger
 from src.m1_ledger.providers.position import SqlitePositionProvider
 from src.m2_fund.windows import spans
@@ -65,7 +69,6 @@ SITE_BUDGET_BYTES = 900 * 1024 * 1024
 #: About a year of trading days: below this a fund page is mostly empty panels.
 MIN_PRICES = 250
 PUBLIC_USER = UserId("PUBLIC")
-ISIN = re.compile(r"IN[A-Z0-9]{10}")
 #: What the public pages load. d3 draws only the portfolio Sankey, which the
 #: public copy does not have.
 STATIC_FILES = (
@@ -75,31 +78,8 @@ STATIC_FILES = (
 #: directory it must not delete.
 MARKER = ".nojekyll"
 
-AGGREGATOR_WITHHELD = (
-    "In the self-hosted app, this fund's holdings come from an aggregator's page "
-    "rather than the fund house's own disclosure, so the public copy leaves them out."
-)
 NOT_BUILT = "This picture could not be built for the public copy."
 
-#: The front page's category tiles, in reading order: key, name, what is in it.
-FAMILIES = (
-    ("equity", "Equity", "Shares of listed companies"),
-    ("debt", "Debt", "Bonds, government securities and money-market paper"),
-    ("hybrid", "Hybrid", "Shares and bonds together"),
-    ("other", "Index funds, ETFs and more",
-     "Index funds, exchange-traded funds and funds of funds"),
-    ("solution", "Solution oriented", "Retirement and children's funds"),
-)
-#: How the part of a category before " - " begins, for each family. AMFI's list
-#: carries several generations of naming at once: "Equity Scheme" and "Equity
-#: Schemes", "Income/Debt Oriented Schemes", and pre-2018 categories that have
-#: no dash at all ("Income", "Growth", "ELSS").
-FAMILY_PREFIXES = (
-    ("equity", ("equity", "growth", "elss")),
-    ("debt", ("debt", "income", "money market", "gilt", "liquid")),
-    ("hybrid", ("hybrid", "balanced")),
-    ("solution", ("solution",)),
-)
 RETURN_WINDOWS = ("1y", "3y", "5y")
 
 
@@ -137,48 +117,33 @@ def public_deps(warehouse: Any) -> Deps:
 
 
 def funds_to_publish(warehouse: Any) -> list[dict[str, str]]:
-    """One page per fund with a year of prices, as the share class a reader
-    most likely means: Direct before Regular, Growth before IDCW (the same
-    preference search uses)."""
+    """One page per live fund with a year of prices, as its Direct share class.
+
+    The funds are `m0_data.universe.live_funds`, the same set the history
+    backfill loads and the peer groups rank (DECISIONS V1-75). ISIN-keyed only: a
+    scheme AMFI lists without one is keyed `AMFI:<code>:...`, which is no folder
+    name on Windows and no clean URL.
+    """
     priced = {
         str(sid) for sid, n in warehouse.execute(
             "SELECT scheme_id, count(*) FROM nav_daily GROUP BY scheme_id"
         )
         if n >= MIN_PRICES
     }
-    best: dict[str, tuple[tuple[bool, bool, str], dict[str, str]]] = {}
-    schemes = warehouse.execute(
-        "SELECT scheme_id, scheme_name, fund_name, plan, option, sebi_category,"
-        " amc_id, scheme_family FROM scheme WHERE status = 'active'"
-    )
-    for sid, scheme_name, fund_name, plan, option, category, amc, family in schemes:
-        # ISIN-keyed only: a scheme AMFI lists without one is keyed
-        # `AMFI:<code>:...`, which is no folder name on Windows and no clean URL.
-        if str(sid) not in priced or not ISIN.fullmatch(str(sid)):
-            continue
-        key = f"{amc}|{family or sid}"
-        rank = (plan != "direct", option != "growth", str(sid))
-        if key not in best or rank < best[key][0]:
-            best[key] = (rank, {
-                "scheme_id": str(sid),
-                "name": str(fund_name or scheme_name),
-                "category": str(category or "Other"),
-                "detail": " · ".join(
-                    str(x).title() if x in (plan, option) else str(x)
-                    for x in (category, plan, option)
-                    if x and x != "unknown"
-                ),
-            })
-    return sorted((f for _, f in best.values()), key=lambda f: f["name"].lower())
-
-
-def family_of(category: str) -> str:
-    """The key of the scheme family a category belongs to; "other" for index
-    funds, ETFs, funds of funds and anything unnamed."""
-    head = category.partition(" - ")[0].strip().lower()
-    return next(
-        (key for key, starts in FAMILY_PREFIXES if head.startswith(starts)), "other"
-    )
+    return [
+        {
+            "scheme_id": fund.scheme_id,
+            "name": fund.name,
+            "category": fund.category,
+            "detail": " · ".join(
+                str(x).title() if x in (fund.plan, fund.option) else str(x)
+                for x in (fund.category, fund.plan, fund.option)
+                if x and x != "unknown"
+            ),
+        }
+        for fund in live_funds(warehouse)
+        if fund.scheme_id in priced and ISIN.fullmatch(fund.scheme_id)
+    ]
 
 
 def _return_cell(value: Any) -> dict[str, Any]:
@@ -198,13 +163,15 @@ def _return_cell(value: Any) -> dict[str, Any]:
 
 
 def explorer_row(
-    fund: dict[str, str], facts: Any, detail: ViewEnvelope | None
+    fund: dict[str, str], facts: Any, detail: ViewEnvelope | None,
+    peers: ViewEnvelope | None = None,
 ) -> dict[str, Any]:
     """One fund's row in the front page's table (DECISIONS V1-74).
 
     Nothing new is computed: the returns are the fund page's own "every figure"
-    rows (`fund_xray_header`), and the size and house are the scheme facts its
-    header already shows. They are formatted here, in Python (§16.4).
+    rows (`fund_xray_header`), the rank is its peer panel's (`fund_peers`), and
+    the size, cost and house are the scheme facts its header already shows.
+    They are formatted here, in Python (§16.4).
     """
     windows: dict[str, Any] = {}
     if detail is not None and detail.state.value == "ok":
@@ -217,15 +184,27 @@ def explorer_row(
             and spans(int(row["obs_days"]), row["window_key"])
         }
     size = facts.aum_inr if facts is not None else None
-    category = fund["category"]
+    ter = facts.ter if facts is not None else None
+    category = category_of(fund["category"])
+    rank: dict[str, Any] = {}
+    if peers is not None and peers.state.value == "ok":
+        rank = peers.payload.get("rank_3y") or {}
     return {
         **fund,
-        "family": family_of(category),
-        "category_short": category.partition(" - ")[2] or category,
+        "family": category.family,
+        # The canonical name (DECISIONS V1-76), not whichever of AMFI's two
+        # spellings this fund house happens to use.
+        "category_short": category.name,
         "house": (facts.amc_name if facts is not None else None) or "",
         "size_value": str(size) if size is not None else "",
         "size_label": format_inr(size, precision=0) if size is not None else DASH,
+        "ter_value": str(ter) if ter is not None else "",
+        "ter_label": format_pct(ter, precision=2) if ter is not None else DASH,
         "returns": [_return_cell(windows.get(key)) for key in RETURN_WINDOWS],
+        # Sorted by quarter: a rank means something only within its category.
+        "rank_value": str(rank["quartile"]) if rank.get("quartile") else "",
+        "rank_label": rank.get("label") or DASH,
+        "rank_quarter": rank.get("quarter") or "",
     }
 
 
@@ -246,9 +225,7 @@ def _adapter(folder: Path, url: str, scope: Scope) -> Any:
     written beside the page, and what it withholds."""
 
     def adapt(env: ViewEnvelope) -> ViewEnvelope:
-        if env.view_id == "fund_portfolio" and env.payload.get("tier") == "aggregator":
-            env = empty_envelope(env.view_id, env.question, scope, AGGREGATOR_WITHHELD)
-        elif env.state.value == "error":
+        if env.state.value == "error":
             # An exception's text is for the person running the build, not for
             # the public page.
             print(f"  ! {scope.scope_id} {env.view_id}: {env.state_reason}")
@@ -301,7 +278,9 @@ def build_site(
         )
         # The front page's table and counts, from what this page just drew.
         facts = deps.market.scheme_facts(SchemeId(sid))
-        rows.append(explorer_row(fund, facts, context["detail"]["env"]))
+        panels = {p["env"].view_id: p["env"] for p in context["panels"]}
+        rows.append(explorer_row(fund, facts, context["detail"]["env"],
+                                 panels.get("fund_peers")))
         if facts is not None and facts.amc_name:
             houses.add(facts.amc_name)
         for panel in context["panels"]:
@@ -372,10 +351,19 @@ def check_budget(size: int, budget: int = SITE_BUDGET_BYTES) -> None:
         )
 
 
+class GitFailed(RuntimeError):
+    """A git command failed; its own message is kept, since a bare exit status
+    left a failed publish unexplained."""
+
+
 def _git(*args: str, cwd: Path = REPO_ROOT) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
-    ).stdout.strip()
+    done = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    if done.returncode != 0:
+        # The arguments are not echoed: in CI the push URL carries a token.
+        raise GitFailed(
+            f"git {args[0]} exited {done.returncode}: {done.stderr.strip()[-600:]}"
+        )
+    return done.stdout.strip()
 
 
 def default_base() -> str:
@@ -388,10 +376,14 @@ def push(out: Path) -> None:
     """Publish `out` as the only commit on `gh-pages`, replacing the last.
 
     An orphan commit force-pushed, so the branch never accumulates history and
-    the repository does not grow with every rebuild. The user's own git
-    identity and credentials; nothing here holds a token.
+    the repository does not grow with every rebuild. From this machine, the
+    user's own git identity and credentials. In GitHub Actions the workflow hands
+    in `SITE_PUSH_URL` with its short-lived token, because this commit is made in
+    a new repository that does not inherit the checkout's credentials.
+
+    Pushed twice at most: one 250 MB push failed once for no reason git gave.
     """
-    remote = _git("remote", "get-url", "origin")
+    remote = os.environ.get("SITE_PUSH_URL") or _git("remote", "get-url", "origin")
     author = [f"user.name={_git('config', 'user.name')}",
               f"user.email={_git('config', 'user.email')}"]
     with tempfile.TemporaryDirectory() as tmp:
@@ -401,7 +393,11 @@ def push(out: Path) -> None:
         _git("add", "-A", cwd=work)
         _git(*[a for pair in author for a in ("-c", pair)], "commit", "-q", "-m",
              f"Public fund explorer, built {date.today().isoformat()}", cwd=work)
-        _git("push", "-q", "--force", remote, "gh-pages", cwd=work)
+        try:
+            _git("push", "-q", "--force", remote, "gh-pages", cwd=work)
+        except GitFailed as first:
+            print(f"  ! push failed, trying once more: {first}")
+            _git("push", "-q", "--force", remote, "gh-pages", cwd=work)
 
 
 def main() -> None:

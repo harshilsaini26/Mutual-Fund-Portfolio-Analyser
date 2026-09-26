@@ -105,11 +105,19 @@ and each page leads with charts, each under one plain sentence:
 
 - **The fund at a glance:** its house, category and plan, then a strip of figures:
   returns over 1, 3 and 5 years (each beside its benchmark's, with a small chart of that
-  period's prices), its worst fall and how long it took to recover, volatility, and fund
-  size. Below the strip, how steady it has been across every three-year stretch.
+  period's prices), its rank in its category over three years, its worst fall and how
+  long it took to recover, volatility, fund size, and its expense ratio (AMFI's total
+  TER). Below the strip, how steady it has been across every three-year stretch.
 - **What ₹10,000 became**, against the benchmark with dividends reinvested, over 1, 3 or
   5 years or the whole record.
 - **Returns by period**, fund beside benchmark.
+- **Among its peers:** where it ranks among the open funds of its category (Direct
+  plans, one share class each) on return, volatility, worst fall, return for the risk
+  and cost, and a chart of the whole category's three-year risk against return with this
+  fund marked. AMFI's category names are mid-rename; only names that certainly mean the
+  same category are merged (`config/categories.yaml`), and a group that could not be
+  merged cleanly says so. Funds that have closed are not counted yet, and every rank says
+  that too.
 - **Falls and recoveries:** how far below its last high the fund stood each day, and how
   long it took to climb back.
 - **Consistency:** the return of every three-year stretch, not just the one that ends
@@ -270,27 +278,50 @@ and ICICI what they have published.
 ## 6. Publish the public fund explorer (optional)
 
 A static copy of the fund pages, for anyone to browse on GitHub Pages without installing
-anything.
+anything: every open fund with a Direct plan and a year of prices, about 1,800.
+
+**It builds itself.** A GitHub Actions workflow (`.github/workflows/site.yml`) runs every
+night and whenever you start it by hand. It builds on a fresh machine from the public
+sources alone (AMFI's daily prices, categories, fund sizes and expense ratios; mfapi.in
+for price history; fund houses' own portfolio files where they fetch themselves, and
+Groww's fund pages for the rest), computes every figure in Python as the app does, and
+publishes to the `gh-pages` branch. Nothing is kept between runs except the site itself,
+which carries a compact copy of every fund's prices (`data/nav/`, about 30 MB) and of the
+portfolios read from Groww (`data/holdings/`), so a normal night asks mfapi for nothing.
+The first run fetches every fund's history, about an hour. Groww's pages are read a
+hundred a night, so portfolios fill in over about sixteen nights and are then refreshed
+monthly.
+
+To turn it on, once:
+
+1. **Settings → Secrets and variables → Actions → Variables:** add `MF_CONTACT_EMAIL`,
+   the address sent with every request (the build stops without it).
+2. **Settings → Pages → Deploy from a branch → `gh-pages` / root.**
+3. **Actions → site → Run workflow**, to publish the first time rather than waiting
+   for the night.
+
+To build the same thing on your own machine, into a folder you can preview:
 
 ```bash
-python -m jobs.publish_site --base ""                   # a local preview copy in site/
+python -m jobs.build_site --out site --base ""          # about an hour the first time
 python -m http.server -d site 8000                      # then open http://127.0.0.1:8000
-python -m jobs.publish_site --push                      # build and publish to gh-pages
 ```
 
-Its front page lists every published fund in one table you can sort by size or return
-and narrow by category. It carries AMFI's prices and fund houses' own disclosures, and
-nothing else:
+Its front page lists every published fund in one table you can sort by size, cost,
+return or category rank, and narrow by category. It carries AMFI's figures and fund
+houses' own disclosures, and nothing else:
 
 - **No benchmark comparisons.** NSE's index levels are licensed for personal use, so the
   public copy leaves them out and each page says so.
-- **No aggregator holdings.** Holdings read from Groww are left out, with a note.
+- **Groww's portfolios, marked.** Where the fund house's own file is not loaded, what a
+  fund owns comes from Groww's page for it, and the panel says so. Groww's terms of use
+  apply to what it publishes.
 - **None of your data.** The build never opens your ledger.
 
-Nothing is published unless you run `--push`, and that needs push access to the
-repository. Turn Pages on once, under **Settings → Pages → Deploy from a branch →
-`gh-pages` / root**. The site then appears at `https://<user>.github.io/<repository>/`;
-for this repository, <https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Analyser.io/>.
+The site appears at `https://<user>.github.io/<repository>/`; for this repository,
+<https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Analyser.io/>.
+`python -m jobs.publish_site --push` still publishes from this machine's own warehouse,
+which the next nightly build replaces.
 
 ---
 
@@ -306,11 +337,15 @@ for this repository, <https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Ana
 | `python -m jobs.fetch_amc --amc kotak\|icici` | fetch a fund house's disclosure |
 | `python -m jobs.ingest_inbox` | load every workbook in `data/inbox/` |
 | `python -m jobs.fetch_groww --slug <slug>` | holdings from the aggregator tier |
+| `python -m jobs.fetch_groww --crawl 100` | up to 100 of Groww's pages, found through its sitemap |
 | `python -m jobs.backfill_scheme_nav --scheme <ISIN>` | one fund's full price history |
+| `python -m jobs.backfill_scheme_nav --universe --missing` | history for every open fund still short of it |
+| `python -m jobs.fetch_ter [--month YYYY-MM]` | AMFI's expense ratios for a finished month |
 | `python -m jobs.status [--check]` | what is stale, and the command that fixes it |
 | `python -m scripts.show_fund_xray --scheme <ISIN>` | one fund's statistics in the terminal |
 | `python -m scripts.show_lookthrough` | your look-through in the terminal |
-| `python -m jobs.publish_site [--push]` | build, or build and publish, the public copy |
+| `python -m jobs.publish_site [--push]` | build, or build and publish, the public copy from this warehouse |
+| `python -m jobs.build_site --out site [--store site] [--push]` | the nightly build: the public copy from the APIs alone |
 
 ---
 

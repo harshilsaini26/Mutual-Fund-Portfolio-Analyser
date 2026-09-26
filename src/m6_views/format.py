@@ -125,6 +125,13 @@ def format_fraction(v: Decimal | None, precision: int = 1) -> str:
     return f"{abs(v) * 100:.{precision}f}%"
 
 
+def format_ordinal(n: int) -> str:
+    """1st, 2nd, 3rd, 4th ... 11th, 12th, 13th ... 21st: a rank as it is said."""
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
 def format_date(d: date | None) -> str:
     """§9.4. `31 Jul 2026`. Never MM/DD or DD/MM — both are ambiguous, and this
     project's data spans Indian (DD/MM) and American (MM/DD) sources."""

@@ -67,6 +67,7 @@ VIEW_ICONS = {
     "fund_header": "box",
     "fund_growth": "growth",
     "fund_returns": "bars",
+    "fund_peers": "scatter",
     "fund_drawdown": "fall",
     "fund_consistency": "wave",
     "fund_portfolio": "box",

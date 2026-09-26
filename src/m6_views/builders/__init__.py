@@ -13,6 +13,7 @@ from src.m6_views.builders.fund import (  # noqa: F401
     drawdown,
     growth,
     header,
+    peers,
     portfolio,
     returns,
     xray,

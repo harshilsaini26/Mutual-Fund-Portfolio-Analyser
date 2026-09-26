@@ -4,7 +4,7 @@ Where the project actually is. Numbers here are measured from the warehouse and
 the test suite, not remembered — if one looks stale it is, and it should be
 re-measured rather than trusted.
 
-**Last updated:** 2026-09-24 · 1,537 tests passing
+**Last updated:** 2026-09-26 · 1,618 tests passing
 
 > This file was deleted in `0bd425b` when the repository was published, and
 > restored on request. It is public now, so it says what the project does and
@@ -23,6 +23,9 @@ re-measured rather than trusted.
 | AMC formats with a parser | 5 — HDFC, ICICI, Kotak, Nippon, PPFAS |
 | **AMCs that fetch themselves** | **2** — Kotak, ICICI |
 | **Schemes reachable without one** | **1,973**, via the coverage tier |
+| **Funds on the public site** | **1,661** — every open fund with a Direct plan and a year of prices |
+| Funds with an expense ratio | 1,790 of 1,864 open Direct funds (AMFI, August 2026) |
+| Groww portfolios in the public build | 92 after the first night; ~1,600 over sixteen |
 
 The gap between 200 schemes and 1,144 ISINs is V1-37: a disclosure describes a
 *scheme*, and every share class of that scheme — Direct, Regular, Growth, each
@@ -225,9 +228,37 @@ The charts are interactive (hover, zoom, series toggles) and the figures in them
 are formatted on the server: a tooltip says exactly what the CSV export says.
 The table of every statistic stays at the bottom, closed.
 
-A fund's pictures need its price history, and **207 of 1,834 active Direct
-Growth funds have three years of it loaded.** For the rest, each panel says
-what is missing. Loading the rest automatically is the next piece of work.
+Two more panels since 2026-09-25 (DECISIONS V1-76 to V1-78): **its peers**
+(a sentence, the category's three-year risk against return with this fund
+marked, and its rank on six measures) and **its expense ratio**, AMFI's total
+TER, in the header beside a "Category rank, 3 years" tile.
+
+In the local app a fund's pictures need its price history, loaded for the funds
+you hold; `python -m jobs.backfill_scheme_nav --universe --missing` loads every
+open fund's (about an hour). The public site has all of them: see below.
+
+## The public site
+
+<https://harshilsaini26.github.io/Mutual-Fund-Portfolio-Analyser.io/>, built
+every night by GitHub Actions from the APIs alone (DECISIONS V1-75):
+`.github/workflows/site.yml` runs `jobs.build_site` on a fresh machine and
+pushes one commit to `gh-pages`. Measured on the first full build, 2026-09-26:
+
+- **1,864 open funds with a Direct plan**; 1,661 have a year of prices and a page.
+- **History**: the first build fetches every fund from mfapi.in (~1 hour at the
+  polite 0.5 requests a second); the site then carries a compact copy
+  (`data/nav/`) so later builds fetch only what is new. Four funds have no
+  usable history: three Franklin segregated portfolios priced 0 every day, and
+  one AMFI-coded fund likewise; one fund priced 0 on a single day has no
+  figures and is reported by name.
+- **Peers**: 95 AMFI category names become 64 groups (`config/categories.yaml`);
+  7,393 period figures computed once per build.
+- **Expense ratios**: last month's AMFI workbook, 3,539 fund-plans joined to
+  12,357 share classes.
+- **Holdings**: Kotak's and ICICI's own files, workbooks in `inbox/`, and
+  Groww's pages (V1-79), 100 a night, each panel marked as from an aggregator.
+- **Pages ~90 KB** (from 352 KB): each panel's figures are a linked CSV, not an
+  inline table (§10.4).
 
 ## Benchmarks
 
@@ -314,8 +345,14 @@ went: `pdfplumber` decrypts a statement on its own.
 - **Nobody has used this.** Including its author. Every figure carries its own
   as-of date, staleness and coverage precisely so you can judge how far to trust
   it, and the answer for now is "not with money that matters".
-- **47 of 52 AMCs have no disclosure loaded.** The machinery to load one is
-  built; the files have not been downloaded.
+- **47 of 52 AMCs have no disclosure of their own loaded.** The public site
+  fills the gap from Groww's pages, which carry no ISINs, so more of each is
+  unresolved; the first pass over them takes about sixteen nights.
+- **Peer ranks leave out closed funds.** Nothing records a fund wound up or
+  merged, so the ranks compare survivors only, and every peer panel says so.
+- **The local app's peer panels are empty** unless every open fund's history is
+  loaded (`backfill_scheme_nav --universe --missing`, then the figures); the
+  public site is where peers live.
 - **Two of the eleven specified views are absent**, deliberately — sector
   tilt and the holdings treemap need M5's sector taxonomy and company data,
   and a view that always renders empty is a broken feature pretending to be a
@@ -545,16 +582,12 @@ Ordered by what they cost.
 The coverage machinery is done; the work now is making it usable by someone
 who has never heard of a look-through.
 
-**Waiting on the owner:** the public copy is built and checked (754 funds,
-246 MB) and goes live once GitHub Pages is switched on for the `gh-pages` branch
-and `python -m jobs.publish_site --push` is run. Neither is automated.
+**Waiting on the owner:** add the `MF_CONTACT_EMAIL` repository variable
+(Settings → Secrets and variables → Actions → Variables) and run the **site**
+workflow once by hand; the nightly schedule takes over from there.
 
-In order (the plan agreed 2026-09-24):
+Phase 2 (every fund, its peers and its cost, built nightly) is done. In order:
 
-- **Price history for every fund, loaded automatically.** One-time download
-  of all ~1,800 active Direct Growth funds, kept current by the daily job;
-  then category peers (normalised category names), a rank on the fund page,
-  expense ratios from AMFI, and a risk-against-return picture of the category.
 - **Compare**: two to four funds side by side, with how much their portfolios
   overlap.
 - **Your portfolio**: import a CAS statement in the browser rather than the
@@ -569,9 +602,6 @@ Then the data work already planned:
 - **Two schema changes**: `scheme_aum` revisions, and remembering which
   indices have no series, so a refresh stops asking NSE for them — 576 of its
   724 requests.
-- **Expense ratios.** AMFI's TER page is backed by the same kind of JSON API
-  as its AUM data: Regular and Direct TER, daily, per fund house, back to
-  2018-19, keyed by the fund-level name the scheme master now supplies.
 - **More discovery adapters**, one per house, as funds are actually held.
   Each also brings that house's declared benchmarks: run
   `python -m jobs.fetch_index --declared` after loading its disclosures.

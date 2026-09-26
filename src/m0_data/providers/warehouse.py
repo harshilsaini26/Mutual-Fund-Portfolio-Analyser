@@ -21,6 +21,7 @@ from decimal import Decimal
 from src.common.contracts.entity import MergerLink, SchemeRef
 from src.common.contracts.market import IdcwEvent, IndexPoint, NavPoint
 from src.common.types import Confidence, IndexId, Isin, Plan, SchemeId
+from src.m0_data.universe import Fund, live_funds
 
 #: §11.3 resolution confidence, by the field that matched.
 _CONFIDENCE = {
@@ -41,6 +42,7 @@ class WarehouseMarketDataProvider:
 
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
+        self._live: list[Fund] | None = None
 
     # --- scheme resolution -------------------------------------------------
 
@@ -219,8 +221,34 @@ class WarehouseMarketDataProvider:
         raise KeyError(f"no tax class for {scheme_id} on {on}; not loaded in V0.4")
 
     def ter(self, scheme_id: SchemeId, on: date) -> Decimal:
-        """`scheme_ter` is deferred to V2 — DECISIONS V0-18. No table to read."""
-        raise KeyError(f"no TER for {scheme_id} on {on}; deferred to V2 (V0-18)")
+        """The total TER in force on `on`, percent a year (DECISIONS V1-78)."""
+        found = self.ters([str(scheme_id)], on).get(str(scheme_id))
+        if found is None:
+            raise KeyError(f"no TER for {scheme_id} on or before {on}")
+        return found.total
+
+    def ters(self, scheme_ids: list[str], on: date) -> dict[str, Ter]:
+        """Each fund's TER in force on `on`: its newest `valid_from` on or before
+        that day, at its latest revision. Empty before migration 017."""
+        found: dict[str, Ter] = {}
+        for start in range(0, len(scheme_ids), 500):
+            chunk = scheme_ids[start:start + 500]
+            marks = ",".join("?" * len(chunk))
+            try:
+                rows = self.conn.execute(
+                    "SELECT scheme_id, valid_from, total_ter, base_ter FROM scheme_ter"
+                    f" WHERE scheme_id IN ({marks}) AND valid_from <= ?"
+                    " ORDER BY scheme_id, valid_from, revision",
+                    (*chunk, on),
+                ).fetchall()
+            except sqlite3.OperationalError:
+                return {}
+            for sid, day, total, base in rows:  # the last row per fund wins
+                found[str(sid)] = Ter(
+                    str(sid), _as_date(day), Decimal(str(total)),
+                    None if base is None else Decimal(str(base)),
+                )
+        return found
 
     def exit_load_period(self, scheme_id: SchemeId) -> timedelta:
         raise KeyError(f"no exit load period for {scheme_id}; not loaded in V0.4")
@@ -322,6 +350,8 @@ class WarehouseMarketDataProvider:
             " ORDER BY as_of_date DESC LIMIT 1",
             (str(scheme_id),),
         ).fetchone()
+        # The newest on record, as for the size.
+        ter = self.ters([str(scheme_id)], date.max).get(str(scheme_id))
         return SchemeFacts(
             scheme_id=SchemeId(str(row["scheme_id"])),
             name=str(row["fund_name"] or row["scheme_name"]),
@@ -337,7 +367,49 @@ class WarehouseMarketDataProvider:
             aum_inr=Decimal(str(aum["aum_inr"])) if aum else None,
             aum_as_of=_as_date(aum["as_of_date"]) if aum else None,
             aum_basis=aum["basis"] if aum else None,
+            ter=ter.total if ter else None,
+            ter_as_of=ter.valid_from if ter else None,
         )
+
+    def live_funds(self) -> list[Fund]:
+        """Every live fund with a Direct plan (`m0_data.universe`, V1-75).
+
+        Kept for the provider's life -- one request on the server, one build for
+        the public copy -- since a fund page asks twice (its header's rank tile
+        and its peer panel) and the answer does not change within either.
+        """
+        if self._live is None:
+            self._live = live_funds(self.conn)
+        return self._live
+
+    def window_stats(self, scheme_ids: list[str]) -> list[WindowStat]:
+        """The stored per-window figures for these funds (DECISIONS V1-77).
+
+        Empty when the table is not there yet -- a warehouse from before
+        migration 016 -- so a peer panel says its figures are not computed
+        rather than failing.
+        """
+        found: list[WindowStat] = []
+        for start in range(0, len(scheme_ids), 500):
+            chunk = scheme_ids[start:start + 500]
+            marks = ",".join("?" * len(chunk))
+            try:
+                rows = self.conn.execute(
+                    "SELECT scheme_id, window_key, as_of, obs_days, spans, return_ann,"
+                    " volatility_ann, max_dd, sharpe FROM fund_window_stat"
+                    f" WHERE scheme_id IN ({marks})",
+                    chunk,
+                ).fetchall()
+            except sqlite3.OperationalError:
+                return []
+            found += [
+                WindowStat(
+                    str(r[0]), str(r[1]), _as_date(r[2]), int(r[3]), bool(r[4]),
+                    *(None if v is None else Decimal(str(v)) for v in r[5:9]),
+                )
+                for r in rows
+            ]
+        return found
 
     def search_schemes(self, query: str, limit: int = 10) -> list[SchemeHit]:
         """Funds whose name holds every word typed, one row per fund.
@@ -418,6 +490,31 @@ SEARCH_SCAN_ROWS = 400
 
 
 @dataclass(frozen=True)
+class WindowStat:
+    """One fund's stored figures for one window (`fund_window_stat`, V1-77)."""
+
+    scheme_id: str
+    window_key: str
+    as_of: date
+    obs_days: int
+    spans: bool
+    return_ann: Decimal | None
+    volatility_ann: Decimal | None
+    max_dd: Decimal | None
+    sharpe: Decimal | None
+
+
+@dataclass(frozen=True)
+class Ter:
+    """A share class's expense ratio, percent a year (`scheme_ter`, V1-78)."""
+
+    scheme_id: str
+    valid_from: date
+    total: Decimal
+    base: Decimal | None
+
+
+@dataclass(frozen=True)
 class SchemeFacts:
     scheme_id: SchemeId
     name: str  # AMFI's fund-level name where the scheme master gives one
@@ -433,6 +530,9 @@ class SchemeFacts:
     aum_inr: Decimal | None
     aum_as_of: date | None
     aum_basis: str | None
+    #: Total TER, percent a year, and the day it was published for (V1-78).
+    ter: Decimal | None = None
+    ter_as_of: date | None = None
 
 
 @dataclass(frozen=True)

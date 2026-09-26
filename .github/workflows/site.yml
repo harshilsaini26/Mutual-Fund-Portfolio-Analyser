@@ -1,0 +1,61 @@
+# The public site, built from the APIs every day. DECISIONS V1-75.
+#
+# Runs `jobs.build_site` on a fresh machine: today's prices from AMFI, every
+# fund's history from the store carried in the previous site, anything still
+# short from mfapi.in; then the pages, pushed to gh-pages as one commit.
+#
+# Scheduled and run-by-hand only -- never on a pull request, so no code from
+# outside the repository runs with this workflow's write token. Actions are
+# pinned to commits, not tags. The token reaches git only through SITE_PUSH_URL
+# (GitHub masks it in the log); the checkouts keep no credentials.
+#
+# One setting is yours: Settings -> Secrets and variables -> Actions ->
+# Variables -> MF_CONTACT_EMAIL, the address every request carries in its From:
+# header (MODULE_0 §2.3). The build stops with a message if it is missing.
+
+name: site
+
+on:
+  schedule:
+    - cron: "30 20 * * *"   # 02:00 IST, after AMFI publishes the day's prices
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: The previous site, which carries the store
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        continue-on-error: true   # the very first build has no gh-pages yet
+        with:
+          ref: gh-pages
+          path: previous
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install -e . -c requirements.lock
+
+      - name: Build and publish
+        env:
+          MF_CONTACT_EMAIL: ${{ vars.MF_CONTACT_EMAIL }}
+          SITE_PUSH_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python -m jobs.build_site --store previous --out site --push

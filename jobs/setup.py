@@ -47,6 +47,8 @@ STEPS: tuple[Step, ...] = (
          ("build_entity_master",)),
     Step("fund_sizes", "each fund's size, from AMFI's quarterly averages",
          ("fetch_aum",)),
+    Step("expense_ratios", "each fund's expense ratio, from AMFI, once a month",
+         ("fetch_ter", "--if-missing")),
     Step("kotak", "Kotak's latest portfolio disclosure", ("fetch_amc", "--amc", "kotak")),
     Step("icici", "ICICI Prudential's latest portfolio disclosures",
          ("fetch_amc", "--amc", "icici")),
@@ -60,7 +62,7 @@ STEPS: tuple[Step, ...] = (
 )
 
 #: What a start does once the first run has finished: seconds, not hours.
-DAILY = ("prices",)
+DAILY = ("prices", "expense_ratios")
 
 
 def state_path() -> Path:

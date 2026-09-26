@@ -74,7 +74,9 @@ def test_a_first_run_resumed_tomorrow_still_refreshes_tomorrows_prices() -> None
     setup.run(run, today=DAY)
     ran, run = _runner()
     setup.run(run, today=date(2026, 9, 25))
-    assert ran == ["prices", "index_levels"]
+    # The daily steps (the expense ratios' is a no-op once a month is loaded),
+    # then what did not finish.
+    assert ran == ["prices", "expense_ratios", "index_levels"]
 
 
 def test_the_contact_email_is_asked_once_and_kept_under_data(

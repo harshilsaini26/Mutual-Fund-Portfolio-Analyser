@@ -80,9 +80,11 @@
         <th scope="col"><button type="button" data-sort="text">Fund</button></th>
         <th scope="col"><button type="button" data-sort="text">Category</button></th>
         <th scope="col" class="num"><button type="button" data-sort="number">Fund size</button></th>
+        <th scope="col" class="num"><button type="button" data-sort="number">Expense ratio</button></th>
         <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
         <th scope="col" class="num"><button type="button" data-sort="number">3 years</button></th>
         <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        <th scope="col" class="num"><button type="button" data-sort="number">Rank in category, 3 years</button></th>
       </tr></thead>
       <tbody>
         {% for fund in funds %}
@@ -91,11 +93,14 @@
             <span class="cell-sub">{{ fund.house }}</span></td>
           <td>{{ fund.category_short }}</td>
           <td class="num"{% if fund.size_value %} data-value="{{ fund.size_value }}"{% endif %}>{{ fund.size_label }}</td>
+          <td class="num"{% if fund.ter_value %} data-value="{{ fund.ter_value }}"{% endif %}>{{ fund.ter_label }}</td>
           {% for r in fund.returns %}
           <td class="num{% if r.tone %} ret--{{ r.tone }}{% endif %}"{% if r.value %} data-value="{{ r.value }}"{% endif %}>
             {%- if r.symbol %}<span class="ret__symbol" aria-hidden="true">{{ r.symbol }}</span>{% endif %}{{ r.label -}}
           </td>
           {% endfor %}
+          <td class="num"{% if fund.rank_value %} data-value="{{ fund.rank_value }}"{% endif %}>{{ fund.rank_label }}
+            {%- if fund.rank_quarter %}<span class="cell-sub">{{ fund.rank_quarter }}</span>{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

@@ -108,8 +108,12 @@ def assemble_caveats(
             quality.unresolved_pct is not None
             and quality.unresolved_pct > UNRESOLVED_WARN_PCT
         ):
+            # A fund has no coverage figure (None): its unresolved share is of
+            # its own portfolio, not of the reader's.
+            whose = ("this fund's portfolio" if quality.coverage_pct is None
+                     else "your exposure")
             out.append(
-                f"{format_pct(quality.unresolved_pct)} of your exposure could "
+                f"{format_pct(quality.unresolved_pct)} of {whose} could "
                 f"not be identified to a company; it is shown as a separate "
                 f"block."
             )

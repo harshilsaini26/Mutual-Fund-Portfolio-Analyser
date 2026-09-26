@@ -123,6 +123,8 @@ def _fmt_value(tile: dict[str, Any], compact: bool) -> str:
         return format_pct(Decimal(str(value)))
     if kind == "return_ann":
         return format_pct(Decimal(str(value)) * 100, signed=True) + " p.a."
+    if kind == "ter":  # percent a year, to AMFI's two places (V1-78)
+        return format_pct(Decimal(str(value)), precision=2)
     if kind == "fraction":  # M2's figures are fractions: 0.0842 -> 8.42%
         return format_pct(Decimal(str(value)) * 100, precision=2)
     if kind == "ratio":

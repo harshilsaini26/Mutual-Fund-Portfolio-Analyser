@@ -28,6 +28,7 @@ a Direct and a Regular plan, invisible downstream.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -35,7 +36,9 @@ from decimal import Decimal, InvalidOperation
 from src.m0_data.parse.nav.amfi import StagedNav
 
 PARSER_ID = "nav.mfapi"
-PARSER_VERSION = "1"
+#: 2: a scheme keyed `AMFI:` (no ISIN) is identified by its code alone.
+PARSER_VERSION = "2"
+ISIN = re.compile(r"IN[A-Z0-9]{10}")
 
 #: mfapi renders dates as DD-MM-YYYY.
 _DATE_FORMAT = "%d-%m-%Y"
@@ -106,7 +109,9 @@ def parse_mfapi(content: bytes, scheme_id: str, amfi_code: str) -> MfapiParseRes
         for k in ("isin_growth", "isin_div_reinvestment")
         if meta.get(k)
     }
-    if claimed and scheme_id not in claimed:
+    # A scheme AMFI lists without an ISIN is keyed `AMFI:<code>:<option>`: there
+    # is no ISIN of ours to compare, and the code check above is the identity.
+    if claimed and ISIN.fullmatch(scheme_id) and scheme_id not in claimed:
         raise MfapiParseError(
             f"scheme_code {amfi_code} resolves to ISIN(s) {sorted(claimed)}, "
             f"not {scheme_id}; refusing to file one fund's history under another"

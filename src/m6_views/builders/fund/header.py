@@ -1,9 +1,10 @@
 """`fund_header`: "What is this fund, and how has it done?". MODULE_6.md §8.2.
 
 The top of the fund page: the fund's name in words rather than an ISIN, a
-strip of KPI tiles (DECISIONS V1-74) -- returns against the benchmark, the worst
-fall, volatility and size -- and the one finding no tile can hold: how steady
-the fund has been across every three-year stretch. Each is descriptive (§2.6),
+strip of KPI tiles (DECISIONS V1-74) -- returns against the benchmark, its rank
+in its category (V1-77), the worst fall, volatility, size and cost -- and the one
+finding no tile can hold: how steady the fund has been across every three-year
+stretch. Each is descriptive (§2.6),
 and a tone always travels with a symbol and words, never colour alone (§10.3).
 """
 
@@ -16,6 +17,7 @@ from typing import Any
 from src.common.contracts.market import NavPoint
 from src.common.types import SchemeId
 from src.m2_fund.paths import price_history, rolling_path
+from src.m2_fund.peers import PeerContext, peer_context
 from src.m2_fund.windows import (
     FundWindows,
     NothingToCompute,
@@ -25,7 +27,8 @@ from src.m2_fund.windows import (
 )
 from src.m6_views.aggregate import lttb_indices
 from src.m6_views.builder import Scope
-from src.m6_views.builders.fund.common import NO_FUND, FundQuality
+from src.m6_views.builders.fund.common import NO_FUND, FundQuality, withholds_index
+from src.m6_views.builders.fund.peers import QUARTERS, rank_words
 from src.m6_views.compose import ok_envelope
 from src.m6_views.deps import Deps
 from src.m6_views.envelope import ViewEnvelope
@@ -74,9 +77,25 @@ def _tile(key: str, label: str, value: Any, kind: str, context: str | None,
     }
 
 
-def _tiles(fw: FundWindows | None, facts: Any) -> list[dict[str, Any]]:
+def _rank_tile(peers: PeerContext | None) -> dict[str, Any]:
+    """Its three-year return's rank in its category (V1-77); `fund_peers` has
+    the rest. A rank is a position, not a verdict, so it carries no tone."""
+    label = "Category rank, 3 years"
+    if peers is None:
+        return _tile("rank_3y", label, None, "text",
+                     "Only funds open today with a Direct plan are ranked")
+    three = next(r for r in peers.ranks if r.metric.key == "return_3y")
+    if three.rank is None or three.quartile is None:
+        return _tile("rank_3y", label, None, "text", (three.reason or "").capitalize())
+    return _tile("rank_3y", label, rank_words(three), "text",
+                 f"The {QUARTERS[three.quartile]} of {peers.category.name}")
+
+
+def _tiles(fw: FundWindows | None, facts: Any,
+           peers: PeerContext | None) -> list[dict[str, Any]]:
     """The fund page's KPI strip (DECISIONS V1-74): returns over one, three and
-    five years, the worst fall, volatility and size.
+    five years, the category rank, the worst fall, volatility, size and the
+    expense ratio (V1-78).
 
     Beside each return goes the benchmark's own figure, never a difference
     between the two: that would be a number the page derived, and §2.1 keeps
@@ -101,6 +120,7 @@ def _tiles(fw: FundWindows | None, facts: Any) -> list[dict[str, Any]]:
         if fw is not None:
             tile["spark"] = _spark(fw.navs, window_start(fw.navs[-1].nav_date, key))
         tiles.append(tile)
+    tiles.append(_rank_tile(peers))
 
     longest = fw.windows.get("since_first_nav") if fw else None
     if longest is not None and longest.obs_days >= YEAR and longest.drawdown.depth < 0:
@@ -124,6 +144,11 @@ def _tiles(fw: FundWindows | None, facts: Any) -> list[dict[str, Any]]:
         "fund_size", "Fund size", facts.aum_inr, "inr_round",
         f"Quarterly average to {format_date(facts.aum_as_of)}"
         if facts.aum_inr is not None else "Not on record",
+    ))
+    tiles.append(_tile(
+        "ter", "Expense ratio", facts.ter, "ter",
+        f"Total, a year; AMFI, {format_date(facts.ter_as_of)}"
+        if facts.ter is not None else "Not on record",
     ))
     return tiles
 
@@ -184,8 +209,11 @@ class FundHeaderBuilder:
                 ("Plan", plan or None),
                 ("Launched", format_date(facts.inception) if facts.inception else None),
                 ("Fund size", size),
+                # The public build has no index data at all (NSE's licence),
+                # so "none on record" there would be a claim about the fund.
                 ("Benchmark", f"{facts.benchmark_name}, with dividends"
-                 if facts.benchmark_name else "None on record"),
+                 if facts.benchmark_name
+                 else None if withholds_index(self.market) else "None on record"),
                 ("Prices on record",
                  f"{format_date(first)} to {format_date(last)}" if first else "None"),
             )
@@ -200,7 +228,7 @@ class FundHeaderBuilder:
                     x for x in (facts.amc_name, facts.category, plan) if x
                 ),
                 "scheme_id": str(scheme),
-                "tiles": _tiles(fw, facts),
+                "tiles": _tiles(fw, facts, peer_context(self.market, scheme)),
                 "findings": findings,
                 "columns": [
                     {"key": "label", "label": "Fact", "kind": "text"},
