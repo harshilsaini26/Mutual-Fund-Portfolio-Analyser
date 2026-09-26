@@ -1,0 +1,54 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:34.851509+00:00
+fund,return_3y,volatility_3y
+Motilal Oswal ELSS Tax Saver Fund,0.214261,0.192574
+SBI Long Term Advantage Fund - Series V,0.206626,0.149012
+ITI ELSS Tax Saver Fund,0.173849,0.175551
+JM ELSS - Tax Saver Fund,0.166172,0.161474
+HSBC ELSS Tax saver Fund,0.161818,0.166293
+WhiteOak Capital ELSS Tax Saver Fund,0.159792,0.142398
+Quant ELSS Tax Saver Fund,0.150644,0.166914
+Baroda BNP Paribas ELSS Tax Saver Fund,0.149928,0.147157
+BANK OF INDIA MID CAP TAX FUND SERIES 1,0.146666,0.175084
+BANK OF INDIA MID CAP TAX FUND Series 2,0.136018,0.175084
+Edelweiss ELSS Tax Saver Fund,0.132187,0.144354
+SBI ELSS Tax Saver Fund,0.131759,0.131088
+Invesco India ELSS Tax Saver Fund,0.126796,0.147495
+Tata ELSS - Tax Saver Fund,0.126787,0.145556
+DSP ELSS Tax Saver Fund,0.126375,0.140798
+HDFC ELSS - Tax Saver Fund,0.124742,0.124193
+BANK OF INDIA ELSS TAX SAVER FUND,0.123723,0.173233
+Nippon India ELSS Tax Saver Fund,0.121988,0.144632
+Mirae Asset ELSS Tax Saver Fund,0.118960,0.140293
+Canara Robeco ELSS - Tax Saver Fund,0.113486,0.135527
+ICICI Prudential ELSS - Tax Saver Fund,0.110585,0.126246
+Kotak ELSS Tax Saver Fund (this fund),0.110512,0.143937
+Taurus ELSS Tax Saver Fund,0.107042,0.136756
+Aditya Birla Sun Life ELSS Tax Saver Fund,0.106525,0.134284
+Union ELSS Tax Saver Fund (Formerly Union Tax Saver (ELSS) Fund,0.104635,0.141290
+Axis ELSS- Tax Saver Fund,0.103148,0.133304
+Franklin India ELSS Tax Saver Fund,0.103147,0.134967
+LIC MF ELSS Tax Saver Fund,0.099829,0.136684
+SBI Long Term Advantage Fund - Series VI,0.096105,0.148688
+BANDHAN ELSS - Tax Saver Fund,0.094216,0.124763
+NJ ELSS Tax Saver Fund,0.094122,0.141463
+PGIM India ELSS Tax Saver Fund,0.093868,0.132373
+Groww ELSS Tax Saver Fund,0.091118,0.144142
+Quantum ELSS Tax Saver Fund,0.090476,0.122632
+Parag Parikh ELSS Tax Saver Fund,0.084877,0.112099
+Sundaram ELSS Tax Saver Fund,0.081079,0.131421
+UTI ELSS Tax Saver Fund,0.080331,0.129617
+LIC MF Unit Linked Insurance Scheme (ULIS),0.078047,0.104403
+Mahindra Manulife ELSS Tax Saver Fund,0.077825,0.132243
+SBI Long Term Advantage Fund - Series IV,0.077110,0.136218
+Shriram ELSS Tax Saver Fund,0.071959,0.155623
+NAVI ELSS TAX SAVER NIFTY50 INDEX FUND,0.065104,0.132138
+Samco ELSS Tax Saver Fund,0.049350,0.177885

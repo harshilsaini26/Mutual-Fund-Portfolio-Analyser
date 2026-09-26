@@ -1,0 +1,41 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:33:46.756197+00:00
+fund,return_3y,volatility_3y
+quant Dynamic Asset Allocation Fund,0.136818,0.142725
+Baroda BNP Paribas Balanced Advantage Fund,0.118375,0.105013
+Aditya Birla Sun Life Balanced Advantage Fund,0.117657,0.082053
+WhiteOak Capital Balanced Advantage Fund,0.116338,0.083619
+Axis Balanced Advantage Fund,0.114454,0.080304
+HDFC Balanced Advantage Fund,0.110196,0.098202
+Mahindra Manulife Balanced Advantage Fund,0.110100,0.101583
+ICICI Prudential Balanced Advantage Fund,0.109707,0.070138
+Edelweiss Balanced Advantage Fund,0.105827,0.091909
+Nippon India Balanced Advantage Fund,0.104924,0.079581
+DSP Dynamic Asset Allocation Fund,0.103370,0.057534
+Mirae Asset Balanced Advantage Fund,0.102474,0.075639
+BANDHAN Balanced Advantage Fund (this fund),0.097592,0.073939
+Franklin India Balanced Advantage Fund,0.097449,0.072706
+SBI Balanced Advantage Fund,0.097140,0.067225
+HSBC Balanced Advantage Fund,0.096509,0.070776
+ITI Balanced Advantage Fund,0.096339,0.091763
+Kotak Balanced Advantage Fund,0.095071,0.079105
+Invesco India Balanced Advantage Fund,0.089109,0.083931
+BANK OF INDIA BALANCED ADVANTAGE FUND,0.089018,0.099025
+LIC MF Balanced Advantage Fund,0.083693,0.087889
+Union Balanced Advantage Fund,0.083642,0.085456
+Sundaram Dynamic Asset Allocation Fund (Formerly Known as Sundaram Balanced Advantage Fund),0.083123,0.083496
+NJ Balanced Advantage Fund,0.081606,0.083193
+UTI Balanced Advantage Fund,0.081422,0.076849
+Tata Balanced Advantage Fund,0.080940,0.074926
+UTI - Unit Linked Insurance Plan,0.076554,0.056470
+PGIM India Balanced Advantage Fund,0.071022,0.091863
+Shriram Balanced Advantage Fund,0.063586,0.101103
+Motilal Oswal Balanced Advantage Fund,0.030363,0.123108

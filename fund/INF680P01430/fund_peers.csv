@@ -1,0 +1,46 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 26 Sep 2026 (0 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - This fund has less than three years of prices, so it is not in the picture of its category.
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:56.220335+00:00
+fund,return_3y,volatility_3y
+Aditya Birla Sun Life Liquid Fund,0.069969,0.001645
+Axis Liquid Fund,0.069947,0.001746
+Edelweiss Liquid Fund,0.069945,0.001471
+Sundaram Liquid Fund (Formerly Known as Principal Cash Management Fund),0.069862,0.001699
+Franklin India Liquid Fund,0.069793,0.001660
+Mahindra Manulife Liquid Fund,0.069760,0.002574
+PGIM India Liquid Fund,0.069715,0.001463
+DSP Liquid Fund,0.069709,0.001647
+Nippon India Liquid Fund,0.069701,0.001745
+BANK OF INDIA LIQUID FUND,0.069662,0.002390
+Groww Liquid Fund,0.069660,0.001824
+Tata Liquid Fund,0.069574,0.001659
+Bajaj Finserv Liquid Fund,0.069559,0.001812
+Union Liquid Fund,0.069543,0.002293
+UTI - Liquid Fund,0.069520,0.001576
+Canara Robeco Liquid Fund,0.069421,0.002432
+Quant Liquid Fund,0.069391,0.002078
+Kotak Liquid Fund,0.069361,0.001730
+Invesco India Liquid Fund,0.069323,0.001695
+ICICI Prudential Liquid Fund -,0.069298,0.001620
+Mirae Asset Liquid Fund,0.069256,0.001593
+LIC MF Liquid Fund,0.069240,0.001599
+BANDHAN LIQUID Fund,0.069216,0.001684
+HDFC Liquid Fund,0.069175,0.001656
+BARODA BNP PARIBAS LIQUID FUND,0.069096,0.002021
+SBI LIQUID FUND,0.068948,0.001502
+TRUSTMF Liquid Fund,0.068794,0.004100
+WhiteOak Capital Liquid Fund,0.068547,0.002228
+360 ONE Liquid Fund,0.067410,0.002219
+ITI Liquid Fund,0.066881,0.001809
+Parag Parikh Liquid Fund,0.066876,0.001658
+Quantum Liquid Fund,0.065177,0.002029
+HSBC Liquid Fund,0.000220,0.001212
+Navi Liquid Fund,0.000040,0.000671

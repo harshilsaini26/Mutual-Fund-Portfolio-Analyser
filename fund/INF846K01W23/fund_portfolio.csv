@@ -1,0 +1,49 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 22.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 22.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:36.597099+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,22.742795
+Cash & Bank Balance,Cash and equivalents,10.707282
+ICICI Bank Ltd.,Shares,6.326077
+Bajaj Finance Limited,Shares,5.770798
+AXIS Bank Ltd.,Shares,3.634145
+Reliance Industries Ltd,Shares,3.459659
+Pidilite Industries Ltd.,Shares,3.145306
+Maruti Suzuki India  Ltd.,Shares,2.899377
+Sun Pharmaceutical Industries Ltd.,Shares,2.774250
+CG Power and Industrial Solutions Limited,Shares,2.560674
+COFORGE LIMITED,Shares,2.438343
+Metropolis Healthcare Limited,Shares,2.419381
+REC LIMITED,Shares,2.323514
+Bharat Heavy Electricals Ltd.,Shares,2.294170
+TATA CONSUMER PRODUCTS LIMITED,Shares,2.097628
+Arvind Ltd.,Shares,2.050580
+Varun Beverages Limited,Shares,1.959736
+Chalet Hotels Limited,Shares,1.772298
+Indian Hotels Co. Ltd,Shares,1.718997
+TBO TEK LIMITED,Shares,1.626140
+Anthem Biosciences Limited,Shares,1.617893
+Mahindra & Mahindra Ltd.,Shares,1.529136
+Krishna Institute of Medical Sciences Limited,Shares,1.434537
+Cummins India Ltd.,Shares,1.427101
+Star Health and Allied Insurance Company Limited,Shares,1.353598
+Ipca Laboratories Ltd.,Shares,1.243912
+Eicher Motors Ltd.,Shares,1.207598
+TD Power Systems Ltd,Shares,1.005158
+SBI Life Insurance Company Limited,Shares,0.982375
+Supreme Industries Ltd.,Shares,0.829098
+Alkem Laboratories Limited,Shares,0.681663
+Craftsman Automation Limited,Shares,0.576748
+Crompton Greaves Consumer Electricals Limited,Shares,0.574726
+ASTRAL LIMITED,Shares,0.535813
+Apar Industries Ltd,Shares,0.125369
+Symphony Limited,Shares,0.119386
+Net Receivables / Payables,Cash and equivalents,0.034739

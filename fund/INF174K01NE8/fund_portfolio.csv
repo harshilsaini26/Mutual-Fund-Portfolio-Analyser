@@ -1,0 +1,55 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 28.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 28.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:38.298892+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,28.296535
+Government Securities,Bonds and other debt,16.892885
+HDFC Bank Ltd.,Bonds and other debt,8.662797
+TREPS / Repo / Reverse Repo,Cash and equivalents,7.474152
+Union Bank of India,Bonds and other debt,6.910675
+Indian Overseas Bank,Bonds and other debt,2.458116
+Bank of India,Bonds and other debt,2.447378
+Punjab National Bank,Bonds and other debt,1.976235
+Central Bank of India,Bonds and other debt,1.957474
+Hindustan Petroleum Corporation Ltd,Bonds and other debt,1.710481
+IIFL FINANCE LIMITED,Bonds and other debt,1.657355
+REC LIMITED,Bonds and other debt,1.338354
+PNB Housing Finance Limited,Bonds and other debt,1.272457
+Bajaj Finance Limited,Bonds and other debt,1.053475
+IDBI Bank Ltd,Bonds and other debt,0.987523
+Power Finance Corporation Ltd,Bonds and other debt,0.978983
+City Union Bank Ltd,Bonds and other debt,0.978372
+Canara Bank,Bonds and other debt,0.978135
+Jammu and Kashmir Bank Ltd.,Bonds and other debt,0.977712
+PUNJAB & SIND BANK,Bonds and other debt,0.974947
+Adani Ports and Special Economic Zone Ltd,Bonds and other debt,0.884189
+Motilal Oswal Financial Services Limited,Bonds and other debt,0.688423
+Manappuram Finance Limited,Bonds and other debt,0.586810
+CESC Limited,Bonds and other debt,0.585041
+ANGEL ONE LIMITED,Bonds and other debt,0.494637
+Karur Vysya Bank Ltd.,Bonds and other debt,0.494494
+Federal Bank Ltd.,Bonds and other debt,0.492605
+Bank Of Baroda,Bonds and other debt,0.490132
+DCB Bank Limited,Bonds and other debt,0.489239
+Reliance Industries Ltd,Bonds and other debt,0.487700
+Yes Bank Ltd.,Bonds and other debt,0.487424
+Can Fin Homes Ltd.,Bonds and other debt,0.486958
+Bajaj Housing Finance Limited,Bonds and other debt,0.459404
+Bharat Petroleum Corpn. Ltd.,Bonds and other debt,0.393130
+Fedbank Financial Services Limited,Bonds and other debt,0.389264
+IIFL CAPITAL SERVICES LIMITED,Bonds and other debt,0.387795
+Cash & Bank Balance,Cash and equivalents,0.356111
+Aditya Birla  Money Ltd,Bonds and other debt,0.291906
+Network 18 Media & Investments Limited,Bonds and other debt,0.243709
+Units of Other Schemes,"REITs, InvITs and other",0.222761
+Net Receivables / Payables,Cash and equivalents,0.209038
+Pilani Investment And Industries Corporation Limited,Bonds and other debt,0.194897
+Godrej Industries Ltd.,Bonds and other debt,0.146978
+SUNDARAM FINANCE LTD,Bonds and other debt,0.033660
+Indian Bank,Bonds and other debt,0.019654

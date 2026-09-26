@@ -1,0 +1,48 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 16.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 16.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:30.743879+00:00
+holding,kind,weight_pct
+Government Securities,Bonds and other debt,30.865867
+TREPS / Repo / Reverse Repo,Cash and equivalents,28.336814
+Unresolved Holdings,Bonds and other debt,16.349574
+Net Receivables / Payables,Cash and equivalents,1.995674
+ICICI Bank Ltd.,Shares,1.865538
+TD Power Systems Ltd,Shares,1.717072
+HDFC Bank Ltd.,Shares,1.559441
+Hindalco Industries Ltd.,Shares,1.302834
+Metropolis Healthcare Limited,Shares,1.280839
+State Bank Of India,Shares,1.101580
+Fortis Healthcare Ltd,Shares,1.083617
+Bharti Airtel  Ltd.,Shares,0.996371
+Federal Bank Ltd.,Shares,0.980608
+Bajaj Finance Limited,Shares,0.968877
+S.V.J.ENTERPRISES LIMITED,Shares,0.912423
+Max Financial Services Limited,Shares,0.853404
+AXIS Bank Ltd.,Shares,0.810147
+UltraTech Cement Ltd,Shares,0.789252
+Sun Pharmaceutical Industries Ltd.,Shares,0.727666
+Torrent Pharmaceuticals Ltd.,Shares,0.674145
+Bajaj Auto Limited,Shares,0.644818
+Larsen & Toubro Limited,Shares,0.542542
+Sona BLW Precision Forgings Limited,Shares,0.473258
+Godrej Consumer Products Ltd.,Shares,0.368049
+Avenue Supermarts Limited,Shares,0.343121
+Bank Of Baroda,Shares,0.341288
+SBFC Finance Limited,Shares,0.340922
+Vinati Organics Ltd.,Shares,0.295099
+Infosys Ltd,Shares,0.291066
+SBI Life Insurance Company Limited,Shares,0.255874
+Mrs. Bectors Food Specialities Limited,Shares,0.222149
+Whirlpool of India Ltd,Shares,0.200154
+Praj Industries Ltd.,Shares,0.167162
+Cipla Ltd.,Shares,0.164229
+Cholamandalam Investment and Finance Company Ltd,Shares,0.115107
+V-Guard Industries Ltd.,Shares,0.063419

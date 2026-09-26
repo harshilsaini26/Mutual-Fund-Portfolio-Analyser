@@ -1,0 +1,48 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 9.2% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 9.2% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:16.702437+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,9.178492
+Divi's Laboratories Ltd.,Shares,4.141226
+TVS Motor Company Ltd.,Shares,3.538243
+Aurobindo Pharma Ltd.,Shares,3.495769
+Torrent Pharmaceuticals Ltd.,Shares,3.439591
+Bajaj Auto Limited,Shares,3.432188
+Cholamandalam Investment and Finance Company Ltd,Shares,3.385919
+APL Apollo Tubes Limited,Shares,3.324100
+Polycab India Limited,Shares,3.313635
+Bajaj Finance Limited,Shares,3.211045
+Eicher Motors Ltd.,Shares,3.183482
+Solar Industries India Limited,Shares,3.131407
+Ashok Leyland Ltd.,Shares,3.083517
+Hero MotoCorp Limited,Shares,3.034989
+Marico Limited,Shares,3.014142
+Nestle India Ltd.,Shares,2.904198
+Hindustan Zinc Ltd.,Shares,2.828875
+ASTRAL LIMITED,Shares,2.814650
+Cummins India Ltd.,Shares,2.756059
+HDFC Asset Management Company Limited,Shares,2.751377
+Bharat Electronics Ltd.,Shares,2.734338
+SBI Life Insurance Company Limited,Shares,2.721815
+INDUS TOWERS LIMITED,Shares,2.681860
+Britannia Industries Ltd.,Shares,2.609435
+REC LIMITED,Shares,2.581245
+ICICI Lombard General Insurance Company Limited,Shares,2.516517
+MUTHOOT FINANCE LIMITED,Shares,2.475178
+Coal India Limited,Shares,2.361284
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,2.342873
+Power Finance Corporation Ltd,Shares,2.123031
+Bajaj Finserv Limited,Shares,1.929936
+Alkem Laboratories Limited,Shares,1.392473
+Adani Ports and Special Economic Zone Ltd,Shares,0.654088
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.575384
+Indian Oil Corporation Ltd.,Shares,0.451900
+Net Receivables / Payables,Cash and equivalents,-0.114261

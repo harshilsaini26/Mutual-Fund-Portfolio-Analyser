@@ -1,0 +1,40 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:54.212656+00:00
+fund,return_3y,volatility_3y
+Nippon India Taiwan Equity Fund,0.634412,0.360376
+HDFC Defence Fund,0.384497,0.258535
+Mirae Asset Healthcare Fund,0.238361,0.140857
+ICICI Prudential Healthcare Fund,0.231706,0.136303
+Nippon India Japan Equity Fund,0.217852,0.191008
+Nippon India US Equity Opportunities Fund,0.207976,0.157239
+DSP India T.I.G.E.R. Fund,0.206117,0.170352
+DSP Natural Resources And New Energy Fund,0.198936,0.178908
+Invesco India Infrastructure Fund,0.192894,0.193466
+Canara Robeco Infrastructure Fund,0.191457,0.178998
+Axis Innovation Fund,0.189311,0.134154
+Invesco India PSU Equity Fund,0.187635,0.221305
+UTI - Transportation and Logistics Fund,0.181706,0.168799
+Mahindra Manulife Business Cycle Fund,0.175164,0.157186
+HSBC Consumption Fund,0.164444,0.150397
+HSBC Business Cycles Fund,0.162169,0.182315
+Samco Active Momentum Fund,0.161349,0.164418
+360 ONE QUANT FUND,0.149407,0.171012
+Axis Business Cycles Fund,0.136011,0.148369
+Mirae Asset Banking and Financial Services Fund (this fund),0.121478,0.157426
+Mirae Asset Great Consumer Fund,0.107865,0.136370
+Canara Robeco Consumption Fund,0.106392,0.141300
+Mahindra Manulife Consumption Fund,0.101177,0.135269
+UTI - India Consumer Fund,0.099805,0.136541
+Nippon India Consumption Fund,0.095298,0.129427
+Invesco India ESG Integration Strategy Fund,0.089870,0.143329
+Axis Quant Fund,0.087670,0.145329
+DSP Quant Fund,0.066999,0.127843
+HDFC Technology Fund,0.050087,0.176586

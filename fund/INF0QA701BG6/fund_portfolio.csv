@@ -1,0 +1,54 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 17.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 17.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:45.459964+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,17.935991
+Divi's Laboratories Ltd.,Shares,4.736048
+TVS Motor Company Ltd.,Shares,4.016300
+Hindustan Aeronautics Limited,Shares,3.586527
+Adani Power Limited,Shares,3.235810
+Cholamandalam Investment and Finance Company Ltd,Shares,3.164690
+Samvardhana Motherson International Limited,Shares,2.969949
+Torrent Pharmaceuticals Ltd.,Shares,2.925690
+Cummins India Ltd.,Shares,2.715993
+Indian Hotels Co. Ltd,Shares,2.552081
+CG Power and Industrial Solutions Limited,Shares,2.474856
+Avenue Supermarts Limited,Shares,2.474856
+Britannia Industries Ltd.,Shares,2.434260
+Tata Power Co. Ltd,Shares,2.279505
+Varun Beverages Limited,Shares,2.156495
+HDFC Asset Management Company Limited,Shares,2.104910
+Pidilite Industries Ltd.,Shares,2.059430
+Indian Oil Corporation Ltd.,Shares,2.047525
+Bajaj Holdings & Investment Limited,Shares,1.983120
+Power Finance Corporation Ltd,Shares,1.928788
+Solar Industries India Limited,Shares,1.927262
+Gail (India) Ltd.,Shares,1.885750
+DLF LIMITED,Shares,1.745952
+Bank Of Baroda,Shares,1.743510
+United Spirits Limited,Shares,1.733132
+Bosch Ltd,Shares,1.694062
+Canara Bank,Shares,1.679716
+Adani Green Energy Limited,Shares,1.604322
+REC LIMITED,Shares,1.590587
+ABB India Limited,Shares,1.578377
+Punjab National Bank,Shares,1.549380
+Bank of India,Shares,1.435526
+Godrej Consumer Products Ltd.,Shares,1.426369
+Siemens Ltd.,Shares,1.402256
+MUTHOOT FINANCE LIMITED,Shares,1.257268
+HYUNDAI MOTOR INDIA LIMITED,Shares,1.237733
+Zydus Lifesciences Limited,Shares,1.144331
+Hindustan Zinc Ltd.,Shares,1.128153
+Ambuja Cements Ltd.,Shares,0.984998
+Mazagon Dock Shipbuilders Limited,Shares,0.741724
+Indian Railway Finance Corporation,Shares,0.659921
+Net Receivables / Payables,Cash and equivalents,0.066847

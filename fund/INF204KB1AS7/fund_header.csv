@@ -1,0 +1,18 @@
+﻿# View: fund_header
+# Question: What is this fund, and how has it done?
+# As of: 2026-09-26
+# Data as of: 30 Sep 2019 (2553 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: low
+# Source modules: m2, m0
+# Notes:
+#   - Holdings as of 30 Sep 2019 — 2553 days old. Funds disclose monthly.
+# Generated: 2026-09-26T10:36:08.550072+00:00
+key,label,value
+return_1y,"Return, 1 year",0.065338
+return_3y,"Return, 3 years",0.070635
+return_5y,"Return, 5 years",
+rank_3y,"Category rank, 3 years",43rd of 52
+worst_fall,Worst fall,-0.029405
+volatility,Volatility,0.033302
+fund_size,Fund size,
+ter,Expense ratio,

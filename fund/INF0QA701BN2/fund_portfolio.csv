@@ -1,0 +1,96 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 13.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 13.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:45.602903+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,13.797692
+RUBICON RESEARCH LIMITED,Shares,3.982088
+Welspun Corp Limited,Shares,3.914413
+TD Power Systems Ltd,Shares,2.782866
+CRISIL Ltd.,Shares,2.719211
+S.V.J.ENTERPRISES LIMITED,Shares,2.699592
+Schaeffler India Limited,Shares,2.664301
+Zydus Wellness Limited,Shares,2.570392
+Timken India Ltd,Shares,2.494386
+Federal Bank Ltd.,Shares,2.217690
+ANGEL ONE LIMITED,Shares,2.066528
+HEG Ltd.,Shares,2.019462
+PIRAMAL PHARMA LIMITED,Shares,2.011483
+Neuland Laboratories Limited.,Shares,1.873900
+Sona BLW Precision Forgings Limited,Shares,1.871240
+RBL Bank Limited,Shares,1.846438
+Ingersoll-Rand (India) Ltd.,Shares,1.804083
+Brigade Enterprises Limited,Shares,1.626320
+Ujjivan Small Finance Bank Limited,Shares,1.510004
+Clean Max Enviro Energy Solutions Limited,Shares,1.478238
+Prudent Corporate Advisory Services Limited,Shares,1.377468
+KNR Constructions Limited,Shares,1.334999
+Sobha Limited,Shares,1.301500
+Devyani International Limited,Shares,1.300431
+VOLTAMP TRANSFORMERS LIMITED,Shares,1.252439
+Amber Enterprises India Limited,Shares,1.190801
+Safari Industries (India) Ltd.,Shares,1.160396
+Whirlpool of India Ltd,Shares,1.108021
+SENORES PHARMACEUTICALS LIMITED,Shares,1.086600
+Steel Authority of India Ltd.,Shares,1.081311
+Cash & Bank Balance,Cash and equivalents,1.018895
+Apar Industries Ltd,Shares,0.923787
+SCHNEIDER ELECTRIC INFRASTRUCTURE LIMITED,Shares,0.896767
+RHI MAGNESITA INDIA LIMITED,Shares,0.890379
+VA Tech Wabag Limited,Shares,0.851870
+Aditya Infotech Limited,Shares,0.850185
+Tega Industries Limited,Shares,0.839731
+Hindustan Copper Ltd.,Shares,0.819515
+Onesource Specialty Pharma Limited,Shares,0.803481
+V-Mart Retail Limited,Shares,0.777617
+Nitin Spinners Ltd.,Shares,0.769921
+CarTrade Tech Limited,Shares,0.765984
+KSB LIMITED,Shares,0.744684
+Syrma SGS Technology Limited,Shares,0.732428
+Net Receivables / Payables,Cash and equivalents,0.668459
+JSW Holdings Limited,Shares,0.662804
+NIVA BUPA HEALTH INSURANCE COMPANY LIMITED,Shares,0.660087
+Elecon Engineering Co.Ltd.,Shares,0.654454
+Thangamayil Jewellery Limited,Shares,0.653449
+Metro Brands Limited,Shares,0.634669
+The Ramco Cements Limited,Shares,0.577126
+Five-Star Business Finance Ltd.,Shares,0.576034
+Time Technoplast Limited,Shares,0.569842
+Redington Limited,Shares,0.567662
+EPL LIMITED,Shares,0.550352
+Emami Ltd,Shares,0.546974
+Century Plyboards (India) Ltd.,Shares,0.543321
+Tenneco Clean Air India Limited,Shares,0.539962
+Nesco Ltd,Shares,0.530098
+Great Eastern Shipping Co. Ltd.,Shares,0.492004
+DCB Bank Limited,Shares,0.490444
+Neogen Chemicals Limited,Shares,0.488846
+Page Industries Ltd.,Shares,0.468109
+PNC Infratech Limited,Shares,0.464255
+GARWARE TECHNICAL FIBRES LIMITED,Shares,0.456639
+Indo Count Industries Ltd,Shares,0.453117
+AIA Engineering Ltd.,Shares,0.450858
+JK Lakshmi Cement Limited,Shares,0.439921
+Repco Home Finance Limited,Shares,0.439800
+Usha Martin Ltd.,Shares,0.433177
+Elantas Beck India Ltd,Shares,0.433068
+Nazara Technologies Limited,Shares,0.430763
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.427359
+Cera Sanitaryware Ltd.,Shares,0.420181
+SEDEMAC MECHATRONICS LIMITED,Shares,0.390305
+Ather Energy Limited,Shares,0.389213
+La Opala RG Ltd.,Shares,0.361203
+Vedant Fashions Limited,Shares,0.250915
+PG Electroplast Limited,Shares,0.230476
+Ahluwalia Contracts (India) Ltd,Shares,0.199297
+Pondy Oxides & Chemicals Limited,Shares,0.194952
+Awfis Space Solutions Limited,Shares,0.194616
+G R Infraprojects Limited,Shares,0.187619
+Derivative Positions,Derivatives,0.048033

@@ -1,0 +1,28 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:31.310164+00:00
+fund,return_3y,volatility_3y
+Parag Parikh Conservative Hybrid Fund,0.091950,0.027400
+HSBC Conservative Hybrid Fund,0.089226,0.048527
+ICICI Prudential Conservative Hybrid Fund,0.087634,0.031999
+DSP Conservative Hybrid Fund,0.086688,0.032708
+Nippon India Conservative Hybrid Fund (Existing number of Segregated Portfolios - 1),0.085721,0.019650
+Aditya Birla Sun Life Conservative Hybrid Fund,0.085683,0.033369
+BARODA BNP PARIBAS CONSERVATIVE HYBRID FUND,0.084924,0.036988
+Kotak Conservative Hybrid Fund,0.084706,0.044653
+SBI CONSERVATIVE HYBRID FUND,0.082780,0.036418
+Franklin India Conservative Hybrid Fund (this fund),0.077141,0.036484
+Canara Robeco Conservative Hybrid Fund,0.076778,0.037011
+UTI Conservative Hybrid Fund,0.076325,0.038896
+HDFC Conservative Hybrid Fund,0.071866,0.037204
+BANDHAN CONSERVATIVE HYBRID FUND,0.070881,0.039235
+LIC MF Conservative Hybrid Fund,0.065527,0.034464
+Axis Conservative Hybrid Fund,0.064565,0.034395
+Sundaram Conservative Hybrid Fund (Formerly Known as Sundaram Debt Oriented Hybrid Fund),0.051975,0.034329

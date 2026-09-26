@@ -1,0 +1,70 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:27.535161+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,8.563668
+Maruti Suzuki India  Ltd.,Shares,4.936779
+United Spirits Limited,Shares,4.086419
+Nestle India Ltd.,Shares,3.718183
+Hindustan Unilever Ltd.,Shares,3.681941
+Bosch Ltd,Shares,3.311655
+Britannia Industries Ltd.,Shares,3.135016
+Gland Pharma Limited,Shares,3.111259
+Cummins India Ltd.,Shares,2.985829
+Schaeffler India Limited,Shares,2.926137
+Vedanta Aluminium Metal Limited,Shares,2.829059
+Pfizer Ltd.,Shares,2.186063
+CRISIL Ltd.,Shares,2.122906
+United Breweries Ltd.,Shares,2.088408
+3M India Ltd.,Shares,2.025458
+ABB India Limited,Shares,1.994922
+Honeywell Automation India Ltd.,Shares,1.942170
+HYUNDAI MOTOR INDIA LIMITED,Shares,1.918407
+Grindwell Norton Ltd.,Shares,1.769198
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,1.754330
+Bayer CropScience Limited.,Shares,1.727995
+Asahi India Glass Ltd.,Shares,1.688386
+Siemens Ltd.,Shares,1.634597
+Ambuja Cements Ltd.,Shares,1.583688
+Gillette India Ltd.,Shares,1.557981
+Mphasis Limited,Shares,1.474317
+ICRA Limited,Shares,1.401309
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,1.353145
+TRAVEL FOOD SERVICES LIMITED,Shares,1.328361
+COFORGE LIMITED,Shares,1.326381
+Meesho Limited,Shares,1.311142
+Procter & Gamble Hygiene & Health Care Ltd.,Shares,1.286423
+LG Electronics India Limited,Shares,1.237420
+Samvardhana Motherson International Limited,Shares,1.178907
+SWIGGY LIMITED,Shares,1.169496
+Timken India Ltd,Shares,1.151484
+GE Vernova T&D India Limited,Shares,1.149207
+Sapphire Foods India Limited,Shares,1.141988
+Aptus Value Housing Finance India Limited,Shares,1.058715
+RBL Bank Limited,Shares,1.039942
+Arvind Ltd.,Shares,0.998158
+Whirlpool of India Ltd,Shares,0.993922
+Motherson Sumi Wiring India Limited,Shares,0.989263
+Eureka Forbes Limited,Shares,0.950641
+Escorts Kubota Limited,Shares,0.914457
+Abbott India Ltd.,Shares,0.900102
+Fortis Healthcare Ltd,Shares,0.881310
+DOMS Industries Limited,Shares,0.858698
+ZF Commercial Vehicle Control Systems India Limited,Shares,0.770406
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.683893
+Bata India Limited,Shares,0.663531
+Oracle Financial Services Software Limited,Shares,0.571226
+Esab India Ltd.,Shares,0.568108
+Orkla India Limited,Shares,0.516233
+Apar Industries Ltd,Shares,0.376360
+Ingersoll-Rand (India) Ltd.,Shares,0.294481
+Net Receivables / Payables,Cash and equivalents,0.119784
+Margin / Deposits,Cash and equivalents,0.060736

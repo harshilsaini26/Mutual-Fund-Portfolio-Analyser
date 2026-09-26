@@ -1,0 +1,32 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:18.350859+00:00
+fund,return_3y,volatility_3y
+Quant Value Fund,0.203353,0.187726
+Axis Value Fund,0.181449,0.140831
+LIC MF Value Fund,0.178953,0.172081
+DSP Value Fund,0.161847,0.110688
+HDFC Value Fund,0.159788,0.138170
+HSBC Value Fund,0.156354,0.160337
+Nippon India Value Fund,0.135416,0.152866
+Tata Value Fund,0.129103,0.154616
+ITI Value Fund,0.128643,0.172308
+JM Value Fund,0.128203,0.171597
+Groww Value Fund,0.126732,0.136366
+Union Value Fund,0.118822,0.147739
+UTI Value Fund,0.117566,0.133748
+ICICI Prudential Value Fund (erstwhile Value Discovery Fund) (this fund),0.113835,0.112430
+Canara Robeco Value Fund,0.109902,0.138014
+Bandhan Value Fund,0.101353,0.129303
+Baroda BNP Paribas Value Fund,0.091614,0.146967
+Templeton India Value Fund,0.091241,0.131301
+Quantum Value Fund,0.089281,0.123220
+Aditya Birla Sun Life Value Fund,0.067106,0.179619
+Sundaram Value Fund,0.064732,0.129513

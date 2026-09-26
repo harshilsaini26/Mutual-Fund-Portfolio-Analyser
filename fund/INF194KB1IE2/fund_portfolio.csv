@@ -1,0 +1,86 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 16.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 16.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:51.783335+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,16.434123
+One 97 Communications Limited,Shares,5.021797
+Bajaj Finserv Limited,Shares,3.721061
+ICICI Bank Ltd.,Shares,3.162780
+Meesho Limited,Shares,2.804496
+AstraZeneca Pharma India Ltd.,Shares,2.722730
+COFORGE LIMITED,Shares,2.407316
+Mahindra & Mahindra Ltd.,Shares,2.327582
+Honasa Consumer Limited,Shares,2.275110
+Reliance Industries Ltd,Shares,2.226133
+Sterlite Technologies Limited.,Shares,2.002416
+POONAWALLA FINCORP LIMITED,Shares,1.882254
+Divi's Laboratories Ltd.,Shares,1.794517
+Jubilant Ingrevia Limited,Shares,1.788975
+E2E Networks Limited,Shares,1.704020
+Bharat Electronics Ltd.,Shares,1.695685
+MTAR Technologies Limited,Shares,1.664495
+Billionbrains Garage Ventures Limited,Shares,1.584727
+Amber Enterprises India Limited,Shares,1.558684
+GE Vernova T&D India Limited,Shares,1.514739
+TREPS / Repo / Reverse Repo,Cash and equivalents,1.458023
+Info Edge(India) Ltd.,Shares,1.373819
+Varun Beverages Limited,Shares,1.337973
+Tilaknagar Industries Ltd,Shares,1.181745
+Cholamandalam Investment and Finance Company Ltd,Shares,1.167884
+TVS Motor Company Ltd.,Shares,1.131379
+Saregama India Ltd.,Shares,1.084820
+Prestige Estates Projects Limited,Shares,1.069259
+VINTAGE COFFEE AND BEVERAGES LIMITED,Shares,1.035083
+TD Power Systems Ltd,Shares,1.034630
+Glenmark Pharmaceuticals ltd,Shares,1.029872
+ZF Commercial Vehicle Control Systems India Limited,Shares,1.007430
+Craftsman Automation Limited,Shares,0.995365
+BlueStone Jewellery and Lifestyle Limited,Shares,0.951008
+Adani Ports and Special Economic Zone Ltd,Shares,0.943677
+Physicswallah Limited,Shares,0.899397
+Torrent Pharmaceuticals Ltd.,Shares,0.896337
+Indian Hotels Co. Ltd,Shares,0.892732
+Godrej Properties Limited,Shares,0.865441
+Amagi Media Labs Limited,Shares,0.848974
+HDFC Bank Ltd.,Shares,0.845677
+Vedanta Aluminium Metal Limited,Shares,0.838975
+HEG Ltd.,Shares,0.830988
+Multi Commodity Exchange of India Ltd,Shares,0.829182
+Canara HSBC Life Insurance Company Limited,Shares,0.826815
+Sona BLW Precision Forgings Limited,Shares,0.809266
+Eicher Motors Ltd.,Shares,0.798996
+Thangamayil Jewellery Limited,Shares,0.792636
+JUBILANT PHARMOVA LIMITED,Shares,0.785508
+Max Financial Services Limited,Shares,0.782272
+KFin Technologies Limited,Shares,0.781883
+Sai Life Sciences Limited,Shares,0.780341
+Fortis Healthcare Ltd,Shares,0.779536
+Infosys Ltd,Shares,0.700476
+Rashi Peripherals Limited,Shares,0.695069
+ETHOS LIMITED,Shares,0.651520
+Ather Energy Limited,Shares,0.637176
+Tega Industries Limited,Shares,0.635394
+Afcom Holdings Limited,Shares,0.633547
+3M India Ltd.,Shares,0.566836
+Usha Martin Ltd.,Shares,0.511539
+Electronics Mart India Limited,Shares,0.510153
+SURAKSHA DIAGNOSTIC LIMITED,Shares,0.509605
+IDEAFORGE TECHNOLOGY LIMITED,Shares,0.494903
+KRN HEAT EXCHANGER AND REFRIGERATION LIMITED,Shares,0.449085
+Power Mech Projects Limited,Shares,0.431999
+Jubilant Foodworks Limited,Shares,0.394675
+Nephrocare Health Services Limited,Shares,0.294341
+Tube Investments of India Ltd,Shares,0.186201
+STOVE KRAFT LIMITED,Shares,0.100502
+Optiemus Infracom Limited,Shares,0.097073
+Margin / Deposits,Cash and equivalents,0.067628
+Cash & Bank Balance,Cash and equivalents,0.013286
+Net Receivables / Payables,Cash and equivalents,-0.561571

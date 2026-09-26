@@ -1,0 +1,160 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 22.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 22.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - 1 holding with a negative weight (written options or borrowing) are listed in the table and not drawn in the pictures.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:33.629976+00:00
+holding,kind,weight_pct
+Net Receivables / Payables,Cash and equivalents,68.009850
+Unresolved Holdings,Bonds and other debt,22.745539
+Units of Other Schemes,Other funds,12.472672
+ICICI Bank Ltd.,Shares,3.458591
+HDFC Bank Ltd.,Shares,3.458287
+Reliance Industries Ltd,Shares,3.245495
+Bharat Heavy Electricals Ltd.,Shares,2.751849
+State Bank Of India,Shares,2.535668
+Cash & Bank Balance,Cash and equivalents,2.429117
+Bharti Airtel  Ltd.,Shares,2.006592
+Bharat Electronics Ltd.,Shares,1.984592
+TATA STEEL LIMITED,Shares,1.536563
+Cholamandalam Investment and Finance Company Ltd,Shares,1.388342
+AXIS Bank Ltd.,Shares,1.388149
+Adani Enterprises Ltd.,Shares,1.320922
+Bajaj Finance Limited,Shares,1.302026
+INDUS TOWERS LIMITED,Shares,1.246536
+VODAFONE IDEA LIMITED,Shares,1.224930
+Hindustan Unilever Ltd.,Shares,1.216191
+Canara Bank,Shares,1.210379
+Hindalco Industries Ltd.,Shares,1.128540
+Jio Financial Services Limited,Shares,1.107669
+Coal India Limited,Shares,1.059216
+Adani Power Limited,Shares,1.028394
+JSW Steel Limited,Shares,1.018996
+Glenmark Pharmaceuticals ltd,Shares,0.977040
+ITC Ltd,Shares,0.905260
+Manappuram Finance Limited,Shares,0.872550
+UltraTech Cement Ltd,Shares,0.865170
+Cummins India Ltd.,Shares,0.858692
+Divi's Laboratories Ltd.,Shares,0.851607
+Steel Authority of India Ltd.,Shares,0.822711
+Punjab National Bank,Shares,0.809972
+DLF LIMITED,Shares,0.767783
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.740185
+Federal Bank Ltd.,Shares,0.687701
+HITACHI ENERGY INDIA LIMITED,Shares,0.666810
+Crompton Greaves Consumer Electricals Limited,Shares,0.646779
+Yes Bank Ltd.,Shares,0.638694
+Container Corporation Of India Ltd.,Shares,0.637209
+Varun Beverages Limited,Shares,0.508928
+Maruti Suzuki India  Ltd.,Shares,0.508293
+GE Vernova T&D India Limited,Shares,0.476235
+LIFE INSURANCE CORPORATION OF INDIA,Shares,0.440247
+Hindustan Aeronautics Limited,Shares,0.405189
+Ambuja Cements Ltd.,Shares,0.382591
+Tata Power Co. Ltd,Shares,0.382321
+NBCC (India) Limited,Shares,0.377090
+Eicher Motors Ltd.,Shares,0.367866
+Indian Oil Corporation Ltd.,Shares,0.357243
+Adani Green Energy Limited,Shares,0.353662
+Indian Energy Exchange Limited,Shares,0.327543
+One 97 Communications Limited,Shares,0.318447
+Indian Hotels Co. Ltd,Shares,0.305074
+Bank Of Baroda,Shares,0.297762
+Lic Housing Finance Ltd.,Shares,0.280021
+HDFC Asset Management Company Limited,Shares,0.278443
+Ashok Leyland Ltd.,Shares,0.276040
+Bandhan Bank Limited,Shares,0.272795
+UPL Limited,Shares,0.271829
+UNO Minda Limited,Shares,0.271601
+Godrej Properties Limited,Shares,0.270709
+Godrej Consumer Products Ltd.,Shares,0.268838
+APL Apollo Tubes Limited,Shares,0.262968
+Solar Industries India Limited,Shares,0.260979
+Lupin Ltd,Shares,0.242303
+Infosys Ltd,Shares,0.234591
+Bank of India,Shares,0.233999
+Bharat Forge Ltd,Shares,0.226502
+Max Financial Services Limited,Shares,0.225701
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.223528
+MUTHOOT FINANCE LIMITED,Shares,0.214134
+TVS Motor Company Ltd.,Shares,0.212985
+Kalyan Jewellers India Limited,Shares,0.201418
+AU Small Finance Bank Limited,Shares,0.190703
+Fortis Healthcare Ltd,Shares,0.185760
+Larsen & Toubro Limited,Shares,0.179067
+Aurobindo Pharma Ltd.,Shares,0.176495
+Adani Ports and Special Economic Zone Ltd,Shares,0.167142
+Samvardhana Motherson International Limited,Shares,0.162494
+Pidilite Industries Ltd.,Shares,0.153729
+SRF Ltd.,Shares,0.146942
+Dabur India Ltd.,Shares,0.142504
+United Spirits Limited,Shares,0.141206
+Marico Limited,Shares,0.141180
+Asian Paints Ltd.,Shares,0.139016
+Bosch Ltd,Shares,0.133328
+Torrent Pharmaceuticals Ltd.,Shares,0.126123
+Hindustan Petroleum Corporation Ltd,Shares,0.117450
+ICICI Lombard General Insurance Company Limited,Shares,0.116326
+Inox Wind Limited,Shares,0.105427
+Central Depository Services (India) Ltd.,Shares,0.098097
+National Aluminium Co. Ltd.,Shares,0.094528
+Hero MotoCorp Limited,Shares,0.094142
+RBL Bank Limited,Shares,0.092331
+Hindustan Zinc Ltd.,Shares,0.092261
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,0.086497
+JSW Energy Limited,Shares,0.085017
+Oil And Natural Gas Corporation Ltd,Shares,0.066460
+Bajaj Auto Limited,Shares,0.066122
+IDFC FIRST BANK LIMITED,Shares,0.063976
+SUZLON ENERGY LTD.,Shares,0.058675
+Sun Pharmaceutical Industries Ltd.,Shares,0.045245
+Colgate-Palmolive (India) Ltd.,Shares,0.044332
+Patanjali Foods Limited,Shares,0.042709
+SBI Life Insurance Company Limited,Shares,0.040661
+Grasim Industries Ltd,Shares,0.035797
+Computer Age Management Services Limited,Shares,0.035320
+PNB Housing Finance Limited,Shares,0.035239
+Cochin Shipyard Limited,Shares,0.034778
+Cipla Ltd.,Shares,0.031093
+Gail (India) Ltd.,Shares,0.029144
+Supreme Industries Ltd.,Shares,0.028219
+Power Finance Corporation Ltd,Shares,0.025173
+InterGlobe Aviation Limited,Shares,0.024455
+Tata Consultancy Services Ltd.,Shares,0.022931
+The Phoenix Mills Ltd.,Shares,0.019459
+Mankind Pharma Limited,Shares,0.018269
+Zydus Lifesciences Limited,Shares,0.017758
+HCL Technologies Ltd,Shares,0.015854
+Amber Enterprises India Limited,Shares,0.013666
+Tube Investments of India Ltd,Shares,0.013645
+PG Electroplast Limited,Shares,0.013025
+Voltas Ltd.,Shares,0.009724
+Motilal Oswal Financial Services Limited,Shares,0.009155
+Max Healthcare Institute Limited,Shares,0.008263
+Mahindra & Mahindra Ltd.,Shares,0.006815
+Delhivery Limited,Shares,0.006254
+Polycab India Limited,Shares,0.003343
+PB Fintech Limited,Shares,0.003097
+CG Power and Industrial Solutions Limited,Shares,0.002205
+Bajaj Finserv Limited,Shares,0.001717
+Mazagon Dock Shipbuilders Limited,Shares,0.001580
+Nestle India Ltd.,Shares,0.001413
+Prestige Estates Projects Limited,Shares,0.001388
+FSN E-Commerce Ventures Limited,Shares,0.001031
+COFORGE LIMITED,Shares,0.000890
+KPIT Technologies Ltd,Shares,0.000856
+Info Edge(India) Ltd.,Shares,0.000682
+ANGEL ONE LIMITED,Shares,0.000677
+Page Industries Ltd.,Shares,0.000676
+IndusInd Bank Ltd.,Shares,0.000672
+Ather Energy Limited,Shares,0.000608
+Havells India Limited,Shares,0.000587
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.000572
+PETRONET LNG LTD.,Shares,0.000539
+Derivative Positions,Derivatives,-68.633657

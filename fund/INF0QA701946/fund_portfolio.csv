@@ -1,0 +1,58 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 26.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 26.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:44.392255+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,26.875913
+Bharti Airtel  Ltd.,Shares,5.179523
+Mahindra & Mahindra Ltd.,Shares,4.994989
+Bajaj Auto Limited,Shares,4.742222
+Zydus Wellness Limited,Shares,3.948145
+TVS Motor Company Ltd.,Shares,2.770547
+Safari Industries (India) Ltd.,Shares,2.690236
+Hindustan Unilever Ltd.,Shares,2.254376
+Asian Paints Ltd.,Shares,2.212919
+Samvardhana Motherson International Limited,Shares,2.177223
+Thangamayil Jewellery Limited,Shares,2.114146
+Metro Brands Limited,Shares,1.951658
+Aditya Infotech Limited,Shares,1.885324
+Sona BLW Precision Forgings Limited,Shares,1.878597
+SENORES PHARMACEUTICALS LIMITED,Shares,1.852558
+Orient Electric Limited,Shares,1.787353
+ITC Ltd,Shares,1.743638
+Century Plyboards (India) Ltd.,Shares,1.670610
+Lenskart Solutions Limited,Shares,1.568302
+Indigo Paints Limited,Shares,1.482508
+Nestle India Ltd.,Shares,1.448842
+Exide Industries Ltd.,Shares,1.379725
+PIRAMAL PHARMA LIMITED,Shares,1.343342
+CCL Products (India) Ltd.,Shares,1.323997
+Berger Paints India Ltd,Shares,1.302393
+DLF LIMITED,Shares,1.277581
+Kajaria Ceramics Ltd,Shares,1.228563
+Devyani International Limited,Shares,1.215928
+Units of Other Schemes,Other funds,1.210756
+Greenply Industries Ltd,Shares,1.122622
+Amber Enterprises India Limited,Shares,1.038497
+United Spirits Limited,Shares,0.975747
+Maruti Suzuki India  Ltd.,Shares,0.972687
+Derivative Positions,Derivatives,0.963161
+Turtlemint Fintech Solutions Limited,Shares,0.918857
+Cera Sanitaryware Ltd.,Shares,0.902245
+Dixon Technologies (India) Limited,Shares,0.883718
+Balrampur Chini Mills Ltd.,Shares,0.868300
+Cash & Bank Balance,Cash and equivalents,0.797351
+CarTrade Tech Limited,Shares,0.760902
+Ganesha Ecosphere Limited,Shares,0.679380
+One 97 Communications Limited,Shares,0.578921
+Page Industries Ltd.,Shares,0.483978
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.465795
+La Opala RG Ltd.,Shares,0.269673
+Net Receivables / Payables,Cash and equivalents,-0.193748

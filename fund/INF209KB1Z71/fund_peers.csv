@@ -1,0 +1,31 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:33:28.487605+00:00
+fund,return_3y,volatility_3y
+UTI Nifty 500 Value 50 Index Fund,0.210920,0.205404
+Aditya Birla Sun Life Nifty Smallcap 50 Index Fund,0.196226,0.203724
+Axis Nifty Smallcap 50 Index Fund,0.195383,0.202112
+UTI - Nifty Next 50 Index Fund,0.173635,0.184460
+Axis Nifty Next 50 Index Fund,0.173399,0.182623
+Aditya Birla Sun Life Nifty Next 50 Index Fund,0.171589,0.184412
+HSBC NIFTY NEXT 50 Index Fund,0.169832,0.184600
+Axis Nifty Midcap 50 Index Fund,0.147654,0.178367
+Aditya Birla Sun Life Nifty Midcap 150 Index Fund,0.145374,0.171344
+Aditya Birla Sun Life Nifty 50 Equal Weight index Fund (this fund),0.109570,0.136219
+UTI Nifty50 Equal Weight Index Fund,0.108344,0.136193
+UTI Nifty 200 Momentum 30 Index Fund,0.101597,0.196811
+UTI Nifty Midcap 150 Quality 50 Index Fund,0.080889,0.154601
+UTI BSE Housing Index Fund,0.072278,0.188229
+UTI BSE Low Volatility Index Fund,0.068366,0.113618
+Axis Nifty 50 Index Fund,0.065948,0.131226
+HSBC NIFTY 50 Index Fund,0.065420,0.132174
+360 ONE ELSS Tax Saver Nifty 50 Index Fund,0.065055,0.131576
+UTI BSE Sensex Index Fund,0.047762,0.132511
+Axis Nifty IT Index Fund,-0.031567,0.221888

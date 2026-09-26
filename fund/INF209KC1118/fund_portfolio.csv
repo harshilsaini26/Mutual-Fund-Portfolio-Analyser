@@ -1,0 +1,49 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 16.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 16.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:30.260996+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,16.403054
+Marico Limited,Shares,4.520144
+Torrent Pharmaceuticals Ltd.,Shares,4.376107
+Nestle India Ltd.,Shares,4.293678
+Federal Bank Ltd.,Shares,4.071940
+Grasim Industries Ltd,Shares,4.046755
+State Bank Of India,Shares,3.577992
+Laurus Labs Limited,Shares,3.555725
+Sun Pharmaceutical Industries Ltd.,Shares,3.487186
+Hindalco Industries Ltd.,Shares,3.474417
+TATA STEEL LIMITED,Shares,2.977388
+Glenmark Pharmaceuticals ltd,Shares,2.935080
+Eicher Motors Ltd.,Shares,2.821561
+UltraTech Cement Ltd,Shares,2.770051
+Cummins India Ltd.,Shares,2.703698
+Navin Fluorine International Limited,Shares,2.664923
+Polycab India Limited,Shares,2.636186
+Aster DM Healthcare Limited,Shares,2.629666
+L&T Finance Limited,Shares,2.592714
+APL Apollo Tubes Limited,Shares,2.577400
+Bharat Heavy Electricals Ltd.,Shares,2.486078
+AIA Engineering Ltd.,Shares,2.394624
+Bharat Forge Ltd,Shares,2.381009
+Lupin Ltd,Shares,2.376253
+Zydus Lifesciences Limited,Shares,1.834785
+FSN E-Commerce Ventures Limited,Shares,1.690656
+Ather Energy Limited,Shares,1.433195
+Delhivery Limited,Shares,1.243919
+KEI Industries Ltd.,Shares,1.156640
+Bajaj Auto Limited,Shares,0.976975
+Steel Authority of India Ltd.,Shares,0.953598
+Alkem Laboratories Limited,Shares,0.835116
+National Aluminium Co. Ltd.,Shares,0.790642
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.469210
+Margin / Deposits,Cash and equivalents,0.245660
+Bank Of Baroda,Shares,0.000000
+Net Receivables / Payables,Cash and equivalents,-0.384025

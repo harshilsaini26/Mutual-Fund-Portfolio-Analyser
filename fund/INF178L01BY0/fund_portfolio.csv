@@ -1,0 +1,39 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 51.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 51.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:33.891220+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,51.590822
+Power Finance Corporation Ltd,Bonds and other debt,6.391348
+Government Securities,Bonds and other debt,4.180573
+REC LIMITED,Bonds and other debt,4.126687
+Bajaj Finance Limited,Bonds and other debt,3.752057
+Mahindra & Mahindra Financial Services Limited,Bonds and other debt,2.696897
+Net Receivables / Payables,Cash and equivalents,2.666081
+Lic Housing Finance Ltd.,Bonds and other debt,2.592605
+EMBASSY OFFICE PARKS REIT,Bonds and other debt,2.572527
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.208487
+Knowledge Realty Trust,Bonds and other debt,2.001108
+Larsen & Toubro Limited,Bonds and other debt,1.841307
+Housing &Urban Development Corporation Ltd.,Bonds and other debt,1.661750
+State Bank Of India,Bonds and other debt,1.633437
+L&T Finance Limited,Bonds and other debt,1.504080
+Bajaj Housing Finance Limited,Bonds and other debt,1.499255
+Indian Bank,Bonds and other debt,1.123960
+Tata Capital Limited,Bonds and other debt,1.006457
+Can Fin Homes Ltd.,Bonds and other debt,0.676055
+Hindustan Zinc Ltd.,Bonds and other debt,0.674252
+Brookfield India Real Estate Trust,Bonds and other debt,0.664178
+Aditya Birla Capital Ltd,Bonds and other debt,0.660865
+MINDSPACE BUSINESS PARKS REIT,Bonds and other debt,0.497459
+Units of Other Schemes,"REITs, InvITs and other",0.365396
+Canara Bank,Bonds and other debt,0.328820
+Bank Of Baroda,Bonds and other debt,0.328358
+AXIS Bank Ltd.,Bonds and other debt,0.327893
+HDFC Bank Ltd.,Bonds and other debt,0.326357
+HDB FINANCIAL SERVICES LIMITED,Bonds and other debt,0.100929

@@ -1,0 +1,69 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:44.246097+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,8.595281
+Units of Other Schemes,Other funds,8.594341
+HDFC Bank Ltd.,Shares,6.579411
+ICICI Bank Ltd.,Shares,6.062772
+Bharti Airtel  Ltd.,Shares,5.134477
+Reliance Industries Ltd,Shares,4.165505
+Bajaj Finance Limited,Shares,3.655377
+Divi's Laboratories Ltd.,Shares,3.482761
+Bajaj Auto Limited,Shares,3.021975
+Cash & Bank Balance,Cash and equivalents,2.888970
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,2.749751
+Hindustan Unilever Ltd.,Shares,2.618383
+State Bank Of India,Shares,2.562043
+TATA STEEL LIMITED,Shares,2.479367
+Larsen & Toubro Limited,Shares,2.253272
+Sun Pharmaceutical Industries Ltd.,Shares,2.234560
+UltraTech Cement Ltd,Shares,2.076574
+DLF LIMITED,Shares,2.046868
+AXIS Bank Ltd.,Shares,2.042081
+Infosys Ltd,Shares,1.553995
+ITC Ltd,Shares,1.553532
+Federal Bank Ltd.,Shares,1.375032
+RUBICON RESEARCH LIMITED,Shares,1.293249
+Jio Financial Services Limited,Shares,1.213332
+United Spirits Limited,Shares,1.162289
+JSW Steel Limited,Shares,1.078751
+RBL Bank Limited,Shares,1.073948
+HCL Technologies Ltd,Shares,1.041084
+Vedanta Aluminium Metal Limited,Shares,0.968979
+Hindustan Zinc Ltd.,Shares,0.917028
+Schaeffler India Limited,Shares,0.876798
+Asian Paints Ltd.,Shares,0.837133
+Aurobindo Pharma Ltd.,Shares,0.831852
+Steel Authority of India Ltd.,Shares,0.756988
+Max Financial Services Limited,Shares,0.716814
+Net Receivables / Payables,Cash and equivalents,0.658994
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.653540
+JSW CEMENT LIMITED,Shares,0.590814
+Government Securities,Bonds and other debt,0.560677
+Adani Power Limited,Shares,0.537953
+Hindalco Industries Ltd.,Shares,0.517196
+Canara Bank,Shares,0.497184
+Hindustan Copper Ltd.,Shares,0.493987
+Zydus Wellness Limited,Shares,0.487365
+OBEROI REALTY LIMITED,Shares,0.483776
+Bharat Electronics Ltd.,Shares,0.476716
+Grasim Industries Ltd,Shares,0.470126
+GE Vernova T&D India Limited,Shares,0.435155
+Wipro  Ltd.,Shares,0.409281
+SBI Life Insurance Company Limited,Shares,0.390436
+One 97 Communications Limited,Shares,0.336377
+Thangamayil Jewellery Limited,Shares,0.288374
+TVS Motor Company Ltd.,Shares,0.272138
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.263550
+Mahindra & Mahindra Ltd.,Shares,0.257172
+Hindustan Aeronautics Limited,Shares,0.228493
+Derivative Positions,Derivatives,0.196123

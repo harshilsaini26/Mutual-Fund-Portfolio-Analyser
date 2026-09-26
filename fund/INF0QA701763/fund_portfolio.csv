@@ -1,0 +1,75 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - 1 holding with a negative weight (written options or borrowing) are listed in the table and not drawn in the pictures.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:44.819697+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,8.714393
+ICICI Bank Ltd.,Shares,5.575181
+Divi's Laboratories Ltd.,Shares,3.909363
+HDFC Bank Ltd.,Shares,3.889238
+Sona BLW Precision Forgings Limited,Shares,3.435866
+Reliance Industries Ltd,Shares,3.219963
+Federal Bank Ltd.,Shares,3.049050
+UNO Minda Limited,Shares,2.945296
+Berger Paints India Ltd,Shares,2.852144
+State Bank Of India,Shares,2.776465
+Schaeffler India Limited,Shares,2.466578
+ITC Ltd,Shares,2.460829
+Vedanta Aluminium Metal Limited,Shares,2.405443
+Bajaj Auto Limited,Shares,2.291450
+PETRONET LNG LTD.,Shares,2.142866
+TATA STEEL LIMITED,Shares,2.012731
+RBL Bank Limited,Shares,2.011956
+Thermax Ltd.,Shares,1.875784
+Page Industries Ltd.,Shares,1.816556
+COFORGE LIMITED,Shares,1.799805
+MUTHOOT FINANCE LIMITED,Shares,1.601210
+Bharat Dynamics Limited,Shares,1.581032
+Linde India Limited,Shares,1.549283
+Bajaj Finserv Limited,Shares,1.544991
+SUNDARAM FINANCE LTD,Shares,1.531309
+PIRAMAL PHARMA LIMITED,Shares,1.483251
+JSW Steel Limited,Shares,1.479739
+Cash & Bank Balance,Cash and equivalents,1.456544
+Net Receivables / Payables,Cash and equivalents,1.411316
+Aurobindo Pharma Ltd.,Shares,1.375925
+Prestige Estates Projects Limited,Shares,1.314895
+GE Vernova T&D India Limited,Shares,1.285379
+Exide Industries Ltd.,Shares,1.240341
+Nuvama Wealth Management Limited,Shares,1.193931
+Zydus Wellness Limited,Shares,1.187882
+Timken India Ltd,Shares,1.175633
+One 97 Communications Limited,Shares,1.170083
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,1.102159
+Fortis Healthcare Ltd,Shares,0.934684
+Dixon Technologies (India) Limited,Shares,0.918290
+Gabriel India Ltd.,Shares,0.903467
+Blue Star Ltd,Shares,0.854483
+SWIGGY LIMITED,Shares,0.852664
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.767672
+Neuland Laboratories Limited.,Shares,0.748111
+Prudent Corporate Advisory Services Limited,Shares,0.737909
+Housing &Urban Development Corporation Ltd.,Shares,0.702919
+BSE Ltd.,Shares,0.695599
+JSW CEMENT LIMITED,Shares,0.688149
+Cera Sanitaryware Ltd.,Shares,0.686992
+Indo Tech Transformers Limited,Shares,0.601415
+Multi Commodity Exchange of India Ltd,Shares,0.579435
+Billionbrains Garage Ventures Limited,Shares,0.535818
+Infosys Ltd,Shares,0.525733
+Balkrishna Industries Ltd.,Shares,0.455247
+Onesource Specialty Pharma Limited,Shares,0.419394
+Sun Pharmaceutical Industries Ltd.,Shares,0.314272
+HITACHI ENERGY INDIA LIMITED,Shares,0.274131
+Persistent Systems Limited,Shares,0.268589
+Larsen & Toubro Limited,Shares,0.241407
+Thangamayil Jewellery Limited,Shares,0.177670
+Derivative Positions,Derivatives,-0.219910

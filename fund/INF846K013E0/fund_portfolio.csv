@@ -1,0 +1,111 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 14.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 14.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:40.734765+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,14.262755
+ICICI Bank Ltd.,Shares,3.573092
+HDFC Bank Ltd.,Shares,2.716648
+Sona BLW Precision Forgings Limited,Shares,2.478522
+Ather Energy Limited,Shares,2.140352
+Welspun Corp Limited,Shares,2.067170
+Apar Industries Ltd,Shares,2.065010
+Multi Commodity Exchange of India Ltd,Shares,2.027781
+TD Power Systems Ltd,Shares,1.702418
+Craftsman Automation Limited,Shares,1.670309
+Sansera Engineering Limited,Shares,1.568357
+AXIS Bank Ltd.,Shares,1.537601
+Mahindra & Mahindra Ltd.,Shares,1.525632
+Torrent Pharmaceuticals Ltd.,Shares,1.514313
+GE Vernova T&D India Limited,Shares,1.509548
+Larsen & Toubro Limited,Shares,1.457676
+Fortis Healthcare Ltd,Shares,1.444955
+Cash & Bank Balance,Cash and equivalents,1.443618
+Bharti Airtel  Ltd.,Shares,1.440552
+RBL Bank Limited,Shares,1.430506
+State Bank Of India,Shares,1.326541
+Sai Life Sciences Limited,Shares,1.251687
+PB Fintech Limited,Shares,1.239766
+Bajaj Finance Limited,Shares,1.222488
+Reliance Industries Ltd,Shares,1.195503
+Bharat Heavy Electricals Ltd.,Shares,1.165753
+Federal Bank Ltd.,Shares,1.158572
+Karur Vysya Bank Ltd.,Shares,1.147194
+Divi's Laboratories Ltd.,Shares,1.141996
+Premier Energies Limited,Shares,1.112030
+Samvardhana Motherson International Limited,Shares,1.042560
+TVS Motor Company Ltd.,Shares,1.024984
+InterGlobe Aviation Limited,Shares,1.005952
+PNB Housing Finance Limited,Shares,0.991670
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.961694
+FSN E-Commerce Ventures Limited,Shares,0.953169
+COFORGE LIMITED,Shares,0.908580
+Amber Enterprises India Limited,Shares,0.906433
+IndusInd Bank Ltd.,Shares,0.902824
+Laurus Labs Limited,Shares,0.894564
+Cholamandalam Investment and Finance Company Ltd,Shares,0.876451
+One 97 Communications Limited,Shares,0.875079
+City Union Bank Ltd,Shares,0.872244
+Lenskart Solutions Limited,Shares,0.842352
+Gland Pharma Limited,Shares,0.812022
+Glenmark Pharmaceuticals ltd,Shares,0.798313
+Sun Pharmaceutical Industries Ltd.,Shares,0.787576
+INDUS TOWERS LIMITED,Shares,0.752370
+Ujjivan Small Finance Bank Limited,Shares,0.741315
+Dixon Technologies (India) Limited,Shares,0.734739
+UltraTech Cement Ltd,Shares,0.707254
+Bharat Electronics Ltd.,Shares,0.700575
+Solar Industries India Limited,Shares,0.681728
+Marico Limited,Shares,0.676729
+Delhivery Limited,Shares,0.632408
+SWIGGY LIMITED,Shares,0.627960
+Cummins India Ltd.,Shares,0.594186
+The Phoenix Mills Ltd.,Shares,0.589714
+Global Health Limited,Shares,0.582891
+MTAR Technologies Limited,Shares,0.563448
+Vijaya Diagnostic Centre Limited,Shares,0.537736
+Berger Paints India Ltd,Shares,0.535220
+BSE Ltd.,Shares,0.532550
+Mphasis Limited,Shares,0.528372
+Azad Engineering Limited,Shares,0.525074
+CG Power and Industrial Solutions Limited,Shares,0.516826
+HealthCare Global Enterprises Limited,Shares,0.496539
+Karnataka Bank Ltd.,Shares,0.489268
+Billionbrains Garage Ventures Limited,Shares,0.483397
+DOMS Industries Limited,Shares,0.481120
+Pidilite Industries Ltd.,Shares,0.477475
+United Spirits Limited,Shares,0.463665
+Blue Star Ltd,Shares,0.424653
+KFin Technologies Limited,Shares,0.422118
+CCL Products (India) Ltd.,Shares,0.420682
+Varun Beverages Limited,Shares,0.417968
+Meesho Limited,Shares,0.403311
+KEI Industries Ltd.,Shares,0.391208
+Schaeffler India Limited,Shares,0.384128
+Triveni Turbine Limited,Shares,0.373600
+Carborundum Universal Ltd.,Shares,0.370058
+Krishna Institute of Medical Sciences Limited,Shares,0.366635
+Vishal Mega Mart Limited,Shares,0.364563
+Firstsource Solutions Ltd.,Shares,0.363809
+Tenneco Clean Air India Limited,Shares,0.349058
+PIRAMAL PHARMA LIMITED,Shares,0.342091
+Kirloskar Oil Engines Limited,Shares,0.330274
+Infosys Ltd,Shares,0.323332
+Capillary Technologies India Limited,Shares,0.322771
+Jubilant Foodworks Limited,Shares,0.290046
+Brigade Enterprises Limited,Shares,0.280240
+HCL Technologies Ltd,Shares,0.274597
+BIRLASOFT LIMITED,Shares,0.269773
+Navin Fluorine International Limited,Shares,0.265462
+TRAVEL FOOD SERVICES LIMITED,Shares,0.254197
+RateGain Travel Technologies Limited,Shares,0.207503
+Persistent Systems Limited,Shares,0.078055
+Awfis Space Solutions Limited,Shares,0.040781
+Net Receivables / Payables,Cash and equivalents,0.021716

@@ -1,0 +1,66 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 13.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 13.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:50.084273+00:00
+holding,kind,weight_pct
+ICICI Bank Ltd.,Shares,14.719018
+Unresolved Holdings,Shares,13.818957
+HDFC Bank Ltd.,Shares,10.231363
+AXIS Bank Ltd.,Shares,4.719658
+Bajaj Finance Limited,Shares,4.328545
+State Bank Of India,Shares,3.913268
+Cholamandalam Investment and Finance Company Ltd,Shares,3.145126
+One 97 Communications Limited,Shares,2.392514
+Max Financial Services Limited,Shares,2.243661
+Multi Commodity Exchange of India Ltd,Shares,1.831770
+Lic Housing Finance Ltd.,Shares,1.820642
+City Union Bank Ltd,Shares,1.807251
+TREPS / Repo / Reverse Repo,Cash and equivalents,1.749178
+IDFC FIRST BANK LIMITED,Shares,1.640659
+RBL Bank Limited,Shares,1.566407
+HDFC Asset Management Company Limited,Shares,1.512940
+POONAWALLA FINCORP LIMITED,Shares,1.284569
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,1.269316
+DCB Bank Limited,Shares,1.267151
+AAVAS Financiers Limited,Shares,1.207002
+Prudent Corporate Advisory Services Limited,Shares,1.195117
+ICICI Lombard General Insurance Company Limited,Shares,1.191998
+ANGEL ONE LIMITED,Shares,1.187151
+Yes Bank Ltd.,Shares,1.131199
+Can Fin Homes Ltd.,Shares,1.105468
+MUTHOOT FINANCE LIMITED,Shares,1.096158
+ICICI Prudential Life Insurance Company Limited,Shares,1.070658
+Jammu and Kashmir Bank Ltd.,Shares,1.052483
+Nuvama Wealth Management Limited,Shares,1.015650
+Ujjivan Small Finance Bank Limited,Shares,0.992093
+LIFE INSURANCE CORPORATION OF INDIA,Shares,0.930688
+BSE Ltd.,Shares,0.900307
+IndusInd Bank Ltd.,Shares,0.851830
+ICICI Prudential Asset Management Company Limited,Shares,0.837779
+OnEMI Technology Solutions Limited,Shares,0.779386
+Bajaj Finserv Limited,Shares,0.776882
+PB Fintech Limited,Shares,0.757281
+Karnataka Bank Ltd.,Shares,0.747872
+CHOLAMANDALAM FINANCIAL HOLDINGS LIMITED,Shares,0.719825
+Billionbrains Garage Ventures Limited,Shares,0.685772
+Star Health and Allied Insurance Company Limited,Shares,0.543450
+SBI Life Insurance Company Limited,Shares,0.527324
+Pine Labs Limited,Shares,0.525186
+HDB FINANCIAL SERVICES LIMITED,Shares,0.518592
+KFin Technologies Limited,Shares,0.495089
+UTI Asset Management Company Limited,Shares,0.426592
+Five-Star Business Finance Ltd.,Shares,0.390561
+Spandana Sphoorty Financial Limited,Shares,0.386516
+Turtlemint Fintech Solutions Limited,Shares,0.313101
+MAS Financial Services Limited,Shares,0.220085
+Margin / Deposits,Cash and equivalents,0.178192
+Karur Vysya Bank Ltd.,Shares,0.154849
+Cash & Bank Balance,Cash and equivalents,0.012643
+Net Receivables / Payables,Cash and equivalents,-0.186772

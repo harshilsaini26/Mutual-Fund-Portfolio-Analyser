@@ -1,0 +1,89 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 14.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 14.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:42.455854+00:00
+holding,kind,weight_pct
+Government Securities,Bonds and other debt,18.597322
+Unresolved Holdings,Shares,14.693997
+Reliance Industries Ltd,Shares,5.238002
+ICICI Bank Ltd.,Shares,5.114896
+HDFC Bank Ltd.,Shares,4.395618
+Cash & Bank Balance,Cash and equivalents,3.706858
+Bharti Airtel  Ltd.,Shares,2.657651
+State Bank Of India,Shares,2.566934
+Infosys Ltd,Shares,2.328600
+Mahindra & Mahindra Ltd.,Shares,2.244372
+Larsen & Toubro Limited,Shares,2.096558
+Bajaj Finance Limited,Shares,1.852997
+Solar Industries India Limited,Shares,1.473154
+Pidilite Industries Ltd.,Shares,1.431968
+Divi's Laboratories Ltd.,Shares,1.289509
+PNB Housing Finance Limited,Shares,1.178716
+AXIS Bank Ltd.,Shares,1.176138
+Fortis Healthcare Ltd,Shares,0.979515
+Hindustan Aeronautics Limited,Shares,0.962471
+The Phoenix Mills Ltd.,Shares,0.954197
+Premier Energies Limited,Shares,0.883669
+InterGlobe Aviation Limited,Shares,0.853817
+Sun Pharmaceutical Industries Ltd.,Shares,0.834534
+Samvardhana Motherson International Limited,Shares,0.810775
+Sona BLW Precision Forgings Limited,Shares,0.795941
+Dixon Technologies (India) Limited,Shares,0.782028
+United Spirits Limited,Shares,0.773853
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.756271
+Britannia Industries Ltd.,Shares,0.725229
+CG Power and Industrial Solutions Limited,Shares,0.721587
+Indian Hotels Co. Ltd,Shares,0.693308
+DOMS Industries Limited,Shares,0.676944
+Mankind Pharma Limited,Shares,0.639541
+Tata Consultancy Services Ltd.,Shares,0.610511
+Tata Power Co. Ltd,Shares,0.603824
+Varun Beverages Limited,Shares,0.592192
+Ather Energy Limited,Shares,0.585504
+Net Receivables / Payables,Cash and equivalents,0.581962
+Cipla Ltd.,Shares,0.526651
+SUNDARAM FINANCE LTD,Shares,0.523775
+Info Edge(India) Ltd.,Shares,0.506971
+PG Electroplast Limited,Shares,0.481483
+Cholamandalam Investment and Finance Company Ltd,Shares,0.479939
+Mphasis Limited,Shares,0.458120
+COFORGE LIMITED,Shares,0.442167
+Jubilant Foodworks Limited,Shares,0.433156
+REC LIMITED,Shares,0.420476
+PIRAMAL PHARMA LIMITED,Shares,0.413251
+Computer Age Management Services Limited,Shares,0.404920
+INDUS TOWERS LIMITED,Shares,0.398148
+Amber Enterprises India Limited,Shares,0.393189
+Awfis Space Solutions Limited,Shares,0.350713
+Berger Paints India Ltd,Shares,0.339521
+Kirloskar Oil Engines Limited,Shares,0.339053
+Gujarat Fluorochemicals Limited,Shares,0.337410
+Delhivery Limited,Shares,0.325253
+Bharat Electronics Ltd.,Shares,0.316753
+Hindustan Unilever Ltd.,Shares,0.312219
+RBL Bank Limited,Shares,0.297470
+Zydus Lifesciences Limited,Shares,0.287822
+ITC Ltd,Shares,0.284804
+Schaeffler India Limited,Shares,0.278088
+Exide Industries Ltd.,Shares,0.264515
+TATA STEEL LIMITED,Shares,0.263935
+Cyient DLM Limited,Shares,0.260988
+TVS Motor Company Ltd.,Shares,0.259557
+Hindalco Industries Ltd.,Shares,0.232283
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.227466
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,0.202942
+GE Vernova T&D India Limited,Shares,0.198833
+Maruti Suzuki India  Ltd.,Shares,0.191551
+HCL Technologies Ltd,Shares,0.154700
+Global Health Limited,Shares,0.144400
+Voltas Ltd.,Shares,0.138732
+Apar Industries Ltd,Shares,0.127157
+Avenue Supermarts Limited,Shares,0.120073
+Supreme Industries Ltd.,Shares,0.000553

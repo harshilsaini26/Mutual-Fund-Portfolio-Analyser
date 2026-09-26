@@ -1,0 +1,25 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:54.675448+00:00
+fund,return_3y,volatility_3y
+Axis CRISIL IBX SDL May 2027 Index Fund,0.075046,0.008144
+Mirae Asset Nifty SDL June 2028 Index Fund,0.075027,0.012991
+Mirae Asset Nifty SDL Jun 2027 Index Fund,0.074858,0.008215
+UTI CRISIL SDL Maturity June 2027 Index Fund,0.074765,0.008003
+UTI NIFTY SDL Plus AAA PSU Bond Apr 2028- 75 25 Index Fund,0.074180,0.011231
+Baroda BNP Paribas NIFTY SDL December 2028 Index Fund,0.074042,0.015869
+Axis Crisil IBX 50 50 Gilt Plus SDL September 2027 Index Fund,0.073880,0.007998
+HSBC CRISIL IBX 50 50 Gilt Plus SDL Apr 2028 Index Fund,0.073670,0.010054
+Invesco India Nifty G-sec Jul 2027 Index Fund,0.072983,0.008573
+HSBC CRISIL IBX Gilt June 2027 Index Fund,0.072803,0.008606
+Invesco India Nifty G-sec Sep 2032 Index Fund,0.072748,0.022860
+Axis Nifty SDL September 2026 Debt Index Fund,0.072096,0.006202
+Mirae Asset CRISIL IBX Gilt Index - April 2033 Index Fund (this fund),0.071280,0.023368
+UTI CRISIL SDL Maturity April 2033 Index Fund,0.069273,0.023642

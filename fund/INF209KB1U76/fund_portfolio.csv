@@ -1,0 +1,61 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 16.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 16.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:22.836034+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,16.930761
+ICICI Bank Ltd.,Shares,9.281076
+HDFC Bank Ltd.,Shares,4.124746
+Bharti Airtel  Ltd.,Shares,3.893453
+AXIS Bank Ltd.,Shares,3.685828
+TVS Motor Company Ltd.,Shares,3.376333
+State Bank Of India,Shares,3.126235
+Sona BLW Precision Forgings Limited,Shares,3.109431
+Infosys Ltd,Shares,2.833715
+Bajaj Finance Limited,Shares,2.674895
+Hindalco Industries Ltd.,Shares,2.627746
+V-Mart Retail Limited,Shares,2.420139
+Samvardhana Motherson International Limited,Shares,2.412497
+Mahindra & Mahindra Ltd.,Shares,2.321425
+AU Small Finance Bank Limited,Shares,2.029405
+Hindustan Unilever Ltd.,Shares,1.817175
+ICICI Prudential Asset Management Company Limited,Shares,1.727207
+COFORGE LIMITED,Shares,1.541251
+Tata Consultancy Services Ltd.,Shares,1.527363
+Hero MotoCorp Limited,Shares,1.515356
+RBL Bank Limited,Shares,1.482940
+Avenue Supermarts Limited,Shares,1.444883
+Torrent Pharmaceuticals Ltd.,Shares,1.398355
+Varun Beverages Limited,Shares,1.381690
+INDUS TOWERS LIMITED,Shares,1.341493
+ICICI Lombard General Insurance Company Limited,Shares,1.291204
+TATA CONSUMER PRODUCTS LIMITED,Shares,1.288703
+Mankind Pharma Limited,Shares,1.252060
+IndusInd Bank Ltd.,Shares,1.227666
+Aditya Birla Lifestyle Brands Limited,Shares,1.212951
+PNB Housing Finance Limited,Shares,1.152759
+TREPS / Repo / Reverse Repo,Cash and equivalents,1.119636
+Britannia Industries Ltd.,Shares,1.086858
+HCL Technologies Ltd,Shares,1.048128
+Voltas Ltd.,Shares,1.030272
+Schaeffler India Limited,Shares,1.003325
+Sun Pharmaceutical Industries Ltd.,Shares,0.995769
+Page Industries Ltd.,Shares,0.926417
+Godrej Consumer Products Ltd.,Shares,0.777448
+Lupin Ltd,Shares,0.755073
+SBI Life Insurance Company Limited,Shares,0.750674
+MAS Financial Services Limited,Shares,0.719500
+Cipla Ltd.,Shares,0.656393
+DALMIA BHARAT LIMITED,Shares,0.640453
+PITTI ENGINEERING LIMITED,Shares,0.626686
+InterGlobe Aviation Limited,Shares,0.429723
+Margin / Deposits,Cash and equivalents,0.086259
+Meesho Limited,Shares,0.019322
+Net Receivables / Payables,Cash and equivalents,-0.122677

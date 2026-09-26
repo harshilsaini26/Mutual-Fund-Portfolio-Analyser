@@ -1,0 +1,32 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:38.084271+00:00
+fund,return_3y,volatility_3y
+360 ONE Dynamic Term Fund,0.079233,0.017368
+Kotak Dynamic Term Fund,0.077743,0.024481
+Aditya Birla Sun Life Dynamic Term Fund,0.075737,0.020555
+ICICI Prudential Dynamic Term Fund,0.075645,0.016247
+BANDHAN Dynamic Term Fund,0.075597,0.033948
+Mahindra Manulife Dynamic Term Fund,0.074141,0.019895
+SBI DYNAMIC TERM FUND,0.073737,0.019837
+Axis Dynamic Term Fund,0.073494,0.019023
+UTI Dynamic Term Fund,0.072772,0.018001
+Nippon India Dynamic Term Fund,0.071108,0.018442
+PGIM India Dynamic Term Fund,0.069165,0.022322
+Mirae Asset Dynamic Term Fund,0.068684,0.008575
+JM Dynamic Term Fund,0.066855,0.018109
+HDFC Dynamic Term Fund,0.066080,0.023711
+HSBC Dynamic Term Fund,0.065853,0.022933
+Baroda BNP Paribas Dynamic Term Fund,0.061383,0.023616
+DSP Dynamic Term Fund,0.060706,0.029905
+ITI Dynamic Term Fund,0.060361,0.020273
+Groww Dynamic Term Fund (this fund),0.058151,0.020518
+Canara Robeco Dynamic Term Fund,0.055487,0.025735
+Union Dynamic Term Fund,0.050746,0.032792

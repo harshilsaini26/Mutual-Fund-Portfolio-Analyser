@@ -1,0 +1,59 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 11.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 11.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:41.895756+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,11.672056
+Multi Commodity Exchange of India Ltd,Shares,5.704990
+Laurus Labs Limited,Shares,5.632585
+Hindalco Industries Ltd.,Shares,4.955928
+Cummins India Ltd.,Shares,4.379933
+GE Vernova T&D India Limited,Shares,4.193435
+Adani Power Limited,Shares,4.107487
+BSE Ltd.,Shares,4.024884
+Federal Bank Ltd.,Shares,3.763808
+Bharat Heavy Electricals Ltd.,Shares,3.455410
+Bharat Forge Ltd,Shares,3.109892
+CG Power and Industrial Solutions Limited,Shares,2.900763
+HITACHI ENERGY INDIA LIMITED,Shares,2.841402
+Torrent Pharmaceuticals Ltd.,Shares,2.679930
+National Aluminium Co. Ltd.,Shares,2.638461
+Polycab India Limited,Shares,2.600113
+HFCL LIMITED,Shares,2.422087
+Ather Energy Limited,Shares,2.386415
+VODAFONE IDEA LIMITED,Shares,1.995525
+ABB India Limited,Shares,1.855010
+Welspun Corp Limited,Shares,1.796486
+Glenmark Pharmaceuticals ltd,Shares,1.662213
+KEI Industries Ltd.,Shares,1.628213
+Steel Authority of India Ltd.,Shares,1.607590
+Navin Fluorine International Limited,Shares,1.566233
+Apar Industries Ltd,Shares,1.405039
+Karur Vysya Bank Ltd.,Shares,1.357383
+Kirloskar Oil Engines Limited,Shares,1.250088
+Anand Rathi Wealth Limited,Shares,1.156727
+Hindustan Copper Ltd.,Shares,0.974799
+Thermax Ltd.,Shares,0.956851
+Sai Life Sciences Limited,Shares,0.929484
+Craftsman Automation Limited,Shares,0.770854
+Granules India Ltd.,Shares,0.633739
+Syrma SGS Technology Limited,Shares,0.611109
+Great Eastern Shipping Co. Ltd.,Shares,0.593775
+NETWEB TECHNOLOGIES INDIA LIMITED,Shares,0.514794
+R R KABEL LIMITED,Shares,0.482132
+NLC India Limited,Shares,0.466804
+SCHNEIDER ELECTRIC INFRASTRUCTURE LIMITED,Shares,0.456994
+Finolex Cables Ltd.,Shares,0.443729
+BELRISE INDUSTRIES LIMITED,Shares,0.429293
+RBL Bank Limited,Shares,0.392729
+Honasa Consumer Limited,Shares,0.304050
+Cash & Bank Balance,Cash and equivalents,0.263138
+Gujarat Mineral Development Corpora,Shares,0.191014
+Net Receivables / Payables,Cash and equivalents,-0.165374

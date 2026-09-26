@@ -1,0 +1,49 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 22.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 22.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:18.788167+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,22.754125
+Reliance Industries Ltd,Shares,10.849758
+Larsen & Toubro Limited,Shares,5.042195
+Mahindra & Mahindra Ltd.,Shares,4.443948
+Adani Enterprises Ltd.,Shares,4.214055
+Grasim Industries Ltd,Shares,4.166637
+Bajaj Finance Limited,Shares,3.938762
+Tube Investments of India Ltd,Shares,3.293259
+Welspun Corp Limited,Shares,3.175167
+Arvind Ltd.,Shares,2.487499
+JSW Steel Limited,Shares,2.478905
+Ambuja Cements Ltd.,Shares,2.238144
+Ceat Ltd.,Shares,2.212908
+Adani Ports and Special Economic Zone Ltd,Shares,2.212206
+SUNDARAM-CLAYTON LIMITED,Shares,2.071535
+CG Power and Industrial Solutions Limited,Shares,2.013331
+TATA STEEL LIMITED,Shares,1.992981
+Firstsource Solutions Ltd.,Shares,1.881739
+Godrej Properties Limited,Shares,1.515484
+Bharat Forge Ltd,Shares,1.436154
+Orient Electric Limited,Shares,1.315162
+Sonata Software Ltd.,Shares,1.238068
+Atul Limited.,Shares,1.237074
+Jubilant Foodworks Limited,Shares,1.174417
+Tata Consultancy Services Ltd.,Shares,1.125974
+TREPS / Repo / Reverse Repo,Cash and equivalents,1.105345
+Tata Chemicals Ltd,Shares,0.977256
+Adani Green Energy Limited,Shares,0.938047
+Kirloskar Brothers Ltd.,Shares,0.933949
+Kirloskar Pneumatic Co.Ltd.,Shares,0.931924
+Vedanta Aluminium Metal Limited,Shares,0.912922
+Finolex Industries Ltd.,Shares,0.893603
+JSW Energy Limited,Shares,0.831027
+JSW Infrastructure Limited,Shares,0.804629
+L&T Technology Services Limited,Shares,0.722821
+Carborundum Universal Ltd.,Shares,0.628004
+Net Receivables / Payables,Cash and equivalents,-0.189014

@@ -1,0 +1,70 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 30.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 30.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:35:33.310162+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,30.947048
+TREPS / Repo / Reverse Repo,Cash and equivalents,15.716214
+Government Securities,Bonds and other debt,14.270003
+Power Finance Corporation Ltd,Bonds and other debt,4.867226
+Lic Housing Finance Ltd.,Bonds and other debt,2.844044
+MUTHOOT FINANCE LIMITED,Bonds and other debt,2.674028
+HDFC Bank Ltd.,Shares,1.788872
+REC LIMITED,Bonds and other debt,1.782103
+ICICI Bank Ltd.,Shares,1.451654
+Adani Power Limited,Bonds and other debt,1.251414
+State Bank Of India,Shares,1.227886
+Net Receivables / Payables,Cash and equivalents,1.199625
+Bharti Airtel  Ltd.,Shares,1.077837
+Maruti Suzuki India  Ltd.,Shares,1.011087
+NTPC Limited,Shares,0.940655
+Hero MotoCorp Limited,Shares,0.897792
+Reliance Industries Ltd,Shares,0.869348
+AXIS Bank Ltd.,Shares,0.676851
+Divi's Laboratories Ltd.,Shares,0.619626
+Tech Mahindra Limited,Shares,0.581629
+Max Healthcare Institute Limited,Shares,0.562842
+Billionbrains Garage Ventures Limited,Shares,0.552253
+Britannia Industries Ltd.,Shares,0.538938
+Bagmane Prime Office REIT,Shares,0.492187
+Lenskart Solutions Limited,Shares,0.478915
+Torrent Pharmaceuticals Ltd.,Shares,0.476234
+INDUS TOWERS LIMITED,Shares,0.475321
+SWIGGY LIMITED,Shares,0.466724
+TATA STEEL LIMITED,Shares,0.447486
+Mphasis Limited,Shares,0.432637
+Bank of maharashtra,Shares,0.431902
+InterGlobe Aviation Limited,Shares,0.427842
+POONAWALLA FINCORP LIMITED,Shares,0.409700
+Indian Bank,Shares,0.400341
+Schaeffler India Limited,Shares,0.396897
+Fortis Healthcare Ltd,Shares,0.385904
+Bank Of Baroda,Shares,0.383560
+United Spirits Limited,Shares,0.373255
+Sun Pharmaceutical Industries Ltd.,Shares,0.361641
+Aster DM Healthcare Limited,Shares,0.358574
+NIPPON LIFE INDIA ASSET MANAGEMENT LIMITED,Shares,0.351211
+Radico Khaitan Ltd.,Shares,0.340522
+Units of Other Schemes,"REITs, InvITs and other",0.329693
+Century Plyboards (India) Ltd.,Shares,0.322921
+Infosys Ltd,Shares,0.311705
+V.S.T.Tillers Tractors Ltd.,Shares,0.292936
+Ashok Leyland Ltd.,Shares,0.275048
+UltraTech Cement Ltd,Shares,0.272146
+Indian Railway Finance Corporation,Bonds and other debt,0.269046
+ITC Ltd,Shares,0.203386
+Cholamandalam Investment and Finance Company Ltd,Shares,0.199015
+POWER GRID CORPORATION OF INDIA LIMITED,Bonds and other debt,0.197886
+IndusInd Bank Ltd.,Shares,0.188509
+Pokarna Ltd.,Shares,0.183051
+HDB FINANCIAL SERVICES LIMITED,Bonds and other debt,0.179887
+SUNDARAM FINANCE LTD,Bonds and other debt,0.174158
+LIFE INSURANCE CORPORATION OF INDIA,Shares,0.166740
+LG Electronics India Limited,Shares,0.109290
+Tenneco Clean Air India Limited,Shares,0.084755

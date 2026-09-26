@@ -1,0 +1,111 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 31.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 31.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - 1 holding with a negative weight (written options or borrowing) are listed in the table and not drawn in the pictures.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:33.831195+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,31.314567
+Net Receivables / Payables,Cash and equivalents,13.407805
+ICICI Bank Ltd.,Shares,6.083852
+HDFC Bank Ltd.,Shares,5.377206
+Reliance Industries Ltd,Shares,4.539610
+State Bank Of India,Shares,3.528249
+Government Securities,Bonds and other debt,3.065375
+Infosys Ltd,Shares,2.389143
+Bharti Airtel  Ltd.,Shares,2.335723
+Larsen & Toubro Limited,Shares,2.320024
+Mahindra & Mahindra Ltd.,Shares,2.285504
+Sun Pharmaceutical Industries Ltd.,Shares,1.895516
+AXIS Bank Ltd.,Shares,1.495715
+Bajaj Finance Limited,Shares,1.225040
+Cash & Bank Balance,Cash and equivalents,1.119979
+InterGlobe Aviation Limited,Shares,0.990860
+EMBASSY OFFICE PARKS REIT,"REITs, InvITs and other",0.918266
+The Phoenix Mills Ltd.,Shares,0.898133
+ITC Ltd,Shares,0.894439
+Samvardhana Motherson International Limited,Shares,0.887354
+SBI Life Insurance Company Limited,Shares,0.865083
+Hindustan Aeronautics Limited,Shares,0.826412
+Britannia Industries Ltd.,Shares,0.798122
+TVS Motor Company Ltd.,Shares,0.781900
+Indian Hotels Co. Ltd,Shares,0.731451
+PNB Housing Finance Limited,Shares,0.691172
+CG Power and Industrial Solutions Limited,Shares,0.683169
+United Spirits Limited,Shares,0.679684
+Sona BLW Precision Forgings Limited,Shares,0.679472
+Hindustan Unilever Ltd.,Shares,0.654869
+Tata Power Co. Ltd,Shares,0.641441
+DOMS Industries Limited,Shares,0.637674
+Pidilite Industries Ltd.,Shares,0.614498
+Grasim Industries Ltd,Shares,0.579996
+Bajaj Auto Limited,Shares,0.576745
+Vijaya Diagnostic Centre Limited,Shares,0.575747
+Premier Energies Limited,Shares,0.566206
+Maruti Suzuki India  Ltd.,Shares,0.561164
+Varun Beverages Limited,Shares,0.554488
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.551333
+TATA STEEL LIMITED,Shares,0.540948
+Dixon Technologies (India) Limited,Shares,0.536941
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.513338
+Asian Paints Ltd.,Shares,0.510984
+Divi's Laboratories Ltd.,Shares,0.407308
+Amber Enterprises India Limited,Shares,0.405614
+FSN E-Commerce Ventures Limited,Shares,0.392073
+INDUS TOWERS LIMITED,Shares,0.380040
+LG Electronics India Limited,Shares,0.379036
+Mphasis Limited,Shares,0.372908
+Computer Age Management Services Limited,Shares,0.363069
+Mankind Pharma Limited,Shares,0.353830
+COFORGE LIMITED,Shares,0.347936
+Jubilant Foodworks Limited,Shares,0.344873
+Info Edge(India) Ltd.,Shares,0.340319
+RBL Bank Limited,Shares,0.339954
+UltraTech Cement Ltd,Shares,0.325593
+Torrent Pharmaceuticals Ltd.,Shares,0.324602
+REC LIMITED,Shares,0.321938
+Delhivery Limited,Shares,0.317297
+Cipla Ltd.,Shares,0.299581
+Knowledge Realty Trust,"REITs, InvITs and other",0.298171
+PIRAMAL PHARMA LIMITED,Shares,0.290128
+Bharat Electronics Ltd.,Shares,0.284114
+Bajaj Finserv Limited,Shares,0.242996
+Eicher Motors Ltd.,Shares,0.236367
+Exide Industries Ltd.,Shares,0.217146
+Vishal Mega Mart Limited,Shares,0.210611
+Hero MotoCorp Limited,Shares,0.209745
+Tata Consultancy Services Ltd.,Shares,0.209226
+Tenneco Clean Air India Limited,Shares,0.208593
+Fortis Healthcare Ltd,Shares,0.202039
+Voltas Ltd.,Shares,0.183090
+Hindalco Industries Ltd.,Shares,0.161286
+Multi Commodity Exchange of India Ltd,Shares,0.159205
+GE Vernova T&D India Limited,Shares,0.149302
+UNO Minda Limited,Shares,0.137214
+Federal Bank Ltd.,Shares,0.135636
+DLF LIMITED,Shares,0.124933
+Adani Ports and Special Economic Zone Ltd,Shares,0.124281
+PETRONET LNG LTD.,Shares,0.119468
+HCL Technologies Ltd,Shares,0.114763
+Avenue Supermarts Limited,Shares,0.104088
+Awfis Space Solutions Limited,Shares,0.096413
+Bharat Heavy Electricals Ltd.,Shares,0.078757
+Bank Of Baroda,Shares,0.038207
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,0.028717
+IndusInd Bank Ltd.,Shares,0.025972
+ICICI Prudential Life Insurance Company Limited,Shares,0.022443
+PG Electroplast Limited,Shares,0.020441
+Godrej Properties Limited,Shares,0.015362
+Crompton Greaves Consumer Electricals Limited,Shares,0.006611
+Glenmark Pharmaceuticals ltd,Shares,0.004849
+Coal India Limited,Shares,0.003876
+Cholamandalam Investment and Finance Company Ltd,Shares,0.000954
+Supreme Industries Ltd.,Shares,0.000511
+Cummins India Ltd.,Shares,0.000159
+Derivative Positions,Derivatives,-12.806842

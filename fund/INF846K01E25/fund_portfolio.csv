@@ -1,0 +1,97 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 34.2% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 34.2% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:33.397219+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,34.196967
+ICICI Bank Ltd.,Shares,5.071171
+Reliance Industries Ltd,Shares,4.862131
+HDFC Bank Ltd.,Shares,4.347141
+Cash & Bank Balance,Cash and equivalents,3.286208
+Bharti Airtel  Ltd.,Shares,2.709314
+State Bank Of India,Shares,2.529606
+Infosys Ltd,Shares,2.300255
+Mahindra & Mahindra Ltd.,Shares,2.221333
+Larsen & Toubro Limited,Shares,2.084212
+Bajaj Finance Limited,Shares,1.849452
+Divi's Laboratories Ltd.,Shares,1.287572
+PNB Housing Finance Limited,Shares,1.180464
+AXIS Bank Ltd.,Shares,1.141819
+DOMS Industries Limited,Shares,1.027147
+Sansera Engineering Limited,Shares,1.011100
+Premier Energies Limited,Shares,0.987482
+Hindustan Aeronautics Limited,Shares,0.958148
+The Phoenix Mills Ltd.,Shares,0.925885
+Sun Pharmaceutical Industries Ltd.,Shares,0.832092
+InterGlobe Aviation Limited,Shares,0.828891
+Sona BLW Precision Forgings Limited,Shares,0.817724
+Samvardhana Motherson International Limited,Shares,0.813999
+Krishna Institute of Medical Sciences Limited,Shares,0.802187
+Dixon Technologies (India) Limited,Shares,0.797545
+Net Receivables / Payables,Cash and equivalents,0.742112
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.730823
+Britannia Industries Ltd.,Shares,0.717780
+CG Power and Industrial Solutions Limited,Shares,0.703378
+Indian Hotels Co. Ltd,Shares,0.686896
+Mankind Pharma Limited,Shares,0.636595
+Pidilite Industries Ltd.,Shares,0.616062
+Tata Power Co. Ltd,Shares,0.615458
+FSN E-Commerce Ventures Limited,Shares,0.596991
+Tata Consultancy Services Ltd.,Shares,0.596529
+Varun Beverages Limited,Shares,0.587347
+Ather Energy Limited,Shares,0.575351
+SBI Life Insurance Company Limited,Shares,0.536977
+Cholamandalam Investment and Finance Company Ltd,Shares,0.462569
+Cipla Ltd.,Shares,0.450097
+Jubilant Foodworks Limited,Shares,0.427485
+PG Electroplast Limited,Shares,0.421837
+United Spirits Limited,Shares,0.413490
+COFORGE LIMITED,Shares,0.412247
+PIRAMAL PHARMA LIMITED,Shares,0.410058
+Mphasis Limited,Shares,0.409351
+Computer Age Management Services Limited,Shares,0.401569
+INDUS TOWERS LIMITED,Shares,0.395140
+REC LIMITED,Shares,0.389940
+Amber Enterprises India Limited,Shares,0.370142
+Info Edge(India) Ltd.,Shares,0.365418
+Awfis Space Solutions Limited,Shares,0.339890
+Berger Paints India Ltd,Shares,0.337042
+Kirloskar Oil Engines Limited,Shares,0.336458
+Gujarat Fluorochemicals Limited,Shares,0.334949
+Torrent Pharmaceuticals Ltd.,Shares,0.328200
+Government Securities,Bonds and other debt,0.325400
+Delhivery Limited,Shares,0.322742
+Bharat Electronics Ltd.,Shares,0.311915
+Vijaya Diagnostic Centre Limited,Shares,0.307294
+RBL Bank Limited,Shares,0.295176
+ITC Ltd,Shares,0.287584
+EMBASSY OFFICE PARKS REIT,"REITs, InvITs and other",0.279897
+VOLTAMP TRANSFORMERS LIMITED,Shares,0.271945
+Hindustan Unilever Ltd.,Shares,0.271578
+Exide Industries Ltd.,Shares,0.262606
+Cyient DLM Limited,Shares,0.258984
+TATA STEEL LIMITED,Shares,0.242339
+Hindalco Industries Ltd.,Shares,0.235651
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.223431
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,0.200866
+GE Vernova T&D India Limited,Shares,0.194810
+Maruti Suzuki India  Ltd.,Shares,0.190039
+Zydus Lifesciences Limited,Shares,0.188605
+Schaeffler India Limited,Shares,0.160121
+Global Health Limited,Shares,0.143292
+HCL Technologies Ltd,Shares,0.142327
+Voltas Ltd.,Shares,0.137665
+Avenue Supermarts Limited,Shares,0.122862
+Apar Industries Ltd,Shares,0.121876
+Clean Science and Technology Limited,Shares,0.102662
+Bajaj Finserv Limited,Shares,0.070549
+Oil And Natural Gas Corporation Ltd,Shares,0.061570
+Suryoday Small Finance Bank Limited,Shares,0.047658
+Supreme Industries Ltd.,Shares,0.000530

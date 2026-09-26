@@ -1,0 +1,42 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:24.588259+00:00
+fund,return_3y,volatility_3y
+BANK OF INDIA OVERNIGHT FUND,0.061961,0.002184
+quant Overnight Fund,0.061106,0.001844
+Axis Overnight Fund,0.060911,0.001180
+Tata Overnight Fund,0.060889,0.001130
+Bajaj Finserv Overnight Fund,0.060784,0.001362
+Nippon India Overnight Fund,0.060763,0.001187
+Mirae Asset Overnight Fund,0.060710,0.001090
+Baroda BNP Paribas Overnight Fund,0.060671,0.001586
+Kotak Overnight Fund,0.060646,0.001159
+BANDHAN Overnight Fund,0.060603,0.001140
+HSBC Overnight Fund,0.060595,0.001141
+Invesco India Overnight Fund (this fund),0.060592,0.001177
+LIC MF Overnight Fund,0.060590,0.001018
+UTI - Overnight Fund,0.060589,0.000988
+DSP Overnight Fund,0.060584,0.001196
+Union Overnight Fund,0.060560,0.001905
+ADITYA BIRLA SUN LIFE OVERNIGHT FUND,0.060555,0.001034
+Franklin India Overnight Fund,0.060538,0.001091
+Mahindra Manulife Overnight Fund,0.060518,0.002063
+ICICI Prudential Overnight Fund,0.060466,0.001041
+Sundaram Overnight Fund,0.060392,0.001099
+SBI OVERNIGHT FUND,0.060218,0.000896
+Edelweiss Overnight Fund,0.060096,0.000857
+HDFC Overnight Fund,0.060063,0.001016
+PGIM India Overnight Fund,0.060008,0.000817
+NJ Overnight Fund,0.059871,0.001762
+Groww Overnight Fund,0.059826,0.001270
+Canara Robeco Overnight Fund,0.059796,0.001951
+JM Overnight Fund,0.059430,0.001188
+Samco Overnight Fund,0.058235,0.001367
+ITI Overnight Fund,0.058175,0.001380

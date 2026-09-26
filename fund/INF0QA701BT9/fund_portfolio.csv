@@ -1,0 +1,56 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.0% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.0% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - 1 holding with a negative weight (written options or borrowing) are listed in the table and not drawn in the pictures.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:44.506480+00:00
+holding,kind,weight_pct
+Net Receivables / Payables,Cash and equivalents,46.347322
+Units of Other Schemes,Other funds,22.252282
+Unresolved Holdings,Shares,8.030027
+ICICI Bank Ltd.,Shares,6.861149
+Cash & Bank Balance,Cash and equivalents,5.282495
+ITC Ltd,Shares,4.757268
+HDFC Bank Ltd.,Shares,4.453529
+EMBASSY OFFICE PARKS REIT,"REITs, InvITs and other",4.019473
+AXIS Bank Ltd.,Shares,3.097353
+Bajaj Finserv Limited,Shares,3.054245
+Multi Commodity Exchange of India Ltd,Shares,2.653387
+DLF LIMITED,Shares,2.439580
+Federal Bank Ltd.,Shares,2.430166
+Hindustan Aeronautics Limited,Shares,2.319670
+Torrent Pharmaceuticals Ltd.,Shares,2.275571
+Hindalco Industries Ltd.,Shares,2.113295
+Bharat Electronics Ltd.,Shares,1.755794
+Elantas Beck India Ltd,Shares,1.678992
+Solar Industries India Limited,Shares,1.494419
+INDUS TOWERS LIMITED,Shares,1.473856
+UltraTech Cement Ltd,Shares,1.463699
+Timken India Ltd,Shares,1.429509
+Jio Financial Services Limited,Shares,1.405230
+Ingersoll-Rand (India) Ltd.,Shares,1.145837
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,1.116603
+JSW Steel Limited,Shares,1.093315
+ZF Commercial Vehicle Control Systems India Limited,Shares,1.039801
+Power Finance Corporation Ltd,Shares,0.974891
+Schaeffler India Limited,Shares,0.957796
+Sun Pharmaceutical Industries Ltd.,Shares,0.913201
+Oil And Natural Gas Corporation Ltd,Shares,0.775205
+Adani Ports and Special Economic Zone Ltd,Shares,0.749935
+Bandhan Bank Limited,Shares,0.729124
+Hindustan Unilever Ltd.,Shares,0.700385
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,0.569078
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.322816
+Larsen & Toubro Limited,Shares,0.230406
+Cipla Ltd.,Shares,0.200676
+Cummins India Ltd.,Shares,0.189775
+Infosys Ltd,Shares,0.178627
+Tata Consultancy Services Ltd.,Shares,0.166487
+Reliance Industries Ltd,Shares,0.158311
+Derivative Positions,Derivatives,-45.300580

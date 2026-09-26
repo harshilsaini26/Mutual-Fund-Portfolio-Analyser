@@ -1,0 +1,92 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 12.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 12.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:42.753032+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,12.256509
+Government Securities,Bonds and other debt,10.452341
+Cash & Bank Balance,Cash and equivalents,9.390511
+ICICI Bank Ltd.,Shares,5.594722
+Reliance Industries Ltd,Shares,5.231317
+HDFC Bank Ltd.,Shares,4.771518
+Bharti Airtel  Ltd.,Shares,2.787736
+State Bank Of India,Shares,2.568533
+Infosys Ltd,Shares,2.317996
+Mahindra & Mahindra Ltd.,Shares,2.245420
+Larsen & Toubro Limited,Shares,2.105222
+Bajaj Finance Limited,Shares,1.871512
+Vijaya Diagnostic Centre Limited,Shares,1.807332
+Apar Industries Ltd,Shares,1.720037
+Pidilite Industries Ltd.,Shares,1.434898
+Divi's Laboratories Ltd.,Shares,1.291011
+PNB Housing Finance Limited,Shares,1.177546
+AXIS Bank Ltd.,Shares,1.171820
+Sansera Engineering Limited,Shares,1.013566
+Fortis Healthcare Ltd,Shares,0.981388
+Hindustan Aeronautics Limited,Shares,0.967336
+The Phoenix Mills Ltd.,Shares,0.963261
+Dixon Technologies (India) Limited,Shares,0.877969
+United Spirits Limited,Shares,0.871225
+Premier Energies Limited,Shares,0.847723
+InterGlobe Aviation Limited,Shares,0.840627
+Sun Pharmaceutical Industries Ltd.,Shares,0.838695
+Sona BLW Precision Forgings Limited,Shares,0.818848
+Samvardhana Motherson International Limited,Shares,0.805183
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.781822
+Britannia Industries Ltd.,Shares,0.723122
+CG Power and Industrial Solutions Limited,Shares,0.720734
+Abbott India Ltd.,Shares,0.697408
+DOMS Industries Limited,Shares,0.694774
+Indian Hotels Co. Ltd,Shares,0.690699
+Mankind Pharma Limited,Shares,0.669165
+Varun Beverages Limited,Shares,0.630313
+Ather Energy Limited,Shares,0.628626
+Tata Power Co. Ltd,Shares,0.612713
+Tata Consultancy Services Ltd.,Shares,0.573720
+Cipla Ltd.,Shares,0.555875
+SUNDARAM FINANCE LTD,Shares,0.546074
+SBI Life Insurance Company Limited,Shares,0.539084
+PG Electroplast Limited,Shares,0.505149
+Mphasis Limited,Shares,0.484845
+Cholamandalam Investment and Finance Company Ltd,Shares,0.464962
+REC LIMITED,Shares,0.451051
+Jubilant Foodworks Limited,Shares,0.433311
+Awfis Space Solutions Limited,Shares,0.427058
+PIRAMAL PHARMA LIMITED,Shares,0.414307
+Info Edge(India) Ltd.,Shares,0.405700
+Computer Age Management Services Limited,Shares,0.405208
+Amber Enterprises India Limited,Shares,0.399904
+INDUS TOWERS LIMITED,Shares,0.399166
+Hindustan Unilever Ltd.,Shares,0.345982
+VOLTAMP TRANSFORMERS LIMITED,Shares,0.345279
+Berger Paints India Ltd,Shares,0.340361
+Kirloskar Oil Engines Limited,Shares,0.339764
+Gujarat Fluorochemicals Limited,Shares,0.338148
+Delhivery Limited,Shares,0.326099
+ITC Ltd,Shares,0.313734
+Bharat Electronics Ltd.,Shares,0.309307
+RBL Bank Limited,Shares,0.298207
+Zydus Lifesciences Limited,Shares,0.293218
+Schaeffler India Limited,Shares,0.282785
+Net Receivables / Payables,Cash and equivalents,0.278886
+ICICI Prudential Life Insurance Company Limited,Shares,0.267750
+Exide Industries Ltd.,Shares,0.265186
+Hindalco Industries Ltd.,Shares,0.240280
+TATA STEEL LIMITED,Shares,0.238418
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.222399
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,0.200655
+Maruti Suzuki India  Ltd.,Shares,0.191767
+GE Vernova T&D India Limited,Shares,0.190678
+Avenue Supermarts Limited,Shares,0.187692
+HCL Technologies Ltd,Shares,0.154882
+Voltas Ltd.,Shares,0.139039
+COFORGE LIMITED,Shares,0.010960
+RITES Limited,Shares,0.001300
+Supreme Industries Ltd.,Shares,0.000632

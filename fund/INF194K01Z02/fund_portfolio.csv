@@ -1,0 +1,65 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 28.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 28.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - 1 holding with a negative weight (written options or borrowing) are listed in the table and not drawn in the pictures.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:49.980040+00:00
+holding,kind,weight_pct
+Margin / Deposits,Cash and equivalents,46.096551
+Unresolved Holdings,Bonds and other debt,28.402034
+Units of Other Schemes,Other funds,6.966172
+AXIS Bank Ltd.,Shares,3.870142
+Government Securities,Bonds and other debt,3.670453
+HDFC Bank Ltd.,Shares,3.658947
+TREPS / Repo / Reverse Repo,Cash and equivalents,3.290786
+Reliance Industries Ltd,Shares,3.223123
+Larsen & Toubro Limited,Shares,2.954452
+Canara Bank,Shares,2.929293
+Pidilite Industries Ltd.,Shares,2.913415
+Bharti Airtel  Ltd.,Shares,2.901568
+ICICI Bank Ltd.,Shares,2.340972
+State Bank Of India,Shares,2.303623
+ITC Ltd,Shares,2.148684
+Grasim Industries Ltd,Shares,1.914479
+Sun Pharmaceutical Industries Ltd.,Shares,1.910693
+Nestle India Ltd.,Shares,1.891200
+Bajaj Finserv Limited,Shares,1.888465
+Maruti Suzuki India  Ltd.,Shares,1.817040
+Aurobindo Pharma Ltd.,Shares,1.337908
+Punjab National Bank,Shares,1.227718
+CG Power and Industrial Solutions Limited,Shares,1.198186
+SBI Life Insurance Company Limited,Shares,1.071973
+TATA STEEL LIMITED,Shares,1.064986
+Tata Power Co. Ltd,Shares,0.970943
+TVS Motor Company Ltd.,Shares,0.946443
+Asian Paints Ltd.,Shares,0.819643
+Hindalco Industries Ltd.,Shares,0.798685
+Bajaj Auto Limited,Shares,0.796438
+Tata Consultancy Services Ltd.,Shares,0.761654
+Britannia Industries Ltd.,Shares,0.710455
+UltraTech Cement Ltd,Shares,0.699781
+HCL Technologies Ltd,Shares,0.681631
+Cipla Ltd.,Shares,0.671397
+JSW Steel Limited,Shares,0.668416
+Hindustan Unilever Ltd.,Shares,0.667317
+Bajaj Finance Limited,Shares,0.658401
+Wipro  Ltd.,Shares,0.647678
+Torrent Pharmaceuticals Ltd.,Shares,0.643110
+Infosys Ltd,Shares,0.614409
+Dabur India Ltd.,Shares,0.546771
+Dr. Reddy's Laboratories Ltd.,Shares,0.540737
+Bharat Electronics Ltd.,Shares,0.476079
+Adani Ports and Special Economic Zone Ltd,Shares,0.443616
+Glenmark Pharmaceuticals ltd,Shares,0.227170
+Container Corporation Of India Ltd.,Shares,0.093775
+ICICI Prudential Life Insurance Company Limited,Shares,0.058405
+Cash & Bank Balance,Cash and equivalents,0.004739
+Kwality Wall’s (India) Limited,Shares,0.004470
+Net Receivables / Payables,Cash and equivalents,-1.488157
+Derivative Positions,Derivatives,-45.656869

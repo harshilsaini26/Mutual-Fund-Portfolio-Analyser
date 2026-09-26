@@ -1,0 +1,84 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 13.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 13.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:45.253816+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,13.644159
+Bharti Airtel  Ltd.,Shares,4.916412
+HDFC Bank Ltd.,Shares,4.459954
+Schaeffler India Limited,Shares,2.992987
+Federal Bank Ltd.,Shares,2.858283
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,2.836842
+DLF LIMITED,Shares,2.542833
+Zydus Wellness Limited,Shares,2.519821
+Aurobindo Pharma Ltd.,Shares,2.484465
+Max Financial Services Limited,Shares,2.344215
+Vedanta Aluminium Metal Limited,Shares,2.266130
+Sterlite Technologies Limited.,Shares,2.258050
+ICICI Bank Ltd.,Shares,2.207971
+Larsen & Toubro Limited,Shares,2.195713
+Steel Authority of India Ltd.,Shares,2.141260
+Bajaj Auto Limited,Shares,2.046825
+AXIS Bank Ltd.,Shares,1.896440
+HEG Ltd.,Shares,1.891937
+RBL Bank Limited,Shares,1.885907
+Sona BLW Precision Forgings Limited,Shares,1.768049
+TATA STEEL LIMITED,Shares,1.671823
+UltraTech Cement Ltd,Shares,1.580714
+Asian Paints Ltd.,Shares,1.565364
+Neuland Laboratories Limited.,Shares,1.417145
+Cash & Bank Balance,Cash and equivalents,1.244190
+Dixon Technologies (India) Limited,Shares,1.213313
+Balrampur Chini Mills Ltd.,Shares,1.185988
+Prestige Estates Projects Limited,Shares,1.178865
+National Aluminium Co. Ltd.,Shares,1.139399
+Exide Industries Ltd.,Shares,1.129197
+Redington Limited,Shares,1.123902
+Samvardhana Motherson International Limited,Shares,1.085326
+KNR Constructions Limited,Shares,1.039738
+Devyani International Limited,Shares,0.991744
+Ujjivan Small Finance Bank Limited,Shares,0.924984
+Hindustan Copper Ltd.,Shares,0.910518
+Bharat Dynamics Limited,Shares,0.899966
+Restaurant Brands Asia Limited,Shares,0.827887
+VODAFONE IDEA LIMITED,Shares,0.782427
+ANGEL ONE LIMITED,Shares,0.775164
+RHI MAGNESITA INDIA LIMITED,Shares,0.771501
+BSE Ltd.,Shares,0.744986
+CarTrade Tech Limited,Shares,0.713655
+Nitin Spinners Ltd.,Shares,0.689931
+Century Plyboards (India) Ltd.,Shares,0.686324
+Motherson Sumi Wiring India Limited,Shares,0.680668
+Gokaldas Exports Ltd,Shares,0.663772
+EPL LIMITED,Shares,0.636061
+Page Industries Ltd.,Shares,0.628582
+MTAR Technologies Limited,Shares,0.619478
+The Ramco Cements Limited,Shares,0.586190
+VOLTAMP TRANSFORMERS LIMITED,Shares,0.525878
+SUNDARAM FINANCE LTD,Shares,0.519841
+Tenneco Clean Air India Limited,Shares,0.505841
+COFORGE LIMITED,Shares,0.487185
+JK Lakshmi Cement Limited,Shares,0.458486
+Units of Other Schemes,Other funds,0.453842
+PNC Infratech Limited,Shares,0.451032
+Welspun Corp Limited,Shares,0.447640
+Hindustan Zinc Ltd.,Shares,0.444885
+GARWARE TECHNICAL FIBRES LIMITED,Shares,0.430155
+Clean Max Enviro Energy Solutions Limited,Shares,0.418597
+Meesho Limited,Shares,0.413315
+Five-Star Business Finance Ltd.,Shares,0.378567
+Housing &Urban Development Corporation Ltd.,Shares,0.335058
+Mold-Tek Packaging Limited,Shares,0.277586
+Thangamayil Jewellery Limited,Shares,0.249016
+La Opala RG Ltd.,Shares,0.237593
+Net Receivables / Payables,Cash and equivalents,0.234562
+Whirlpool of India Ltd,Shares,0.221832
+G R Infraprojects Limited,Shares,0.157722
+Derivative Positions,Derivatives,0.084312

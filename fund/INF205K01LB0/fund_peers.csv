@@ -1,0 +1,41 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:23.194116+00:00
+fund,return_3y,volatility_3y
+Invesco India Large Cap Fund (this fund),0.137963,0.143723
+quant Large Cap Fund,0.136605,0.159359
+Taurus Large Cap Fund,0.132070,0.138257
+BANK OF INDIA LARGE CAP FUND,0.129263,0.151059
+WhiteOak Capital Large Cap Fund,0.128071,0.133806
+BANDHAN LARGE CAP FUND,0.124667,0.134138
+BARODA BNP PARIBAS LARGE CAP FUND,0.113291,0.131581
+ITI Large Cap Fund,0.111371,0.154932
+Nippon India Large Cap Fund,0.107527,0.135809
+DSP Large Cap Fund,0.105418,0.122233
+JM Large Cap Fund,0.104664,0.149893
+ICICI Prudential Large Cap Fund (erstwhile Bluechip Fund),0.104282,0.125957
+Groww Large Cap Fund,0.103454,0.138245
+Edelweiss Large Cap Fund,0.100958,0.131133
+Canara Robeco Large Cap Fund,0.099935,0.130869
+HSBC Large Cap Fund,0.099793,0.141897
+Kotak Large Cap Fund,0.099427,0.131558
+Tata Large Cap Fund,0.097884,0.138690
+Franklin India Large Cap Fund,0.094004,0.127722
+Aditya Birla Sun Life Large Cap Fund,0.092736,0.129655
+SBI Large Cap Fund,0.090536,0.125061
+Axis Large Cap Fund,0.087633,0.126915
+HDFC Large Cap Fund,0.087140,0.134713
+Mirae Asset Large Cap Fund,0.083539,0.132531
+Mahindra Manulife Large Cap Fund,0.081143,0.129729
+LIC MF Large Cap Fund,0.080204,0.138318
+PGIM India Large Cap Fund,0.074875,0.129660
+Union Largecap Fund,0.074291,0.137845
+Sundaram Large Cap Fund ( Formerly Know as Sundaram Blue Chip Fund),0.073977,0.127865
+UTI - Large Cap Fund,0.069490,0.124764

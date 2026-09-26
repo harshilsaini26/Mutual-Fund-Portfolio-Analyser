@@ -1,0 +1,96 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 13.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 13.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:40.997468+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,13.853895
+HDFC Bank Ltd.,Shares,8.008566
+ICICI Bank Ltd.,Shares,7.683204
+Reliance Industries Ltd,Shares,6.363541
+Bharti Airtel  Ltd.,Shares,4.064176
+Larsen & Toubro Limited,Shares,3.492192
+State Bank Of India,Shares,3.231917
+Infosys Ltd,Shares,2.933432
+AXIS Bank Ltd.,Shares,2.753952
+Mahindra & Mahindra Ltd.,Shares,2.161342
+Bajaj Finance Limited,Shares,2.089715
+ITC Ltd,Shares,1.816750
+Tata Consultancy Services Ltd.,Shares,1.806939
+Sun Pharmaceutical Industries Ltd.,Shares,1.550263
+Maruti Suzuki India  Ltd.,Shares,1.303602
+Hindustan Unilever Ltd.,Shares,1.287498
+TATA STEEL LIMITED,Shares,1.124046
+Bharat Electronics Ltd.,Shares,1.094971
+Hindalco Industries Ltd.,Shares,1.084522
+HCL Technologies Ltd,Shares,1.020469
+UltraTech Cement Ltd,Shares,0.999452
+Bajaj Auto Limited,Shares,0.990960
+Grasim Industries Ltd,Shares,0.938202
+JSW Steel Limited,Shares,0.904748
+Divi's Laboratories Ltd.,Shares,0.887468
+Asian Paints Ltd.,Shares,0.885183
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,0.880370
+InterGlobe Aviation Limited,Shares,0.873920
+Adani Ports and Special Economic Zone Ltd,Shares,0.866932
+Bajaj Finserv Limited,Shares,0.863038
+Eicher Motors Ltd.,Shares,0.808548
+Nestle India Ltd.,Shares,0.791492
+TVS Motor Company Ltd.,Shares,0.752249
+Coal India Limited,Shares,0.709835
+Hindustan Aeronautics Limited,Shares,0.671920
+Oil And Natural Gas Corporation Ltd,Shares,0.664185
+Adani Enterprises Ltd.,Shares,0.608585
+Adani Power Limited,Shares,0.606024
+Cholamandalam Investment and Finance Company Ltd,Shares,0.592724
+Cipla Ltd.,Shares,0.584894
+Jio Financial Services Limited,Shares,0.584127
+SBI Life Insurance Company Limited,Shares,0.576863
+Max Healthcare Institute Limited,Shares,0.572084
+Samvardhana Motherson International Limited,Shares,0.556204
+Torrent Pharmaceuticals Ltd.,Shares,0.548164
+Dr. Reddy's Laboratories Ltd.,Shares,0.519069
+Cummins India Ltd.,Shares,0.508668
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.498377
+Indian Hotels Co. Ltd,Shares,0.477974
+Avenue Supermarts Limited,Shares,0.463584
+CG Power and Industrial Solutions Limited,Shares,0.463303
+Britannia Industries Ltd.,Shares,0.456163
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.431153
+Tata Power Co. Ltd,Shares,0.426921
+Varun Beverages Limited,Shares,0.403877
+HDFC Asset Management Company Limited,Shares,0.394337
+Pidilite Industries Ltd.,Shares,0.385759
+Indian Oil Corporation Ltd.,Shares,0.383446
+Bajaj Holdings & Investment Limited,Shares,0.371869
+Wipro  Ltd.,Shares,0.368570
+Solar Industries India Limited,Shares,0.361339
+Power Finance Corporation Ltd,Shares,0.361211
+Gail (India) Ltd.,Shares,0.353171
+DLF LIMITED,Shares,0.327008
+Bank Of Baroda,Shares,0.326523
+United Spirits Limited,Shares,0.324671
+Bosch Ltd,Shares,0.319887
+Canara Bank,Shares,0.314603
+Adani Green Energy Limited,Shares,0.300442
+REC LIMITED,Shares,0.297876
+ABB India Limited,Shares,0.295686
+Punjab National Bank,Shares,0.290193
+Bank of India,Shares,0.268862
+Godrej Consumer Products Ltd.,Shares,0.267182
+Siemens Ltd.,Shares,0.262779
+MUTHOOT FINANCE LIMITED,Shares,0.235584
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.231913
+Zydus Lifesciences Limited,Shares,0.214315
+Hindustan Zinc Ltd.,Shares,0.211225
+Ambuja Cements Ltd.,Shares,0.184483
+Mazagon Dock Shipbuilders Limited,Shares,0.138975
+Indian Railway Finance Corporation,Shares,0.123656
+Cash & Bank Balance,Cash and equivalents,0.070151
+Net Receivables / Payables,Cash and equivalents,-0.077968

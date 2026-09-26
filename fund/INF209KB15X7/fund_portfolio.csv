@@ -1,0 +1,45 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 15.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 15.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:31.807663+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,15.849965
+Mahindra & Mahindra Ltd.,Shares,11.891590
+Eicher Motors Ltd.,Shares,7.359757
+TVS Motor Company Ltd.,Shares,7.346209
+Bajaj Auto Limited,Shares,5.246930
+SEDEMAC MECHATRONICS LIMITED,Shares,4.626834
+Sansera Engineering Limited,Shares,3.630827
+Maruti Suzuki India  Ltd.,Shares,3.507918
+Bosch Ltd,Shares,3.319158
+Happy Forgings Limited,Shares,3.120130
+Samvardhana Motherson International Limited,Shares,2.911051
+InterGlobe Aviation Limited,Shares,2.864201
+Sona BLW Precision Forgings Limited,Shares,2.669289
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.236559
+SWIGGY LIMITED,Shares,2.155240
+PITTI ENGINEERING LIMITED,Shares,2.025621
+HYUNDAI MOTOR INDIA LIMITED,Shares,1.970252
+Ashok Leyland Ltd.,Shares,1.792235
+S.V.J.ENTERPRISES LIMITED,Shares,1.691482
+Craftsman Automation Limited,Shares,1.527548
+BELRISE INDUSTRIES LIMITED,Shares,1.485705
+Cyient DLM Limited,Shares,1.348491
+Asahi India Glass Ltd.,Shares,1.309203
+Container Corporation Of India Ltd.,Shares,1.274308
+Ather Energy Limited,Shares,1.197696
+Adani Ports and Special Economic Zone Ltd,Shares,1.163841
+VRL Logistics Limited,Shares,1.039743
+Gabriel India Ltd.,Shares,0.926914
+Meesho Limited,Shares,0.818936
+Endurance Technologies Limited,Shares,0.796244
+Tube Investments of India Ltd,Shares,0.618459
+Hero MotoCorp Limited,Shares,0.386870
+Net Receivables / Payables,Cash and equivalents,-0.109206

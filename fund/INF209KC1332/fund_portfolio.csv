@@ -1,0 +1,40 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 17.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 17.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:18.581411+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,17.873685
+Larsen & Toubro Limited,Shares,10.595989
+Adani Ports and Special Economic Zone Ltd,Shares,8.814307
+InterGlobe Aviation Limited,Shares,8.500068
+Oil And Natural Gas Corporation Ltd,Shares,6.616300
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,6.529843
+Adani Power Limited,Shares,4.363758
+Rail Vikas Nigam Limited,Shares,3.758891
+Power Finance Corporation Ltd,Shares,3.673764
+Gail (India) Ltd.,Shares,3.410402
+Tata Power Co. Ltd,Shares,3.137397
+REC LIMITED,Shares,2.850758
+NBCC (India) Limited,Shares,2.801877
+IRB Infrastructure Developers Limited,Shares,2.454718
+Adani Green Energy Limited,Shares,2.176393
+Oil India Limited,Shares,1.888756
+KEC International Ltd.,Shares,1.729476
+JSW Energy Limited,Shares,1.560219
+NHPC Limited,Shares,1.266930
+TORRENT POWER LIMITED,Shares,1.260279
+IRCON International Ltd,Shares,1.250968
+Indian Railway Finance Corporation,Shares,1.114300
+Great Eastern Shipping Co. Ltd.,Shares,0.964995
+CESC Limited,Shares,0.493471
+Reliance Power Limited,Shares,0.346826
+Gujarat Pipavav Port Limited,Shares,0.332528
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.266022
+Net Receivables / Payables,Cash and equivalents,-0.032920

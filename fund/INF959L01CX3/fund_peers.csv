@@ -1,0 +1,40 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:04.217450+00:00
+fund,return_3y,volatility_3y
+BANK OF INDIA AGGRESSIVE HYBRID FUND,0.173185,0.149714
+Bandhan Aggressive Hybrid Fund,0.142722,0.118320
+Quant Aggressive Hybrid Fund,0.134404,0.130342
+HSBC Aggressive Hybrid Fund,0.134115,0.135655
+ICICI Prudential Aggressive Hybrid Fund,0.131066,0.099179
+Edelweiss Aggressive Hybrid Fund,0.130461,0.106500
+JM Aggressive Hybrid Fund,0.130384,0.125441
+Kotak Aggressive Hybrid Fund,0.126654,0.117205
+Navi Aggressive Hybrid Fund (this fund),0.126512,0.114368
+LIC MF Aggressive Hybrid Fund,0.120806,0.114665
+SBI AGGRESSIVE HYBRID FUND,0.118917,0.098081
+Mahindra Manulife Aggressive Hybrid Fund,0.115944,0.106943
+Mirae Asset Aggressive Hybrid Fund,0.110231,0.107854
+BARODA BNP PARIBAS AGGRESSIVE HYBRID FUND,0.108867,0.102126
+Invesco India Aggressive Hybrid Fund,0.107262,0.109105
+Canara Robeco Aggressive Hybrid Fund,0.106984,0.106205
+Union Aggressive Hybrid Fund,0.106717,0.107253
+UTI Aggressive Hybrid Fund,0.105253,0.099084
+Nippon India Aggressive Hybrid Fund (Existing Number of Segregated Portfolios - 2),0.104667,0.105192
+DSP Aggressive Hybrid Fund,0.097350,0.097466
+Aditya Birla Sun Life Aggressive Hybrid Fund,0.096913,0.102941
+Franklin India Aggressive Hybrid Fund,0.096626,0.098022
+Axis Aggressive Hybrid Fund,0.094799,0.102702
+Shriram Aggressive Hybrid Fund,0.093321,0.109538
+PGIM India Aggressive Hybrid Equity Fund,0.093028,0.098469
+Sundaram Aggressive Hybrid Fund (Formerly Known as Principal Hybrid Equity Fund),0.089685,0.100953
+Groww Aggressive Hybrid Fund,0.088735,0.105468
+Tata Aggressive Hybrid Fund,0.079015,0.104150
+HDFC Aggressive Hybrid Fund,0.062612,0.095502

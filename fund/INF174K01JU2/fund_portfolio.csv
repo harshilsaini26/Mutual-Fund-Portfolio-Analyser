@@ -1,0 +1,28 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 12.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 12.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:35:34.644842+00:00
+holding,kind,weight_pct
+Government Securities,Bonds and other debt,28.768155
+TREPS / Repo / Reverse Repo,Cash and equivalents,24.966083
+Unresolved Holdings,"REITs, InvITs and other",12.395297
+MUTHOOT FINANCE LIMITED,Bonds and other debt,7.775643
+Vedanta Ltd.,Bonds and other debt,6.638546
+Adani Power Limited,Bonds and other debt,4.182037
+TATA STEEL LIMITED,Bonds and other debt,3.266626
+EMBASSY OFFICE PARKS REIT,Shares,2.422848
+Net Receivables / Payables,Cash and equivalents,2.251875
+AXIS Bank Ltd.,Bonds and other debt,2.146465
+Bajaj Finance Limited,Bonds and other debt,1.102108
+Indian Bank,Bonds and other debt,1.073828
+Brookfield India Real Estate Trust,Shares,1.015346
+Nexus Select Trust,Shares,0.785512
+Torrent Pharmaceuticals Ltd.,Bonds and other debt,0.545716
+Units of Other Schemes,"REITs, InvITs and other",0.393779
+REC LIMITED,Bonds and other debt,0.270136

@@ -1,0 +1,52 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 10.1% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 10.1% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:44.462672+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,10.095776
+ICICI Bank Ltd.,Shares,6.714964
+Cash & Bank Balance,Cash and equivalents,6.311030
+Reliance Industries Ltd,Shares,5.930706
+HDFC Bank Ltd.,Shares,5.823985
+State Bank Of India,Shares,4.360999
+Divi's Laboratories Ltd.,Shares,3.602635
+Zydus Wellness Limited,Shares,3.148988
+PG Electroplast Limited,Shares,2.743207
+Balrampur Chini Mills Ltd.,Shares,2.716010
+Nitin Spinners Ltd.,Shares,2.646386
+Larsen & Toubro Limited,Shares,2.614728
+Timken India Ltd,Shares,2.549238
+Indigo Paints Limited,Shares,2.408030
+Indo Count Industries Ltd,Shares,2.298154
+GARWARE TECHNICAL FIBRES LIMITED,Shares,2.277267
+TATA STEEL LIMITED,Shares,2.265735
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,2.250722
+Steel Authority of India Ltd.,Shares,2.233207
+Net Receivables / Payables,Cash and equivalents,2.104728
+Five-Star Business Finance Ltd.,Shares,1.990936
+SUNDARAM FINANCE LTD,Shares,1.946006
+Pondy Oxides & Chemicals Limited,Shares,1.905863
+Vedanta Aluminium Metal Limited,Shares,1.884867
+Billionbrains Garage Ventures Limited,Shares,1.671533
+Bharat Dynamics Limited,Shares,1.666420
+Balkrishna Industries Ltd.,Shares,1.388031
+Pricol Limited,Shares,1.289468
+Bajaj Finserv Limited,Shares,1.278916
+Indo Tech Transformers Limited,Shares,1.208639
+COFORGE LIMITED,Shares,1.187860
+Gabriel India Ltd.,Shares,1.073850
+SEDEMAC MECHATRONICS LIMITED,Shares,1.008251
+SWIGGY LIMITED,Shares,0.981380
+S.V.J.ENTERPRISES LIMITED,Shares,0.974091
+Go Digit General Insurance Limited,Shares,0.847679
+RHI MAGNESITA INDIA LIMITED,Shares,0.786431
+MTAR Technologies Limited,Shares,0.694940
+Prudent Corporate Advisory Services Limited,Shares,0.690697
+Cera Sanitaryware Ltd.,Shares,0.427647

@@ -1,0 +1,71 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 9.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 9.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:45.199072+00:00
+holding,kind,weight_pct
+Units of Other Schemes,Other funds,19.601887
+Unresolved Holdings,Bonds and other debt,9.714368
+ICICI Bank Ltd.,Shares,6.005513
+HDFC Bank Ltd.,Shares,5.978259
+State Bank Of India,Shares,3.284135
+EMBASSY OFFICE PARKS REIT,"REITs, InvITs and other",3.167307
+Bharti Airtel  Ltd.,Shares,2.407461
+Larsen & Toubro Limited,Shares,2.387189
+Divi's Laboratories Ltd.,Shares,2.206189
+Reliance Industries Ltd,Shares,2.072571
+Bajaj Finance Limited,Shares,2.015255
+MINDSPACE BUSINESS PARKS REIT,"REITs, InvITs and other",1.796925
+Infosys Ltd,Shares,1.571130
+TATA STEEL LIMITED,Shares,1.569215
+Cash & Bank Balance,Cash and equivalents,1.549029
+RUBICON RESEARCH LIMITED,Shares,1.545558
+INDUS TOWERS LIMITED,Shares,1.421173
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,1.413340
+Vedanta Aluminium Metal Limited,Shares,1.168269
+Whirlpool of India Ltd,Shares,1.143377
+Graphite India Ltd.,Shares,1.121871
+Exide Industries Ltd.,Shares,1.086006
+Sun Pharmaceutical Industries Ltd.,Shares,1.049396
+Federal Bank Ltd.,Shares,1.047321
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,1.039275
+Hindustan Unilever Ltd.,Shares,1.034167
+Asian Paints Ltd.,Shares,1.032630
+Mahindra & Mahindra Ltd.,Shares,1.025960
+Cummins India Ltd.,Shares,1.004398
+Eicher Motors Ltd.,Shares,1.004353
+Tata Consultancy Services Ltd.,Shares,0.966982
+Ujjivan Small Finance Bank Limited,Shares,0.921914
+Bajaj Auto Limited,Shares,0.882170
+Page Industries Ltd.,Shares,0.865702
+Net Receivables / Payables,Cash and equivalents,0.840210
+SENORES PHARMACEUTICALS LIMITED,Shares,0.817923
+PETRONET LNG LTD.,Shares,0.744597
+Aurobindo Pharma Ltd.,Shares,0.743116
+Crompton Greaves Consumer Electricals Limited,Shares,0.728320
+eClerx Services Limited,Shares,0.718854
+HCL Technologies Ltd,Shares,0.690687
+Motherson Sumi Wiring India Limited,Shares,0.680994
+Onesource Specialty Pharma Limited,Shares,0.642067
+Hindustan Zinc Ltd.,Shares,0.629956
+ANGEL ONE LIMITED,Shares,0.617573
+Gabriel India Ltd.,Shares,0.594001
+UNO Minda Limited,Shares,0.527119
+Ingersoll-Rand (India) Ltd.,Shares,0.511819
+Indian Bank,Shares,0.502580
+Steel Authority of India Ltd.,Shares,0.491189
+ICRA Limited,Shares,0.480448
+Emami Ltd,Shares,0.467169
+SBI Life Insurance Company Limited,Shares,0.455954
+ITC Ltd,Shares,0.437637
+SEDEMAC MECHATRONICS LIMITED,Shares,0.389097
+CRISIL Ltd.,Shares,0.374528
+Pricol Limited,Shares,0.340608
+Thermax Ltd.,Shares,0.243161
+Nuvama Wealth Management Limited,Shares,0.230098

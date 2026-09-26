@@ -1,0 +1,13 @@
+﻿# View: fund_returns
+# Question: How much has it returned, against its benchmark?
+# As of: 2026-09-26
+# Data as of: 29 Apr 2022 (1611 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - Holdings as of 29 Apr 2022 — 1611 days old. Funds disclose monthly.
+# Generated: 2026-09-26T10:36:14.265173+00:00
+period,fund_return,benchmark_return,annualised,days
+1 year,0.040068,,yes,365
+3 years,0.076852,,yes,1095
+Since 19 Mar 2019,0.076168,,yes,1137

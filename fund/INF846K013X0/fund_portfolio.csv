@@ -1,0 +1,62 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 24.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 24.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:34.813777+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,24.359381
+Bharti Airtel  Ltd.,Shares,8.801898
+Mahindra & Mahindra Ltd.,Shares,6.982417
+Maruti Suzuki India  Ltd.,Shares,4.773071
+Asian Paints Ltd.,Shares,3.469148
+InterGlobe Aviation Limited,Shares,3.163871
+Hindustan Unilever Ltd.,Shares,2.654134
+TVS Motor Company Ltd.,Shares,2.492970
+TATA CONSUMER PRODUCTS LIMITED,Shares,2.391559
+Varun Beverages Limited,Shares,2.249754
+Nestle India Ltd.,Shares,2.070130
+Bajaj Auto Limited,Shares,2.068948
+ITC Ltd,Shares,1.955086
+Eicher Motors Ltd.,Shares,1.834261
+Indian Hotels Co. Ltd,Shares,1.781084
+United Spirits Limited,Shares,1.769237
+Ather Energy Limited,Shares,1.703811
+Britannia Industries Ltd.,Shares,1.643450
+Tata Power Co. Ltd,Shares,1.593450
+Berger Paints India Ltd,Shares,1.485807
+Avenue Supermarts Limited,Shares,1.481931
+Max Healthcare Institute Limited,Shares,1.416585
+DOMS Industries Limited,Shares,1.253735
+Marico Limited,Shares,1.191230
+Godrej Consumer Products Ltd.,Shares,1.072761
+Sapphire Foods India Limited,Shares,1.001444
+Pidilite Industries Ltd.,Shares,0.991237
+TBO TEK LIMITED,Shares,0.935689
+Jubilant Foodworks Limited,Shares,0.914690
+PNB Housing Finance Limited,Shares,0.826074
+Delhivery Limited,Shares,0.718087
+Bharti Hexacom Limited,Shares,0.708851
+TRAVEL FOOD SERVICES LIMITED,Shares,0.687305
+Page Industries Ltd.,Shares,0.679517
+HYUNDAI MOTOR INDIA LIMITED,Shares,0.632851
+Amber Enterprises India Limited,Shares,0.622731
+Devyani International Limited,Shares,0.572651
+Vishal Mega Mart Limited,Shares,0.561082
+Voltas Ltd.,Shares,0.552397
+Hero MotoCorp Limited,Shares,0.521087
+Vijaya Diagnostic Centre Limited,Shares,0.513009
+Cash & Bank Balance,Cash and equivalents,0.506376
+INDUS TOWERS LIMITED,Shares,0.471094
+DLF LIMITED,Shares,0.439562
+Fortis Healthcare Ltd,Shares,0.372160
+Craftsman Automation Limited,Shares,0.300151
+WeWork India Management Limited,Shares,0.262992
+KFin Technologies Limited,Shares,0.219953
+Dixon Technologies (India) Limited,Shares,0.219816
+Net Receivables / Payables,Cash and equivalents,0.109485

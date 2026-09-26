@@ -1,0 +1,155 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - AMFI's older heading does not say whether an index fund tracks shares or bonds, so these funds are compared only with each other.
+#   - This fund has less than three years of prices, so it is not in the picture of its category.
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:33:54.678550+00:00
+fund,return_3y,volatility_3y
+ICICI Prudential NASDAQ 100 Index Fund,0.336917,0.212719
+Motilal Oswal S&P 500 Index Fund,0.274519,0.153261
+ICICI Prudential Nifty Pharma Index Fund,0.216309,0.150445
+Edelweiss MSCI India Domestic & World Healthcare 45 Index Fund,0.204937,0.115706
+Kotak Nifty Smallcap 50 Index Fund,0.196776,0.203701
+ICICI Prudential Nifty Auto Index Fund,0.190015,0.192064
+Navi Nifty India Manufacturing Index Fund,0.179648,0.159299
+Motilal Oswal Nifty Microcap 250 Index Fund,0.175825,0.215627
+Kotak Nifty Next 50 Index Fund,0.173901,0.184237
+LIC MF Nifty Next 50 Index Fund,0.173755,0.183764
+Edelweiss Nifty Next 50 Index Fund,0.173614,0.183782
+Motilal Oswal Nifty Next 50 Index Fund,0.173256,0.184368
+SBI Nifty Next 50 Index Fund,0.173227,0.183380
+DSP Nifty Next 50 Index Fund,0.172887,0.184199
+Navi Nifty Next 50 Index Fund,0.172436,0.184507
+ICICI Prudential Nifty Next 50 Index Fund,0.171278,0.184302
+HDFC NIFTY Next 50 index Fund,0.170897,0.184464
+Edelweiss Nifty Smallcap 250 Index Fund,0.149352,0.190220
+Motilal Oswal Nifty Smallcap 250 Index Fund,0.148420,0.190666
+Motilal Oswal Nifty Midcap 150 Index Fund,0.146601,0.171390
+HDFC NIFTY Smallcap 250 Index Fund,0.146197,0.190417
+SBI Nifty Smallcap 250 Index Fund,0.146188,0.189506
+ICICI Prudential Nifty Smallcap 250 Index Fund,0.146027,0.190432
+Nippon India Nifty Midcap 150 Index Fund,0.144342,0.171081
+Nippon India Nifty Smallcap 250 Index Fund,0.144224,0.190411
+SBI Nifty Midcap 150 Index Fund,0.144127,0.170386
+ICICI Prudential Nifty Midcap 150 Index Fund,0.143879,0.171182
+HDFC NIFTY Midcap 150 Index Fund,0.143224,0.171130
+Edelweiss Nifty Midcap150 Momentum 50 Index Fund,0.143201,0.198398
+Kotak Nifty Financial Services Ex-Bank Index Fund,0.140571,0.201844
+Tata Nifty Midcap 150 Momentum 50 Index Fund,0.137534,0.198172
+HDFC NIFTY 100 Equal Weight Index Fund,0.137114,0.153496
+Sundaram Nifty 100 Equal Weight Fund (Formerly Known as Principal Nifty 100 Equal Weight Fund),0.136623,0.150596
+Edelweiss NIFTY Large Midcap 250 Index Fund,0.114354,0.149038
+DSP Nifty 50 Equal Weight Index Fund,0.109981,0.136147
+HDFC NIFTY50 Equal Weight Index Fund,0.109497,0.136278
+ICICI Prudential Nifty50 Equal Weight Index Fund-,0.108937,0.135803
+Motilal Oswal Nifty 500 Index Fund,0.101452,0.143007
+Kotak Nifty 200 Momentum 30 Index Fund,0.099449,0.196067
+Nippon India Nifty Alpha Low Volatility 30 Index Fund,0.098642,0.131124
+Motilal Oswal Nifty 200 Momentum 30 Index Fund,0.098181,0.196623
+ICICI Prudential Nifty 200 Momentum 30 Index Fund,0.096865,0.195931
+BANDHAN NIFTY200 MOMENTUM 30 INDEX FUND,0.094974,0.195641
+HDFC BSE 500 Index Fund,0.094861,0.141598
+BANDHAN Nifty100 Low Volatility 30 Index Fund,0.091024,0.115146
+BANDHAN NIFTY 100 INDEX FUND,0.084033,0.136152
+Axis Nifty 100 Index Fund,0.083193,0.136080
+DSP Nifty Midcap 150 Quality 50 Index Fund,0.082191,0.154497
+HDFC NIFTY 100 Index Fund,0.081876,0.136813
+ICICI Prudential Nifty Bank Index Fund,0.080383,0.160181
+Navi Nifty Bank Index Fund,0.080371,0.160584
+Motilal Oswal Nifty Bank Index Fund,0.080109,0.160366
+Edelweiss Nifty 100 Quality 30 Index Fund,0.079485,0.125300
+BANDHAN CRISIL IBX 90 10 SDL PLUS GILT - SEPTEMBER 2027 INDEX FUND,0.075777,0.009398
+ICICI Prudential Nifty SDL Sep 2027 Index Fund,0.075455,0.009567
+SBI CRISIL IBX SDL Index - September 2027 Fund,0.075053,0.009490
+Aditya Birla Sun Life Nifty SDL SEP 2027 Index Fund,0.074979,0.008545
+ICICI Prudential Nifty PSU Bond Plus SDL Sep 2027 40 60 Index Fund,0.074697,0.008168
+ICICI Prudential Nifty SDL Dec 2028 Index Fund,0.074455,0.015651
+Tata Nifty G-Sec Dec 2029 Index Fund,0.074354,0.015504
+Edelweiss CRISIL IBX 50 50 Gilt Plus SDL Sep 2028 Index Fund,0.074354,0.010858
+Kotak Nifty SDL Apr 2027 Top 12 Equal Weight Index Fund,0.074326,0.007558
+DSP Nifty SDL Plus G-Sec Sep 2027 50 50 Index Fund,0.074285,0.008224
+Nippon India Nifty SDL Plus G-Sec - Jun 2028 Maturity 70 30 Index Fund,0.074284,0.010450
+Nippon India Nifty AAA CPSE Bond Plus SDL - Apr 2027 Maturity 60 40 Index Fund,0.074128,0.005921
+Edelweiss NIFTY PSU Bond Plus SDL Apr 2027 50 50 Index Fund,0.074057,0.006714
+DSP Nifty SDL Plus G-Sec Jun 2028 30 70 Index Fund,0.074013,0.009614
+Aditya Birla Sun Life Crisil IBX Gilt -Apr 2029 Index Fund,0.073995,0.015676
+HDFC Nifty G-Sec Apr 2029 Index Fund,0.073987,0.015252
+Baroda BNP Paribas Nifty SDL December 2026 Index Fund,0.073953,0.007329
+Nippon India Nifty SDL Plus G-Sec - Jun 2029 Maturity 70 30 Index Fund,0.073920,0.014486
+BANDHAN CRISIL IBX GILT APRIL 2028 INDEX FUND,0.073918,0.010022
+Kotak Nifty SDL Plus AAA PSU Bond Jul 2028 60 - 40 Index Fund,0.073899,0.010784
+Aditya Birla Sun Life Crisil IBX 50 50 Gilt Plus SDL Apr 2028 Index Fund,0.073853,0.010101
+Tata Nifty SDL Plus AAA PSU Bond Dec 2027 60 40 Index Fund,0.073787,0.009095
+Axis CRISIL IBX 50 50 Gilt Plus SDL June 2028 Index Fund,0.073782,0.010769
+SBI CRISIL IBX Gilt Index - April 2029 Fund,0.073649,0.015844
+ICICI Prudential Nifty G-Sec Dec 2030 Index Fund,0.073566,0.020375
+Aditya Birla Sun Life Crisil IBX 60 40 SDL+AAA PSU-APR 2027 Index Fund,0.073519,0.005858
+HDFC Nifty G-Sec July 2031 Index Fund,0.073469,0.023057
+Edelweiss CRISIL IBX 50 50 Gilt Plus SDL June 2027 Index Fund,0.073370,0.007436
+HDFC NIFTY SDL Plus G-Sec Jun 2027 40 60 Index Fund,0.073321,0.007396
+BANDHAN CRISIL IBX GILT APRIL 2032 INDEX FUND,0.073231,0.022597
+Aditya Birla Sun Life Nifty SDL Apr 2027 Index Fund,0.073064,0.006084
+BANDHAN CRISIL IBX 90 10 SDL PLUS GILT - NOV 2026 INDEX FUND,0.073011,0.006027
+Nippon India Nifty G-Sec Oct 2028 Maturity Index Fund,0.072995,0.012591
+Nippon India Nifty G-Sec Sep 2027 Maturity Index Fund,0.072776,0.009024
+HDFC Nifty G-Sec Jun 2027 Index Fund,0.072733,0.008746
+BANDHAN CRISIL IBX GILT JUNE 2027 INDEX FUND,0.072655,0.008295
+TATA CRISIL-IBX GILT INDEX - APRIL 2026 INDEX FUND,0.072575,0.007077
+Nippon India Nifty G-Sec Jun 2036 Maturity Index Fund,0.072492,0.031068
+Kotak BSE Housing Index Fund,0.072483,0.188524
+HDFC Nifty G-Sec Jun 2036 Index Fund,0.072226,0.032105
+Edelweiss CRISIL PSU Plus SDL 50 50 Oct 2025 Index Fund,0.072132,0.005008
+SBI CPSE Bond Plus SDL Sep 2026 50 50 Index Fund,0.071895,0.004983
+Nippon India Nifty AAA PSU Bond Plus SDL - Sep 2026 Maturity 50 50 Index Fund,0.071887,0.005038
+Aditya Birla Sun Life Nifty SDL Plus PSU Bond SEP 2026 60 40 Index Fund,0.071875,0.005017
+Tata Nifty G-Sec Dec 2026 Index Fund,0.071779,0.006574
+HDFC Nifty G-Sec Sep 2032 Index Fund,0.071737,0.024630
+PGIM India CRISIL IBX Gilt Index - Apr 2028 Fund,0.071683,0.009898
+HDFC Nifty SDL Oct 2026 Index Fund,0.071614,0.005789
+ICICI Prudential Nifty SDL Sep 2026 Index Fund,0.071440,0.005551
+HDFC Nifty G-Sec Dec 2026 Index Fund,0.071352,0.006509
+SBI CRISIL IBX Gilt Index - June 2036 Fund,0.071266,0.031936
+BANDHAN CRISIL IBX 90 10 SDL PLUS GILT - APRIL 2032 INDEX FUND,0.071167,0.022391
+Kotak Nifty SDL Jul 2026 Index Fund,0.071154,0.005542
+Edelweiss Nifty PSU Bond Plus SDL Apr 2026 50 50 Index Fund,0.070808,0.004751
+Edelweiss CRISIL IBX 50 50 Gilt Plus SDL Short Duration Index Fund,0.070806,0.010184
+DSP CRISIL-IBX 50 50 Gilt Plus SDL - April 2033 Index Fund,0.070758,0.020360
+Aditya Birla Sun Life CRISIL IBX SDL Jun 2032 Index Fund,0.070327,0.022690
+Aditya Birla Sun Life Crisil IBX Gilt Apr 2028 Index Fund,0.070118,0.010087
+Kotak Nifty SDL Apr 2032 Top 12 Equal Weight Index Fund,0.069794,0.025285
+Kotak Nifty SDL Jul 2033 Index Fund,0.068619,0.024886
+Edelweiss CRISIL IBX 50 50 Gilt Plus SDL April 2037 Index Fund,0.068372,0.026481
+BANDHAN CRISIL IBX GILT APRIL 2026 INDEX FUND,0.068109,0.005534
+Aditya Birla Sun Life Crisil IBX Gilt-April 2026 Index Fund,0.067987,0.005993
+Motilal Oswal Nifty 50 Index Fund,0.066159,0.132249
+Navi Nifty 50 Index Fund,0.066070,0.132170
+Nippon India Index Fund - Nifty 50 Plan,0.066004,0.132159
+DSP Nifty 50 Index Fund,0.065833,0.132119
+BANDHAN Nifty 50 Index Fund,0.065774,0.131441
+Edelweiss Nifty 50 Index Fund,0.065773,0.131855
+UTI Nifty 50 Index Fund,0.065623,0.132293
+Aditya Birla Sun Life Nifty 50 Index Fund,0.065534,0.132186
+Franklin India NSE Nifty 50 Index Fund,0.065364,0.131693
+SBI NIFTY INDEX FUND,0.065163,0.131601
+ICICI Prudential Nifty 50 Index Fund,0.065123,0.132207
+Kotak Nifty 50 Index Fund,0.065080,0.132095
+HDFC Nifty 50 Index Fund,0.065064,0.132286
+Tata Nifty 50 Index Fund,0.064562,0.132101
+LIC MF Nifty 50 Index Fund,0.063638,0.132002
+Taurus Nifty 50 Index Fund,0.057829,0.131152
+ICICI Prudential BSE Sensex Index Fund,0.047840,0.132427
+Nippon India Index Fund - BSE Sensex Plan,0.047696,0.132427
+HDFC BSE Sensex Index Fund,0.047597,0.132567
+NAVI BSE SENSEX INDEX FUND,0.047098,0.132238
+SBI BSE Sensex Index Fund,0.047032,0.131713
+Tata BSE Sensex Index Fund,0.046576,0.132396
+LIC MF BSE Sensex Index Fund,0.045011,0.132159
+Nippon India Nifty 50 Value 20 Index Fund,0.043507,0.132391
+Bandhan Nifty IT Index Fund,-0.028620,0.222891
+ICICI Prudential Nifty IT Index Fund,-0.031381,0.223208

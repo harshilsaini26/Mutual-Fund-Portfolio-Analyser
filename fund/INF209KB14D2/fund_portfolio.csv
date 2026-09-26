@@ -1,0 +1,65 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 12.0% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 12.0% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:18.698869+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,12.013955
+ICICI Bank Ltd.,Shares,4.159899
+Federal Bank Ltd.,Shares,3.453647
+R R KABEL LIMITED,Shares,3.004571
+Shivalik Bimetal Controls Ltd.,Shares,2.732585
+BIRLASOFT LIMITED,Shares,2.642793
+Shaily Engineering Plastics Ltd.,Shares,2.585058
+S.V.J.ENTERPRISES LIMITED,Shares,2.579720
+Craftsman Automation Limited,Shares,2.559222
+Karur Vysya Bank Ltd.,Shares,2.495347
+TVS Motor Company Ltd.,Shares,2.360696
+Zensar Technologies Ltd.,Shares,2.359698
+Ather Energy Limited,Shares,2.329290
+Vedanta Aluminium Metal Limited,Shares,2.318176
+MUTHOOT FINANCE LIMITED,Shares,2.317492
+Thyrocare Technologies Limited,Shares,2.308559
+Sai Life Sciences Limited,Shares,2.300308
+Torrent Pharmaceuticals Ltd.,Shares,2.205081
+Ajanta Pharma Ltd.,Shares,2.120127
+FSN E-Commerce Ventures Limited,Shares,2.085635
+Mastek Limited,Shares,2.028691
+Narayana Hrudayalaya Limited,Shares,1.849416
+JSW Steel Limited,Shares,1.844241
+CG Power and Industrial Solutions Limited,Shares,1.813529
+Hindalco Industries Ltd.,Shares,1.751780
+Fortis Healthcare Ltd,Shares,1.670162
+Syrma SGS Technology Limited,Shares,1.545026
+Chalet Hotels Limited,Shares,1.520161
+The Phoenix Mills Ltd.,Shares,1.485370
+Eicher Motors Ltd.,Shares,1.466809
+Indian Bank,Shares,1.462502
+Persistent Systems Limited,Shares,1.441423
+Honasa Consumer Limited,Shares,1.435923
+Larsen & Toubro Limited,Shares,1.304598
+APL Apollo Tubes Limited,Shares,1.289920
+Bharat Electronics Ltd.,Shares,1.281398
+Lenskart Solutions Limited,Shares,1.257548
+Delhivery Limited,Shares,1.157851
+UltraTech Cement Ltd,Shares,1.084451
+Thomas Cook (India) Ltd.,Shares,1.070191
+Pricol Limited,Shares,1.069404
+L&T Finance Limited,Shares,1.044957
+Meesho Limited,Shares,1.031456
+Bajaj Finance Limited,Shares,0.974676
+Marico Limited,Shares,0.934048
+Ambuja Cements Ltd.,Shares,0.850570
+SUNDARAM FINANCE LTD,Shares,0.847375
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.843464
+MAS Financial Services Limited,Shares,0.814841
+Sobha Limited,Shares,0.681226
+Margin / Deposits,Cash and equivalents,0.298331
+Kirloskar Brothers Ltd.,Shares,0.005196
+Net Receivables / Payables,Cash and equivalents,-0.088393

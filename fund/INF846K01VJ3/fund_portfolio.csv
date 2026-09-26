@@ -1,0 +1,95 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 23.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 23.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - 1 holding with a negative weight (written options or borrowing) are listed in the table and not drawn in the pictures.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:36.420128+00:00
+holding,kind,weight_pct
+Net Receivables / Payables,Cash and equivalents,32.475145
+Unresolved Holdings,Shares,23.643897
+Government Securities,Bonds and other debt,8.311678
+ICICI Bank Ltd.,Shares,7.299968
+Reliance Industries Ltd,Shares,6.651979
+HDFC Bank Ltd.,Shares,5.050658
+Cash & Bank Balance,Cash and equivalents,3.393950
+Units of Other Schemes,Other funds,2.958014
+TATA STEEL LIMITED,Shares,2.887119
+Bharti Airtel  Ltd.,Shares,2.426046
+Mahindra & Mahindra Ltd.,Shares,2.350975
+Hindustan Aeronautics Limited,Shares,1.970053
+Larsen & Toubro Limited,Shares,1.952422
+SBI Life Insurance Company Limited,Shares,1.303970
+DLF LIMITED,Shares,1.267117
+EMBASSY OFFICE PARKS REIT,"REITs, InvITs and other",1.109446
+Sun Pharmaceutical Industries Ltd.,Shares,1.085426
+Bajaj Finance Limited,Shares,1.049894
+RBL Bank Limited,Shares,0.940510
+Knowledge Realty Trust,"REITs, InvITs and other",0.935182
+Corona Remedies Limited,Shares,0.911343
+State Bank Of India,Shares,0.882380
+Bank Of Baroda,Shares,0.858643
+Fortis Healthcare Ltd,Shares,0.839387
+IndusInd Bank Ltd.,Shares,0.755026
+Sona BLW Precision Forgings Limited,Shares,0.743344
+COFORGE LIMITED,Shares,0.732757
+Ambuja Cements Ltd.,Shares,0.717214
+Infosys Ltd,Shares,0.620674
+Emcure Pharmaceuticals Limited,Shares,0.615674
+Sansera Engineering Limited,Shares,0.615335
+Divi's Laboratories Ltd.,Shares,0.609082
+United Spirits Limited,Shares,0.608811
+Punjab National Bank,Shares,0.536370
+Sudeep Pharma Limited,Shares,0.536099
+ITC Ltd,Shares,0.522340
+Honeywell Automation India Ltd.,Shares,0.521346
+Bharat Heavy Electricals Ltd.,Shares,0.499630
+HealthCare Global Enterprises Limited,Shares,0.494765
+VODAFONE IDEA LIMITED,Shares,0.481243
+Metropolis Healthcare Limited,Shares,0.460124
+UltraTech Cement Ltd,Shares,0.426488
+Federal Bank Ltd.,Shares,0.417605
+Yes Bank Ltd.,Shares,0.400708
+Oil India Limited,Shares,0.387198
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,0.380764
+AAVAS Financiers Limited,Shares,0.379014
+Indian Bank,Shares,0.353234
+Torrent Pharmaceuticals Ltd.,Shares,0.343087
+Aurobindo Pharma Ltd.,Shares,0.341089
+Bandhan Bank Limited,Shares,0.325535
+TVS Motor Company Ltd.,Shares,0.313605
+Crompton Greaves Consumer Electricals Limited,Shares,0.291956
+Cholamandalam Investment and Finance Company Ltd,Shares,0.273546
+Glenmark Pharmaceuticals ltd,Shares,0.251931
+Berger Paints India Ltd,Shares,0.240260
+Grasim Industries Ltd,Shares,0.237811
+Tata Consultancy Services Ltd.,Shares,0.230192
+S.V.J.ENTERPRISES LIMITED,Shares,0.224718
+Pidilite Industries Ltd.,Shares,0.209548
+CG Power and Industrial Solutions Limited,Shares,0.197854
+Krishna Institute of Medical Sciences Limited,Shares,0.196138
+Hindalco Industries Ltd.,Shares,0.192560
+Craftsman Automation Limited,Shares,0.189603
+Welspun Corp Limited,Shares,0.188915
+Aditya Infotech Limited,Shares,0.181126
+Hindustan Unilever Ltd.,Shares,0.173214
+HDFC Asset Management Company Limited,Shares,0.142061
+APL Apollo Tubes Limited,Shares,0.140537
+Solar Industries India Limited,Shares,0.124826
+Bajaj Finserv Limited,Shares,0.116338
+Cummins India Ltd.,Shares,0.109419
+Cipla Ltd.,Shares,0.101405
+Apar Industries Ltd,Shares,0.101303
+Maruti Suzuki India  Ltd.,Shares,0.099395
+Mphasis Limited,Shares,0.037677
+Godrej Properties Limited,Shares,0.036954
+Havells India Limited,Shares,0.035103
+One 97 Communications Limited,Shares,0.028105
+Bharat Electronics Ltd.,Shares,0.026660
+Hindustan Petroleum Corporation Ltd,Shares,0.025080
+Derivative Positions,Derivatives,-31.097598

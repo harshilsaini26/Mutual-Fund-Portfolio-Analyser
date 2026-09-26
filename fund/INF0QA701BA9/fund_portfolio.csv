@@ -1,0 +1,55 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 12.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 12.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:45.345604+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,12.899667
+HDFC Bank Ltd.,Shares,9.844353
+ICICI Bank Ltd.,Shares,9.444264
+Reliance Industries Ltd,Shares,7.822102
+Bharti Airtel  Ltd.,Shares,4.995781
+Larsen & Toubro Limited,Shares,4.292186
+State Bank Of India,Shares,3.972843
+Infosys Ltd,Shares,3.605987
+AXIS Bank Ltd.,Shares,3.385302
+Mahindra & Mahindra Ltd.,Shares,2.656783
+Bajaj Finance Limited,Shares,2.569029
+ITC Ltd,Shares,2.233069
+Tata Consultancy Services Ltd.,Shares,2.221386
+Sun Pharmaceutical Industries Ltd.,Shares,1.905677
+Maruti Suzuki India  Ltd.,Shares,1.603728
+Hindustan Unilever Ltd.,Shares,1.582958
+TATA STEEL LIMITED,Shares,1.381745
+Bharat Electronics Ltd.,Shares,1.345917
+Hindalco Industries Ltd.,Shares,1.333195
+HCL Technologies Ltd,Shares,1.254527
+UltraTech Cement Ltd,Shares,1.227785
+Bajaj Auto Limited,Shares,1.218698
+Grasim Industries Ltd,Shares,1.153532
+JSW Steel Limited,Shares,1.112251
+Asian Paints Ltd.,Shares,1.088624
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,1.082134
+InterGlobe Aviation Limited,Shares,1.074864
+Adani Ports and Special Economic Zone Ltd,Shares,1.065777
+Bajaj Finserv Limited,Shares,1.060844
+Eicher Motors Ltd.,Shares,0.995418
+Nestle India Ltd.,Shares,0.973349
+Coal India Limited,Shares,0.872613
+Oil And Natural Gas Corporation Ltd,Shares,0.816533
+Adani Enterprises Ltd.,Shares,0.748251
+Cipla Ltd.,Shares,0.719172
+Jio Financial Services Limited,Shares,0.718134
+SBI Life Insurance Company Limited,Shares,0.709566
+Max Healthcare Institute Limited,Shares,0.703335
+Dr. Reddy's Laboratories Ltd.,Shares,0.638168
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.612724
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.529903
+Wipro  Ltd.,Shares,0.453312
+Net Receivables / Payables,Cash and equivalents,0.074514

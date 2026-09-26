@@ -1,0 +1,36 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:32.107510+00:00
+fund,return_3y,volatility_3y
+Tata Arbitrage Fund,0.075278,0.009830
+Kotak Arbitrage Fund (this fund),0.075177,0.010563
+Invesco India Arbitrage Fund,0.075081,0.010293
+ADITYA BIRLA SUN LIFE ARBITRAGE FUND,0.074733,0.010600
+Edelweiss Arbitrage Fund,0.074582,0.010293
+Mirae Asset Arbitrage Fund,0.074167,0.011183
+Axis Arbitrage Fund,0.074076,0.010115
+UTI - Arbitrage Fund,0.073828,0.010049
+ICICI Prudential Arbitrage Fund,0.073610,0.010616
+Nippon India Arbitrage Fund,0.073598,0.010401
+BANDHAN Arbitrage Fund,0.073571,0.010205
+HDFC Arbitrage Fund,0.073424,0.012951
+SBI Arbitrage Fund,0.073198,0.010755
+BARODA BNP PARIBAS ARBITRAGE FUND,0.073127,0.010597
+ITI Arbitrage Fund,0.072943,0.011791
+Sundaram Arbitrage Fund(Formerly Known as Prinicpal Arbitrage Fund),0.072767,0.011564
+DSP Arbitrage fund,0.072717,0.010471
+HSBC Arbitrage Fund,0.072657,0.010490
+Union Arbitrage Fund,0.072615,0.011122
+LIC MF Arbitrage Fund,0.071315,0.010675
+Bajaj Finserv Arbitrage Fund,0.070310,0.010460
+JM Arbitrage Fund,0.070199,0.011047
+NJ Arbitrage Fund,0.068644,0.012978
+BANK OF INDIA ARBITRAGE FUND,0.068260,0.011487
+Mahindra Manulife Arbitrage Fund,0.064665,0.011118

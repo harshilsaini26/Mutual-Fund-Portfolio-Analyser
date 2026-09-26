@@ -1,0 +1,85 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 17.0% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 17.0% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:28.388224+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,16.959781
+ICICI Bank Ltd.,Shares,3.038034
+TD Power Systems Ltd,Shares,2.570714
+One 97 Communications Limited,Shares,2.308894
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.270926
+Lenskart Solutions Limited,Shares,2.151730
+Persistent Systems Limited,Shares,2.145773
+Ather Energy Limited,Shares,2.117053
+Sansera Engineering Limited,Shares,2.098173
+State Bank Of India,Shares,1.975250
+S.V.J.ENTERPRISES LIMITED,Shares,1.967333
+Larsen & Toubro Limited,Shares,1.915122
+RBL Bank Limited,Shares,1.899284
+Sai Life Sciences Limited,Shares,1.740924
+Craftsman Automation Limited,Shares,1.712958
+TVS Motor Company Ltd.,Shares,1.690246
+AXIS Bank Ltd.,Shares,1.682979
+GE Vernova T&D India Limited,Shares,1.523924
+Federal Bank Ltd.,Shares,1.514421
+Bharat Heavy Electricals Ltd.,Shares,1.469370
+TATA STEEL LIMITED,Shares,1.444195
+Ujjivan Small Finance Bank Limited,Shares,1.441247
+COFORGE LIMITED,Shares,1.397813
+Reliance Industries Ltd,Shares,1.356474
+Apar Industries Ltd,Shares,1.351515
+INDUS TOWERS LIMITED,Shares,1.333460
+Vedanta Aluminium Metal Limited,Shares,1.287210
+Max Financial Services Limited,Shares,1.269885
+City Union Bank Ltd,Shares,1.265992
+Bajaj Auto Limited,Shares,1.207961
+Arvind Ltd.,Shares,1.180462
+Fortis Healthcare Ltd,Shares,1.144548
+APL Apollo Tubes Limited,Shares,1.140294
+Granules India Ltd.,Shares,1.134619
+Coal India Limited,Shares,1.130895
+Bharat Forge Ltd,Shares,1.121633
+Meesho Limited,Shares,1.117429
+United Spirits Limited,Shares,1.109473
+UltraTech Cement Ltd,Shares,1.093766
+Emcure Pharmaceuticals Limited,Shares,1.083285
+Adani Enterprises Ltd.,Shares,1.068848
+V-Guard Industries Ltd.,Shares,1.061389
+Oracle Financial Services Software Limited,Shares,1.048984
+Avenue Supermarts Limited,Shares,1.035679
+CG Power and Industrial Solutions Limited,Shares,0.973007
+Asahi India Glass Ltd.,Shares,0.926484
+Vinati Organics Ltd.,Shares,0.908734
+Prestige Estates Projects Limited,Shares,0.907385
+Varun Beverages Limited,Shares,0.903926
+Triveni Turbine Limited,Shares,0.850541
+Vishal Mega Mart Limited,Shares,0.837371
+Jupiter Life Line Hospitals Limited,Shares,0.754426
+Adani Ports and Special Economic Zone Ltd,Shares,0.693293
+Margin / Deposits,Cash and equivalents,0.663897
+Multi Commodity Exchange of India Ltd,Shares,0.650088
+Metropolis Healthcare Limited,Shares,0.647885
+Timken India Ltd,Shares,0.643383
+Home First Finance Company India Limited,Shares,0.563497
+Whirlpool of India Ltd,Shares,0.560936
+CHOLAMANDALAM FINANCIAL HOLDINGS LIMITED,Shares,0.505656
+Hindalco Industries Ltd.,Shares,0.501460
+InterGlobe Aviation Limited,Shares,0.486477
+Billionbrains Garage Ventures Limited,Shares,0.476022
+MUTHOOT FINANCE LIMITED,Shares,0.438928
+Navin Fluorine International Limited,Shares,0.414694
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,0.404990
+The Ramco Cements Limited,Shares,0.396856
+JSW Infrastructure Limited,Shares,0.372770
+Sona BLW Precision Forgings Limited,Shares,0.358309
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.286984
+NIPPON LIFE INDIA ASSET MANAGEMENT LIMITED,Shares,0.197021
+TORRENT POWER LIMITED,Shares,0.182568
+Net Receivables / Payables,Cash and equivalents,-0.087533

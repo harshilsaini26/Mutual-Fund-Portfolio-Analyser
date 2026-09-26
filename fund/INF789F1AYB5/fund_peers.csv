@@ -1,0 +1,18 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:37:29.077880+00:00
+fund,return_3y,volatility_3y
+Aditya Birla Sun Life Long Term Fund,0.064429,0.030755
+ICICI Prudential Long Term Fund,0.064180,0.032066
+SBI Long Term Fund,0.060621,0.037516
+Nippon India Nivesh Lakshya Long Term Fund,0.059372,0.038340
+HDFC Long Term Fund,0.057639,0.042122
+Axis Long Term Fund,0.056834,0.041795
+UTI Long Term Fund (this fund),0.054334,0.039829

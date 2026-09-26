@@ -1,0 +1,33 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:35.424624+00:00
+fund,return_3y,volatility_3y
+Tata Money Market Fund,0.075171,0.004203
+Axis Money Market Fund,0.074425,0.004227
+Aditya Birla Sun Life Money Market Fund,0.074098,0.004271
+Bandhan Money  Market Fund,0.074072,0.004149
+Nippon India Money Market Fund,0.074052,0.004333
+Mirae Asset Money Market Fund,0.073925,0.004292
+Franklin India Money Market Fund (this fund),0.073893,0.004236
+HDFC Money Market Fund,0.073789,0.004250
+Kotak Money Market Fund,0.073778,0.004231
+UTI - Money Market Fund,0.073747,0.004245
+Bajaj Finserv Money Market Fund,0.073686,0.004164
+ICICI Prudential Money Market Fund,0.073644,0.004338
+Edelweiss Money Market Fund,0.073065,0.004217
+SBI Money Market Fund,0.073057,0.004174
+HSBC Money Market Fund,0.073008,0.004211
+Sundaram Money Market Fund,0.072794,0.004230
+Baroda BNP Paribas Money Market Fund,0.072450,0.004089
+Invesco India Money Market Fund,0.072412,0.004198
+DSP Money Market Fund,0.072302,0.004162
+Union Money Market Fund,0.072078,0.003795
+TRUSTMF Money Market Fund,0.071551,0.003866
+LIC MF Money Market Fund,0.067932,0.003749

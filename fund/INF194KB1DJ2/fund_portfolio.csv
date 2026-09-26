@@ -1,0 +1,87 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 9.1% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 9.1% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:53.296253+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,9.098876
+Apar Industries Ltd,Shares,3.966090
+Federal Bank Ltd.,Shares,3.315445
+GE Vernova T&D India Limited,Shares,3.283798
+Ipca Laboratories Ltd.,Shares,2.659384
+Fortis Healthcare Ltd,Shares,2.438421
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.341248
+L&T Finance Limited,Shares,2.234162
+Persistent Systems Limited,Shares,2.206366
+Vishal Mega Mart Limited,Shares,2.186279
+PB Fintech Limited,Shares,2.148472
+KEI Industries Ltd.,Shares,2.088917
+Prestige Estates Projects Limited,Shares,2.059695
+Multi Commodity Exchange of India Ltd,Shares,2.040445
+Sai Life Sciences Limited,Shares,1.960636
+Cummins India Ltd.,Shares,1.935888
+CG Power and Industrial Solutions Limited,Shares,1.753801
+Solar Industries India Limited,Shares,1.732009
+Indian Hotels Co. Ltd,Shares,1.690371
+UNO Minda Limited,Shares,1.630300
+One 97 Communications Limited,Shares,1.571953
+APL Apollo Tubes Limited,Shares,1.548655
+Aditya Infotech Limited,Shares,1.528680
+Glenmark Pharmaceuticals ltd,Shares,1.514199
+Coromandel International Limited,Shares,1.505339
+Navin Fluorine International Limited,Shares,1.424895
+Lenskart Solutions Limited,Shares,1.422648
+TVS Motor Company Ltd.,Shares,1.402770
+FSN E-Commerce Ventures Limited,Shares,1.388765
+COFORGE LIMITED,Shares,1.368407
+The Phoenix Mills Ltd.,Shares,1.309735
+BSE Ltd.,Shares,1.289094
+Bharti Hexacom Limited,Shares,1.201316
+Schaeffler India Limited,Shares,1.194711
+Krishna Institute of Medical Sciences Limited,Shares,1.194393
+Ashok Leyland Ltd.,Shares,1.189640
+Sona BLW Precision Forgings Limited,Shares,1.138971
+SWIGGY LIMITED,Shares,1.136046
+Cholamandalam Investment and Finance Company Ltd,Shares,1.097205
+ICICI Bank Ltd.,Shares,1.088020
+Billionbrains Garage Ventures Limited,Shares,1.079702
+Max Healthcare Institute Limited,Shares,1.059154
+Max Financial Services Limited,Shares,0.990541
+Dixon Technologies (India) Limited,Shares,0.988643
+Shaily Engineering Plastics Ltd.,Shares,0.960258
+Indian Bank,Shares,0.953827
+TORRENT POWER LIMITED,Shares,0.950290
+ICICI Lombard General Insurance Company Limited,Shares,0.935363
+Syrma SGS Technology Limited,Shares,0.855547
+Meesho Limited,Shares,0.837687
+TD Power Systems Ltd,Shares,0.820180
+Anthem Biosciences Limited,Shares,0.802205
+Samvardhana Motherson International Limited,Shares,0.725863
+Sterlite Technologies Limited.,Shares,0.707148
+Bharat Forge Ltd,Shares,0.634939
+HealthCare Global Enterprises Limited,Shares,0.609936
+Global Health Limited,Shares,0.590438
+Supreme Industries Ltd.,Shares,0.582640
+Neuland Laboratories Limited.,Shares,0.577371
+Amber Enterprises India Limited,Shares,0.575791
+3M India Ltd.,Shares,0.500324
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,0.491918
+ASTRAL LIMITED,Shares,0.473853
+Ujjivan Small Finance Bank Limited,Shares,0.466624
+Ajanta Pharma Ltd.,Shares,0.450070
+United Spirits Limited,Shares,0.431037
+OnEMI Technology Solutions Limited,Shares,0.423738
+Welspun Corp Limited,Shares,0.395652
+Aster DM Healthcare Limited,Shares,0.371989
+Abbott India Ltd.,Shares,0.260475
+Gabriel India Ltd.,Shares,0.206711
+SUZLON ENERGY LTD.,Shares,0.202167
+Margin / Deposits,Cash and equivalents,0.077481
+Cash & Bank Balance,Cash and equivalents,0.016093
+Net Receivables / Payables,Cash and equivalents,-0.291700

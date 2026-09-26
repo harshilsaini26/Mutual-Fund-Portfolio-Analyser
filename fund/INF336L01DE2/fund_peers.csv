@@ -1,0 +1,23 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:58.319268+00:00
+fund,return_3y,volatility_3y
+LIC MF Medium to Long Term Fund,0.072590,0.019452
+ICICI Prudential Medium to Long Term Fund,0.070176,0.019847
+Kotak Medium to Long Term Fund,0.069687,0.021405
+SBI MEDIUM TO LONG TERM FUND,0.067786,0.018704
+HDFC Medium to Long Term Fund,0.066385,0.023412
+Nippon India Medium to Long Term Fund,0.066107,0.022234
+Bandhan Medium to Long Term Fund,0.064960,0.022438
+JM Medium to Long Term Fund,0.064607,0.020839
+HSBC Medium to Long Term Fund (this fund),0.063832,0.021122
+UTI Medium to Long Term Fund,0.062434,0.019821
+Canara Robeco Medium To Long Term Fund,0.061782,0.019078
+Aditya Birla Sun Life Medium to Long Term Fund,0.060710,0.022492

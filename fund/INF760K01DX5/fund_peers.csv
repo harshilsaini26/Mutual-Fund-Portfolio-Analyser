@@ -1,0 +1,31 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:11.064747+00:00
+fund,return_3y,volatility_3y
+Axis Short Term Fund,0.076810,0.009690
+Bandhan Short Term Fund,0.076576,0.010351
+Mahindra Manulife Short Term Fund,0.076319,0.009519
+Nippon India Short Term Fund,0.075856,0.009925
+BANK OF INDIA SHORT TERM FUND,0.075799,0.014720
+Groww Short Term Fund,0.074717,0.009391
+LIC MF Short Term Fund,0.074434,0.010311
+Baroda BNP Paribas Short Term Fund (the scheme has 2 segregated portfolios),0.073898,0.009462
+HDFC Short Term Fund,0.073769,0.009311
+Sundaram Short Term Fund (Formerly Known as Sundaram Short Duration Fund),0.073670,0.009196
+Kotak Short Term Fund,0.073472,0.009728
+Mirae Asset Short Term Fund,0.072790,0.010094
+UTI Short Term Fund,0.072599,0.009312
+SBI SHORT TERM FUND,0.072202,0.009584
+Invesco India Short Term Fund,0.071911,0.010186
+Tata Short Term Fund,0.071244,0.009768
+TRUSTMF Short Term Fund,0.070960,0.009332
+JM Short Term Fund,0.070684,0.009307
+JM Short Term Fund,0.070670,0.009302
+Canara Robeco Short Term Fund (this fund),0.069705,0.008135

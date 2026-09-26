@@ -1,0 +1,21 @@
+﻿# View: fund_consistency
+# Question: Was the return steady, or a few good years?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Generated: 2026-09-26T10:35:14.642073+00:00
+stretch_ending,fund_return,benchmark_return
+2026-06-25,-0.057348,
+2026-07-03,-0.046153,
+2026-07-10,-0.050493,
+2026-07-17,-0.029556,
+2026-07-24,-0.043626,
+2026-07-31,-0.001519,
+2026-08-07,0.016173,
+2026-08-14,-0.019469,
+2026-08-21,-0.030953,
+2026-08-28,-0.021876,
+2026-09-04,-0.047416,
+2026-09-11,-0.090523,
+2026-09-18,-0.105860,

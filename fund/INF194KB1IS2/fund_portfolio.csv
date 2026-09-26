@@ -1,0 +1,126 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 10.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 10.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:47.166854+00:00
+holding,kind,weight_pct
+Sun Pharmaceutical Industries Ltd.,Shares,12.951431
+Unresolved Holdings,Shares,10.901354
+Divi's Laboratories Ltd.,Shares,7.223790
+Cipla Ltd.,Shares,4.910083
+Max Healthcare Institute Limited,Shares,4.622179
+Laurus Labs Limited,Shares,4.483223
+Torrent Pharmaceuticals Ltd.,Shares,4.363302
+Dr. Reddy's Laboratories Ltd.,Shares,4.353309
+Lupin Ltd,Shares,3.236905
+Fortis Healthcare Ltd,Shares,2.900461
+Aurobindo Pharma Ltd.,Shares,2.889516
+Glenmark Pharmaceuticals ltd,Shares,2.284202
+Alkem Laboratories Limited,Shares,1.923489
+Zydus Lifesciences Limited,Shares,1.793099
+Ipca Laboratories Ltd.,Shares,1.689834
+Mankind Pharma Limited,Shares,1.639391
+Gland Pharma Limited,Shares,1.400502
+Aster DM Healthcare Limited,Shares,1.224428
+Sai Life Sciences Limited,Shares,1.214434
+Neuland Laboratories Limited.,Shares,1.211579
+Krishna Institute of Medical Sciences Limited,Shares,1.147812
+Wockhardt Ltd,Shares,0.957461
+Ajanta Pharma Ltd.,Shares,0.942233
+Dr. Lal Pathlabs Limited,Shares,0.917488
+PIRAMAL PHARMA LIMITED,Shares,0.821837
+Abbott India Ltd.,Shares,0.812319
+Narayana Hrudayalaya Limited,Shares,0.812319
+Global Health Limited,Shares,0.782339
+Anthem Biosciences Limited,Shares,0.768063
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,0.761401
+Granules India Ltd.,Shares,0.729993
+Onesource Specialty Pharma Limited,Shares,0.724282
+Shilpa Medicare Ltd.,Shares,0.683357
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.613879
+Eris Lifesciences Limited,Shares,0.485393
+Natco Pharma Ltd.,Shares,0.471593
+Syngene International Limited,Shares,0.465882
+Vijaya Diagnostic Centre Limited,Shares,0.449702
+Pfizer Ltd.,Shares,0.434950
+JUBILANT PHARMOVA LIMITED,Shares,0.430667
+Marksans Pharma Ltd.,Shares,0.421626
+STRIDES PHARMA SCIENCE LIMITED,Shares,0.416867
+Poly Medicure Ltd,Shares,0.405446
+Indegene Limited,Shares,0.388790
+Emcure Pharmaceuticals Limited,Shares,0.388790
+Metropolis Healthcare Limited,Shares,0.377369
+RUBICON RESEARCH LIMITED,Shares,0.349293
+Jupiter Life Line Hospitals Limited,Shares,0.338823
+Caplin Point Laboratories Ltd.,Shares,0.305512
+Concord Biotech Limited,Shares,0.297422
+AstraZeneca Pharma India Ltd.,Shares,0.268870
+Aarti Pharmalabs Limited,Shares,0.267442
+YATHARTH HOSPITAL & TRAUMA CARE SERVICES LIMITED,Shares,0.260304
+Bliss GVS Pharma Limited,Shares,0.247455
+HealthCare Global Enterprises Limited,Shares,0.236986
+Thyrocare Technologies Limited,Shares,0.228896
+Morepen Laboratories Ltd.,Shares,0.226993
+SENORES PHARMACEUTICALS LIMITED,Shares,0.218427
+Suven Life Sciences Ltd.,Shares,0.177977
+Sanofi India Ltd,Shares,0.172743
+Kovai Medical Center & Hospital Ltd,Shares,0.170363
+Akums Drugs and Pharmaceuticals Limited,Shares,0.164653
+IOL Chemicals & Pharmaceuticals Ltd,Shares,0.136100
+Supriya Lifescience Limited,Shares,0.126107
+Blue Jet Healthcare Limited,Shares,0.122776
+Sun Pharma Advanced Research Company Ltd.,Shares,0.115162
+INNOVA CAPTAB LIMITED,Shares,0.105644
+FDC Ltd.,Shares,0.100886
+PARK MEDI WORLD LIMITED,Shares,0.098506
+Artemis Medicare Services Limited,Shares,0.095651
+Nephrocare Health Services Limited,Shares,0.092320
+Kwality Pharmaceuticals Limited,Shares,0.092320
+Orchid Pharma Limited,Shares,0.089940
+SOLARA ACTIVE PHARMA SCIENCES LIMITED,Shares,0.088513
+Aarti Drugs Limited,Shares,0.088037
+Advanced Enzyme Technologies Limited,Shares,0.084706
+Gujarat Themis Biosyn Ltd.,Shares,0.081851
+Corona Remedies Limited,Shares,0.077092
+Dishman Carbogen Amcis Limited,Shares,0.070430
+Unichem Laboratories Ltd.,Shares,0.069478
+Gufic BioSciences Ltd.,Shares,0.069002
+RPG Life Sciences Limited,Shares,0.068526
+Novartis India Limited.,Shares,0.068050
+SMS Pharmaceuticals Ltd,Shares,0.066147
+Krsnaa Diagnostics Limited,Shares,0.061864
+Vimta Labs Ltd.,Shares,0.059960
+Syncom Formulations (India) Ltd.,Shares,0.055202
+Indoco Remedies Ltd.,Shares,0.055202
+Hester Biosciences Ltd,Shares,0.052822
+Sigachi Industries Limited,Shares,0.048063
+Windlas Biotech Limited,Shares,0.047588
+Hikal Ltd.,Shares,0.045684
+SURAKSHA DIAGNOSTIC LIMITED,Shares,0.040925
+Dr.Agarwals Eye Hospital Ltd.,Shares,0.040449
+Panacea Biotec Ltd.,Shares,0.039022
+Kopran Ltd.,Shares,0.036167
+Lincoln Pharmaceuticals ltd.,Shares,0.035691
+KMC Speciality Hospitals India Limited,Shares,0.032360
+Tarsons Products Limited,Shares,0.031408
+Wanbury Limited,Shares,0.029980
+FERMENTA BIOTECH LIMITED,Shares,0.029028
+Jagsonpal Pharmaceuticals Limited,Shares,0.027601
+GPT Healthcare Limited,Shares,0.026173
+Shalby Limited,Shares,0.025697
+Bajaj Healthcare Limited,Shares,0.024746
+Laxmi Dental Limited,Shares,0.022366
+GUJARAT KIDNEY AND SUPER SPECIALITY LIMITED,Shares,0.021414
+Themis Medicare Ltd.,Shares,0.020939
+Anuh Pharma Ltd.,Shares,0.014276
+Shree Ganesh Remedies Limited,Shares,0.012849
+Fabtech Technologies Limited,Shares,0.010945
+Nectar Lifesciences Limited,Shares,0.007138
+Cash & Bank Balance,Cash and equivalents,0.004759
+Net Receivables / Payables,Cash and equivalents,-0.728090

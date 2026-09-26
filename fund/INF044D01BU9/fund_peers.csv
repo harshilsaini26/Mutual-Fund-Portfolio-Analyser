@@ -1,0 +1,48 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:37:13.458051+00:00
+fund,return_3y,volatility_3y
+BANK OF INDIA FLEXI CAP FUND,0.193168,0.176609
+ITI Flexi Cap Fund,0.192082,0.163968
+Motilal Oswal Flexi Cap Fund,0.181416,0.168448
+360 ONE Flexicap Fund,0.176161,0.152296
+Invesco India Flexi Cap Fund,0.174607,0.155794
+Bajaj Finserv Flexi Cap Fund,0.167112,0.133521
+ICICI Prudential Flexi Cap fund,0.159123,0.142559
+HSBC Flexi Cap Fund,0.157452,0.157345
+Quant Flexi Cap Fund,0.156176,0.167433
+HDFC Flexi Cap Fund,0.154225,0.119952
+JM Flexi Cap Fund,0.149813,0.157984
+Aditya Birla Sun Life Flexi Cap Fund,0.147246,0.133272
+WhiteOak Capital Flexi Cap Fund,0.143871,0.137666
+Edelweiss Flexi Cap Fund,0.142480,0.146242
+Axis Flexi Cap Fund,0.138572,0.141810
+Parag Parikh Flexi Cap Fund,0.127527,0.098037
+Mirae Asset Flexi Cap Fund,0.123333,0.141000
+Baroda BNP Paribas Flexi Cap Fund,0.121914,0.149702
+Navi Flexi Cap Fund,0.117786,0.141006
+Taurus Flexi Cap Fund (this fund),0.116623,0.148019
+Canara Robeco Flexi Cap Fund,0.114577,0.135039
+Union Flexi Cap Fund,0.113213,0.140599
+Kotak Flexi Cap Fund,0.112971,0.144996
+LIC MF Flexi Cap Fund,0.111733,0.155233
+DSP Flexi Cap Fund,0.108673,0.141550
+PGIM India Flexi Cap Fund,0.107046,0.135464
+Franklin India Flexi Cap Fund,0.106164,0.134411
+BANDHAN Flexi Cap Fund,0.105257,0.128769
+Nippon India Flexi Cap Fund,0.102838,0.146009
+Mahindra Manulife Flexi Cap Fund,0.101874,0.136000
+NJ Flexi Cap Fund,0.098818,0.144259
+Tata Flexi Cap Fund,0.098033,0.127466
+Sundaram Flexicap Fund,0.086753,0.131995
+SBI FLEXICAP FUND,0.086446,0.123955
+UTI - Flexi Cap Fund.,0.080714,0.129468
+Shriram Flexi Cap Fund,0.073899,0.158394
+Samco Flexi Cap Fund,-0.031416,0.175919

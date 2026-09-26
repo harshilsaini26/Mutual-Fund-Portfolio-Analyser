@@ -1,0 +1,80 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 32.5% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 32.5% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:16.996426+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,32.540783
+ICICI Bank Ltd.,Shares,6.453639
+HDFC Bank Ltd.,Shares,4.625280
+Reliance Industries Ltd,Shares,3.682110
+Bharti Airtel  Ltd.,Shares,2.915297
+State Bank Of India,Shares,2.774855
+AXIS Bank Ltd.,Shares,2.646785
+Bajaj Finance Limited,Shares,2.016674
+Mahindra & Mahindra Ltd.,Shares,1.911959
+Infosys Ltd,Shares,1.882738
+Larsen & Toubro Limited,Shares,1.743018
+Sun Pharmaceutical Industries Ltd.,Shares,1.514154
+Government Securities,Bonds and other debt,1.458565
+Hindalco Industries Ltd.,Shares,1.408475
+United Spirits Limited,Shares,1.215253
+TREPS / Repo / Reverse Repo,Cash and equivalents,1.131551
+UltraTech Cement Ltd,Shares,1.127566
+Federal Bank Ltd.,Shares,1.058705
+Sona BLW Precision Forgings Limited,Shares,1.014963
+Bharat Electronics Ltd.,Shares,0.977263
+COFORGE LIMITED,Shares,0.963795
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.938526
+Cholamandalam Investment and Finance Company Ltd,Shares,0.901704
+Meesho Limited,Shares,0.885763
+Gland Pharma Limited,Shares,0.880602
+Persistent Systems Limited,Shares,0.853581
+Lenskart Solutions Limited,Shares,0.851249
+UNO Minda Limited,Shares,0.849537
+Godrej Consumer Products Ltd.,Shares,0.827561
+Cyient DLM Limited,Shares,0.824919
+Siemens Ltd.,Shares,0.703262
+Avenue Supermarts Limited,Shares,0.703232
+Eris Lifesciences Limited,Shares,0.683725
+Ajanta Pharma Ltd.,Shares,0.671462
+Nexus Select Trust,"REITs, InvITs and other",0.661791
+Sundram Fasteners Ltd.,Shares,0.659751
+SRF Ltd.,Shares,0.639250
+Anthem Biosciences Limited,Shares,0.638933
+Adani Enterprises Ltd.,Shares,0.620303
+Ambuja Cements Ltd.,Shares,0.612054
+Timken India Ltd,Shares,0.583279
+Bajaj Finserv Limited,Shares,0.561824
+Atul Limited.,Shares,0.558992
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.538296
+Bharat Forge Ltd,Shares,0.525526
+Container Corporation Of India Ltd.,Shares,0.494304
+Net Receivables / Payables,Cash and equivalents,0.492606
+ICICI Lombard General Insurance Company Limited,Shares,0.485297
+Vedanta Aluminium Metal Limited,Shares,0.482858
+Tube Investments of India Ltd,Shares,0.442706
+AIA Engineering Ltd.,Shares,0.417951
+Units of Other Schemes,Other funds,0.412241
+SWIGGY LIMITED,Shares,0.399211
+SBI Life Insurance Company Limited,Shares,0.398975
+Devyani International Limited,Shares,0.390320
+Gokaldas Exports Ltd,Shares,0.372415
+Adani Ports and Special Economic Zone Ltd,Shares,0.353552
+Hindustan Aeronautics Limited,Shares,0.333002
+Voltas Ltd.,Shares,0.331337
+Sobha Limited,Shares,0.295097
+Jubilant Foodworks Limited,Shares,0.292041
+SHRIRAM PISTONS & RINGS LTD,Shares,0.290449
+United Breweries Ltd.,Shares,0.264189
+INDIQUBE SPACES LIMITED,Shares,0.230757
+INVENTURUS KNOWLEDGE SOLUTIONS LIMITED,Shares,0.226819
+Whirlpool of India Ltd,Shares,0.208698
+InterGlobe Aviation Limited,Shares,0.108897
+Margin / Deposits,Cash and equivalents,0.037728

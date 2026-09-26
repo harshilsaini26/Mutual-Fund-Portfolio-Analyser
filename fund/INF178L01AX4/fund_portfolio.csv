@@ -1,0 +1,39 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 51.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 51.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:44.083631+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,51.879394
+Punjab National Bank,Bonds and other debt,6.227110
+Bajaj Housing Finance Limited,Bonds and other debt,6.075063
+Canara Bank,Bonds and other debt,3.749910
+Vedanta Ltd.,Bonds and other debt,3.436233
+REC LIMITED,Bonds and other debt,3.408536
+Bank Of Baroda,Bonds and other debt,2.914232
+EMBASSY OFFICE PARKS REIT,Bonds and other debt,2.814366
+Bajaj Finance Limited,Bonds and other debt,2.559171
+Net Receivables / Payables,Cash and equivalents,2.106047
+Union Bank of India,Bonds and other debt,2.073557
+HDFC Bank Ltd.,Bonds and other debt,1.872644
+Power Finance Corporation Ltd,Bonds and other debt,1.694627
+Adani Power Limited,Bonds and other debt,1.621400
+Piramal Finance Limited,Bonds and other debt,0.858913
+Can Fin Homes Ltd.,Bonds and other debt,0.857920
+Nexus Select Trust,Bonds and other debt,0.856967
+POONAWALLA FINCORP LIMITED,Bonds and other debt,0.852540
+MUTHOOT FINANCE LIMITED,Bonds and other debt,0.851006
+Federal Bank Ltd.,Bonds and other debt,0.811525
+AXIS Bank Ltd.,Bonds and other debt,0.504692
+PNB Housing Finance Limited,Bonds and other debt,0.429043
+Lic Housing Finance Ltd.,Bonds and other debt,0.428483
+Units of Other Schemes,"REITs, InvITs and other",0.378102
+MINDSPACE BUSINESS PARKS REIT,Bonds and other debt,0.214446
+Mahindra & Mahindra Financial Services Limited,Bonds and other debt,0.214218
+Indian Bank,Bonds and other debt,0.210614
+Aadhar Housing Finance Limited,Bonds and other debt,0.085957
+Government Securities,Bonds and other debt,0.013284

@@ -1,0 +1,34 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - AMFI's older heading does not say what an ETF tracks, so these funds are compared only with each other.
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:11.661410+00:00
+fund,return_3y,volatility_3y
+Nippon India Silver ETF,0.450263,0.366632
+Nippon India Nifty Pharma ETF,0.220734,0.151034
+CPSE ETF,0.211722,0.218199
+Nippon India ETF Hang Seng BeES,0.196219,0.230561
+Nippon India Nifty Auto ETF,0.191908,0.192539
+Nippon India ETF Nifty Next 50 Junior BeES,0.175514,0.184831
+Nippon India ETF Nifty PSU Bank BeES,0.168591,0.258296
+Nippon India ETF BSE Sensex Next 50,0.152045,0.169825
+Nippon India ETF Nifty Midcap 150,0.146318,0.171432
+Nippon India ETF Nifty Infrastructure BeES,0.131065,0.168939
+Nippon India ETF Nifty India Consumption,0.108709,0.138259
+Nippon India ETF Nifty Dividend Opportunities 50,0.084895,0.150541
+Nippon India ETF Nifty Bank BeES,0.080648,0.160553
+Nippon India ETF Nifty 100,0.080383,0.137163
+Nippon India ETF Nifty 5 yr Benchmark G-Sec (this fund),0.074192,0.019875
+Nippon India ETF Nifty SDL Apr 2026 Top 20 Equal Weight,0.069642,0.004905
+Nippon India ETF Nifty 50 BeES,0.067457,0.132482
+Nippon India ETF Nifty 8-13 yr G-Sec Long Term Gilt,0.066712,0.027703
+Nippon India ETF BSE Sensex,0.049789,0.132716
+Nippon India ETF Nifty 50 Value 20,0.044240,0.132369
+Nippon India ETF Nifty 50 Shariah BeES,-0.009325,0.134400
+Nippon India ETF Nifty IT,-0.030005,0.222776

@@ -1,0 +1,32 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:42.814667+00:00
+fund,return_3y,volatility_3y
+Franklin India Corporate Bond Fund,0.079532,0.012141
+BARODA BNP PARIBAS CORPORATE BOND FUND,0.076768,0.011400
+AXIS Corporate Bond Fund,0.075830,0.011100
+Nippon India Corporate Bond Fund,0.074473,0.011524
+DSP Corporate Bond Fund,0.073647,0.006584
+ICICI Prudential Corporate Bond Fund,0.073146,0.009935
+Kotak Corporate Bond Fund,0.072907,0.011146
+HSBC Corporate Bond Fund,0.072838,0.011494
+BANDHAN Corporate Bond Fund,0.072259,0.010201
+UTI - Corporate Bond Fund,0.072032,0.010948
+SBI Corporate Bond Fund,0.071732,0.010932
+Tata Corporate Bond Fund,0.071702,0.011677
+Invesco India Corporate Bond Fund,0.071034,0.012148
+PGIM India Corporate Bond Fund,0.070915,0.011559
+Mirae Asset Corporate Bond Fund,0.070348,0.011591
+Sundaram Corporate Bond Fund,0.069868,0.010844
+Aditya Birla Sun Life Corporate Bond Fund,0.069647,0.013831
+HDFC Corporate Bond Fund (this fund),0.069121,0.012768
+Union Corporate Bond Fund,0.068628,0.012311
+TRUSTMF CORPORATE BOND FUND,0.067346,0.013469
+Canara Robeco Corporate Bond Fund,0.066653,0.009377

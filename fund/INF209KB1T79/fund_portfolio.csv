@@ -1,0 +1,71 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 16.5% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 16.5% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:31.693756+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,16.525609
+Aditya Infotech Limited,Shares,6.546120
+Bharti Airtel  Ltd.,Shares,4.036102
+ICICI Bank Ltd.,Shares,3.409324
+Meesho Limited,Shares,2.915144
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.905195
+SHRIRAM PISTONS & RINGS LTD,Shares,2.702300
+Bank of India,Shares,2.485563
+Billionbrains Garage Ventures Limited,Shares,2.259963
+AXIS Bank Ltd.,Shares,2.236617
+Ujjivan Small Finance Bank Limited,Shares,2.179771
+Vedanta Aluminium Metal Limited,Shares,2.021850
+Navin Fluorine International Limited,Shares,2.013948
+Infosys Ltd,Shares,1.950709
+Bikaji Foods International Limited,Shares,1.795663
+RBL Bank Limited,Shares,1.733831
+COFORGE LIMITED,Shares,1.706874
+INDUS TOWERS LIMITED,Shares,1.671366
+Craftsman Automation Limited,Shares,1.609714
+Mahindra & Mahindra Ltd.,Shares,1.539120
+Varun Beverages Limited,Shares,1.508982
+Bajaj Finserv Limited,Shares,1.400004
+SEDEMAC MECHATRONICS LIMITED,Shares,1.372202
+Ambuja Cements Ltd.,Shares,1.365871
+Carborundum Universal Ltd.,Shares,1.360760
+Five-Star Business Finance Ltd.,Shares,1.339055
+TBO TEK LIMITED,Shares,1.286383
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,1.274042
+BELRISE INDUSTRIES LIMITED,Shares,1.189504
+TATA CONSUMER PRODUCTS LIMITED,Shares,1.187753
+Anthem Biosciences Limited,Shares,1.186745
+Ceat Ltd.,Shares,1.160030
+Ajanta Pharma Ltd.,Shares,1.148619
+Physicswallah Limited,Shares,1.102778
+PITTI ENGINEERING LIMITED,Shares,1.094978
+SWIGGY LIMITED,Shares,1.094907
+ICICI Lombard General Insurance Company Limited,Shares,1.089100
+Reliance Industries Ltd,Shares,1.071280
+Adani Enterprises Ltd.,Shares,1.048613
+Fortis Healthcare Ltd,Shares,1.016076
+Amagi Media Labs Limited,Shares,1.007877
+Atul Limited.,Shares,0.956729
+Margin / Deposits,Cash and equivalents,0.937916
+RateGain Travel Technologies Limited,Shares,0.927599
+Grasim Industries Ltd,Shares,0.858670
+Hindalco Industries Ltd.,Shares,0.796134
+Stylam Industries Limited,Shares,0.781886
+UTI Asset Management Company Limited,Shares,0.727854
+Sobha Limited,Shares,0.705391
+Onesource Specialty Pharma Limited,Shares,0.677488
+Ather Energy Limited,Shares,0.666241
+AIA Engineering Ltd.,Shares,0.646396
+Arvind Ltd.,Shares,0.609794
+PNC Infratech Limited,Shares,0.588230
+VRL Logistics Limited,Shares,0.513454
+Capillary Technologies India Limited,Shares,0.414434
+One 97 Communications Limited,Shares,0.402694
+Derivative Positions,Derivatives,0.064153
+Net Receivables / Payables,Cash and equivalents,-0.825405

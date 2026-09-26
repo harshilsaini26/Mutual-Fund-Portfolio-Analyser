@@ -1,0 +1,40 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 17.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 17.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:16.165983+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,17.419646
+ICICI Bank Ltd.,Shares,7.566540
+AXIS Bank Ltd.,Shares,5.295354
+INDUS TOWERS LIMITED,Shares,4.997654
+Bajaj Finance Limited,Shares,4.935731
+Cholamandalam Investment and Finance Company Ltd,Shares,4.898746
+Bharti Airtel  Ltd.,Shares,4.841423
+TREPS / Repo / Reverse Repo,Cash and equivalents,4.812729
+Premier Energies Limited,Shares,4.177551
+Indian Hotels Co. Ltd,Shares,4.061170
+JSW Steel Limited,Shares,3.671001
+One 97 Communications Limited,Shares,3.203780
+Motherson Sumi Wiring India Limited,Shares,2.905672
+BSE Ltd.,Shares,2.742175
+PNB Housing Finance Limited,Shares,2.696510
+Divi's Laboratories Ltd.,Shares,2.637461
+Onesource Specialty Pharma Limited,Shares,2.362938
+Physicswallah Limited,Shares,2.313631
+AEGIS VOPAK TERMINALS LIMITED,Shares,2.282151
+Varun Beverages Limited,Shares,2.092516
+COFORGE LIMITED,Shares,1.806640
+WeWork India Management Limited,Shares,1.806461
+BAJAJ CONSUMER CARE LIMITED,Shares,1.791893
+Apar Industries Ltd,Shares,1.512158
+MTAR Technologies Limited,Shares,1.125557
+SIS LIMITED,Shares,1.070308
+CG Power and Industrial Solutions Limited,Shares,0.957297
+Net Receivables / Payables,Cash and equivalents,0.015307

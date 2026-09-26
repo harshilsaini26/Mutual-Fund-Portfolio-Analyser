@@ -1,0 +1,47 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:44.739048+00:00
+holding,kind,weight_pct
+Divi's Laboratories Ltd.,Shares,10.548238
+Unresolved Holdings,Shares,8.573715
+Sun Pharmaceutical Industries Ltd.,Shares,8.206171
+RUBICON RESEARCH LIMITED,Shares,6.813573
+PIRAMAL PHARMA LIMITED,Shares,6.717616
+Aurobindo Pharma Ltd.,Shares,6.181389
+Torrent Pharmaceuticals Ltd.,Shares,5.033796
+Neuland Laboratories Limited.,Shares,4.105290
+Emcure Pharmaceuticals Limited,Shares,3.841858
+Max Healthcare Institute Limited,Shares,3.346896
+Fortis Healthcare Ltd,Shares,2.685174
+Zydus Lifesciences Limited,Shares,2.564039
+Ipca Laboratories Ltd.,Shares,2.456182
+Laurus Labs Limited,Shares,2.358895
+Vijaya Diagnostic Centre Limited,Shares,2.308711
+Zydus Wellness Limited,Shares,2.267249
+SENORES PHARMACEUTICALS LIMITED,Shares,2.151288
+Cash & Bank Balance,Cash and equivalents,2.120000
+Shaily Engineering Plastics Ltd.,Shares,1.999998
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,1.787784
+Glenmark Pharmaceuticals ltd,Shares,1.695029
+Dr. Lal Pathlabs Limited,Shares,1.679385
+Cipla Ltd.,Shares,1.388681
+Units of Other Schemes,Other funds,1.301765
+Dr. Reddy's Laboratories Ltd.,Shares,1.279790
+Navin Fluorine International Limited,Shares,0.985291
+Krishna Institute of Medical Sciences Limited,Shares,0.930624
+Turtlemint Fintech Solutions Limited,Shares,0.921731
+Onesource Specialty Pharma Limited,Shares,0.823334
+Medi Assist Healthcare Services Limited,Shares,0.815796
+JUBILANT PHARMOVA LIMITED,Shares,0.760118
+Net Receivables / Payables,Cash and equivalents,0.626370
+MTAR Technologies Limited,Shares,0.260279
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,0.254958
+Neogen Chemicals Limited,Shares,0.208987

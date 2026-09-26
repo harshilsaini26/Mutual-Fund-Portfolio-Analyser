@@ -1,0 +1,16 @@
+﻿# View: fund_header
+# Question: What is this fund, and how has it done?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Generated: 2026-09-26T10:36:52.829879+00:00
+key,label,value
+return_1y,"Return, 1 year",0.052244
+return_3y,"Return, 3 years",0.060218
+return_5y,"Return, 5 years",0.056892
+rank_3y,"Category rank, 3 years",22nd of 31
+worst_fall,Worst fall,-0.001109
+volatility,Volatility,0.000896
+fund_size,Fund size,282039058000.00
+ter,Expense ratio,0.0900

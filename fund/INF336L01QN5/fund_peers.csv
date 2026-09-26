@@ -1,0 +1,33 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:58.965451+00:00
+fund,return_3y,volatility_3y
+Axis Multicap Fund,0.194709,0.148672
+HSBC Multi Cap Fund (this fund),0.186440,0.162588
+WhiteOak Capital Multi Cap Fund,0.183212,0.145130
+LIC MF Multi Cap Fund,0.180638,0.155889
+BANK OF INDIA MULTI CAP FUND,0.179303,0.161028
+Mahindra Manulife Multi Cap Fund,0.175004,0.166317
+ITI Multi Cap Fund,0.173322,0.162798
+Kotak Multi Cap Fund,0.170529,0.159937
+ICICI Prudential Multi Cap Fund,0.157658,0.139133
+Union Multicap Fund,0.150200,0.150949
+Aditya Birla Sun Life Multi-Cap Fund,0.147442,0.145080
+Baroda BNP Paribas Multi Cap Fund,0.146732,0.152794
+Canara Robeco Multi Cap Fund,0.142580,0.141330
+Mirae Asset Multicap Fund,0.136743,0.144980
+Invesco India Multi Cap Fund,0.134729,0.159291
+Nippon India Multi Cap Fund,0.130587,0.144411
+SBI MultiCap Fund,0.130127,0.129454
+Sundaram Multi Cap Fund (Formerly Known as Principal Multi Cap Growth Fund),0.127685,0.142665
+BANDHAN MULTI CAP FUND,0.125322,0.135940
+HDFC Multi Cap Fund,0.114227,0.148499
+Quant Multi Cap Fund,0.103214,0.169779
+TATA MULTICAP FUND,0.102663,0.153098

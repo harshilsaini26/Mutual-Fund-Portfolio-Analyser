@@ -1,0 +1,60 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 6.4% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 6.4% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:41.938866+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,6.350520
+Tata Consultancy Services Ltd.,Shares,5.615933
+Infosys Ltd,Shares,5.297135
+Bharat Electronics Ltd.,Shares,4.226841
+Bajaj Auto Limited,Shares,4.091811
+Dixon Technologies (India) Limited,Shares,3.783330
+BSE Ltd.,Shares,3.762068
+Britannia Industries Ltd.,Shares,3.634623
+Coal India Limited,Shares,3.261860
+Colgate-Palmolive (India) Ltd.,Shares,3.120365
+SUZLON ENERGY LTD.,Shares,2.844958
+HDFC Asset Management Company Limited,Shares,2.786892
+CG Power and Industrial Solutions Limited,Shares,2.702965
+Solar Industries India Limited,Shares,2.665166
+Marico Limited,Shares,2.628984
+Persistent Systems Limited,Shares,2.569551
+Anand Rathi Wealth Limited,Shares,2.433651
+GE Vernova T&D India Limited,Shares,2.309686
+National Aluminium Co. Ltd.,Shares,2.193556
+Computer Age Management Services Limited,Shares,2.128279
+Oracle Financial Services Software Limited,Shares,2.086253
+ABB India Limited,Shares,2.050568
+Page Industries Ltd.,Shares,1.989767
+Central Depository Services (India) Ltd.,Shares,1.902731
+NIPPON LIFE INDIA ASSET MANAGEMENT LIMITED,Shares,1.713117
+Mazagon Dock Shipbuilders Limited,Shares,1.517410
+Indian Railway Catering & Tourism Corporation Ltd,Shares,1.449274
+Motilal Oswal Financial Services Limited,Shares,1.363108
+Indian Energy Exchange Limited,Shares,1.343587
+Castrol India Ltd,Shares,1.337370
+Tata Elxsi Ltd,Shares,1.143529
+Motherson Sumi Wiring India Limited,Shares,1.142534
+SCHNEIDER ELECTRIC INFRASTRUCTURE LIMITED,Shares,1.073278
+eClerx Services Limited,Shares,1.036599
+Force Motors Limited,Shares,1.032869
+Gillette India Ltd.,Shares,1.006012
+L&T Technology Services Limited,Shares,0.976295
+Emami Ltd,Shares,0.944713
+KPIT Technologies Ltd,Shares,0.925690
+Triveni Turbine Limited,Shares,0.911888
+Natco Pharma Ltd.,Shares,0.893487
+Garden Reach Shipbuilders & Engineers Limited,Shares,0.890005
+Zen Technologies Ltd.,Shares,0.873717
+IndiaMART InterMESH Limited,Shares,0.792525
+Sonata Software Ltd.,Shares,0.736697
+BLS International Services Ltd,Shares,0.571453
+Cash & Bank Balance,Cash and equivalents,0.429833
+Net Receivables / Payables,Cash and equivalents,-0.542483

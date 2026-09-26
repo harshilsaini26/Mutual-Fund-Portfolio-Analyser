@@ -1,0 +1,32 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:28.940667+00:00
+fund,return_3y,volatility_3y
+Bandhan Gilt   Fund,0.079019,0.035549
+Axis Gilt Fund,0.070919,0.029785
+ICICI Prudential Gilt Fund,0.068967,0.023447
+DSP Gilt Fund,0.067157,0.037438
+SBI GILT FUND,0.066341,0.026521
+UTI - Gilt Fund,0.065956,0.026232
+Invesco India Gilt Fund,0.065182,0.036339
+Franklin India Gilt Fund,0.064326,0.021777
+BARODA BNP PARIBAS GILT FUND,0.064075,0.025432
+Tata Gilt Fund,0.063238,0.034467
+Nippon India Gilt Fund,0.062721,0.030587
+HDFC Gilt Fund,0.062519,0.027081
+PGIM India Gilt Fund (this fund),0.060434,0.029879
+Canara Robeco Gilt Fund,0.058923,0.029154
+Edelweiss Gilt Fund,0.058710,0.031755
+HSBC Gilt Fund,0.058691,0.030983
+quant Gilt Fund,0.057721,0.021394
+Kotak Gilt Fund,0.056480,0.034024
+Aditya Birla Sun Life Gilt Fund,0.055704,0.036752
+LIC MF Gilt Fund,0.054438,0.035308
+Union Gilt Fund,0.050473,0.039852

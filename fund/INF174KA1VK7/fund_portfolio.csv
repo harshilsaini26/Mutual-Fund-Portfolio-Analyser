@@ -1,0 +1,25 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 21.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 21.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:34.406981+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,21.777224
+Aditya Birla Capital Ltd,Bonds and other debt,9.446813
+HDFC Bank Ltd.,Bonds and other debt,9.410086
+Punjab National Bank,Bonds and other debt,9.407637
+Canara Bank,Bonds and other debt,9.407637
+Union Bank of India,Bonds and other debt,9.407637
+Lic Housing Finance Ltd.,Bonds and other debt,9.405811
+Bajaj Housing Finance Limited,Bonds and other debt,9.403673
+Power Finance Corporation Ltd,Bonds and other debt,3.895077
+REC LIMITED,Bonds and other debt,1.946741
+ICICI Bank Ltd.,Bonds and other debt,1.883199
+AXIS Bank Ltd.,Bonds and other debt,1.879234
+Mahindra & Mahindra Financial Services Limited,Bonds and other debt,1.560160
+Net Receivables / Payables,Cash and equivalents,0.702702
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.466369

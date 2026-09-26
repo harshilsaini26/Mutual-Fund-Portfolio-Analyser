@@ -1,0 +1,20 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:33:51.601571+00:00
+fund,return_3y,volatility_3y
+DSP Healthcare Fund,0.229479,0.128063
+Nippon India Pharma Fund,0.196773,0.129568
+BANDHAN TRANSPORTATION AND LOGISTICS FUND,0.192459,0.160610
+Nippon India Power & Infra Fund,0.188243,0.177686
+Invesco India Financial Services Fund,0.167148,0.165346
+HSBC Infrastructure Fund,0.159846,0.192031
+BANDHAN Infrastructure Fund (this fund),0.156461,0.192528
+BANDHAN FINANCIAL SERVICES FUND,0.146171,0.155715
+Nippon India Banking & Financial Services Fund,0.112117,0.153466

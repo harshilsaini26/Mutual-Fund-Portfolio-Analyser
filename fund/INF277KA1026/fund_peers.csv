@@ -1,0 +1,23 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:37:05.169682+00:00
+fund,return_3y,volatility_3y
+Axis Floating Interest Rates Fund,0.082541,0.020994
+Franklin India Floating Interest Rates Fund,0.079952,0.008079
+BANDHAN FLOATING INTEREST RATES FUND,0.077898,0.009893
+ICICI Prudential Floating Interest Rates Fund,0.076979,0.007683
+Kotak Floating Interest Rates Fund,0.076500,0.007714
+DSP Floating Interest Rates Fund,0.076272,0.011197
+HDFC Floating Interest Rates Fund,0.074744,0.007136
+Tata Floating Interest Rates Fund (this fund),0.074101,0.008126
+SBI Floating Interest Rates Fund,0.073950,0.009139
+Nippon India Floating Interest Rates Fund,0.073777,0.008829
+Aditya Birla Sun Life Floating Interest Rates Fund,0.073746,0.005602
+UTI Floating Interest Rates Fund,0.070732,0.005777

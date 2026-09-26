@@ -1,0 +1,60 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.1% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.1% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:41.836464+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,8.089506
+Sona BLW Precision Forgings Limited,Shares,4.419681
+Karur Vysya Bank Ltd.,Shares,3.981051
+Navin Fluorine International Limited,Shares,3.871668
+Welspun Corp Limited,Shares,3.798916
+Delhivery Limited,Shares,3.098021
+Central Depository Services (India) Ltd.,Shares,3.029136
+RBL Bank Limited,Shares,2.850064
+Gland Pharma Limited,Shares,2.787957
+City Union Bank Ltd,Shares,2.675166
+PNB Housing Finance Limited,Shares,2.618024
+Redington Limited,Shares,2.577015
+Aster DM Healthcare Limited,Shares,2.450439
+Sai Life Sciences Limited,Shares,2.441824
+Neuland Laboratories Limited.,Shares,2.405894
+Anand Rathi Wealth Limited,Shares,2.385868
+Computer Age Management Services Limited,Shares,2.278310
+Manappuram Finance Limited,Shares,2.263186
+ANGEL ONE LIMITED,Shares,2.259854
+Hindustan Copper Ltd.,Shares,2.090317
+Amber Enterprises India Limited,Shares,2.018880
+POONAWALLA FINCORP LIMITED,Shares,2.000743
+Aegis Logistics Ltd.,Shares,1.924698
+Wockhardt Ltd,Shares,1.886075
+Himadri Speciality Chemical Ltd.,Shares,1.877192
+Crompton Greaves Consumer Electricals Limited,Shares,1.837395
+Dr. Lal Pathlabs Limited,Shares,1.827963
+IIFL FINANCE LIMITED,Shares,1.823636
+Bandhan Bank Limited,Shares,1.808499
+CHOLAMANDALAM FINANCIAL HOLDINGS LIMITED,Shares,1.786086
+Tata Technologies Limited,Shares,1.730782
+PIRAMAL PHARMA LIMITED,Shares,1.616816
+Narayana Hrudayalaya Limited,Shares,1.597722
+KFin Technologies Limited,Shares,1.572361
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,1.397603
+Five-Star Business Finance Ltd.,Shares,1.256579
+Tata Chemicals Ltd,Shares,1.219986
+PG Electroplast Limited,Shares,1.137126
+CESC Limited,Shares,1.117330
+NBCC (India) Limited,Shares,1.082141
+Castrol India Ltd,Shares,1.070207
+Syngene International Limited,Shares,0.923746
+Natco Pharma Ltd.,Shares,0.916649
+Inox Wind Limited,Shares,0.822684
+Reliance Power Limited,Shares,0.776889
+KEC International Ltd.,Shares,0.655036
+Cash & Bank Balance,Cash and equivalents,0.255015
+Net Receivables / Payables,Cash and equivalents,-0.311736

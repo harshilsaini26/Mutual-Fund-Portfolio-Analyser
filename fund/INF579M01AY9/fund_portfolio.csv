@@ -1,0 +1,58 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 48.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 48.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:15.438073+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,48.836327
+Government Securities,Bonds and other debt,10.621111
+ICICI Bank Ltd.,Shares,2.439556
+HDFC Bank Ltd.,Shares,2.246838
+Cholamandalam Investment and Finance Company Ltd,Shares,1.859618
+Net Receivables / Payables,Cash and equivalents,1.543930
+INDUS TOWERS LIMITED,Shares,1.540190
+Premier Energies Limited,Shares,1.436128
+Redington Limited,Shares,1.433518
+Bharti Airtel  Ltd.,Shares,1.422145
+Bajaj Finance Limited,Shares,1.368502
+AXIS Bank Ltd.,Shares,1.279944
+Indian Hotels Co. Ltd,Shares,1.275702
+Motherson Sumi Wiring India Limited,Shares,1.271181
+COFORGE LIMITED,Shares,1.245322
+TREPS / Repo / Reverse Repo,Cash and equivalents,1.049130
+AEGIS VOPAK TERMINALS LIMITED,Shares,1.043423
+Reliance Industries Ltd,Shares,1.005926
+Divi's Laboratories Ltd.,Shares,0.980667
+Aegis Logistics Ltd.,Shares,0.943994
+MTAR Technologies Limited,Shares,0.905464
+Varun Beverages Limited,Shares,0.878629
+BAJAJ CONSUMER CARE LIMITED,Shares,0.849924
+Maruti Suzuki India  Ltd.,Shares,0.814604
+Emmvee Photovoltaic Power Limited,Shares,0.761478
+GRAVITA INDIA LIMITED,Shares,0.755003
+Global Health Limited,Shares,0.731349
+Abbott India Ltd.,Shares,0.728684
+JSW Steel Limited,Shares,0.705058
+Adani Enterprises Ltd.,Shares,0.691954
+Vedanta Aluminium Metal Limited,Shares,0.621482
+CG Power and Industrial Solutions Limited,Shares,0.587767
+BSE Ltd.,Shares,0.562327
+Onesource Specialty Pharma Limited,Shares,0.527496
+SIS LIMITED,Shares,0.525500
+JSW Energy Limited,Shares,0.523393
+Capital Small Finance Bank Ltd,Shares,0.480021
+One 97 Communications Limited,Shares,0.479700
+Ujjivan Small Finance Bank Limited,Shares,0.469750
+Vedant Fashions Limited,Shares,0.440445
+GK ENERGY LIMITED,Shares,0.424480
+Aditya Infotech Limited,Shares,0.417810
+Britannia Industries Ltd.,Shares,0.412479
+WeWork India Management Limited,Shares,0.389482
+CreditAccess Grameen Ltd.,Shares,0.288629
+IIFL FINANCE LIMITED,Shares,0.183940

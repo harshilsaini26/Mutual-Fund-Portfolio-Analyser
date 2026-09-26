@@ -1,0 +1,62 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 3.5% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 3.5% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:41.496497+00:00
+holding,kind,weight_pct
+BSE Ltd.,Shares,5.667626
+Federal Bank Ltd.,Shares,3.715276
+Multi Commodity Exchange of India Ltd,Shares,3.665451
+Unresolved Holdings,Shares,3.504570
+Laurus Labs Limited,Shares,3.148696
+One 97 Communications Limited,Shares,3.055048
+Hero MotoCorp Limited,Shares,2.989877
+COFORGE LIMITED,Shares,2.919897
+IndusInd Bank Ltd.,Shares,2.829606
+PB Fintech Limited,Shares,2.741895
+Bharat Heavy Electricals Ltd.,Shares,2.726885
+Dixon Technologies (India) Limited,Shares,2.603490
+AU Small Finance Bank Limited,Shares,2.598953
+Persistent Systems Limited,Shares,2.569103
+SUZLON ENERGY LTD.,Shares,2.442532
+IDFC FIRST BANK LIMITED,Shares,2.410452
+Bharat Forge Ltd,Shares,2.370971
+Lupin Ltd,Shares,2.245904
+Polycab India Limited,Shares,2.134317
+Info Edge(India) Ltd.,Shares,2.124518
+Ashok Leyland Ltd.,Shares,2.123831
+INDUS TOWERS LIMITED,Shares,2.117013
+FSN E-Commerce Ventures Limited,Shares,2.021330
+Aurobindo Pharma Ltd.,Shares,2.008434
+Fortis Healthcare Ltd,Shares,1.997196
+Marico Limited,Shares,1.834268
+Max Financial Services Limited,Shares,1.763238
+APL Apollo Tubes Limited,Shares,1.710406
+Yes Bank Ltd.,Shares,1.694632
+SWIGGY LIMITED,Shares,1.690795
+ICICI Lombard General Insurance Company Limited,Shares,1.609228
+SRF Ltd.,Shares,1.571445
+The Phoenix Mills Ltd.,Shares,1.498950
+Hindustan Petroleum Corporation Ltd,Shares,1.484277
+Mphasis Limited,Shares,1.357888
+UPL Limited,Shares,1.332497
+Havells India Limited,Shares,1.324992
+Alkem Laboratories Limited,Shares,1.317889
+Tube Investments of India Ltd,Shares,1.255258
+NHPC Limited,Shares,1.221998
+Prestige Estates Projects Limited,Shares,1.164086
+Mankind Pharma Limited,Shares,1.157449
+Godrej Properties Limited,Shares,1.151461
+Oil India Limited,Shares,1.113587
+Colgate-Palmolive (India) Ltd.,Shares,1.056349
+Waaree Energies Limited,Shares,1.053769
+Supreme Industries Ltd.,Shares,0.968598
+Dabur India Ltd.,Shares,0.950737
+Cash & Bank Balance,Cash and equivalents,0.209720
+Net Receivables / Payables,Cash and equivalents,-0.226388

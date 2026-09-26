@@ -1,0 +1,85 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 15.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 15.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:47.337580+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,15.734809
+AXIS Bank Ltd.,Shares,5.262720
+HDFC Bank Ltd.,Shares,4.561690
+Reliance Industries Ltd,Shares,4.422122
+ICICI Bank Ltd.,Shares,4.279198
+One 97 Communications Limited,Shares,3.737554
+Bajaj Finance Limited,Shares,3.646184
+Bharti Airtel  Ltd.,Shares,3.446906
+State Bank Of India,Shares,3.441969
+Larsen & Toubro Limited,Shares,3.218732
+Infosys Ltd,Shares,2.802172
+UltraTech Cement Ltd,Shares,2.000331
+IDFC FIRST BANK LIMITED,Shares,1.981527
+City Union Bank Ltd,Shares,1.822483
+ACME Solar Holdings Limited,Shares,1.732968
+Fortis Healthcare Ltd,Shares,1.689588
+InterGlobe Aviation Limited,Shares,1.503503
+Adani Ports and Special Economic Zone Ltd,Shares,1.441966
+Tata Consultancy Services Ltd.,Shares,1.441647
+Mphasis Limited,Shares,1.405851
+PTC India Financial Services Limited,Shares,1.149308
+Coromandel International Limited,Shares,1.142898
+Tata Power Co. Ltd,Shares,1.133969
+Aurobindo Pharma Ltd.,Shares,1.079142
+Tega Industries Limited,Shares,1.074150
+Maruti Suzuki India  Ltd.,Shares,1.045382
+Bharat Electronics Ltd.,Shares,1.041227
+UPL Limited,Shares,1.006430
+Ujjivan Small Finance Bank Limited,Shares,0.950794
+Hero MotoCorp Limited,Shares,0.944247
+Metropolis Healthcare Limited,Shares,0.920861
+KEC International Ltd.,Shares,0.835147
+Tata Technologies Limited,Shares,0.816280
+The Phoenix Mills Ltd.,Shares,0.814335
+Varun Beverages Limited,Shares,0.783329
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.775228
+FSN E-Commerce Ventures Limited,Shares,0.749515
+SWIGGY LIMITED,Shares,0.741795
+Can Fin Homes Ltd.,Shares,0.717891
+Cipla Ltd.,Shares,0.697243
+SBI Life Insurance Company Limited,Shares,0.695633
+TORRENT POWER LIMITED,Shares,0.689359
+United Spirits Limited,Shares,0.649935
+IndusInd Bank Ltd.,Shares,0.649171
+Jindal Saw Ltd.,Shares,0.622630
+NTPC GREEN ENERGY LIMITED,Shares,0.586661
+Glenmark Pharmaceuticals ltd,Shares,0.574550
+GARWARE TECHNICAL FIBRES LIMITED,Shares,0.503883
+Sharda Cropchem Limited,Shares,0.489144
+General Insurance Corporation of India,Shares,0.480843
+IDEAFORGE TECHNOLOGY LIMITED,Shares,0.452493
+Divi's Laboratories Ltd.,Shares,0.450875
+CG Power and Industrial Solutions Limited,Shares,0.436709
+Power Mech Projects Limited,Shares,0.418424
+PNC Infratech Limited,Shares,0.418187
+GPT Infraprojects limited,Shares,0.406476
+KNR Constructions Limited,Shares,0.404121
+JSW Energy Limited,Shares,0.381399
+TeamLease Services Limited,Shares,0.376980
+ICICI Lombard General Insurance Company Limited,Shares,0.347357
+Wipro  Ltd.,Shares,0.330373
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.318062
+Ambuja Cements Ltd.,Shares,0.311642
+ANGEL ONE LIMITED,Shares,0.307487
+Thirumalai Chemicals Ltd.,Shares,0.234066
+Excelsoft Technologies Limited,Shares,0.209389
+DALMIA BHARAT LIMITED,Shares,0.199878
+Bajaj Finserv Limited,Shares,0.185140
+Brigade Enterprises Limited,Shares,0.096743
+CHOLAMANDALAM FINANCIAL HOLDINGS LIMITED,Shares,0.003564
+Cash & Bank Balance,Cash and equivalents,0.001946
+IIFL FINANCE LIMITED,Shares,0.000045
+Net Receivables / Payables,Cash and equivalents,-0.226256

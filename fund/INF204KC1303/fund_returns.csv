@@ -1,0 +1,11 @@
+﻿# View: fund_returns
+# Question: How much has it returned, against its benchmark?
+# As of: 2026-09-26
+# Data as of: 24 Sep 2026 (2 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Generated: 2026-09-26T10:36:24.429452+00:00
+period,fund_return,benchmark_return,annualised,days
+1 year,1.241178,,yes,365
+3 years,0.634412,,yes,1095
+Since 14 Dec 2021,0.333230,,yes,1745

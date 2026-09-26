@@ -1,0 +1,53 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 17.5% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 17.5% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:39.006472+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,17.453632
+ICICI Bank Ltd.,Shares,9.520535
+HDFC Bank Ltd.,Shares,8.025347
+Bharti Airtel  Ltd.,Shares,4.873941
+Bajaj Finance Limited,Shares,4.866064
+Mahindra & Mahindra Ltd.,Shares,3.989195
+Reliance Industries Ltd,Shares,3.472294
+Larsen & Toubro Limited,Shares,3.396765
+AXIS Bank Ltd.,Shares,3.186043
+Cash & Bank Balance,Cash and equivalents,2.661292
+Sun Pharmaceutical Industries Ltd.,Shares,2.605587
+Divi's Laboratories Ltd.,Shares,2.583180
+InterGlobe Aviation Limited,Shares,2.580799
+UltraTech Cement Ltd,Shares,2.263133
+State Bank Of India,Shares,2.080531
+Infosys Ltd,Shares,2.043704
+Pidilite Industries Ltd.,Shares,1.990383
+Cholamandalam Investment and Finance Company Ltd,Shares,1.918871
+Indian Hotels Co. Ltd,Shares,1.790890
+TVS Motor Company Ltd.,Shares,1.753879
+Samvardhana Motherson International Limited,Shares,1.513389
+HYUNDAI MOTOR INDIA LIMITED,Shares,1.464580
+Torrent Pharmaceuticals Ltd.,Shares,1.264016
+Units of Other Schemes,Other funds,1.156770
+United Spirits Limited,Shares,1.031022
+Cipla Ltd.,Shares,1.015254
+CG Power and Industrial Solutions Limited,Shares,1.012330
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.969699
+Britannia Industries Ltd.,Shares,0.945228
+HCL Technologies Ltd,Shares,0.919689
+Tata Consultancy Services Ltd.,Shares,0.897962
+Solar Industries India Limited,Shares,0.824696
+Max Healthcare Institute Limited,Shares,0.757508
+Grasim Industries Ltd,Shares,0.546601
+Cummins India Ltd.,Shares,0.522258
+Bharat Electronics Ltd.,Shares,0.519568
+Varun Beverages Limited,Shares,0.465585
+Avenue Supermarts Limited,Shares,0.444097
+LG Electronics India Limited,Shares,0.289437
+Net Receivables / Payables,Cash and equivalents,0.216072
+Maruti Suzuki India  Ltd.,Shares,0.168174

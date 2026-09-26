@@ -1,0 +1,29 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:44.933190+00:00
+fund,return_3y,volatility_3y
+Franklin India Banking & PSU Debt Fund,0.074418,0.009948
+UTI Banking & PSU Debt Fund,0.074115,0.007939
+Kotak Banking and PSU Debt Fund,0.072404,0.011647
+LIC MF Banking & PSU Debt Fund (this fund),0.072316,0.010872
+ICICI Prudential Banking and PSU Debt Fund,0.071647,0.010548
+SBI BANKING & PSU DEBT FUND,0.071085,0.010291
+Invesco India Banking and PSU Debt Fund,0.071080,0.012264
+Bandhan Banking and PSU Debt Fund,0.071034,0.009348
+Nippon India Banking and PSU Debt Fund,0.070352,0.012168
+Edelweiss Banking and PSU Debt Fund,0.070049,0.012953
+HDFC Banking and PSU Debt Fund,0.069864,0.011366
+ITI Banking & PSU Debt Fund,0.069696,0.008375
+Aditya Birla Sun Life Banking & PSU Debt Fund,0.069333,0.010830
+Axis Banking and PSU Debt Fund,0.069070,0.009442
+HSBC Banking and PSU Debt Fund,0.068831,0.010123
+Mirae Asset Banking and PSU Debt Fund,0.068221,0.011523
+DSP Banking and PSU Debt Fund,0.067991,0.014107
+Canara Robeco Banking and PSU Debt Fund,0.065222,0.009624

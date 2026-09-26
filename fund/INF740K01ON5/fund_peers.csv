@@ -1,0 +1,30 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:21.485544+00:00
+fund,return_3y,volatility_3y
+Nippon India Ultra Short Term Fund,0.075576,0.003802
+Aditya Birla Sun Life Ultra Short Term Fund,0.074631,0.004200
+Axis Ultra Short Term Fund,0.074273,0.003816
+DSP Ultra Short Term Fund (this fund),0.074008,0.004017
+Mirae Asset Ultra Short-Term Fund,0.074008,0.003934
+Invesco India Ultra Short Term Fund,0.073286,0.003702
+UTI Ultra Short Term Fund,0.073089,0.003614
+Mahindra Manulife Ultra Short Term Fund,0.072798,0.003630
+Sundaram Ultra Short Term Fund (Formerly Known as Sundaram Ultra Short Duration Fund),0.072610,0.003659
+Baroda BNP Paribas Ultra Short Term Fund,0.072241,0.003652
+LIC MF Ultra Short Term Fund,0.072233,0.003595
+Kotak Ultra Short Term Fund,0.072036,0.004060
+SBI ULTRA SHORT TERM FUND,0.071560,0.003752
+BANDHAN ULTRA SHORT TERM FUND,0.071450,0.003659
+ITI Ultra Short Term Fund,0.070633,0.003455
+PGIM India Ultra Short Term Fund,0.070578,0.003617
+Canara Robeco Ultra Short Term Fund,0.070473,0.003717
+WhiteOak Capital Ultra Short Term Fund,0.070067,0.003619
+BANK OF INDIA ULTRA SHORT TERM FUND,0.068993,0.003781

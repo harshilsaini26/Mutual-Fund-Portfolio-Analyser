@@ -1,0 +1,26 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:19.206511+00:00
+fund,return_3y,volatility_3y
+Quant Multi Asset Allocation Fund,0.224896,0.114425
+Nippon India Multi Asset Allocation Fund (this fund),0.189768,0.099926
+DSP Multi Asset Allocation Fund,0.183642,0.088211
+Kotak Multi Asset Allocation Fund,0.183245,0.121648
+WhiteOak Capital Multi Asset Allocation Fund,0.167648,0.057993
+Aditya Birla Sun Life Multi Asset Allocation Fund,0.160972,0.104266
+UTI Multi Asset Allocation Fund,0.149637,0.096314
+SBI MULTI ASSET ALLOCATION FUND,0.149561,0.079772
+Baroda BNP Paribas Multi Asset Fund,0.143555,0.108814
+ICICI Prudential Multi Asset Allocation Fund,0.141702,0.082348
+Axis Multi Asset Allocation Fund,0.139116,0.106537
+Tata Multi Asset Allocation Fund,0.129784,0.091735
+HDFC Multi Asset Allocation Fund,0.118344,0.075550
+Shriram Multi Asset Allocation Fund,0.111054,0.119517
+Edelweiss Multi Asset Allocation Fund,0.075264,0.019973

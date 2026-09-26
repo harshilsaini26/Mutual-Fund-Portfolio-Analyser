@@ -1,0 +1,61 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 1.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:18.526111+00:00
+holding,kind,weight_pct
+Multi Commodity Exchange of India Ltd,Shares,4.770502
+HCL Technologies Ltd,Shares,4.467707
+Hindustan Aeronautics Limited,Shares,4.394246
+Hero MotoCorp Limited,Shares,4.367392
+Tata Consultancy Services Ltd.,Shares,4.240533
+Nestle India Ltd.,Shares,3.959961
+Britannia Industries Ltd.,Shares,3.922304
+Infosys Ltd,Shares,3.801155
+Hindustan Unilever Ltd.,Shares,3.552992
+Cummins India Ltd.,Shares,3.522434
+ITC Ltd,Shares,3.489253
+GE Vernova T&D India Limited,Shares,3.448664
+Coal India Limited,Shares,3.442337
+Dixon Technologies (India) Limited,Shares,3.376901
+Marico Limited,Shares,3.211613
+SUZLON ENERGY LTD.,Shares,2.871315
+HDFC Asset Management Company Limited,Shares,2.821157
+Pidilite Industries Ltd.,Shares,2.469902
+Torrent Pharmaceuticals Ltd.,Shares,2.457710
+ABB India Limited,Shares,2.394280
+HITACHI ENERGY INDIA LIMITED,Shares,2.327764
+Colgate-Palmolive (India) Ltd.,Shares,2.058149
+Hindustan Zinc Ltd.,Shares,1.950580
+Unresolved Holdings,Shares,1.910764
+National Aluminium Co. Ltd.,Shares,1.898262
+Page Industries Ltd.,Shares,1.729271
+Oracle Financial Services Software Limited,Shares,1.669699
+ICICI Prudential Asset Management Company Limited,Shares,1.334031
+NIPPON LIFE INDIA ASSET MANAGEMENT LIMITED,Shares,1.310110
+Computer Age Management Services Limited,Shares,1.288658
+Anand Rathi Wealth Limited,Shares,1.204239
+Billionbrains Garage Ventures Limited,Shares,1.200535
+Hindustan Copper Ltd.,Shares,1.020432
+GlaxoSmithkline Pharmaceuticals Ltd.,Shares,0.929223
+Indian Railway Catering & Tourism Corporation Ltd,Shares,0.853909
+Indian Energy Exchange Limited,Shares,0.673652
+Abbott India Ltd.,Shares,0.666398
+Castrol India Ltd,Shares,0.663003
+CRISIL Ltd.,Shares,0.575189
+NBCC (India) Limited,Shares,0.499104
+Motherson Sumi Wiring India Limited,Shares,0.473022
+Force Motors Limited,Shares,0.449564
+Gillette India Ltd.,Shares,0.447403
+Chennai Petroleum Corporation Ltd.,Shares,0.396166
+Garden Reach Shipbuilders & Engineers Limited,Shares,0.395394
+Emami Ltd,Shares,0.389838
+SCHNEIDER ELECTRIC INFRASTRUCTURE LIMITED,Shares,0.389684
+SIGNATUREGLOBAL (INDIA) LIMITED,Shares,0.213439
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.123464
+Net Receivables / Payables,Cash and equivalents,-0.023304

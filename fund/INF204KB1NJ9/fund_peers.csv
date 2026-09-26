@@ -1,0 +1,65 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 13 Jul 2020 (2266 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - AMFI's pre-2018 heading, still used for fixed-term and interval series; it names no SEBI category, so these funds are compared only with each other.
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+#   - Holdings as of 13 Jul 2020 — 2266 days old. Funds disclose monthly.
+# Generated: 2026-09-26T10:36:09.267936+00:00
+fund,return_3y,volatility_3y
+Reliance Interval Fund - II - Series 2,0.090629,0.008672
+Nippon India Dual Advantage Fixed Tenure Fund IX- Plan E,0.090531,0.088362
+Nippon India Fixed Horizon Fund - XLI - Series 10,0.090242,0.017008
+Nippon India Fixed Horizon Fund - XLI - Series 12,0.087769,0.017218
+Nippon India Fixed Maturity Plan - XLV - Series 5,0.085625,0.006279
+Nippon India Dual Advantage Fixed Tenure Fund IX- Plan D,0.085570,0.035252
+Reliance Interval Fund - II - Series 1,0.085232,0.004914
+Reliance Interval Fund - II - Series 3,0.084293,0.004941
+Reliance Yearly Interval Fund - Series 5,0.082965,0.004111
+Reliance Yearly Interval Fund - Series 8,0.081981,0.004511
+Reliance Yearly Interval Fund - Series 9,0.081459,0.004326
+Nippon India Fixed Horizon Fund - XLI - Series 1,0.076852,0.017921
+Nippon India Fixed Maturity Plan - XLIII - Series 5,0.075948,0.013097
+BANDHAN FIXED TERM PLAN SERIES - 179 (3652 DAYS),0.075875,0.016965
+Nippon India Fixed Maturity Plan - XLIV - Series 1,0.075872,0.007922
+HDFC FMP 2638D February 2023,0.075840,0.021090
+Reliance Interval Fund - II - Series 4,0.075821,0.004733
+Nippon India Fixed Maturity Plan - XLI - Series 8,0.075419,0.017430
+SBI Fixed Maturity Plan (FMP) - Series 1 (3668 Days),0.075276,0.012255
+Nippon India Dual Advantage Fixed Tenure Fund X- Plan E,0.075184,0.033962
+HDFC FMP 1861D March 2022,0.075157,0.007042
+HDFC FMP 1876D March 2022,0.075003,0.006955
+Kotak FMP Series 304,0.074877,0.027736
+Nippon India Dual Advantege Fixed Tenure Fund XII- Plan A,0.074828,0.037987
+SBI Fixed Maturity Plan (FMP) - Series 60 (1878 Days),0.074576,0.005801
+SBI Fixed Maturity Plan (FMP) - Series 61 (1927 Days),0.074501,0.006435
+SBI Fixed Maturity Plan (FMP) - Series 6 (3668 Days),0.074345,0.012184
+SBI Fixed Maturity Plan (FMP) - Series 57 (1835 Days),0.073573,0.005027
+SBI Fixed Maturity Plan (FMP) - Series 58 (1842 Days),0.073563,0.005475
+SBI Fixed Maturity Plan (FMP) - Series 54 (1842 Days),0.073423,0.005019
+SBI Fixed Maturity Plan (FMP) - Series 34 (3682 Days),0.073272,0.014781
+SBI Fixed Maturity Plan (FMP) - Series 55 (1849 Days),0.073264,0.005092
+SBI Fixed Maturity Plan (FMP) - Series 53 (1839 Days),0.073089,0.004748
+Nippon India Dual Advantege Fixed Tenure Fund XI- Plan D,0.072898,0.044823
+SBI Fixed Maturity Plan (FMP) - Series 49 (1823 Days),0.072790,0.004282
+HDFC FMP 1269D March 2023,0.072682,0.007128
+SBI Fixed Maturity Plan (FMP) - Series 51 (1846 Days),0.072514,0.004417
+SBI Fixed Maturity Plan (FMP) - Series 52 (1848 Days),0.072395,0.004382
+Axis Fixed Term Plan - Series 113 (1228 Days),0.072351,0.004920
+SBI Fixed Maturity Plan (FMP) - Series 50 (1843 Days),0.072320,0.004417
+Nippon India Dual Advantege Fixed Tenure Fund XI- Plan C,0.071843,0.043539
+Nippon India Dual Advantege Fixed Tenure Fund XI- Plan E,0.070972,0.045008
+Nippon India Dual Advantage Fixed Tenure Fund IX- Plan F,0.070635,0.033302
+Nippon India Fixed Horizon Fund - XLI - Series 11,0.068952,0.018582
+Nippon India Dual Advantage Fixed Tenure Fund- XI- Plan B (this fund),0.049055,0.041432
+Nippon India Dual Advantage Fixed Tenure Fund X- Plan D,0.048740,0.047237
+Nippon India Dual Advantage Fixed Tenure Fund X- Plan B,0.048300,0.048199
+Nippon India Dual Advantage Fixed Tenure Fund X- Plan C,0.048102,0.049709
+Nippon India Dual Advantage Fixed Tenure Fund X- Plan F,0.047897,0.048096
+Nippon India Dual Advantage Fixed Tenure Fund X- Plan A,0.047120,0.049102
+Nippon India Dual Advantage Fixed Tenure Fund XI- Plan A,0.046625,0.043001
+HDFC  Charity Fund for Cancer Cure,0.004139,0.049287

@@ -1,0 +1,23 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:59.712926+00:00
+fund,return_3y,volatility_3y
+Aditya Birla Sun Life Medium Term Fund,0.104721,0.023496
+ICICI Prudential Medium Term Fund,0.083557,0.012365
+Nippon India Medium Term Fund (Existing Number of Segregated Portfolios - 1),0.082666,0.017701
+Axis Medium Term Fund,0.082532,0.011994
+HDFC Medium Term Fund,0.077731,0.011793
+SBI MEDIUM TERM FUND,0.076975,0.012173
+HSBC Medium Term Fund,0.076336,0.012462
+Bandhan Medium Term Fund,0.074085,0.013999
+DSP Medium Term Fund,0.070578,0.012411
+Invesco India Medium Term Fund,0.070577,0.013537
+UTI Medium Term Fund,0.067507,0.011977
+Sundaram Medium Term Fund (Formerly Known as Sundaram Medium Duration Fund) (this fund),0.058973,0.013098

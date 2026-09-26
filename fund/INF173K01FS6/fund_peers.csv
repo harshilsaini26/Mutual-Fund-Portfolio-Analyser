@@ -1,0 +1,31 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:37:01.511663+00:00
+fund,return_3y,volatility_3y
+HSBC Ultra Short to Short Term Fund,0.078184,0.008971
+Kotak Ultra Short to Short Term Fund,0.074378,0.005206
+Nippon India Ultra Short to Short Term Fund,0.074257,0.005006
+Mirae Asset Ultra Short to Short Term Fund,0.074148,0.004969
+Mahindra Manulife Ultra Short to Short Term Fund,0.074122,0.004899
+Axis Ultra Short to Short Term Fund,0.074045,0.004931
+ICICI Prudential Ultra Short to Short Term Fund,0.073793,0.004993
+HDFC Ultra Short to Short Term Fund,0.073601,0.005222
+BARODA BNP PARIBAS ULTRA SHORT TO SHORT TERM FUND,0.073447,0.004754
+Aditya Birla Sun Life Ultra short to short term Fund,0.073264,0.005375
+LIC MF Ultra Short to Short Term fund,0.073253,0.004661
+Tata Ultra Short to Short Term Fund,0.072790,0.004723
+Sundaram Ultra Short to Short Term Fund (Formerly Known as Sundaram Low Duration Fund) (this fund),0.072689,0.004903
+JM Ultra Short to Short Term Fund,0.072347,0.004761
+UTI Ultra Short to Short Term Fund,0.072192,0.004860
+SBI Ultra Short to Short Term Fund,0.072051,0.004805
+Canara Robeco Ultra Short to Short Term Fund,0.071853,0.004898
+Invesco India Ultra Short to Short Term Fund,0.071293,0.004770
+BANDHAN ULTRA SHORT TO SHORT TERM FUND,0.071101,0.004833
+DSP Ultra Short to Short Term Fund,0.071079,0.004994

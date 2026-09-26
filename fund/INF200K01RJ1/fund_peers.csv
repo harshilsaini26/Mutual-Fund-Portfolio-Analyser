@@ -1,0 +1,38 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:36:47.144788+00:00
+fund,return_3y,volatility_3y
+Invesco India Focused Fund,0.211670,0.160745
+ITI Focused Fund,0.177863,0.161101
+ICICI Prudential Focused Fund,0.167429,0.135158
+Bandhan Focused Fund,0.164496,0.151437
+SBI FOCUSED FUND (this fund),0.152456,0.120264
+HDFC Focused Fund,0.152421,0.117275
+Motilal Oswal Focused Fund,0.152219,0.168796
+HSBC Focused Fund,0.151448,0.157736
+Kotak Focused Fund,0.145670,0.142284
+Quant Focused Fund,0.137038,0.165096
+DSP Focused Fund,0.128464,0.144675
+Mahindra Manulife Focused Fund,0.127025,0.138187
+Aditya Birla Sun Life Focused Fund,0.124945,0.135551
+Canara Robeco Focused Fund,0.124441,0.136442
+Edelweiss Focused Fund,0.124271,0.148689
+JM Focused Fund,0.122099,0.165462
+Union Focused Fund,0.114160,0.149713
+360 ONE Focused Fund,0.113320,0.151079
+Sundaram Focused Fund (Formerly Known as Principal Focused Multicap Fund),0.104337,0.133443
+Axis Focused Fund,0.098406,0.137508
+UTI Focused Fund (30 stocks),0.097217,0.134433
+LIC MF Focused Fund,0.096309,0.154959
+Tata Focused Fund,0.093643,0.146480
+Nippon India Focused Fund,0.090470,0.134683
+Baroda BNP Paribas Focused Fund,0.084616,0.160065
+Mirae Asset Focused Fund,0.078351,0.134914
+Franklin India Focused Equity Fund,0.073980,0.132261

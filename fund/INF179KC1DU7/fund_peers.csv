@@ -1,0 +1,85 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:34:52.848089+00:00
+fund,return_3y,volatility_3y
+Mirae Asset NYSE FANG + ETF Fund of Fund,0.574035,0.265145
+UTI Silver ETF Fund of Fund,0.447135,0.394832
+Axis Silver Fund of Fund,0.446182,0.385786
+Kotak Silver ETF Fund of Fund,0.445800,0.400479
+Mirae Asset S&P 500 Top 50 ETF Fund of Fund,0.445773,0.319871
+ICICI Prudential Silver ETF FOF,0.445060,0.384439
+HDFC Silver ETF Fund of Fund (this fund),0.444008,0.414147
+Aditya Birla Sun Life Silver ETF FOF,0.442993,0.398649
+Nippon India Silver ETF FOF,0.441952,0.373236
+Edelweiss Gold and Silver ETF FOF,0.407057,0.284949
+Motilal Oswal Gold and Silver Passive Fund of Funds,0.374915,0.264733
+UTI Gold ETF Fund of Fund,0.356750,0.207976
+Quantum Gold ETF FOF,0.354904,0.214828
+ICICI Prudential Gold ETF FOF,0.353255,0.222329
+SBI GOLD FUND,0.353148,0.214307
+Kotak Gold Fund,0.352277,0.216677
+HDFC Gold ETF Fund of Fund,0.351970,0.218580
+LIC MF Gold ETF Fund of Fund,0.351892,0.242988
+Aditya Birla Sun Life Gold Fund,0.351124,0.224112
+Nippon India Gold Savings Fund,0.350856,0.206093
+Axis Gold Fund,0.348598,0.238685
+Invesco India Gold ETF Fund of Fund,0.348250,0.254545
+ICICI Prudential Global Advantage Fund (FOF),0.207350,0.141890
+Mirae Asset Nifty India Manufacturing ETF Fund of Fund,0.176569,0.159761
+Nippon India Nifty Next 50 Junior BeES FoF,0.173325,0.167041
+Aditya Birla Sun Life Multi Asset Omni FoF,0.166572,0.114995
+Nippon India Multi - Asset Omni FoF,0.163009,0.105666
+Aditya Birla Sun Life Multi-Asset Passive FOF,0.154465,0.114929
+HSBC Multi Asset Active FOF (erstwhile HSBC Managed Solutions India - Moderate Fund),0.153259,0.113134
+Kotak Multi Asset Omni FOF,0.153073,0.114698
+Mirae Asset Hang Seng TECH ETF Fund of Fund,0.153070,0.346758
+ICICI Prudential Diversified Equity All Cap Omni FOF,0.145065,0.124331
+ICICI Prudential BHARAT 22 FOF,0.143776,0.173870
+ICICI Prudential Aggressive Hybrid Active FOF,0.134253,0.101488
+Motilal Oswal Asset Allocation Fund of Fund- Conservative,0.132484,0.069286
+ICICI Prudential Passive Multi-Asset Fund of Funds,0.131277,0.065955
+HDFC Multi-Asset Active FOF,0.131072,0.075150
+Franklin India Income Plus Arbitrage Active Fund of Funds,0.129016,0.043930
+Aditya Birla Sun Life Dynamic Asset Allocation Omni FOF,0.128835,0.105389
+HSBC Aggressive Hybrid Active FOF (erstwhile HSBC Managed Solutions India - Growth fund),0.124617,0.114068
+Bandhan Aggressive Hybrid Passive FOF,0.124367,0.104798
+ICICI Prudential Multi Sector Passive FOF,0.119303,0.115661
+Quantum Diversified Equity All Cap Active FOF,0.110887,0.132815
+Quantum Multi Asset Active FOF,0.107993,0.066629
+Aditya Birla Sun Life Aggressive Hybrid Omni FOF,0.107442,0.090200
+ICICI Prudential Dynamic Asset Allocation Active FOF,0.106163,0.062625
+DSP Income Plus Arbitrage Omni FoF,0.105234,0.062550
+ICICI Prudential Nifty Alpha Low - Volatility 30 ETF FOF,0.097555,0.129706
+Mirae Asset Diversified Equity Allocator Passive FOF,0.095031,0.138757
+Bandhan Multi-Asset Passive FOF,0.094858,0.074914
+Nippon India Diversified Equity Flexicap Passive FoF,0.094798,0.128249
+ICICI Prudential BSE 500 ETF FOF,0.094753,0.135247
+Aditya Birla Sun Life Conservative Hybrid Active FOF,0.093600,0.047677
+ICICI Prudential Income plus Arbitrage Omni FOF,0.091259,0.022478
+ICICI Prudential Nifty 100 Low Volatility 30 ETF FOF,0.088867,0.111488
+HDFC Income Plus Arbitrage Active FOF,0.087921,0.049407
+Tata Nifty India Digital ETF Fund of Fund,0.084891,0.172435
+Franklin India Dynamic Asset Allocation Active Fund of Funds,0.083870,0.068175
+Axis Multi Factor Passive FoF,0.081011,0.125133
+Axis Income Plus Arbitrage Omni FOF,0.077422,0.016442
+Kotak Income Plus Arbitrage Omni FOF,0.075128,0.014771
+Bandhan Conservative Hybrid Passive FOF,0.074641,0.032461
+HSBC Income Plus Arbitrage Active FOF (erstwhile HSBC Managed Solution India - Conservative Plan),0.073251,0.016264
+Bandhan Income Plus Arbitrage Active FOF,0.073209,0.008275
+Bharat Bond FOF - April 2030,0.072452,0.029604
+Motilal Oswal 5 Year G-Sec Fund of Fund,0.071715,0.077430
+BHARAT Bond FOF- April 2031,0.071645,0.031371
+ICICI Prudential Diversified Debt Strategy Active FOF,0.071603,0.013562
+BHARAT Bond ETF FOF - April 2033,0.071486,0.046418
+Aditya Birla Sun Life Income Plus Arbitrage Active FOF,0.071468,0.015361
+BHARAT Bond ETF FOF - April 2032,0.069894,0.034313
+Mirae Asset Nifty 100 ESG Sector Leaders Fund of Fund,0.068129,0.135519
+Quantum Nifty 50 ETF FOF,0.064892,0.123451
+BHARAT Bond FOF- April 2025,0.063228,0.019225

@@ -1,0 +1,43 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 38.0% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 38.0% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:43.850771+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,37.989406
+HDFC Bank Ltd.,Bonds and other debt,6.585556
+Government Securities,Bonds and other debt,6.308947
+MUTHOOT FINANCE LIMITED,Bonds and other debt,6.184900
+Bank Of Baroda,Bonds and other debt,5.344453
+AXIS Bank Ltd.,Bonds and other debt,4.323025
+Punjab National Bank,Bonds and other debt,3.206797
+Mankind Pharma Limited,Bonds and other debt,2.668001
+IndusInd Bank Ltd.,Bonds and other debt,2.462214
+Canara Bank,Bonds and other debt,2.440368
+Torrent Pharmaceuticals Ltd.,Bonds and other debt,2.140334
+MINDSPACE BUSINESS PARKS REIT,Bonds and other debt,1.781054
+IIFL FINANCE LIMITED,Bonds and other debt,1.671206
+Federal Bank Ltd.,Bonds and other debt,1.656397
+Vedanta Ltd.,Bonds and other debt,1.574276
+Yes Bank Ltd.,Bonds and other debt,1.517680
+POONAWALLA FINCORP LIMITED,Bonds and other debt,1.249765
+PUNJAB & SIND BANK,Bonds and other debt,1.216145
+Adani Power Limited,Bonds and other debt,1.188449
+Net Receivables / Payables,Cash and equivalents,1.153352
+Piramal Finance Limited,Bonds and other debt,1.101736
+EMBASSY OFFICE PARKS REIT,Bonds and other debt,1.081062
+Union Bank of India,Bonds and other debt,1.063719
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.745341
+Mahindra & Mahindra Financial Services Limited,Bonds and other debt,0.625206
+Power Finance Corporation Ltd,Bonds and other debt,0.621061
+Manappuram Finance Limited,Bonds and other debt,0.617378
+Tata Capital Limited,Bonds and other debt,0.312053
+Bank of India,Bonds and other debt,0.304660
+Units of Other Schemes,"REITs, InvITs and other",0.296147
+Godrej Industries Ltd.,Bonds and other debt,0.250515
+Lic Housing Finance Ltd.,Bonds and other debt,0.161634
+Godrej Properties Limited,Bonds and other debt,0.157163

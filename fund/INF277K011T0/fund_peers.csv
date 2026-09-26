@@ -1,0 +1,17 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - AMFI's older name for a debt category it has since renamed; which newer name it corresponds to is not certain, so funds under the two names are not compared with each other.
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:37:11.912090+00:00
+fund,return_3y,volatility_3y
+Franklin India Ultra Short Bond Fund (no. of segregated portfolio-1),0.078838,0.029729
+Tata Ultra Short Term Fund (this fund),0.074962,0.003734
+ICICI Prudential Ultra Short term Fund,0.073886,0.003949
+HDFC Ultra Short Term Fund,0.072076,0.004024
+Motilal Oswal Ultra Short Term Fund,0.064238,0.003104

@@ -1,0 +1,30 @@
+﻿# View: fund_consistency
+# Question: Was the return steady, or a few good years?
+# As of: 2026-09-26
+# Data as of: 13 Feb 2026 (225 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Holdings as of 13 Feb 2026 — 225 days old. Funds disclose monthly.
+# Generated: 2026-09-26T10:37:03.644540+00:00
+stretch_ending,fund_return,benchmark_return
+2025-10-03,0.074123,
+2025-10-10,0.075389,
+2025-10-17,0.074459,
+2025-10-24,0.074349,
+2025-10-31,0.074080,
+2025-11-07,0.074228,
+2025-11-14,0.072229,
+2025-11-21,0.072487,
+2025-11-28,0.072121,
+2025-12-05,0.071779,
+2025-12-12,0.072072,
+2025-12-19,0.072110,
+2025-12-26,0.072260,
+2026-01-02,0.072296,
+2026-01-09,0.071784,
+2026-01-16,0.071311,
+2026-01-23,0.071162,
+2026-01-30,0.071958,
+2026-02-06,0.071415,
+2026-02-13,0.072943,

@@ -1,0 +1,20 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: medium
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:46.116110+00:00
+fund,return_3y,volatility_3y
+LIC MF Dividend Yield Fund (this fund),0.185708,0.160003
+ICICI Prudential Dividend Yield Fund,0.145469,0.128357
+Tata Dividend Yield Fund,0.143074,0.159838
+UTI - Dividend Yield Fund,0.123113,0.125975
+Aditya Birla Sun Life Dividend Yield Fund,0.119044,0.146959
+Franklin India Dividend Yield Fund,0.111791,0.131246
+SBI Dividend Yield Fund,0.109197,0.123679
+HDFC DIVIDEND YIELD FUND,0.108219,0.141850
+Sundaram Dividend Yield Fund (Formerly Known as Principal Dividend Yield Fund),0.095579,0.132541

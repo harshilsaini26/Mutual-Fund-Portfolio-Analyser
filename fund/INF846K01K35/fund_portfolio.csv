@@ -1,0 +1,121 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 12.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 12.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:43.400841+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,12.610457
+Cash & Bank Balance,Cash and equivalents,7.431625
+Krishna Institute of Medical Sciences Limited,Shares,2.433784
+Torrent Pharmaceuticals Ltd.,Shares,2.393274
+CCL Products (India) Ltd.,Shares,2.310135
+City Union Bank Ltd,Shares,1.914500
+Sai Life Sciences Limited,Shares,1.750428
+Brigade Enterprises Limited,Shares,1.711416
+Sansera Engineering Limited,Shares,1.659161
+Avalon Technologies Limited,Shares,1.523163
+Navin Fluorine International Limited,Shares,1.441805
+Craftsman Automation Limited,Shares,1.397452
+Karur Vysya Bank Ltd.,Shares,1.341049
+CHOLAMANDALAM FINANCIAL HOLDINGS LIMITED,Shares,1.307727
+Welspun Corp Limited,Shares,1.298315
+PNB Housing Finance Limited,Shares,1.235778
+HDFC Bank Ltd.,Shares,1.231306
+Multi Commodity Exchange of India Ltd,Shares,1.166568
+Kirloskar Oil Engines Limited,Shares,1.149607
+Syrma SGS Technology Limited,Shares,1.137083
+Blue Star Ltd,Shares,1.130321
+TBO TEK LIMITED,Shares,1.109214
+S.V.J.ENTERPRISES LIMITED,Shares,1.089939
+Fine Organic Industries Limited,Shares,1.064260
+PB Fintech Limited,Shares,1.059368
+The Phoenix Mills Ltd.,Shares,1.015674
+Narayana Hrudayalaya Limited,Shares,1.009008
+Galaxy Surfactants Limited,Shares,1.008463
+Vijaya Diagnostic Centre Limited,Shares,0.995389
+RBL Bank Limited,Shares,0.946029
+Vesuvius India Ltd.,Shares,0.894907
+R R KABEL LIMITED,Shares,0.876567
+Gland Pharma Limited,Shares,0.873071
+Can Fin Homes Ltd.,Shares,0.872376
+Ujjivan Small Finance Bank Limited,Shares,0.847554
+Derivative Positions,Derivatives,0.845605
+DOMS Industries Limited,Shares,0.837402
+RateGain Travel Technologies Limited,Shares,0.823794
+Data Patterns (India) Limited,Shares,0.799339
+Happy Forgings Limited,Shares,0.786227
+Sudeep Pharma Limited,Shares,0.770110
+HealthCare Global Enterprises Limited,Shares,0.763249
+KFin Technologies Limited,Shares,0.744133
+Bank of India,Shares,0.738318
+CreditAccess Grameen Ltd.,Shares,0.738225
+Mrs. Bectors Food Specialities Limited,Shares,0.729512
+JK Lakshmi Cement Limited,Shares,0.726039
+COFORGE LIMITED,Shares,0.713318
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,0.713279
+Aditya Infotech Limited,Shares,0.706235
+Laurus Labs Limited,Shares,0.704372
+Gujarat Fluorochemicals Limited,Shares,0.698920
+Crompton Greaves Consumer Electricals Limited,Shares,0.693927
+PG Electroplast Limited,Shares,0.690235
+NIVA BUPA HEALTH INSURANCE COMPANY LIMITED,Shares,0.670457
+Jubilant Ingrevia Limited,Shares,0.667783
+Computer Age Management Services Limited,Shares,0.660225
+Reliance Industries Ltd,Shares,0.651514
+Balrampur Chini Mills Ltd.,Shares,0.647338
+Carborundum Universal Ltd.,Shares,0.636273
+Pine Labs Limited,Shares,0.631383
+Ahluwalia Contracts (India) Ltd,Shares,0.629743
+Equitas Small Finance Bank Limited,Shares,0.629253
+Azad Engineering Limited,Shares,0.625032
+Timken India Ltd,Shares,0.618829
+Amber Enterprises India Limited,Shares,0.597035
+Grindwell Norton Ltd.,Shares,0.576232
+Apar Industries Ltd,Shares,0.574611
+INVENTURUS KNOWLEDGE SOLUTIONS LIMITED,Shares,0.571842
+Neogen Chemicals Limited,Shares,0.566851
+Chalet Hotels Limited,Shares,0.536663
+RHI MAGNESITA INDIA LIMITED,Shares,0.514473
+Gokaldas Exports Ltd,Shares,0.509230
+Anant Raj Limited,Shares,0.507367
+Rolex Rings Limited,Shares,0.501942
+Devyani International Limited,Shares,0.499146
+India Shelter Finance Corporation Limited,Shares,0.494336
+Emcure Pharmaceuticals Limited,Shares,0.480763
+Time Technoplast Limited,Shares,0.473493
+Government Securities,Bonds and other debt,0.472088
+Central Depository Services (India) Ltd.,Shares,0.467288
+Delhivery Limited,Shares,0.465395
+Aptus Value Housing Finance India Limited,Shares,0.443440
+Onesource Specialty Pharma Limited,Shares,0.442741
+Coal India Limited,Shares,0.425405
+Tenneco Clean Air India Limited,Shares,0.404311
+Orient Electric Limited,Shares,0.385553
+TATA CONSUMER PRODUCTS LIMITED,Shares,0.363842
+Bharat Dynamics Limited,Shares,0.354787
+Aarti Industries Ltd,Shares,0.332311
+Chemplast Sanmar Limited,Shares,0.325518
+BIRLASOFT LIMITED,Shares,0.310566
+CESC Limited,Shares,0.278033
+Havells India Limited,Shares,0.251449
+ELLENBARRIE INDUSTRIAL GASES LIMITED,Shares,0.240272
+STRIDES PHARMA SCIENCE LIMITED,Shares,0.239569
+Ather Energy Limited,Shares,0.236542
+PNC Infratech Limited,Shares,0.227658
+Suprajit Engineering Ltd.,Shares,0.221084
+Alicon Castalloy Limited,Shares,0.213989
+SBFC Finance Limited,Shares,0.200816
+Midwest Limited,Shares,0.197627
+Firstsource Solutions Ltd.,Shares,0.185749
+TRAVEL FOOD SERVICES LIMITED,Shares,0.185719
+PDS LIMITED,Shares,0.163781
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,0.156364
+SHRIRAM PISTONS & RINGS LTD,Shares,0.107070
+Jain Resource Recycling Limited,Shares,0.040526
+Net Receivables / Payables,Cash and equivalents,-0.270319

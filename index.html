@@ -1,0 +1,1022 @@
+
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  
+  <title>Look-through: Indian mutual funds, looked through</title>
+  <script src="/Mutual-Fund-Portfolio-Analyser.io/static/theme.js"></script>
+  <link rel="stylesheet" href="/Mutual-Fund-Portfolio-Analyser.io/static/lenis.css">
+  <link rel="stylesheet" href="/Mutual-Fund-Portfolio-Analyser.io/static/app.css">
+</head>
+<body class="is-public" data-root="/Mutual-Fund-Portfolio-Analyser.io"
+      >
+
+
+
+
+
+
+<header class="topbar topbar--public">
+  <a class="brand" href="/Mutual-Fund-Portfolio-Analyser.io/"><svg class="icon brand__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="7.5"/><path d="M16 16l5 5"/><path d="M7.5 13.5v-2M10.5 13.5v-6M13.5 13.5v-4"/></svg><span>Look-through</span></a>
+  <nav class="topnav" aria-label="Main">
+    <a class="topnav__link" href="/Mutual-Fund-Portfolio-Analyser.io/funds/"
+       >Explore funds</a>
+    <a class="topnav__link" href="/Mutual-Fund-Portfolio-Analyser.io/#categories">Categories</a>
+    <a class="topnav__link" href="/Mutual-Fund-Portfolio-Analyser.io/#about">About the data</a>
+  </nav>
+  
+<form class="search" action="/Mutual-Fund-Portfolio-Analyser.io/funds/"
+      method="get" role="search">
+  <label class="sr-only" for="q">Find a fund</label>
+  <svg class="icon search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
+  <input id="q" name="q" type="search" autocomplete="off" spellcheck="false"
+         placeholder="Find a fund by name"
+         data-index="/Mutual-Fund-Portfolio-Analyser.io/search.json">
+  <ul class="search__suggest" hidden data-lenis-prevent></ul>
+</form>
+  <a class="topbar__link" href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io">
+    <span>Self-hosted app</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg></a>
+  <button class="icon-button" type="button" data-theme-toggle
+        aria-label="Switch theme: light, dark or Matrix">
+  <svg class="icon icon--moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg><svg class="icon icon--term" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg><svg class="icon icon--sun-next" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></svg>
+</button>
+</header>
+<p class="public-note">
+  A public copy of the fund pages, built 26 Sep 2026 from AMFI's prices
+  and fund houses' own disclosures. Descriptive, not advice. Benchmark comparisons
+  and your own portfolio are in the
+  <a href="https://github.com/harshilsaini26/Mutual-Fund-Portfolio-Analyser.io">self-hosted app</a>.
+</p>
+<main class="content content--public">
+
+<section class="home-hero">
+  <div class="home-hero__aurora" data-island="aurora" aria-hidden="true"></div>
+  <div class="home-hero__inner">
+    <p class="eyebrow">Indian mutual funds, looked through</p>
+    <h1 class="home-hero__title" data-island="blur-text">See what every fund owns, and how it has done</h1>
+    <p class="home-hero__lede">
+      1659 funds, each set against the funds that do the same job: returns,
+      falls and recoveries, costs, and the companies it holds, from AMFI's prices
+      and the fund houses' own disclosures.
+    </p>
+    <form class="search search--hero" action="/Mutual-Fund-Portfolio-Analyser.io/funds/" method="get" role="search">
+      <label class="sr-only" for="q-hero">Find a fund by name</label>
+      <svg class="icon search__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
+      <input id="q-hero" name="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search 1659 funds by name" data-index="/Mutual-Fund-Portfolio-Analyser.io/search.json">
+      <ul class="search__suggest" hidden data-lenis-prevent></ul>
+    </form>
+    <dl class="home-stats">
+      <div><dt>funds with a page</dt><dd data-island="count-up">1,659</dd></div>
+      <div><dt>fund houses</dt><dd data-island="count-up">48</dd></div>
+      <div><dt>categories</dt><dd data-island="count-up">58</dd></div>
+      <div><dt>prices through</dt><dd>26 Sep 2026</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="map" class="home-section" aria-labelledby="map-h">
+  <div class="section-head">
+    <h2 id="map-h">How mutual funds are organised</h2>
+    <p>SEBI sorts every fund into a family and a category by what it may hold.
+      Open a category for its rule and its funds.</p>
+  </div>
+  
+  <div class="fundmap">
+    <p class="fundmap__root">Mutual funds <span>1,659 funds</span></p>
+    <ul class="fundmap__families">
+      
+      <li class="fundmap__family">
+        <p class="fundmap__node"><strong>Equity</strong>
+          <span>527 funds · Shares of listed companies</span></p>
+        <ul class="fundmap__cats">
+          
+          <li><details class="fundmap__cat">
+            <summary>Sectoral or thematic (older naming) <span>156</span></summary>
+            <p>Sectoral and thematic funds, under the name used before they were split.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/sectoral_thematic">See its 156 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Thematic <span>51</span></summary>
+            <p>At least 80% in one theme across sectors, such as consumption.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/thematic">See its 51 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>ELSS (tax saver) <span>43</span></summary>
+            <p>At least 80% in shares, locked in for 3 years; eligible for tax deduction.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/elss">See its 43 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Flexi cap <span>41</span></summary>
+            <p>At least 65% in shares, of any size, in any mix.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/flexi_cap">See its 41 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Large and mid cap <span>33</span></summary>
+            <p>At least 35% each in large and mid-sized companies.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/large_mid_cap">See its 33 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Large cap <span>32</span></summary>
+            <p>At least 80% in the 100 largest listed companies.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/large_cap">See its 32 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Multi cap <span>31</span></summary>
+            <p>At least 25% each in large, mid-sized and small companies.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/multi_cap">See its 31 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Mid cap <span>30</span></summary>
+            <p>At least 65% in companies ranked 101st to 250th by size.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/mid_cap">See its 30 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Small cap <span>30</span></summary>
+            <p>At least 65% in companies ranked 251st and below by size.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/small_cap">See its 30 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Focused <span>28</span></summary>
+            <p>At most 30 companies, at least 65% in shares.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/focused">See its 28 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Value <span>22</span></summary>
+            <p>Shares chosen for a low price against their value; at least 65% in shares.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/value">See its 22 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Sectoral <span>17</span></summary>
+            <p>At least 80% in one sector, such as banks or technology.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/sectoral">See its 17 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Dividend yield <span>10</span></summary>
+            <p>Mostly shares that pay high dividends; at least 65% in shares.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/dividend_yield">See its 10 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Contra <span>3</span></summary>
+            <p>Shares chosen against the market&#39;s current view; at least 65% in shares.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/contra">See its 3 funds</a>
+          </details></li>
+          
+        </ul>
+      </li>
+      
+      <li class="fundmap__family">
+        <p class="fundmap__node"><strong>Debt</strong>
+          <span>374 funds · Bonds, government securities and money-market paper</span></p>
+        <ul class="fundmap__cats">
+          
+          <li><details class="fundmap__cat">
+            <summary>Income (older naming) <span>50</span></summary>
+            <p>Bond funds under a name used before SEBI&#39;s 2017 categories.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/income_legacy">See its 50 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Overnight <span>35</span></summary>
+            <p>Bonds and loans that mature the next day.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/overnight">See its 35 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Liquid <span>34</span></summary>
+            <p>Debt and money-market papers maturing within 91 days.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/liquid">See its 34 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Money market <span>24</span></summary>
+            <p>Money-market papers maturing within a year.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/money_market">See its 24 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Gilt <span>23</span></summary>
+            <p>At least 80% in government bonds, of any maturity.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/gilt">See its 23 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Ultra short to short term <span>23</span></summary>
+            <p>Bonds between ultra short and short term.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/ultra_short_to_short_term">See its 23 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Corporate bond <span>21</span></summary>
+            <p>At least 80% in the highest-rated company bonds.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/corporate_bond">See its 21 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Dynamic term <span>21</span></summary>
+            <p>Bonds of any maturity, changed as rates move.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/dynamic_term">See its 21 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Ultra short term <span>21</span></summary>
+            <p>Short-dated bonds, held for months rather than years.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/ultra_short_term">See its 21 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Banking and PSU <span>20</span></summary>
+            <p>At least 80% in bonds of banks, public sector firms and public finance bodies.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/banking_psu">See its 20 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Short term <span>20</span></summary>
+            <p>Bonds held for an average of about 1 to 3 years.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/short_term">See its 20 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Credit risk <span>13</span></summary>
+            <p>At least 65% in company bonds rated below the highest grades.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/credit_risk">See its 13 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Medium to long term <span>13</span></summary>
+            <p>Bonds held for an average of about 4 to 7 years.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/medium_long_term">See its 13 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Floating interest rates <span>12</span></summary>
+            <p>At least 65% in bonds whose interest resets with market rates.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/floating_rate">See its 12 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Medium term <span>12</span></summary>
+            <p>Bonds held for an average of about 3 to 4 years.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/medium_term">See its 12 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Long term <span>11</span></summary>
+            <p>Bonds held for an average of more than 7 years.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/long_term">See its 11 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Gilt, 10-year constant maturity <span>5</span></summary>
+            <p>At least 80% in government bonds, averaging 10 years to maturity.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/gilt_10y">See its 5 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Ultra short duration (older naming) <span>5</span></summary>
+            <p>Bonds held for an average of 3 to 6 months (older naming).</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/ultra_short_duration">See its 5 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Short duration (older naming) <span>3</span></summary>
+            <p>Bonds held for an average of 1 to 3 years (older naming).</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/short_duration">See its 3 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Dynamic bond (older naming) <span>2</span></summary>
+            <p>Bonds of any maturity, changed as rates move (older naming).</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/dynamic_bond">See its 2 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Medium to long duration (older naming) <span>2</span></summary>
+            <p>Bonds held for an average of 4 to 7 years (older naming).</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/medium_long_duration">See its 2 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Fixed term plans <span>1</span></summary>
+            <p>Closed-end plans holding bonds that mature with the plan.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/fixed_term">See its 1 fund</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Low duration (older naming) <span>1</span></summary>
+            <p>Bonds held for an average of 6 to 12 months (older naming).</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/low_duration">See its 1 fund</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Medium duration (older naming) <span>1</span></summary>
+            <p>Bonds held for an average of 3 to 4 years (older naming).</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/medium_duration">See its 1 fund</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Other debt <span>1</span></summary>
+            <p>Debt funds outside SEBI&#39;s named debt categories.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=debt/other">See its 1 fund</a>
+          </details></li>
+          
+        </ul>
+      </li>
+      
+      <li class="fundmap__family">
+        <p class="fundmap__node"><strong>Hybrid</strong>
+          <span>170 funds · Shares and bonds together</span></p>
+        <ul class="fundmap__cats">
+          
+          <li><details class="fundmap__cat">
+            <summary>Balanced advantage (dynamic asset allocation) <span>35</span></summary>
+            <p>Moves between shares and bonds as the fund&#39;s model directs.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/balanced_advantage">See its 35 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Arbitrage <span>32</span></summary>
+            <p>Buys and sells the same shares in different markets for the price gap.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/arbitrage">See its 32 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Multi asset allocation <span>30</span></summary>
+            <p>At least 10% each in three asset classes, such as shares, bonds and gold.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/multi_asset">See its 30 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Aggressive hybrid <span>29</span></summary>
+            <p>65% to 80% in shares, the rest in bonds.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/aggressive">See its 29 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Equity savings <span>25</span></summary>
+            <p>Shares, arbitrage and bonds together, at least 65% in shares with hedges.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/equity_savings">See its 25 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Conservative hybrid <span>17</span></summary>
+            <p>75% to 90% in bonds, 10% to 25% in shares.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/conservative">See its 17 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Balanced hybrid <span>2</span></summary>
+            <p>40% to 60% in shares and 40% to 60% in bonds.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=hybrid/balanced">See its 2 funds</a>
+          </details></li>
+          
+        </ul>
+      </li>
+      
+      <li class="fundmap__family">
+        <p class="fundmap__node"><strong>Index funds, ETFs and more</strong>
+          <span>546 funds · Index funds, exchange-traded funds and funds of funds</span></p>
+        <ul class="fundmap__cats">
+          
+          <li><details class="fundmap__cat">
+            <summary>Index funds (older naming) <span>263</span></summary>
+            <p>Index funds, under the name used before they were split by asset.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=index/undivided">See its 263 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Funds of funds, domestic <span>114</span></summary>
+            <p>Invest in other Indian mutual funds or ETFs rather than directly.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=fof/domestic">See its 114 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Index funds, equity <span>49</span></summary>
+            <p>Track a share index, such as the Nifty 50, rather than choosing shares.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=index/equity">See its 49 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Funds of funds, overseas <span>48</span></summary>
+            <p>Invest in funds abroad, for exposure to foreign markets.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=fof/overseas">See its 48 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>ETFs (older naming) <span>35</span></summary>
+            <p>Exchange-traded funds, under the name used before they were split.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=etf/undivided">See its 35 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Index funds, debt <span>19</span></summary>
+            <p>Track a bond index, often one that matures on a set date.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=index/debt">See its 19 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>ETFs, equity <span>7</span></summary>
+            <p>Traded on the stock exchange like a share; track a share index.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=etf/equity">See its 7 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Gold ETFs <span>6</span></summary>
+            <p>Traded on the stock exchange; hold physical gold.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=etf/gold">See its 6 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>ETFs, debt <span>3</span></summary>
+            <p>Traded on the stock exchange; track a bond or money-market index.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=etf/debt">See its 3 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Silver ETFs <span>2</span></summary>
+            <p>Traded on the stock exchange; hold physical silver.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=etf/silver">See its 2 funds</a>
+          </details></li>
+          
+        </ul>
+      </li>
+      
+      <li class="fundmap__family">
+        <p class="fundmap__node"><strong>Solution oriented</strong>
+          <span>42 funds · Retirement and children&#39;s funds</span></p>
+        <ul class="fundmap__cats">
+          
+          <li><details class="fundmap__cat">
+            <summary>Retirement <span>30</span></summary>
+            <p>For retirement: locked in for 5 years or until retirement age.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=solution/retirement">See its 30 funds</a>
+          </details></li>
+          
+          <li><details class="fundmap__cat">
+            <summary>Children&#39;s <span>12</span></summary>
+            <p>For a child&#39;s goals: locked in for 5 years or until the child turns 18.</p>
+            <a href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=solution/children">See its 12 funds</a>
+          </details></li>
+          
+        </ul>
+      </li>
+      
+    </ul>
+  </div>
+</section>
+
+<section id="categories" class="home-section" aria-labelledby="categories-h">
+  <div class="section-head">
+    <h2 id="categories-h">Highest three-year returns, by category</h2>
+    <p>Annualised, Direct plans, to 26 Sep 2026.
+      Past returns only: each fund's page sets them against its whole category,
+      with its falls, its costs and what it holds.</p>
+  </div>
+  <div class="leaders">
+    
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-1">
+      <header class="leader__head">
+        <h3 id="leader-1">Flexi cap</h3>
+        <a class="leader__all" href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/flexi_cap">All 41 funds
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </header>
+      <table class="leader__table" data-sortable>
+        <thead><tr>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        </tr></thead>
+        <tbody>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF761K01FF5/">BANK OF INDIA FLEXI CAP FUND</a></td>
+            <td class="num" data-value="24141262000.00">₹2,414 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.110730"><span class="ret__symbol" aria-hidden="true">▲</span>+11.1%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.193168"><span class="ret__symbol" aria-hidden="true">▲</span>+19.3%</td>
+            
+            <td class="num ret--gain" data-value="0.165120"><span class="ret__symbol" aria-hidden="true">▲</span>+16.5%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF00XX01CO7/">ITI Flexi Cap Fund</a></td>
+            <td class="num" data-value="13042161000.00">₹1,304 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.131887"><span class="ret__symbol" aria-hidden="true">▲</span>+13.2%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.192082"><span class="ret__symbol" aria-hidden="true">▲</span>+19.2%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF247L01502/">Motilal Oswal Flexi Cap Fund</a></td>
+            <td class="num" data-value="128359017000.00">₹12,836 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.027653"><span class="ret__symbol" aria-hidden="true">▲</span>+2.8%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.181416"><span class="ret__symbol" aria-hidden="true">▲</span>+18.1%</td>
+            
+            <td class="num ret--gain" data-value="0.124848"><span class="ret__symbol" aria-hidden="true">▲</span>+12.5%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF579M01AS1/">360 ONE Flexicap Fund</a></td>
+            <td class="num" data-value="20182226000.00">₹2,018 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.098151"><span class="ret__symbol" aria-hidden="true">▲</span>+9.8%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.176161"><span class="ret__symbol" aria-hidden="true">▲</span>+17.6%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF205KA1494/">Invesco India Flexi Cap Fund</a></td>
+            <td class="num" data-value="49041624000.00">₹4,904 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.006420"><span class="ret__symbol" aria-hidden="true">▲</span>+0.6%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.174607"><span class="ret__symbol" aria-hidden="true">▲</span>+17.5%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+        </tbody>
+      </table>
+    </article>
+    
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-2">
+      <header class="leader__head">
+        <h3 id="leader-2">Large cap</h3>
+        <a class="leader__all" href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/large_cap">All 32 funds
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </header>
+      <table class="leader__table" data-sortable>
+        <thead><tr>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        </tr></thead>
+        <tbody>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF205K01LB0/">Invesco India Large Cap Fund</a></td>
+            <td class="num" data-value="17421356000.00">₹1,742 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.025096"><span class="ret__symbol" aria-hidden="true">▲</span>+2.5%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.137963"><span class="ret__symbol" aria-hidden="true">▲</span>+13.8%</td>
+            
+            <td class="num ret--gain" data-value="0.107921"><span class="ret__symbol" aria-hidden="true">▲</span>+10.8%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF966L01AT0/">quant Large Cap Fund</a></td>
+            <td class="num" data-value="31716189000.00">₹3,172 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.052011"><span class="ret__symbol" aria-hidden="true">▲</span>+5.2%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.136605"><span class="ret__symbol" aria-hidden="true">▲</span>+13.7%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF044D01BX3/">Taurus Large Cap Fund</a></td>
+            <td class="num" data-value="506231000.00">₹51 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.079923"><span class="ret__symbol" aria-hidden="true">▲</span>+8.0%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.132070"><span class="ret__symbol" aria-hidden="true">▲</span>+13.2%</td>
+            
+            <td class="num ret--gain" data-value="0.100644"><span class="ret__symbol" aria-hidden="true">▲</span>+10.1%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF761K01FL3/">BANK OF INDIA LARGE CAP FUND</a></td>
+            <td class="num" data-value="2124121000.00">₹212 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.044274"><span class="ret__symbol" aria-hidden="true">▲</span>+4.4%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.129263"><span class="ret__symbol" aria-hidden="true">▲</span>+12.9%</td>
+            
+            <td class="num ret--gain" data-value="0.092483"><span class="ret__symbol" aria-hidden="true">▲</span>+9.2%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF03VN01696/">WhiteOak Capital Large Cap Fund</a></td>
+            <td class="num" data-value="11671651000.00">₹1,167 Cr</td>
+            
+            <td class="num ret--loss" data-value="-0.010480"><span class="ret__symbol" aria-hidden="true">▼</span>-1.0%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.128071"><span class="ret__symbol" aria-hidden="true">▲</span>+12.8%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+        </tbody>
+      </table>
+    </article>
+    
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-3">
+      <header class="leader__head">
+        <h3 id="leader-3">Mid cap</h3>
+        <a class="leader__all" href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/mid_cap">All 30 funds
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </header>
+      <table class="leader__table" data-sortable>
+        <thead><tr>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        </tr></thead>
+        <tbody>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF205K01MV6/">Invesco India Mid Cap Fund</a></td>
+            <td class="num" data-value="121603226000.00">₹12,160 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.094114"><span class="ret__symbol" aria-hidden="true">▲</span>+9.4%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.235306"><span class="ret__symbol" aria-hidden="true">▲</span>+23.5%</td>
+            
+            <td class="num ret--gain" data-value="0.193952"><span class="ret__symbol" aria-hidden="true">▲</span>+19.4%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF917K01FZ1/">HSBC Midcap Fund</a></td>
+            <td class="num" data-value="137012364000.00">₹13,701 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.178661"><span class="ret__symbol" aria-hidden="true">▲</span>+17.9%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.233835"><span class="ret__symbol" aria-hidden="true">▲</span>+23.4%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF03VN01597/">WhiteOak Capital Mid Cap Fund</a></td>
+            <td class="num" data-value="55135882000.00">₹5,514 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.131747"><span class="ret__symbol" aria-hidden="true">▲</span>+13.2%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.215276"><span class="ret__symbol" aria-hidden="true">▲</span>+21.5%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF109K011N7/">ICICI Prudential Mid Cap Fund</a></td>
+            <td class="num" data-value="75938212000.00">₹7,594 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.136815"><span class="ret__symbol" aria-hidden="true">▲</span>+13.7%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.213425"><span class="ret__symbol" aria-hidden="true">▲</span>+21.3%</td>
+            
+            <td class="num ret--gain" data-value="0.167130"><span class="ret__symbol" aria-hidden="true">▲</span>+16.7%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF843K01AO4/">Edelweiss Mid Cap Fund</a></td>
+            <td class="num" data-value="163099758000.00">₹16,310 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.071446"><span class="ret__symbol" aria-hidden="true">▲</span>+7.1%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.205588"><span class="ret__symbol" aria-hidden="true">▲</span>+20.6%</td>
+            
+            <td class="num ret--gain" data-value="0.182728"><span class="ret__symbol" aria-hidden="true">▲</span>+18.3%</td>
+            
+          </tr>
+          
+        </tbody>
+      </table>
+    </article>
+    
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-4">
+      <header class="leader__head">
+        <h3 id="leader-4">Small cap</h3>
+        <a class="leader__all" href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/small_cap">All 30 funds
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </header>
+      <table class="leader__table" data-sortable>
+        <thead><tr>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        </tr></thead>
+        <tbody>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF00XX01747/">ITI Small Cap Fund</a></td>
+            <td class="num" data-value="29768313000.00">₹2,977 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.218059"><span class="ret__symbol" aria-hidden="true">▲</span>+21.8%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.253079"><span class="ret__symbol" aria-hidden="true">▲</span>+25.3%</td>
+            
+            <td class="num ret--gain" data-value="0.190850"><span class="ret__symbol" aria-hidden="true">▲</span>+19.1%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF194KB1AL4/">BANDHAN Small Cap Fund</a></td>
+            <td class="num" data-value="260123685000.00">₹26,012 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.124734"><span class="ret__symbol" aria-hidden="true">▲</span>+12.5%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.251647"><span class="ret__symbol" aria-hidden="true">▲</span>+25.2%</td>
+            
+            <td class="num ret--gain" data-value="0.197873"><span class="ret__symbol" aria-hidden="true">▲</span>+19.8%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF205K013T3/">Invesco India Small Cap Fund</a></td>
+            <td class="num" data-value="114957638000.00">₹11,496 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.167388"><span class="ret__symbol" aria-hidden="true">▲</span>+16.7%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.234905"><span class="ret__symbol" aria-hidden="true">▲</span>+23.5%</td>
+            
+            <td class="num ret--gain" data-value="0.200733"><span class="ret__symbol" aria-hidden="true">▲</span>+20.1%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF761K01EP7/">BANK OF INDIA SMALL CAP FUND</a></td>
+            <td class="num" data-value="22352360000.00">₹2,235 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.279101"><span class="ret__symbol" aria-hidden="true">▲</span>+27.9%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.227310"><span class="ret__symbol" aria-hidden="true">▲</span>+22.7%</td>
+            
+            <td class="num ret--gain" data-value="0.201480"><span class="ret__symbol" aria-hidden="true">▲</span>+20.1%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF174V01BK7/">Mahindra Manulife Small Cap Fund</a></td>
+            <td class="num" data-value="45117088000.00">₹4,512 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.182216"><span class="ret__symbol" aria-hidden="true">▲</span>+18.2%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.210715"><span class="ret__symbol" aria-hidden="true">▲</span>+21.1%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+        </tbody>
+      </table>
+    </article>
+    
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-5">
+      <header class="leader__head">
+        <h3 id="leader-5">Large and mid cap</h3>
+        <a class="leader__all" href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/large_mid_cap">All 33 funds
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </header>
+      <table class="leader__table" data-sortable>
+        <thead><tr>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        </tr></thead>
+        <tbody>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF205K01MA0/">Invesco India Large &amp; Mid Cap Fund</a></td>
+            <td class="num" data-value="100303894000.00">₹10,030 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.082979"><span class="ret__symbol" aria-hidden="true">▲</span>+8.3%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.227572"><span class="ret__symbol" aria-hidden="true">▲</span>+22.8%</td>
+            
+            <td class="num ret--gain" data-value="0.167004"><span class="ret__symbol" aria-hidden="true">▲</span>+16.7%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF247L01999/">Motilal Oswal Large and Midcap Fund</a></td>
+            <td class="num" data-value="170501392000.00">₹17,050 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.076226"><span class="ret__symbol" aria-hidden="true">▲</span>+7.6%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.220127"><span class="ret__symbol" aria-hidden="true">▲</span>+22.0%</td>
+            
+            <td class="num ret--gain" data-value="0.186151"><span class="ret__symbol" aria-hidden="true">▲</span>+18.6%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF194K01V89/">Bandhan Large &amp; Mid Cap Fund</a></td>
+            <td class="num" data-value="170204524000.00">₹17,020 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.040120"><span class="ret__symbol" aria-hidden="true">▲</span>+4.0%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.177396"><span class="ret__symbol" aria-hidden="true">▲</span>+17.7%</td>
+            
+            <td class="num ret--gain" data-value="0.163531"><span class="ret__symbol" aria-hidden="true">▲</span>+16.4%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF336L01NV5/">HSBC Large &amp; Mid Cap Fund</a></td>
+            <td class="num" data-value="49584738000.00">₹4,958 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.088832"><span class="ret__symbol" aria-hidden="true">▲</span>+8.9%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.174991"><span class="ret__symbol" aria-hidden="true">▲</span>+17.5%</td>
+            
+            <td class="num ret--gain" data-value="0.139652"><span class="ret__symbol" aria-hidden="true">▲</span>+14.0%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF846K01J46/">Axis Large &amp; Mid Cap Fund</a></td>
+            <td class="num" data-value="156964857000.00">₹15,696 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.058564"><span class="ret__symbol" aria-hidden="true">▲</span>+5.9%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.151928"><span class="ret__symbol" aria-hidden="true">▲</span>+15.2%</td>
+            
+            <td class="num ret--gain" data-value="0.118671"><span class="ret__symbol" aria-hidden="true">▲</span>+11.9%</td>
+            
+          </tr>
+          
+        </tbody>
+      </table>
+    </article>
+    
+    <article class="leader" data-island="spotlight" aria-labelledby="leader-6">
+      <header class="leader__head">
+        <h3 id="leader-6">ELSS (tax saver)</h3>
+        <a class="leader__all" href="/Mutual-Fund-Portfolio-Analyser.io/funds/#category=equity/elss">All 43 funds
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </header>
+      <table class="leader__table" data-sortable>
+        <thead><tr>
+          <th scope="col"><button type="button" data-sort="text">Fund</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">Size</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">1 year</button></th>
+          <th scope="col" class="num" aria-sort="descending"><button type="button" data-sort="number">3 years</button></th>
+          <th scope="col" class="num"><button type="button" data-sort="number">5 years</button></th>
+        </tr></thead>
+        <tbody>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF247L01569/">Motilal Oswal ELSS Tax Saver Fund</a></td>
+            <td class="num" data-value="46268527000.00">₹4,627 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.086332"><span class="ret__symbol" aria-hidden="true">▲</span>+8.6%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.214261"><span class="ret__symbol" aria-hidden="true">▲</span>+21.4%</td>
+            
+            <td class="num ret--gain" data-value="0.169990"><span class="ret__symbol" aria-hidden="true">▲</span>+17.0%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF200KA1RW8/">SBI Long Term Advantage Fund - Series V</a></td>
+            <td class="num" data-value="3548076000.00">₹355 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.022138"><span class="ret__symbol" aria-hidden="true">▲</span>+2.2%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.206626"><span class="ret__symbol" aria-hidden="true">▲</span>+20.7%</td>
+            
+            <td class="num ret--gain" data-value="0.151721"><span class="ret__symbol" aria-hidden="true">▲</span>+15.2%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF00XX01390/">ITI ELSS Tax Saver Fund</a></td>
+            <td class="num" data-value="4270636000.00">₹427 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.046202"><span class="ret__symbol" aria-hidden="true">▲</span>+4.6%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.173849"><span class="ret__symbol" aria-hidden="true">▲</span>+17.4%</td>
+            
+            <td class="num ret--gain" data-value="0.129895"><span class="ret__symbol" aria-hidden="true">▲</span>+13.0%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF192K01CE3/">JM ELSS - Tax Saver Fund</a></td>
+            <td class="num" data-value="2209469000.00">₹221 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.087570"><span class="ret__symbol" aria-hidden="true">▲</span>+8.8%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.166172"><span class="ret__symbol" aria-hidden="true">▲</span>+16.6%</td>
+            
+            <td class="num ret--gain" data-value="0.137404"><span class="ret__symbol" aria-hidden="true">▲</span>+13.7%</td>
+            
+          </tr>
+          
+          <tr>
+            <td><a class="fund-name" href="/Mutual-Fund-Portfolio-Analyser.io/fund/INF917K01GP0/">HSBC ELSS Tax saver Fund</a></td>
+            <td class="num" data-value="39565735000.00">₹3,957 Cr</td>
+            
+            <td class="num ret--gain" data-value="0.047425"><span class="ret__symbol" aria-hidden="true">▲</span>+4.7%</td>
+            
+            <td class="num ret--gain leader__key" data-value="0.161818"><span class="ret__symbol" aria-hidden="true">▲</span>+16.2%</td>
+            
+            <td class="num">—</td>
+            
+          </tr>
+          
+        </tbody>
+      </table>
+    </article>
+    
+  </div>
+  <p class="home-section__more"><a class="button" href="/Mutual-Fund-Portfolio-Analyser.io/funds/">Explore all 1659 funds <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
+</section>
+
+<section id="about" class="home-section" aria-labelledby="about-h">
+  <div class="section-head">
+    <h2 id="about-h">What every fund page shows</h2>
+    <p>From public sources only, rebuilt every night, with each figure's date and source beside it.</p>
+  </div>
+  <div class="features">
+    <div class="feature" data-island="spotlight"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+      <h3>Returns</h3>
+      <p>What ₹10,000 became over one, three and five years and its whole record, from AMFI's daily prices.</p></div>
+    <div class="feature" data-island="spotlight"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4v16h16"/><circle cx="9" cy="14" r="1.5"/><circle cx="13" cy="9" r="1.5"/><circle cx="17" cy="12" r="1.5"/><circle cx="17.5" cy="6" r="1.5"/></svg>
+      <h3>Its peers</h3>
+      <p>Where it stands among the funds that do the same job, on return, risk, falls and cost.</p></div>
+    <div class="feature" data-island="spotlight"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v9h9"/><path d="M21 12a9 9 0 1 1-9-9"/></svg>
+      <h3>Its cost</h3>
+      <p>The total expense ratio AMFI publishes each month, and how it compares with the category's.</p></div>
+    <div class="feature" data-island="spotlight"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg>
+      <h3>Falls and recoveries</h3>
+      <p>How far below its last high it stood each day, and how long it took to climb back.</p></div>
+    <div class="feature" data-island="spotlight"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12c2-4.5 4-4.5 6 0s4 4.5 6 0 4-4.5 6 0"/></svg>
+      <h3>Consistency</h3>
+      <p>The return of every three-year stretch, not only the one that ends today.</p></div>
+    <div class="feature" data-island="spotlight"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
+      <h3>What it owns</h3>
+      <p>Asset mix, largest holdings and sectors, from the fund house's disclosure or, marked, an aggregator's page.</p></div>
+  </div>
+</section>
+
+</main>
+<footer class="colophon">
+  <p>
+    
+    Built from public sources; every figure traces to an archived source file.
+    No cookies, no tracking, and nothing loads from anywhere but this site.
+    
+  </p>
+</footer>
+<script src="/Mutual-Fund-Portfolio-Analyser.io/static/vendor/lenis.v1.3.26.min.js" defer></script>
+<script src="/Mutual-Fund-Portfolio-Analyser.io/static/app.js" defer></script>
+<script src="/Mutual-Fund-Portfolio-Analyser.io/static/vendor/islands.v1.js" defer></script>
+
+</body>
+</html>

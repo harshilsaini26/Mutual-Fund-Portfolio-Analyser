@@ -1,0 +1,28 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 33.1% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 33.1% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:32.679220+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,33.053901
+Power Finance Corporation Ltd,Bonds and other debt,11.132791
+HDFC Bank Ltd.,Bonds and other debt,8.698718
+TREPS / Repo / Reverse Repo,Cash and equivalents,7.194845
+REC LIMITED,Bonds and other debt,6.756841
+POWER GRID CORPORATION OF INDIA LIMITED,Bonds and other debt,4.713539
+ICICI Bank Ltd.,Bonds and other debt,4.046504
+Canara Bank,Bonds and other debt,3.057755
+Union Bank of India,Bonds and other debt,3.050964
+State Bank Of India,Bonds and other debt,2.941415
+Indian Oil Corporation Ltd.,Bonds and other debt,2.924411
+Government Securities,Bonds and other debt,2.883391
+Net Receivables / Payables,Cash and equivalents,2.840346
+Indian Railway Finance Corporation,Bonds and other debt,2.189049
+Bank Of Baroda,Bonds and other debt,1.528306
+Indian Bank,Bonds and other debt,1.494399
+Mahanagar Telephone Nigam Ltd.,Bonds and other debt,1.106716
+Units of Other Schemes,"REITs, InvITs and other",0.386109

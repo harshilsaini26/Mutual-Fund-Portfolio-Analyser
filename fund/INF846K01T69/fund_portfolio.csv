@@ -1,0 +1,42 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 7.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 7.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:42.596909+00:00
+holding,kind,weight_pct
+Government Securities,Bonds and other debt,59.624473
+Unresolved Holdings,Shares,7.601093
+Reliance Industries Ltd,Shares,4.633317
+State Bank Of India,Shares,2.877058
+Infosys Ltd,Shares,2.325881
+Bharti Airtel  Ltd.,Shares,2.267760
+ICICI Bank Ltd.,Shares,1.916251
+HDFC Bank Ltd.,Shares,1.869712
+LIFE INSURANCE CORPORATION OF INDIA,Shares,1.768055
+Hero MotoCorp Limited,Shares,1.499544
+HCL Technologies Ltd,Shares,1.403249
+Mahindra & Mahindra Ltd.,Shares,1.252909
+ITC Ltd,Shares,1.242829
+Larsen & Toubro Limited,Shares,1.161546
+Net Receivables / Payables,Cash and equivalents,1.015710
+Sun Pharmaceutical Industries Ltd.,Shares,0.920272
+Cash & Bank Balance,Cash and equivalents,0.914911
+Varun Beverages Limited,Shares,0.837274
+Britannia Industries Ltd.,Shares,0.715029
+Mankind Pharma Limited,Shares,0.635033
+Cipla Ltd.,Shares,0.567262
+Info Edge(India) Ltd.,Shares,0.510428
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.486408
+Torrent Pharmaceuticals Ltd.,Shares,0.427001
+Tata Consultancy Services Ltd.,Shares,0.404482
+SUNDARAM FINANCE LTD,Shares,0.282451
+Cyient DLM Limited,Shares,0.278591
+Hindustan Unilever Ltd.,Shares,0.204600
+Bajaj Finance Limited,Shares,0.202670
+Global Health Limited,Shares,0.154201

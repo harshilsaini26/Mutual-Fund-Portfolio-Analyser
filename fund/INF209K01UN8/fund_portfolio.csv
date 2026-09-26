@@ -1,0 +1,70 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 10.0% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 10.0% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:22.456727+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,10.022851
+ICICI Bank Ltd.,Shares,7.746476
+HDFC Bank Ltd.,Shares,5.875034
+AXIS Bank Ltd.,Shares,3.808917
+Reliance Industries Ltd,Shares,3.741130
+State Bank Of India,Shares,3.536171
+Federal Bank Ltd.,Shares,3.006258
+Mahindra & Mahindra Ltd.,Shares,2.854114
+Bharti Airtel  Ltd.,Shares,2.693528
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.668580
+Hindalco Industries Ltd.,Shares,2.318544
+Infosys Ltd,Shares,2.169317
+SUNDARAM-CLAYTON LIMITED,Shares,2.006820
+Larsen & Toubro Limited,Shares,1.979765
+Cummins India Ltd.,Shares,1.890967
+Bajaj Finance Limited,Shares,1.870727
+Fortis Healthcare Ltd,Shares,1.862771
+Bosch Ltd,Shares,1.859747
+Emcure Pharmaceuticals Limited,Shares,1.722217
+Cholamandalam Investment and Finance Company Ltd,Shares,1.720583
+Ambuja Cements Ltd.,Shares,1.675261
+Varun Beverages Limited,Shares,1.664926
+Thyrocare Technologies Limited,Shares,1.662111
+Computer Age Management Services Limited,Shares,1.621188
+Godrej Consumer Products Ltd.,Shares,1.533559
+SBFC Finance Limited,Shares,1.446798
+Adani Power Limited,Shares,1.436404
+Meesho Limited,Shares,1.326313
+Avenue Supermarts Limited,Shares,1.269374
+Dixon Technologies (India) Limited,Shares,1.245791
+Balrampur Chini Mills Ltd.,Shares,1.196585
+Gillette India Ltd.,Shares,1.193802
+L&T Finance Limited,Shares,1.145180
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,1.108897
+Adani Ports and Special Economic Zone Ltd,Shares,1.095926
+Max Financial Services Limited,Shares,1.020464
+Hindustan Unilever Ltd.,Shares,0.862067
+Thomas Cook (India) Ltd.,Shares,0.859705
+Persistent Systems Limited,Shares,0.853560
+Medi Assist Healthcare Services Limited,Shares,0.812767
+Home First Finance Company India Limited,Shares,0.786623
+NIPPON LIFE INDIA ASSET MANAGEMENT LIMITED,Shares,0.733767
+Vinati Organics Ltd.,Shares,0.708602
+Sai Life Sciences Limited,Shares,0.695113
+Chalet Hotels Limited,Shares,0.661563
+Go Digit General Insurance Limited,Shares,0.655763
+Corona Remedies Limited,Shares,0.651405
+Prestige Estates Projects Limited,Shares,0.632030
+Kirloskar Brothers Ltd.,Shares,0.615645
+Ather Energy Limited,Shares,0.542186
+Mankind Pharma Limited,Shares,0.521540
+Ajanta Pharma Ltd.,Shares,0.467622
+V-Guard Industries Ltd.,Shares,0.452023
+Apar Industries Ltd,Shares,0.451261
+LG Electronics India Limited,Shares,0.400004
+SURAKSHA DIAGNOSTIC LIMITED,Shares,0.381739
+Arvind Ltd.,Shares,0.284866
+Net Receivables / Payables,Cash and equivalents,-0.026947

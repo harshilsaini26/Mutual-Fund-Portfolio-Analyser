@@ -1,0 +1,38 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - This fund has less than three years of prices, so it is not in the picture of its category.
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:35:30.191083+00:00
+fund,return_3y,volatility_3y
+Invesco India Large & Mid Cap Fund,0.227572,0.166877
+Motilal Oswal Large and Midcap Fund,0.220127,0.192445
+Bandhan Large & Mid Cap Fund,0.177396,0.142802
+HSBC Large & Mid Cap Fund,0.174991,0.176703
+Axis Large & Mid Cap Fund,0.151928,0.133600
+ICICI Prudential Large & Mid Cap Fund,0.151288,0.131113
+Quant Large & Mid Cap Fund,0.150474,0.164841
+UTI Large & Mid Cap Fund,0.148068,0.136839
+Nippon India Vision Large & Mid Cap Fund,0.142021,0.147663
+Edelweiss Large & Mid Cap Fund,0.140938,0.151511
+Sundaram Large and Midcap Fund,0.140573,0.150488
+Baroda BNP Paribas Large and Mid Cap fund,0.137156,0.150162
+LIC MF Large & Mid Cap Fund,0.134088,0.157084
+BANK OF INDIA LARGE & MID CAP FUND,0.133515,0.156040
+Union Large & Midcap Fund,0.131814,0.153345
+Kotak Large & Mid Cap Fund,0.131132,0.149997
+DSP Large & Mid Cap Fund,0.130747,0.142054
+HDFC Large & Mid Cap Fund,0.125853,0.149406
+SBI LARGE & MIDCAP FUND,0.123804,0.127932
+Canara Robeco Large and Mid Cap Fund,0.123544,0.152010
+Mahindra Manulife Large & Mid Cap Fund,0.120478,0.162676
+Mirae Asset Large & Midcap Fund,0.117190,0.146132
+Aditya Birla Sun Life Large & Mid Cap Fund,0.113761,0.153035
+Franklin India Large & Mid Cap Fund,0.112065,0.138135
+Navi Large & Midcap Fund,0.099338,0.146547
+Tata Large & Mid Cap Fund,0.072018,0.141576

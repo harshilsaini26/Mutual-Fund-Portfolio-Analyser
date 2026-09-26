@@ -1,0 +1,37 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 43.2% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 43.2% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+# Generated: 2026-09-26T10:35:42.997743+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,43.225152
+Lic Housing Finance Ltd.,Bonds and other debt,5.914466
+Power Finance Corporation Ltd,Bonds and other debt,5.543350
+Bajaj Finance Limited,Bonds and other debt,5.345134
+REC LIMITED,Bonds and other debt,5.294652
+MINDSPACE BUSINESS PARKS REIT,Bonds and other debt,3.754708
+Government Securities,Bonds and other debt,3.625416
+Brookfield India Real Estate Trust,Bonds and other debt,2.758035
+TREPS / Repo / Reverse Repo,Cash and equivalents,2.736284
+Net Receivables / Payables,Cash and equivalents,2.695926
+Knowledge Realty Trust,Bonds and other debt,2.077425
+EMBASSY OFFICE PARKS REIT,Bonds and other debt,2.062264
+Bajaj Housing Finance Limited,Bonds and other debt,1.942957
+Bank Of Baroda,Bonds and other debt,1.879315
+Housing &Urban Development Corporation Ltd.,Bonds and other debt,1.725125
+Mahindra & Mahindra Financial Services Limited,Bonds and other debt,1.559990
+AXIS Bank Ltd.,Bonds and other debt,1.297099
+HDFC Bank Ltd.,Bonds and other debt,1.217097
+Indian Bank,Bonds and other debt,1.000136
+Hindustan Zinc Ltd.,Bonds and other debt,0.699332
+Tata Capital Limited,Bonds and other debt,0.696560
+POONAWALLA FINCORP LIMITED,Bonds and other debt,0.694447
+Aditya Birla Capital Ltd,Bonds and other debt,0.686069
+Canara Bank,Bonds and other debt,0.682140
+Punjab National Bank,Bonds and other debt,0.512031
+Units of Other Schemes,"REITs, InvITs and other",0.371394
+HDB FINANCIAL SERVICES LIMITED,Bonds and other debt,0.003496

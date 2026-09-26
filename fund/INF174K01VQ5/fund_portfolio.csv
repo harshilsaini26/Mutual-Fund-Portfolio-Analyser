@@ -1,0 +1,32 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: 49.2% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 49.2% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:35:38.751519+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,49.185713
+EMBASSY OFFICE PARKS REIT,Shares,6.669522
+Government Securities,Bonds and other debt,5.888789
+Vedanta Ltd.,Bonds and other debt,5.239697
+Adani Power Limited,Bonds and other debt,4.665864
+MAS Financial Services Limited,Bonds and other debt,3.848736
+TATA STEEL LIMITED,Bonds and other debt,3.847021
+Aadhar Housing Finance Limited,Bonds and other debt,3.383578
+TREPS / Repo / Reverse Repo,Cash and equivalents,3.003058
+ADITYA BIRLA REAL ESTATE LIMITED,Bonds and other debt,2.848167
+Godrej Properties Limited,Bonds and other debt,2.605210
+Net Receivables / Payables,Cash and equivalents,2.238806
+Brookfield India Real Estate Trust,Shares,2.184439
+MUTHOOT FINANCE LIMITED,Bonds and other debt,1.310118
+Piramal Finance Limited,Bonds and other debt,1.304496
+Torrent Pharmaceuticals Ltd.,Bonds and other debt,0.642675
+Nexus Select Trust,Shares,0.616562
+Units of Other Schemes,"REITs, InvITs and other",0.307320
+REC LIMITED,Bonds and other debt,0.106120
+Mahindra & Mahindra Financial Services Limited,Bonds and other debt,0.104109
+Yes Bank Ltd.,Bonds and other debt,0.000000

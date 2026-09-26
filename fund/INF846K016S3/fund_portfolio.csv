@@ -1,0 +1,82 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 6.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 6.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:38.416528+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,6.270154
+Mahindra & Mahindra Ltd.,Shares,5.126534
+Sun Pharmaceutical Industries Ltd.,Shares,3.770882
+Divi's Laboratories Ltd.,Shares,3.474222
+Bharat Electronics Ltd.,Shares,3.013532
+Sona BLW Precision Forgings Limited,Shares,3.006076
+Reliance Industries Ltd,Shares,2.894770
+TVS Motor Company Ltd.,Shares,2.844543
+Bharat Heavy Electricals Ltd.,Shares,2.527768
+Cummins India Ltd.,Shares,2.447831
+Hindalco Industries Ltd.,Shares,2.330525
+Ather Energy Limited,Shares,2.278083
+Samvardhana Motherson International Limited,Shares,2.258038
+Craftsman Automation Limited,Shares,2.168019
+Torrent Pharmaceuticals Ltd.,Shares,2.133188
+GE Vernova T&D India Limited,Shares,2.125253
+Maruti Suzuki India  Ltd.,Shares,2.121014
+Apar Industries Ltd,Shares,2.053365
+TD Power Systems Ltd,Shares,1.858237
+Sansera Engineering Limited,Shares,1.828821
+TATA STEEL LIMITED,Shares,1.689814
+Hindustan Aeronautics Limited,Shares,1.672717
+Bajaj Auto Limited,Shares,1.667841
+HYUNDAI MOTOR INDIA LIMITED,Shares,1.653417
+Welspun Corp Limited,Shares,1.502569
+Bharat Forge Ltd,Shares,1.472397
+Solar Industries India Limited,Shares,1.456456
+UltraTech Cement Ltd,Shares,1.372589
+Premier Energies Limited,Shares,1.356042
+Dixon Technologies (India) Limited,Shares,1.348957
+Happy Forgings Limited,Shares,1.334701
+Vedanta Aluminium Metal Limited,Shares,1.327563
+JSW Steel Limited,Shares,1.274174
+CG Power and Industrial Solutions Limited,Shares,1.254234
+Amber Enterprises India Limited,Shares,1.180629
+Cash & Bank Balance,Cash and equivalents,1.166339
+Pidilite Industries Ltd.,Shares,1.142533
+Glenmark Pharmaceuticals ltd,Shares,1.118939
+Schaeffler India Limited,Shares,1.052148
+Ipca Laboratories Ltd.,Shares,0.980087
+Sai Life Sciences Limited,Shares,0.975818
+ABB India Limited,Shares,0.956484
+Laurus Labs Limited,Shares,0.921934
+Syrma SGS Technology Limited,Shares,0.851947
+Voltas Ltd.,Shares,0.845050
+Gland Pharma Limited,Shares,0.833264
+Carborundum Universal Ltd.,Shares,0.832620
+KEI Industries Ltd.,Shares,0.788988
+Blue Star Ltd,Shares,0.773661
+Tenneco Clean Air India Limited,Shares,0.734607
+Azad Engineering Limited,Shares,0.704283
+Ashok Leyland Ltd.,Shares,0.679927
+Bosch Ltd,Shares,0.641183
+Triveni Turbine Limited,Shares,0.554567
+PIRAMAL PHARMA LIMITED,Shares,0.541917
+SRF Ltd.,Shares,0.511052
+PG Electroplast Limited,Shares,0.481269
+Kirloskar Oil Engines Limited,Shares,0.455188
+Cyient DLM Limited,Shares,0.450107
+Supreme Industries Ltd.,Shares,0.445629
+Avalon Technologies Limited,Shares,0.427576
+MTAR Technologies Limited,Shares,0.330898
+PI Industries Limited,Shares,0.327229
+Grindwell Norton Ltd.,Shares,0.320331
+Aether Industries Limited,Shares,0.289940
+Anthem Biosciences Limited,Shares,0.274592
+VOLTAMP TRANSFORMERS LIMITED,Shares,0.240811
+Aditya Infotech Limited,Shares,0.131939
+Asian Paints Ltd.,Shares,0.089201
+Net Receivables / Payables,Cash and equivalents,0.032987

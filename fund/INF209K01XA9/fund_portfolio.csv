@@ -1,0 +1,17 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 78.8% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 78.8% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+# Generated: 2026-09-26T10:33:26.738865+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Bonds and other debt,78.833473
+Government Securities,Bonds and other debt,13.843689
+TREPS / Repo / Reverse Repo,Cash and equivalents,3.453183
+Net Receivables / Payables,Cash and equivalents,2.315859
+Nexus Select Trust,"REITs, InvITs and other",0.915866
+EMBASSY OFFICE PARKS REIT,"REITs, InvITs and other",0.637930

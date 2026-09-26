@@ -1,0 +1,56 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 18.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 18.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:28.527028+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,18.602103
+Bajaj Auto Limited,Shares,2.456425
+HCL Technologies Ltd,Shares,2.326032
+Tata Consultancy Services Ltd.,Shares,2.246270
+Bajaj Finserv Limited,Shares,2.241222
+Nestle India Ltd.,Shares,2.137191
+Grasim Industries Ltd,Shares,2.127955
+Infosys Ltd,Shares,2.118774
+Mahindra & Mahindra Ltd.,Shares,2.114661
+Bajaj Finance Limited,Shares,2.106117
+JSW Steel Limited,Shares,2.097198
+Sun Pharmaceutical Industries Ltd.,Shares,2.090822
+ICICI Bank Ltd.,Shares,2.090074
+Wipro  Ltd.,Shares,2.087924
+Eicher Motors Ltd.,Shares,2.073883
+Hindalco Industries Ltd.,Shares,2.053073
+State Bank Of India,Shares,2.022989
+Maruti Suzuki India  Ltd.,Shares,2.018969
+Jio Financial Services Limited,Shares,1.995018
+InterGlobe Aviation Limited,Shares,1.984623
+Bharat Electronics Ltd.,Shares,1.978827
+UltraTech Cement Ltd,Shares,1.977910
+Asian Paints Ltd.,Shares,1.964187
+SBI Life Insurance Company Limited,Shares,1.944144
+Cipla Ltd.,Shares,1.935094
+Reliance Industries Ltd,Shares,1.919501
+TATA STEEL LIMITED,Shares,1.914191
+Larsen & Toubro Limited,Shares,1.909909
+Oil And Natural Gas Corporation Ltd,Shares,1.907067
+Bharti Airtel  Ltd.,Shares,1.905740
+Max Healthcare Institute Limited,Shares,1.902225
+TATA CONSUMER PRODUCTS LIMITED,Shares,1.865541
+AXIS Bank Ltd.,Shares,1.854005
+Adani Enterprises Ltd.,Shares,1.839028
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,1.813021
+Hindustan Unilever Ltd.,Shares,1.800288
+Coal India Limited,Shares,1.795726
+POWER GRID CORPORATION OF INDIA LIMITED,Shares,1.788883
+HDFC Bank Ltd.,Shares,1.764932
+ITC Ltd,Shares,1.737522
+Adani Ports and Special Economic Zone Ltd,Shares,1.734736
+Dr. Reddy's Laboratories Ltd.,Shares,1.715871
+TREPS / Repo / Reverse Repo,Cash and equivalents,0.106573
+Net Receivables / Payables,Cash and equivalents,-0.066244

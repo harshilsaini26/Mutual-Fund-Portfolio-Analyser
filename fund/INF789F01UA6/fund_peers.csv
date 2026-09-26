@@ -1,0 +1,39 @@
+﻿# View: fund_peers
+# Question: How does it compare with funds that do the same job?
+# As of: 2026-09-26
+# Data as of: 25 Sep 2026 (1 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m2, m0
+# Notes:
+#   - Rank 1 is the highest return, the lowest volatility, the smallest fall, the highest return for the risk and the lowest expense ratio.
+#   - Ranks compare the funds open today; funds that closed or merged are not included, which tends to flatter the category's middle.
+# Generated: 2026-09-26T10:37:23.726760+00:00
+fund,return_3y,volatility_3y
+Invesco India Mid Cap Fund,0.235306,0.171688
+HSBC Midcap Fund,0.233835,0.187143
+WhiteOak Capital Mid Cap Fund,0.215276,0.159317
+ICICI Prudential Mid Cap Fund,0.213425,0.177901
+Edelweiss Mid Cap Fund,0.205588,0.166189
+ITI Mid Cap Fund,0.198187,0.179896
+JM Mid Cap Fund,0.190318,0.178816
+BANDHAN MID CAP FUND,0.182009,0.166793
+Nippon India Growth Mid Cap Fund,0.179899,0.165954
+Sundaram Mid Cap Fund,0.176847,0.158537
+Mahindra Manulife Mid Cap Fund,0.172728,0.169186
+Kotak Mid Cap Fund,0.172104,0.160734
+Canara Robeco Mid Cap Fund,0.171969,0.162602
+Union Midcap Fund,0.167962,0.169090
+HDFC Mid Cap Fund,0.167573,0.149837
+Baroda BNP Paribas Mid Cap Fund,0.164990,0.152464
+Axis Midcap Fund,0.162530,0.148358
+LIC MF Mid Cap Fund,0.158610,0.167467
+Mirae Asset Midcap Fund,0.153938,0.160217
+Franklin India Mid Cap Fund,0.151972,0.155549
+Tata Mid Cap Fund,0.147390,0.155803
+Aditya Birla Sun Life Midcap Fund,0.146509,0.156828
+DSP Midcap Fund,0.140696,0.157388
+PGIM India Midcap Fund,0.116740,0.151963
+UTI - Mid Cap Fund (this fund),0.115557,0.153070
+Quant Mid Cap Fund,0.107798,0.170714
+SBI MIDCAP FUND,0.106378,0.133473
+Taurus Mid Cap Fund,0.101067,0.182235

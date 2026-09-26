@@ -1,0 +1,67 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 15.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 15.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:17.673288+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,15.264418
+TREPS / Repo / Reverse Repo,Cash and equivalents,6.143169
+ICICI Bank Ltd.,Shares,5.968563
+HDFC Bank Ltd.,Shares,3.366070
+Reliance Industries Ltd,Shares,3.338347
+AXIS Bank Ltd.,Shares,2.780732
+Infosys Ltd,Shares,2.473431
+Bharti Airtel  Ltd.,Shares,2.393681
+Meesho Limited,Shares,2.205737
+State Bank Of India,Shares,2.155242
+Hindalco Industries Ltd.,Shares,2.084706
+Welspun Corp Limited,Shares,2.076755
+Samvardhana Motherson International Limited,Shares,1.836255
+Bikaji Foods International Limited,Shares,1.835094
+Mahindra & Mahindra Ltd.,Shares,1.670382
+INVENTURUS KNOWLEDGE SOLUTIONS LIMITED,Shares,1.609005
+Larsen & Toubro Limited,Shares,1.598638
+Torrent Pharmaceuticals Ltd.,Shares,1.560665
+KFin Technologies Limited,Shares,1.531844
+Arvind Ltd.,Shares,1.484673
+Thyrocare Technologies Limited,Shares,1.433862
+One 97 Communications Limited,Shares,1.423636
+Grasim Industries Ltd,Shares,1.420833
+Bharat Heavy Electricals Ltd.,Shares,1.399790
+Dixon Technologies (India) Limited,Shares,1.390788
+SUMITOMO CHEMICAL INDIA LIMITED,Shares,1.352879
+Container Corporation Of India Ltd.,Shares,1.332831
+PB Fintech Limited,Shares,1.332468
+V-Guard Industries Ltd.,Shares,1.232582
+MAS Financial Services Limited,Shares,1.219601
+Vedanta Aluminium Metal Limited,Shares,1.215266
+Dabur India Ltd.,Shares,1.203366
+Varun Beverages Limited,Shares,1.201558
+UPL Limited,Shares,1.188964
+IndusInd Bank Ltd.,Shares,1.175485
+Bajaj Finance Limited,Shares,1.155279
+Hindustan Aeronautics Limited,Shares,1.137418
+Timken India Ltd,Shares,1.119131
+Max Financial Services Limited,Shares,1.055820
+Emcure Pharmaceuticals Limited,Shares,1.039538
+Ambuja Cements Ltd.,Shares,1.029447
+Greenply Industries Ltd,Shares,0.961177
+Adani Ports and Special Economic Zone Ltd,Shares,0.943450
+KPIT Technologies Ltd,Shares,0.923844
+Godrej Consumer Products Ltd.,Shares,0.889599
+Gokaldas Exports Ltd,Shares,0.869235
+Balrampur Chini Mills Ltd.,Shares,0.855654
+FSN E-Commerce Ventures Limited,Shares,0.828025
+United Breweries Ltd.,Shares,0.811830
+Persistent Systems Limited,Shares,0.768773
+Tata Chemicals Ltd,Shares,0.761579
+JUBILANT PHARMOVA LIMITED,Shares,0.732656
+SHRIRAM PISTONS & RINGS LTD,Shares,0.661362
+Devyani International Limited,Shares,0.591181
+Net Receivables / Payables,Cash and equivalents,-0.036314

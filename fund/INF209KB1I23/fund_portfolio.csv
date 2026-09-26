@@ -1,0 +1,80 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 12.7% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 12.7% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:30.420673+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,12.671751
+ICICI Bank Ltd.,Shares,3.826875
+Ather Energy Limited,Shares,3.705453
+Aditya Infotech Limited,Shares,3.595887
+TREPS / Repo / Reverse Repo,Cash and equivalents,3.235818
+S.V.J.ENTERPRISES LIMITED,Shares,2.663766
+Dr. Lal Pathlabs Limited,Shares,2.206622
+Sona BLW Precision Forgings Limited,Shares,2.163170
+Ajanta Pharma Ltd.,Shares,1.961173
+HDFC Bank Ltd.,Shares,1.912728
+Hindalco Industries Ltd.,Shares,1.899641
+COFORGE LIMITED,Shares,1.814277
+Kirloskar Oil Engines Limited,Shares,1.802361
+Godrej Consumer Products Ltd.,Shares,1.638762
+Kirloskar Brothers Ltd.,Shares,1.619778
+Craftsman Automation Limited,Shares,1.587502
+Adani Ports and Special Economic Zone Ltd,Shares,1.571046
+Larsen & Toubro Limited,Shares,1.551837
+Cyient DLM Limited,Shares,1.540044
+Reliance Industries Ltd,Shares,1.528600
+Ujjivan Small Finance Bank Limited,Shares,1.502200
+Shivalik Bimetal Controls Ltd.,Shares,1.500741
+Bajaj Finance Limited,Shares,1.476683
+AU Small Finance Bank Limited,Shares,1.466144
+Federal Bank Ltd.,Shares,1.407036
+Britannia Industries Ltd.,Shares,1.391402
+SWIGGY LIMITED,Shares,1.369747
+TVS Motor Company Ltd.,Shares,1.328945
+Prestige Estates Projects Limited,Shares,1.321529
+State Bank Of India,Shares,1.293587
+City Union Bank Ltd,Shares,1.268194
+Fortis Healthcare Ltd,Shares,1.256340
+Emcure Pharmaceuticals Limited,Shares,1.252374
+Vedanta Aluminium Metal Limited,Shares,1.224803
+Varun Beverages Limited,Shares,1.213504
+Greenply Industries Ltd,Shares,1.194623
+Vinati Organics Ltd.,Shares,1.183919
+Balrampur Chini Mills Ltd.,Shares,1.180817
+Hindustan Unilever Ltd.,Shares,1.168140
+Bank of India,Shares,1.072032
+Aptus Value Housing Finance India Limited,Shares,1.069073
+SBI Life Insurance Company Limited,Shares,1.053438
+SBFC Finance Limited,Shares,1.015122
+Ambuja Cements Ltd.,Shares,0.988989
+Infosys Ltd,Shares,0.957843
+Thermax Ltd.,Shares,0.933847
+Capillary Technologies India Limited,Shares,0.925875
+PB Fintech Limited,Shares,0.919137
+VRL Logistics Limited,Shares,0.909316
+Hindustan Petroleum Corporation Ltd,Shares,0.907919
+Persistent Systems Limited,Shares,0.896517
+PNB Housing Finance Limited,Shares,0.861406
+Avenue Supermarts Limited,Shares,0.831143
+Mankind Pharma Limited,Shares,0.795230
+Billionbrains Garage Ventures Limited,Shares,0.762112
+L&T Technology Services Limited,Shares,0.711325
+Firstsource Solutions Ltd.,Shares,0.701998
+Meesho Limited,Shares,0.668037
+ICICI Lombard General Insurance Company Limited,Shares,0.560135
+CreditAccess Grameen Ltd.,Shares,0.547644
+United Spirits Limited,Shares,0.520402
+Go Digit General Insurance Limited,Shares,0.458315
+Praj Industries Ltd.,Shares,0.447940
+Supreme Industries Ltd.,Shares,0.336340
+Multi Commodity Exchange of India Ltd,Shares,0.279410
+Government Securities,Bonds and other debt,0.209743
+Atul Limited.,Shares,0.153244
+Net Receivables / Payables,Cash and equivalents,0.008649

@@ -1,0 +1,61 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 18.1% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 18.1% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:15.945407+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,18.053191
+ICICI Bank Ltd.,Shares,5.085905
+Cholamandalam Investment and Finance Company Ltd,Shares,3.680306
+AXIS Bank Ltd.,Shares,3.544849
+TREPS / Repo / Reverse Repo,Cash and equivalents,3.240276
+Premier Energies Limited,Shares,3.218417
+Redington Limited,Shares,3.158729
+INDUS TOWERS LIMITED,Shares,3.069533
+One 97 Communications Limited,Shares,2.746265
+Bajaj Finance Limited,Shares,2.618729
+Bharti Airtel  Ltd.,Shares,2.594350
+Indian Hotels Co. Ltd,Shares,2.378875
+IIFL FINANCE LIMITED,Shares,2.304200
+MTAR Technologies Limited,Shares,1.953509
+COFORGE LIMITED,Shares,1.860836
+AEGIS VOPAK TERMINALS LIMITED,Shares,1.827679
+Motherson Sumi Wiring India Limited,Shares,1.765315
+Divi's Laboratories Ltd.,Shares,1.727384
+JSW Steel Limited,Shares,1.709774
+Ujjivan Small Finance Bank Limited,Shares,1.630028
+Onesource Specialty Pharma Limited,Shares,1.588545
+BSE Ltd.,Shares,1.579625
+Global Health Limited,Shares,1.511287
+PNB Housing Finance Limited,Shares,1.506518
+Maruti Suzuki India  Ltd.,Shares,1.473819
+BAJAJ CONSUMER CARE LIMITED,Shares,1.469156
+Varun Beverages Limited,Shares,1.459129
+State Bank Of India,Shares,1.441674
+GK ENERGY LIMITED,Shares,1.411917
+Emmvee Photovoltaic Power Limited,Shares,1.363190
+ICICI Prudential Asset Management Company Limited,Shares,1.361448
+GRAVITA INDIA LIMITED,Shares,1.308356
+Physicswallah Limited,Shares,1.273856
+Abbott India Ltd.,Shares,1.257188
+SHRIRAM PISTONS & RINGS LTD,Shares,1.100904
+Anthem Biosciences Limited,Shares,1.020432
+Vedanta Aluminium Metal Limited,Shares,1.018841
+Shaily Engineering Plastics Ltd.,Shares,0.980741
+JSW Energy Limited,Shares,0.916871
+Britannia Industries Ltd.,Shares,0.852952
+SIS LIMITED,Shares,0.835706
+WeWork India Management Limited,Shares,0.812220
+Vedant Fashions Limited,Shares,0.806718
+Aditya Infotech Limited,Shares,0.735638
+Capital Small Finance Bank Ltd,Shares,0.720211
+Aegis Logistics Ltd.,Shares,0.716695
+CG Power and Industrial Solutions Limited,Shares,0.675852
+CreditAccess Grameen Ltd.,Shares,0.457640
+Net Receivables / Payables,Cash and equivalents,0.174721

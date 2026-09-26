@@ -1,0 +1,38 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 32.9% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 32.9% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:34.723783+00:00
+holding,kind,weight_pct
+Government Securities,Bonds and other debt,49.217199
+Unresolved Holdings,Bonds and other debt,32.867435
+Cash & Bank Balance,Cash and equivalents,2.062202
+Reliance Industries Ltd,Shares,1.878848
+ICICI Bank Ltd.,Shares,1.726029
+Net Receivables / Payables,Cash and equivalents,1.538619
+HDFC Bank Ltd.,Shares,1.495959
+Infosys Ltd,Shares,1.263838
+Cipla Ltd.,Shares,1.048944
+State Bank Of India,Shares,0.915952
+Bharti Airtel  Ltd.,Shares,0.854287
+Divi's Laboratories Ltd.,Shares,0.637707
+Mahindra & Mahindra Ltd.,Shares,0.595913
+Larsen & Toubro Limited,Shares,0.583106
+HDFC LIFE INSURANCE COMPANY LIMITED,Shares,0.508042
+Britannia Industries Ltd.,Shares,0.507267
+ITC Ltd,Shares,0.490859
+Cholamandalam Investment and Finance Company Ltd,Shares,0.372406
+Sun Pharmaceutical Industries Ltd.,Shares,0.302947
+Tata Consultancy Services Ltd.,Shares,0.258829
+AXIS Bank Ltd.,Shares,0.245521
+Bajaj Finance Limited,Shares,0.197255
+Hindustan Unilever Ltd.,Shares,0.159974
+InterGlobe Aviation Limited,Shares,0.146711
+HCL Technologies Ltd,Shares,0.095164
+SUNDARAM FINANCE LTD,Shares,0.028987

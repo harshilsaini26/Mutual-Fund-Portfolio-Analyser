@@ -1,0 +1,92 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 16.6% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 16.6% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:38.743999+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,16.623336
+ICICI Bank Ltd.,Shares,4.628863
+HDFC Bank Ltd.,Shares,3.208342
+Divi's Laboratories Ltd.,Shares,2.664336
+Cash & Bank Balance,Cash and equivalents,2.644342
+Sona BLW Precision Forgings Limited,Shares,2.501588
+Bharti Airtel  Ltd.,Shares,2.231807
+Multi Commodity Exchange of India Ltd,Shares,1.965540
+AXIS Bank Ltd.,Shares,1.955914
+Reliance Industries Ltd,Shares,1.844274
+Apar Industries Ltd,Shares,1.734122
+Larsen & Toubro Limited,Shares,1.713334
+Bharat Heavy Electricals Ltd.,Shares,1.692228
+GE Vernova T&D India Limited,Shares,1.652864
+Fortis Healthcare Ltd,Shares,1.602426
+Federal Bank Ltd.,Shares,1.578667
+COFORGE LIMITED,Shares,1.561432
+Mahindra & Mahindra Ltd.,Shares,1.523574
+Samvardhana Motherson International Limited,Shares,1.511446
+PB Fintech Limited,Shares,1.478623
+IndusInd Bank Ltd.,Shares,1.467427
+Units of Other Schemes,Other funds,1.369322
+Bajaj Finance Limited,Shares,1.335158
+BSE Ltd.,Shares,1.311821
+Sun Pharmaceutical Industries Ltd.,Shares,1.246360
+INDUS TOWERS LIMITED,Shares,1.197909
+State Bank Of India,Shares,1.172253
+Ather Energy Limited,Shares,1.166486
+RBL Bank Limited,Shares,1.127454
+The Phoenix Mills Ltd.,Shares,1.084129
+TD Power Systems Ltd,Shares,1.063786
+Solar Industries India Limited,Shares,1.056729
+SRF Ltd.,Shares,0.995311
+InterGlobe Aviation Limited,Shares,0.983499
+FSN E-Commerce Ventures Limited,Shares,0.966052
+Indian Hotels Co. Ltd,Shares,0.964303
+Pidilite Industries Ltd.,Shares,0.961923
+TVS Motor Company Ltd.,Shares,0.958669
+AU Small Finance Bank Limited,Shares,0.950494
+Premier Energies Limited,Shares,0.925301
+Schaeffler India Limited,Shares,0.859513
+Mphasis Limited,Shares,0.853594
+Page Industries Ltd.,Shares,0.847025
+Varun Beverages Limited,Shares,0.839579
+Torrent Pharmaceuticals Ltd.,Shares,0.829659
+UltraTech Cement Ltd,Shares,0.819719
+Cholamandalam Investment and Finance Company Ltd,Shares,0.815758
+UNO Minda Limited,Shares,0.799852
+SWIGGY LIMITED,Shares,0.785444
+Vishal Mega Mart Limited,Shares,0.745222
+SUNDARAM FINANCE LTD,Shares,0.723605
+Supreme Industries Ltd.,Shares,0.719759
+Lenskart Solutions Limited,Shares,0.654002
+United Spirits Limited,Shares,0.619493
+Berger Paints India Ltd,Shares,0.606805
+Bharat Electronics Ltd.,Shares,0.597516
+Cummins India Ltd.,Shares,0.573551
+Maruti Suzuki India  Ltd.,Shares,0.570779
+Anthem Biosciences Limited,Shares,0.550957
+Vijaya Diagnostic Centre Limited,Shares,0.530314
+TORRENT POWER LIMITED,Shares,0.496808
+Voltas Ltd.,Shares,0.491404
+Amber Enterprises India Limited,Shares,0.490574
+Blue Star Ltd,Shares,0.486948
+Kirloskar Oil Engines Limited,Shares,0.475520
+Glenmark Pharmaceuticals ltd,Shares,0.465139
+Persistent Systems Limited,Shares,0.462009
+Coromandel International Limited,Shares,0.431498
+Marico Limited,Shares,0.429975
+Triveni Turbine Limited,Shares,0.421652
+Billionbrains Garage Ventures Limited,Shares,0.399704
+CG Power and Industrial Solutions Limited,Shares,0.338803
+Jubilant Foodworks Limited,Shares,0.325238
+KEI Industries Ltd.,Shares,0.323635
+Net Receivables / Payables,Cash and equivalents,0.234638
+Bandhan Bank Limited,Shares,0.229815
+BIRLASOFT LIMITED,Shares,0.198210
+Infosys Ltd,Shares,0.141704
+Cyient DLM Limited,Shares,0.131062
+Gland Pharma Limited,Shares,0.062074

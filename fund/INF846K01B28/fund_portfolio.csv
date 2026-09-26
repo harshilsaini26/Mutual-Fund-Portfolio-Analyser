@@ -1,0 +1,73 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 31 Aug 2026 (26 days old)
+# Coverage: — of portfolio value | Unresolved: 8.3% | Confidence: medium
+# Source modules: m3, m0
+# Notes:
+#   - 8.3% of this fund's portfolio could not be identified to a company; it is shown as a separate block.
+#   - This portfolio comes from Groww's page for the fund, an aggregator, not from the fund house's own file. The page carries no ISINs, so more of it is unresolved than the fund house's file would leave.
+#   - Sectors are as the fund house labels them; two fund houses may name the same sector differently.
+# Generated: 2026-09-26T10:33:36.887373+00:00
+holding,kind,weight_pct
+Unresolved Holdings,Shares,8.308938
+ICICI Bank Ltd.,Shares,7.851914
+Cash & Bank Balance,Cash and equivalents,7.570257
+Bajaj Finance Limited,Shares,4.264165
+Apar Industries Ltd,Shares,4.055969
+Bharat Electronics Ltd.,Shares,3.504059
+State Bank Of India,Shares,3.194657
+AXIS Bank Ltd.,Shares,3.088422
+Krishna Institute of Medical Sciences Limited,Shares,2.943888
+Mahindra & Mahindra Ltd.,Shares,2.559955
+TVS Motor Company Ltd.,Shares,2.390750
+InterGlobe Aviation Limited,Shares,2.380513
+Sansera Engineering Limited,Shares,2.294468
+PB Fintech Limited,Shares,2.166355
+Cholamandalam Investment and Finance Company Ltd,Shares,2.154979
+HDFC Bank Ltd.,Shares,2.119857
+Bharti Airtel  Ltd.,Shares,2.100471
+One 97 Communications Limited,Shares,1.767717
+Infosys Ltd,Shares,1.668515
+Samvardhana Motherson International Limited,Shares,1.646284
+CG Power and Industrial Solutions Limited,Shares,1.569051
+Navin Fluorine International Limited,Shares,1.557895
+GE Vernova T&D India Limited,Shares,1.555684
+Indian Hotels Co. Ltd,Shares,1.514150
+Net Receivables / Payables,Cash and equivalents,1.408861
+Solar Industries India Limited,Shares,1.371259
+Cummins India Ltd.,Shares,1.256178
+Welspun Corp Limited,Shares,1.198657
+Ipca Laboratories Ltd.,Shares,1.180842
+Sai Life Sciences Limited,Shares,1.174137
+TORRENT POWER LIMITED,Shares,1.150008
+Fine Organic Industries Limited,Shares,1.148749
+Hindustan Aeronautics Limited,Shares,1.058531
+L&T Finance Limited,Shares,1.029218
+FSN E-Commerce Ventures Limited,Shares,1.021088
+Bharat Forge Ltd,Shares,0.976851
+HealthCare Global Enterprises Limited,Shares,0.834141
+Ujjivan Small Finance Bank Limited,Shares,0.833815
+Federal Bank Ltd.,Shares,0.799381
+KEI Industries Ltd.,Shares,0.794588
+Anthem Biosciences Limited,Shares,0.768083
+UltraTech Cement Ltd,Shares,0.718311
+Azad Engineering Limited,Shares,0.700685
+Onesource Specialty Pharma Limited,Shares,0.655112
+Oil And Natural Gas Corporation Ltd,Shares,0.616036
+KAYNES TECHNOLOGY INDIA LIMITED,Shares,0.564204
+Gokaldas Exports Ltd,Shares,0.539062
+TD Power Systems Ltd,Shares,0.502339
+Billionbrains Garage Ventures Limited,Shares,0.470277
+Gujarat Fluorochemicals Limited,Shares,0.448588
+Sterlite Technologies Limited.,Shares,0.433271
+DOMS Industries Limited,Shares,0.344277
+RUBICON RESEARCH LIMITED,Shares,0.336086
+Neuland Laboratories Limited.,Shares,0.315802
+Neogen Chemicals Limited,Shares,0.309634
+Adani Enterprises Ltd.,Shares,0.297699
+Cyient DLM Limited,Shares,0.235866
+Brigade Hotel Ventures Limited,Shares,0.185736
+Wakefit Innovations Limited,Shares,0.045364
+Sobha Limited,Shares,0.032275
+Meesho Limited,Shares,0.016076

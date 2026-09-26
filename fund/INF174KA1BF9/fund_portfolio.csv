@@ -1,0 +1,12 @@
+﻿# View: fund_portfolio
+# Question: What does this fund own?
+# As of: 2026-09-26
+# Data as of: 15 Sep 2026 (11 days old)
+# Coverage: — of portfolio value | Unresolved: — | Confidence: high
+# Source modules: m3, m0
+# Generated: 2026-09-26T10:35:42.494083+00:00
+holding,kind,weight_pct
+Cash & Bank Balance,Cash and equivalents,79.436210
+TREPS / Repo / Reverse Repo,Cash and equivalents,18.337685
+Government Securities,Bonds and other debt,2.228965
+Net Receivables / Payables,Cash and equivalents,-0.002860
